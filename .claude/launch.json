@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Kyuplan.Api", "--launch-profile", "http", "--no-build"],
+      "port": 5100
+    },
+    {
+      "name": "blazor",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Kyuplan.Client.Blazor", "--no-launch-profile", "--no-build", "--urls", "http://localhost:5200"],
+      "port": 5200
+    }
+  ]
+}

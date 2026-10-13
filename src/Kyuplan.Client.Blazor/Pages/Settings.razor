@@ -1,0 +1,58 @@
+@page "/settings"
+@inherits ViewModelComponent<SettingsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy || Vm.IsRestarting ? "on" : "")" role="progressbar" aria-hidden="@(!(Vm.IsBusy || Vm.IsRestarting))"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Settings_Lede</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.IsLoaded)
+        {
+            <form class="page" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <SettingsFields Form="Vm.Form" Disabled="@(!Vm.CanEdit || Vm.IsRestarting)" />
+
+                @if (Vm.CanEdit)
+                {
+                    <div class="form-actions">
+                        <button type="submit" class="btn" disabled="@(!Vm.CanSave)">@Strings.Settings_Save</button>
+                    </div>
+                }
+            </form>
+        }
+    </PageGate>
+</section>
+
+@code {
+    // The save button follows what is typed, which the form (not the page) announces.
+    protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Vm.Form];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    /// <summary>Only when there is nothing to show: a failed save is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.IsLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

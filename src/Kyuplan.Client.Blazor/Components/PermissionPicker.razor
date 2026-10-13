@@ -1,0 +1,50 @@
+@implements IDisposable
+@using System.ComponentModel
+
+@* Every permission there is, one box per area. Ticking one ticks the area's .view as well (the view model does that), so the boxes are redrawn whenever it changes. *@
+<div class="perm-groups">
+    @foreach (var group in Picker.Groups)
+    {
+        <fieldset class="perm-group" @key="group">
+            <legend>@group.Label</legend>
+            @foreach (var permission in group.Permissions)
+            {
+                <label class="check inline" @key="permission">
+                    <input type="checkbox" disabled="@(!Picker.IsEnabled)" @bind="permission.IsSelected" />
+                    <span>@permission.Label</span>
+                </label>
+            }
+        </fieldset>
+    }
+</div>
+<small>@Strings.Roles_FormPermissionsHint</small>
+
+@code {
+    [Parameter, EditorRequired] public PermissionPickerViewModel Picker { get; set; } = default!;
+
+    private PermissionPickerViewModel? _observed;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_observed, Picker)) return;
+
+        Unobserve();
+        _observed = Picker;
+        _observed.Changed += OnChanged;
+        _observed.PropertyChanged += OnPropertyChanged;
+    }
+
+    private void OnChanged(object? sender, EventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    private void Unobserve()
+    {
+        if (_observed is null) return;
+
+        _observed.Changed -= OnChanged;
+        _observed.PropertyChanged -= OnPropertyChanged;
+    }
+
+    public void Dispose() => Unobserve();
+}

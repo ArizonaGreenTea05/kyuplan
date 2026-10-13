@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kyuplan.Client.WpfApp</RootNamespace>
+    <AssemblyName>Kyuplan</AssemblyName>
+    <ApplicationIcon>..\..\assets\branding\app.ico</ApplicationIcon>
+    <Description>WPF client of Kyuplan.</Description>
+    <!-- The Fluent theme that ships with WPF (Application.ThemeMode: Windows 11 look, Mica, accent colour) is
+         still flagged experimental; WPF0001 is the warning for using it. -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Svg.Skia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kyuplan.Client.Shared\Kyuplan.Client.Shared.csproj" />
+  </ItemGroup>
+
+  <!-- The logos and the name are not in here: the API says how the instance presents itself (GET /api/branding), and the logos are the
+       same SVG or bitmap files the web client shows (ImageLoader renders an SVG with Skia, as WPF cannot). The windows' icon is the web
+       client's tab icon (RemoteImage.WindowIcon). Only the icon of the program file itself (ApplicationIcon above) is fixed when the
+       program is built. -->
+
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Resource Include="..\..\assets\branding\app.ico" Link="Assets\watermark.ico" />
+    <!-- The public half of the key that signs the installers (WindowsClientUpdater); the private half is the release secret UPDATE_SIGNING_KEY. -->
+    <EmbeddedResource Include="..\..\installer\update-key.pub.pem" LogicalName="update-key.pub.pem" />
+  </ItemGroup>
+
+  <!-- SkiaSharp and HarfBuzzSharp (the SVG renderer) ship the debug symbols of their native libraries: 110 MB that the installer and
+       the people who install it have no use for. A publish leaves out the .pdb files that come out of NuGet packages. -->
+  <Target Name="LeaveOutPackageSymbols" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb' And '%(ResolvedFileToPublish.NuGetPackageId)' != ''" />
+    </ItemGroup>
+  </Target>
+
+</Project>

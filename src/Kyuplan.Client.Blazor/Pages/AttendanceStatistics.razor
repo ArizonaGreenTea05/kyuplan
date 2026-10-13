@@ -1,0 +1,400 @@
+@page "/statistics"
+@using System.ComponentModel
+@inherits ViewModelComponent<AttendanceStatisticsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Vm.FilterSummary</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="() => Vm.RefreshCommand.ExecuteAsync(null)" />
+
+        @* ---- Filters ------------------------------------------------------------------------------------- *@
+        <article class="card filters" aria-label="@Strings.Stats_Filters">
+            @* Default filters: the time span as two events, who, and how much attendance is required. *@
+            <div class="filter-row">
+                <EventPicker Label="@Strings.Stats_FromEvent" Options="Vm.EventOptions" @bind-Value="Vm.FromEventId" />
+                <EventPicker Label="@Strings.Stats_ToEvent" Options="Vm.EventOptions" @bind-Value="Vm.ToEventId" />
+                <SubGroupPicker Label="@Strings.Stats_Members" Options="Vm.SubGroupOptions" Summary="@Vm.SubGroupSummary"
+                                IsEveryone="Vm.IsEveryoneSelected" OnClear="() => Vm.ClearSubGroupsCommand.Execute(null)" />
+            </div>
+
+            <div class="filter-row">
+                <label class="field slider">
+                    <span>@Strings.Stats_MinAttendance <output>@Vm.ThresholdText</output></span>
+                    <input type="range" min="0" max="100" step="5" @bind="Vm.MinAttendancePercent" @bind:event="oninput" />
+                    <small>@Strings.Stats_MinAttendanceHint</small>
+                </label>
+                <label class="field narrow">
+                    <span>@Strings.Stats_MinInvited</span>
+                    <input type="number" min="1" max="200" @bind="Vm.MinInvitedEvents" @bind:event="onchange" />
+                    <small>@Strings.Stats_MinInvitedHint</small>
+                </label>
+                <div class="filter-actions">
+                    <button type="button" class="btn ghost" aria-controls="advanced-filters"
+                            aria-expanded="@(Vm.ShowAdvanced ? "true" : "false")"
+                            @onclick="() => Vm.ShowAdvanced = !Vm.ShowAdvanced">
+                        <Icon Name="@(Vm.ShowAdvanced ? "up" : "down")" Size="16" /><span>@Strings.Stats_Advanced</span>
+                    </button>
+                    <button type="button" class="btn ghost" disabled="@(!Vm.CanReset)" @onclick="() => Vm.ResetFiltersCommand.Execute(null)">
+                        <Icon Name="reset" /><span>@Strings.Stats_Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            @* Saved filters: named filters kept on the server, one set per exam. *@
+            @if (Saved.CanUse)
+            {
+                <div class="saved" role="group" aria-label="@Strings.Saved_Title">
+                    <div class="filter-row">
+                        <label class="field saved-pick">
+                            <span>@Strings.Saved_Pick</span>
+                            <select value="@(Saved.SelectedFilterId?.ToString() ?? "")" disabled="@(!Saved.HasFilters)"
+                                    @onchange="OnSavedFilterChosen">
+                                <option value="">@(Saved.HasFilters ? Strings.Saved_PickPrompt : Strings.Saved_PickEmpty)</option>
+                                @foreach (var exam in Saved.Exams.Where(e => e.Filters.Count > 0))
+                                {
+                                    <optgroup label="@exam.Label">
+                                        @foreach (var saved in exam.Filters)
+                                        {
+                                            <option value="@saved.Id">@saved.Name</option>
+                                        }
+                                    </optgroup>
+                                }
+                            </select>
+                        </label>
+                        <div class="filter-actions start">
+                            @if (Saved.CanSaveFilter)
+                            {
+                                <button type="button" class="btn ghost" aria-expanded="@(Saved.IsSaving ? "true" : "false")"
+                                        @onclick="() => Saved.BeginSaveCommand.Execute(null)">
+                                    <span>@Strings.Saved_SaveAs</span>
+                                </button>
+                            }
+                            <button type="button" class="btn ghost" title="@Strings.Saved_ReloadTip" disabled="@(!Saved.CanReload)"
+                                    @onclick="() => Saved.ReloadSelectedCommand.Execute(null)">
+                                <span>@Strings.Saved_Reload</span>
+                            </button>
+                            @if (Saved.CanChangeFilters)
+                            {
+                                <button type="button" class="btn ghost" title="@Strings.Saved_UpdateTip" disabled="@(!Saved.CanUpdate)"
+                                        @onclick="() => Saved.AskUpdateCommand.Execute(null)">
+                                    <span>@Strings.Saved_Update</span>
+                                </button>
+                                <button type="button" class="btn ghost danger" disabled="@(!Saved.HasSelection)"
+                                        @onclick="() => Saved.AskDeleteFilterCommand.Execute(null)">
+                                    <span>@Strings.Saved_Delete</span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    @if (Saved.CanSaveFilter && Saved.IsSaving)
+                    {
+                        <div class="save-form">
+                            <div class="filter-row">
+                                <label class="field">
+                                    <span>@Strings.Saved_FilterName</span>
+                                    <input type="text" maxlength="200" @bind="Saved.NewFilterName" @bind:event="oninput" />
+                                </label>
+                                <label class="field">
+                                    <span>@Strings.Saved_Exam</span>
+                                    <select value="@Saved.SelectedExamId" @onchange="OnExamChosen">
+                                        @foreach (var exam in Saved.ExamChoices)
+                                        {
+                                            <option value="@exam.Id">@exam.Label</option>
+                                        }
+                                    </select>
+                                </label>
+                                @if (Saved.CanMakeExams && Saved.IsNewExam)
+                                {
+                                    @* An exam is a Spond event: a new one is made by choosing the event. *@
+                                    <EventPicker Label="@Strings.Saved_ExamEvent" Options="Saved.EventOptions" @bind-Value="Saved.NewExamEventId" />
+                                }
+                            </div>
+                            <div class="filter-actions start">
+                                <button type="button" class="btn" @onclick="() => Saved.SaveCommand.ExecuteAsync(null)">
+                                    <span>@Strings.Saved_Save</span>
+                                </button>
+                                <button type="button" class="btn ghost" @onclick="() => Saved.CancelSaveCommand.Execute(null)">
+                                    <span>@Strings.Saved_Cancel</span>
+                                </button>
+                                @if (Saved.CanMakeExams && !Saved.IsNewExam)
+                                {
+                                    <button type="button" class="btn ghost danger" @onclick="() => Saved.AskDeleteExamCommand.Execute(null)">
+                                        <span>@Strings.Saved_DeleteExam</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (Saved.IsConfirming)
+                    {
+                        <div class="confirm" role="alertdialog" aria-label="@Saved.ConfirmText">
+                            <span>@Saved.ConfirmText</span>
+                            <button type="button" class="btn danger" @onclick="() => Saved.ConfirmPendingCommand.ExecuteAsync(null)">
+                                <span>@Saved.ConfirmYesText</span>
+                            </button>
+                            <button type="button" class="btn ghost" @onclick="() => Saved.CancelPendingCommand.Execute(null)">
+                                <span>@Strings.Saved_Cancel</span>
+                            </button>
+                        </div>
+                    }
+
+                    @if (Saved.ErrorMessage is { } savedError)
+                    {
+                        <p class="field-error" role="alert">@savedError</p>
+                    }
+                </div>
+            }
+
+            @* Advanced filters: the time span as dates, and event names. *@
+            @if (Vm.ShowAdvanced)
+            {
+                <div class="advanced" id="advanced-filters">
+                    <p class="note">@Vm.SpanHint</p>
+                    <div class="filter-row">
+                        <label class="field">
+                            <span>@Strings.Stats_From</span>
+                            <input type="date" @bind="Vm.From" @bind:event="onchange" />
+                        </label>
+                        <label class="field">
+                            <span>@Strings.Stats_To</span>
+                            <input type="date" @bind="Vm.To" @bind:event="onchange" />
+                        </label>
+                        <div class="pills" role="group" aria-label="@Strings.Stats_QuickRanges">
+                            <button type="button" class="pill" @onclick='() => Vm.SetRangeCommand.Execute("3m")'>@Strings.Range_3Months</button>
+                            <button type="button" class="pill" @onclick='() => Vm.SetRangeCommand.Execute("6m")'>@Strings.Range_6Months</button>
+                            <button type="button" class="pill" @onclick='() => Vm.SetRangeCommand.Execute("12m")'>@Strings.Range_12Months</button>
+                            <button type="button" class="pill" @onclick='() => Vm.SetRangeCommand.Execute("year")'>@Strings.Range_ThisYear</button>
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <label class="field">
+                            <span>@Strings.Stats_NameContains</span>
+                            <input type="text" placeholder="@Strings.Stats_NameContainsPlaceholder" @bind="Vm.EventNameContains" @bind:event="oninput" />
+                            <small>@Strings.Stats_NameContainsHint</small>
+                        </label>
+                        <label class="field">
+                            <span>@Strings.Stats_NameExcludes</span>
+                            <input type="text" placeholder="@Strings.Stats_NameExcludesPlaceholder" @bind="Vm.EventNameExcludes" @bind:event="oninput" />
+                            <small>@Strings.Stats_NameExcludesHint</small>
+                        </label>
+                    </div>
+                </div>
+            }
+
+            @if (Vm.FilterError is { } filterError)
+            {
+                <p class="field-error" role="alert">@filterError</p>
+            }
+        </article>
+
+        @* ---- Results ------------------------------------------------------------------------------------- *@
+        @if (Vm.HasResults)
+        {
+            <div class="kpis dense">
+                @foreach (var kpi in Vm.Kpis)
+                {
+                    <KpiCard Kpi="kpi" />
+                }
+            </div>
+
+            <article class="card results">
+                <div class="card-head">
+                    <div class="tabs" role="tablist">
+                        <button type="button" role="tab" aria-selected="@(_tab == Tab.Members)" class="tab @(_tab == Tab.Members ? "on" : "")"
+                                @onclick="() => _tab = Tab.Members">@Strings.Tab_Members <span class="count">@Vm.VisibleMembers.Count</span></button>
+                        <button type="button" role="tab" aria-selected="@(_tab == Tab.Insights)" class="tab @(_tab == Tab.Insights ? "on" : "")"
+                                @onclick="() => _tab = Tab.Insights">@Strings.Tab_Insights</button>
+                        <button type="button" role="tab" aria-selected="@(_tab == Tab.Events)" class="tab @(_tab == Tab.Events ? "on" : "")"
+                                @onclick="() => _tab = Tab.Events">@Strings.Tab_Events <span class="count">@Vm.Events.Count</span></button>
+                    </div>
+
+                    @if (_tab == Tab.Members)
+                    {
+                        <div class="toolbar">
+                            <div class="segmented" role="group" aria-label="@Strings.Stats_Show">
+                                @foreach (var (filter, label) in StatusFilters)
+                                {
+                                    <button type="button" class="@(Vm.StatusFilter == filter ? "on" : "")"
+                                            aria-pressed="@(Vm.StatusFilter == filter)"
+                                            @onclick="() => Vm.StatusFilter = filter">@label</button>
+                                }
+                            </div>
+                            <label class="search">
+                                <Icon Name="search" Size="16" />
+                                <input type="search" placeholder="@Strings.Stats_FindMember" aria-label="@Strings.Stats_FindMember"
+                                       @bind="Vm.SearchText" @bind:event="oninput" />
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                @switch (_tab)
+                {
+                    case Tab.Members:
+                        <div class="table-wrap">
+                            @* --t is the required attendance (0–1); app.css draws it as one line through the attendance column. *@
+                            <table class="data members" style="--t:@CssNum.Num(Vm.ThresholdFraction)">
+                                <caption class="sr-only">@Strings.Caption_Members</caption>
+                                <thead>
+                                    <tr>
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.Name" Label="@Strings.Col_Member" />
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.SubGroups" Label="@Strings.Col_SubGroups" />
+                                        <th scope="col">@Strings.Col_Status</th>
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.AttendanceRate" Label="@Strings.Col_Attendance" Class="att">
+                                            <span class="req">@Vm.RequiredText</span>
+                                        </SortHeader>
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.ResponseRate" Label="@Strings.Col_Answered" Class="num" />
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.CurrentStreak" Label="@Strings.Col_Streak" Class="num" />
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.DaysSinceLastAttended" Label="@Strings.Col_LastAttended" />
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.SessionsPerWeek" Label="@Strings.Col_PerWeek" Class="num" />
+                                        <th scope="col" title="@Strings.Col_FormTip">@Strings.Col_Form</th>
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.EngagementScore" Label="@Strings.Col_Engagement" />
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var m in Vm.VisibleMembers)
+                                    {
+                                        <tr @key="m.Dto.MemberId">
+                                            <th scope="row" class="name"><strong>@m.Name</strong></th>
+                                            <td class="subgroups">@m.SubGroupsText</td>
+                                            <td><StatusBadge Status="m.Status" /></td>
+                                            <td class="att">
+                                                <div class="rate">
+                                                    <RateBar Fraction="m.AttendanceFraction" Status="m.Status" Label="@m.AttendanceAriaText" />
+                                                    <span class="num">@m.AttendanceText</span>
+                                                </div>
+                                                <small class="muted">@m.AttendedEventsText</small>
+                                            </td>
+                                            <td class="num">@m.ResponseRateText</td>
+                                            <td class="num" title="@Strings.Col_StreakTip">@m.StreakText</td>
+                                            <td class="last">
+                                                @m.LastAttendedDateText
+                                                @if (m.LastAttendedAgoText.Length > 0)
+                                                {
+                                                    <small>@m.LastAttendedAgoText</small>
+                                                }
+                                            </td>
+                                            <td class="num">@m.SessionsPerWeekText</td>
+                                            <td class="form-cell"><FormStrip Marks="m.RecentMarks" /><TrendMark Member="m" /></td>
+                                            <td><LevelBadge Member="m" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            @if (Vm.VisibleMembers.Count == 0)
+                            {
+                                <p class="empty-inline">@Strings.Stats_NoMemberMatches</p>
+                            }
+                        </div>
+                        <p class="legend">
+                            <span><i class="mk yes"></i>@Strings.Legend_Attended</span>
+                            <span><i class="mk no"></i>@Strings.Legend_Declined</span>
+                            <span><i class="mk open"></i>@Strings.Legend_NoAnswer</span>
+                            <span><i class="mk other"></i>@Strings.Legend_WaitingList</span>
+                            <span class="sep">@Strings.Legend_RequiredLine</span>
+                        </p>
+                        break;
+
+                    case Tab.Insights:
+                        <div class="grid two inner">
+                            <div>
+                                <h2>@Strings.Chart_DistributionTitle</h2>
+                                <BarChart Bars="Vm.Distribution" Label="@Strings.Chart_DistributionAria" Thresholded="true" />
+                                <p class="note">@Strings.Chart_DistributionNote</p>
+                            </div>
+                            <div>
+                                <h2>@Strings.Chart_TrendTitle</h2>
+                                <BarChart Bars="Vm.Trend" Label="@Strings.Chart_TrendAria" />
+                                <p class="note">@Strings.Chart_TrendNote</p>
+                            </div>
+                        </div>
+                        break;
+
+                    default:
+                        <div class="table-wrap">
+                            <table class="data">
+                                <caption class="sr-only">@Strings.Caption_Events</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">@Strings.Col_Event</th>
+                                        <th scope="col">@Strings.Col_Date</th>
+                                        <th scope="col" class="att">@Strings.Col_Attendance</th>
+                                        <th scope="col" class="num">@Strings.Col_Declined</th>
+                                        <th scope="col" class="num">@Strings.Col_NoAnswer</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var e in Vm.Events)
+                                    {
+                                        <tr>
+                                            <th scope="row" class="name"><strong>@e.Name</strong></th>
+                                            <td>@e.StartText</td>
+                                            <td class="att plain">
+                                                <div class="rate">
+                                                    <RateBar Fraction="e.AttendanceFraction" Label="@e.AttendanceText" />
+                                                    <span class="num">@e.AttendanceText</span>
+                                                </div>
+                                                <small class="muted">@e.InvitedCameText</small>
+                                            </td>
+                                            <td class="num">@e.DeclinedText</td>
+                                            <td class="num">@e.UnansweredText</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        break;
+                }
+            </article>
+        }
+        else if (Vm.HasNoResults)
+        {
+            <p class="empty">@Strings.Stats_NoResults</p>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private enum Tab { Members, Insights, Events }
+
+    private Tab _tab = Tab.Members;
+
+    // The labels depend on the language, so they are read each time the page renders.
+    private static (MemberStatusFilter Filter, string Label)[] StatusFilters =>
+    [
+        (MemberStatusFilter.All, Strings.Stats_Everyone),
+        (MemberStatusFilter.Qualified, Strings.Status_Qualified),
+        (MemberStatusFilter.BelowThreshold, Strings.Filter_Below),
+        (MemberStatusFilter.InsufficientData, Strings.Status_TooFew),
+    ];
+
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell, Vm.SavedFilters];
+
+    private SavedFiltersViewModel Saved => Vm.SavedFilters;
+
+    private void OnSavedFilterChosen(ChangeEventArgs e) =>
+        Saved.SelectedFilterId = int.TryParse(e.Value?.ToString(), out var id) ? id : null;
+
+    private void OnExamChosen(ChangeEventArgs e) =>
+        Saved.SelectedExamId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

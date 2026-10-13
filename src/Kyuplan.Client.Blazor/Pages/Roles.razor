@@ -1,0 +1,166 @@
+@page "/roles"
+@inherits ViewModelComponent<RolesViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Roles_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="BeginCreate">
+                <Icon Name="plus" /><span>@Strings.Roles_New</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save or delete is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.IsFormOpen)
+        {
+            <form class="card card-form" aria-labelledby="role-form-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="role-form-title">@Vm.FormTitle</h2>
+
+                <label class="field">
+                    <span>@Strings.Roles_FormName</span>
+                    <input type="text" @ref="_nameInput" maxlength="@RoleRules.MaxNameLength" autocomplete="off"
+                           @bind="Vm.FormName" @bind:event="oninput" />
+                    @if (Vm.NameProblem is { } problem)
+                    {
+                        <p class="field-error" role="alert">@problem</p>
+                    }
+                </label>
+
+                <div class="field" role="group" aria-label="@Strings.Roles_FormPermissions">
+                    <span>@Strings.Roles_FormPermissions</span>
+                    <PermissionPicker Picker="Vm.Picker" />
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.CanSave)">@(Vm.IsCreating ? Strings.Roles_Create : Strings.Roles_Save)</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelFormCommand.Execute(null)">@Strings.Roles_Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (Vm.CanEdit && Vm.IsConfirmingDelete)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+                <span>@Vm.ConfirmText</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                    <span>@Strings.Roles_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                    <span>@Strings.Roles_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.HasRoles)
+        {
+            <article class="card results">
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>@Strings.Roles_ColName</th>
+                                <th>@Strings.Roles_ColPermissions</th>
+                                <th>@Strings.Roles_ColUsers</th>
+                                @if (Vm.CanEdit)
+                                {
+                                    <th></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var role in Vm.Roles)
+                            {
+                                <tr @key="role.Id">
+                                    <td class="name">
+                                        <strong>@role.Name</strong>
+                                        @if (role.IsSystem)
+                                        {
+                                            <small>@Strings.Roles_SystemHint</small>
+                                        }
+                                    </td>
+                                    <td>@role.PermissionsText</td>
+                                    <td>@role.UsersText</td>
+                                    @if (Vm.CanEdit)
+                                    {
+                                        <td class="row-actions">
+                                            @* The administrator role has everything and cannot be changed: its row has no buttons. *@
+                                            @if (!role.IsSystem)
+                                            {
+                                                <button type="button" class="btn ghost" aria-label="@($"{Strings.Roles_Edit}: {role.Name}")"
+                                                        disabled="@(!Vm.BeginEditCommand.CanExecute(role))" @onclick="() => BeginEdit(role)">
+                                                    <Icon Name="edit" /><span>@Strings.Roles_Edit</span>
+                                                </button>
+                                                <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Roles_Delete}: {role.Name}")"
+                                                        disabled="@(!Vm.CanDelete(role))" @onclick="() => Vm.AskDeleteCommand.Execute(role)">
+                                                    <Icon Name="trash" /><span>@Strings.Roles_Delete</span>
+                                                </button>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private ElementReference _nameInput;
+    private bool _focusName;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    // Opening the form puts the cursor in its first field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusName || !Vm.IsFormOpen) return;
+
+        _focusName = false;
+        await _nameInput.FocusAsync();
+    }
+
+    private void BeginCreate()
+    {
+        _focusName = true;
+        Vm.BeginCreateCommand.Execute(null);
+    }
+
+    private void BeginEdit(RoleRow role)
+    {
+        _focusName = true;
+        Vm.BeginEditCommand.Execute(role);
+    }
+
+    /// <summary>Only when there is no list to show: a failed save or delete is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.Roles.Count == 0 ? EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null)) : default;
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

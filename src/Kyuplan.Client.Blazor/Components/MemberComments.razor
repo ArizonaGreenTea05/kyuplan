@@ -1,0 +1,294 @@
+@using System.ComponentModel
+@implements IDisposable
+@inject IJSRuntime Js
+
+@* The comments on one member: the composer (a new comment, a reply or a change) and the threads under it. *@
+<section class="comments" aria-labelledby="comments-title">
+    <header class="comments-head">
+        <button type="button" class="btn ghost" @onclick="OnClose">
+            <Icon Name="back" /><span>@Strings.Comments_Back</span>
+        </button>
+        <div>
+            <h2 id="comments-title">@Vm.Title</h2>
+            <small role="status">@Vm.CountText</small>
+        </div>
+    </header>
+    <p class="lede">@Strings.Comments_Lede</p>
+
+    @* A failed save or delete is no reason to offer "try again"; only comments that could not be loaded are. *@
+    <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+    @if (Vm.CanCompose)
+    {
+        <article class="card composer">
+            <h3 class="composer-title">@Vm.ComposerTitle</h3>
+
+            @if (Vm.ReplyingTo is { } parent)
+            {
+                <blockquote class="reply-to">
+                    <strong>@parent.AuthorName</strong>
+                    <CommentText Spans="parent.Spans" />
+                </blockquote>
+            }
+
+            <div class="fmt-bar" role="toolbar" aria-label="@Strings.Comments_FormatHint">
+                <button type="button" class="fmt" title="@Strings.Comments_Bold" aria-label="@Strings.Comments_Bold"
+                        @onclick="() => Format(CommentStyle.Bold)"><b>B</b></button>
+                <button type="button" class="fmt" title="@Strings.Comments_Italic" aria-label="@Strings.Comments_Italic"
+                        @onclick="() => Format(CommentStyle.Italic)"><i>I</i></button>
+                <button type="button" class="fmt" title="@Strings.Comments_Underline" aria-label="@Strings.Comments_Underline"
+                        @onclick="() => Format(CommentStyle.Underline)"><u>U</u></button>
+                <button type="button" class="fmt" title="@Strings.Comments_Strike" aria-label="@Strings.Comments_Strike"
+                        @onclick="() => Format(CommentStyle.Strikethrough)"><s>S</s></button>
+            </div>
+
+            <textarea class="comment-box" @ref="_box" rows="4" placeholder="@Strings.Comments_Placeholder" aria-label="@Vm.ComposerTitle"
+                      maxlength="@(CommentRules.MaxBodyLength + 500)" spellcheck="true"
+                      @bind="Vm.Text" @bind:event="oninput" @onkeydown="OnKeyDown"></textarea>
+            @if (Vm.TextProblem is { } textProblem)
+            {
+                <p class="field-error" role="alert">@textProblem</p>
+            }
+            else
+            {
+                <small>@Strings.Comments_FormatHint</small>
+            }
+
+            @if (Vm.HasPreview)
+            {
+                <div class="preview" aria-label="@Strings.Comments_Preview">
+                    <small>@Strings.Comments_Preview</small>
+                    <CommentText Spans="Vm.Preview" />
+                </div>
+            }
+
+            <div class="field" role="group" aria-label="@Strings.Comments_Tags">
+                <span>@Strings.Comments_Tags</span>
+                @if (Vm.TagOptions.Count == 0)
+                {
+                    <p class="empty-inline">@Strings.Comments_NoTags</p>
+                }
+                else
+                {
+                    <ul class="tag-picks">
+                        @foreach (var option in Vm.TagOptions)
+                        {
+                            <li @key="option.Id" class="tag-pick @(option.IsSelected ? "on" : "")">
+                                <label class="check inline" title="@option.ToolTip">
+                                    <input type="checkbox" @bind="option.IsSelected" />
+                                    <span>@option.Name</span>
+                                    @if (option.HasEvent)
+                                    {
+                                        <Icon Name="calendar" Size="13" />
+                                    }
+                                </label>
+                                @if (Vm.CanEditTags)
+                                {
+                                    <button type="button" class="tag-edit" title="@string.Format(Strings.Comments_EditTag, option.Name)"
+                                            aria-label="@string.Format(Strings.Comments_EditTag, option.Name)"
+                                            disabled="@(!Vm.EditTagCommand.CanExecute(option))"
+                                            @onclick="() => Vm.EditTagCommand.ExecuteAsync(option)">
+                                        <Icon Name="edit" Size="14" />
+                                    </button>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (Vm.CanEditTags)
+                {
+                    <div>
+                        <button type="button" class="btn ghost" disabled="@(!Vm.NewTagCommand.CanExecute(null))"
+                                @onclick="() => Vm.NewTagCommand.ExecuteAsync(null)">
+                            <Icon Name="plus" /><span>@Strings.Comments_NewTag</span>
+                        </button>
+                    </div>
+                }
+            </div>
+
+            @if (Vm.CanEditTags && Vm.TagEditor.IsOpen)
+            {
+                <div class="save-form">
+                    @* One form at a time: a tag that is opened for another tag or for a new one is a new form, with the cursor in its name. *@
+                    <TagForm @key="Vm.TagEditor.Editing?.Id" Editor="Vm.TagEditor" />
+                </div>
+            }
+
+            <div class="form-actions">
+                <button type="button" class="btn" disabled="@(!Vm.SaveCommand.CanExecute(null))"
+                        @onclick="() => Vm.SaveCommand.ExecuteAsync(null)">@Vm.SaveText</button>
+                @if (Vm.IsReplying || Vm.IsEditing)
+                {
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelComposerCommand.Execute(null)">@Strings.Comments_Cancel</button>
+                }
+            </div>
+        </article>
+    }
+
+    @if (Vm.IsConfirmingDelete)
+    {
+        <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+            <span>@Vm.ConfirmText</span>
+            <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                <span>@Strings.Comments_ConfirmYes</span>
+            </button>
+            <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                <span>@Strings.Comments_Cancel</span>
+            </button>
+        </div>
+    }
+
+    @if (Vm.IsEmpty)
+    {
+        <p class="empty">@Strings.Comments_Empty</p>
+    }
+    else if (Vm.Comments.Count > 0)
+    {
+        <ol class="threads" aria-label="@Vm.Title">
+            @foreach (var row in Vm.Comments)
+            {
+                <li @key="row.Id" class="comment @(row.Depth > 0 ? "reply" : "") @(Vm.EditingRow?.Id == row.Id ? "editing" : "")"
+                    style="@($"--indent:{CssNum.Num(row.IndentWidth)}px")">
+                    <div class="comment-head">
+                        <strong>@row.AuthorName</strong>
+                        <small>@row.CreatedText</small>
+                    </div>
+
+                    <div class="comment-body"><CommentText Spans="row.Spans" /></div>
+
+                    @if (row.HasTags)
+                    {
+                        <ul class="tag-list" aria-label="@Strings.Comments_Tags">
+                            @foreach (var tag in row.Tags)
+                            {
+                                <li class="tag @(tag.HasEvent ? "has-event" : "")" title="@tag.ToolTip">
+                                    <Icon Name="tag" Size="13" /><span>@tag.Name</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <div class="comment-actions">
+                        @if (Vm.CanWriteComments)
+                        {
+                            <button type="button" class="btn ghost" aria-label="@($"{Strings.Comments_Reply}: {row.AuthorName}")"
+                                    disabled="@(!Vm.ReplyCommand.CanExecute(row))" @onclick="() => Reply(row)">
+                                <Icon Name="reply" /><span>@Strings.Comments_Reply</span>
+                            </button>
+                        }
+                        @if (Vm.CanEditComments)
+                        {
+                            <button type="button" class="btn ghost" aria-label="@($"{Strings.Comments_Edit}: {row.AuthorName}")"
+                                    disabled="@(!Vm.EditCommand.CanExecute(row))" @onclick="() => Edit(row)">
+                                <Icon Name="edit" /><span>@Strings.Comments_Edit</span>
+                            </button>
+                        }
+                        @* Only the author (who may delete their own comments) and those who may delete any get the button. *@
+                        @if (row.CanDelete)
+                        {
+                            <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Comments_Delete}: {row.AuthorName}")"
+                                    disabled="@(!Vm.AskDeleteCommand.CanExecute(row))"
+                                    @onclick="() => Vm.AskDeleteCommand.Execute(row)">
+                                <Icon Name="trash" /><span>@Strings.Comments_Delete</span>
+                            </button>
+                        }
+                        @if (row.IsEdited)
+                        {
+                            <button type="button" class="edited" aria-expanded="@(row.IsHistoryOpen ? "true" : "false")"
+                                    @onclick="() => Vm.ToggleHistoryCommand.Execute(row)">@row.EditedText</button>
+                        }
+                    </div>
+
+                    @if (row.IsHistoryOpen)
+                    {
+                        @* Who changed it, when and how, the latest first; and what it said before, when the words or their styling changed. *@
+                        <ol class="history">
+                            @foreach (var edit in row.Edits)
+                            {
+                                <li>
+                                    <div><strong>@edit.EditorName</strong> <small>@edit.WhenText</small> · <span>@edit.ChangesText</span></div>
+                                    @if (edit.HasPrevious)
+                                    {
+                                        <div class="before"><small>@Strings.Comments_Before</small> <CommentText Spans="edit.PreviousSpans" /></div>
+                                    }
+                                </li>
+                            }
+                        </ol>
+                    }
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    private ElementReference _box;
+    private (int Start, int End)? _select;
+    private bool _focusBox;
+
+    [Parameter, EditorRequired] public MemberCommentsViewModel Vm { get; set; } = null!;
+
+    /// <summary>Back to the list of members.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Vm.PropertyChanged += OnChanged;
+        Vm.TagEditor.PropertyChanged += OnChanged;
+    }
+
+    private void OnChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    /// <summary>Only when the comments could not be loaded: a failed save is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    /// <summary>A style button: the view model puts the markers around what is selected, and the same words are selected again.</summary>
+    private async Task Format(CommentStyle style)
+    {
+        var selection = await Js.InvokeAsync<int[]>("ppComments.selection", _box);
+        var change = Vm.ApplyFormat(style, selection[0], selection[1] - selection[0]);
+
+        _select = (change.SelectionStart, change.SelectionStart + change.SelectionLength);
+        StateHasChanged(); // there has to be a render after the text was set: the selection is made after it
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e is { CtrlKey: true, Key: "Enter" } && Vm.SaveCommand.CanExecute(null)) await Vm.SaveCommand.ExecuteAsync(null);
+    }
+
+    // Replying and editing put the cursor into the text. Not before the next render: somebody who may only change comments gets the composer
+    // (and with it the text box) only once the change has begun.
+    private void Reply(CommentRow row)
+    {
+        Vm.ReplyCommand.Execute(row);
+        _focusBox = true;
+    }
+
+    private void Edit(CommentRow row)
+    {
+        Vm.EditCommand.Execute(row);
+        _focusBox = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusBox && Vm.CanCompose)
+        {
+            _focusBox = false;
+            await _box.FocusAsync();
+        }
+
+        if (_select is not { } selection) return;
+
+        _select = null;
+        await Js.InvokeVoidAsync("ppComments.select", _box, selection.Start, selection.End);
+    }
+
+    public void Dispose()
+    {
+        Vm.PropertyChanged -= OnChanged;
+        Vm.TagEditor.PropertyChanged -= OnChanged;
+    }
+}

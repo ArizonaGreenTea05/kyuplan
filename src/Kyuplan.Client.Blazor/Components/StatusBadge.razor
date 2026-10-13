@@ -1,0 +1,13 @@
+@* Qualification status of a member against the current filter: a mark (filled, half, hollow) and its name. *@
+<span class="status @Css" title="@Display.StatusTip(Status)">@Display.Status(Status)</span>
+
+@code {
+    [Parameter] public QualificationStatus Status { get; set; }
+
+    private string Css => Status switch
+    {
+        QualificationStatus.Qualified => "ok",
+        QualificationStatus.BelowThreshold => "warn",
+        _ => "muted",
+    };
+}

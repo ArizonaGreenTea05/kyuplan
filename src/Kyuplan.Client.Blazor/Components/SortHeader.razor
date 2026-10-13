@@ -1,0 +1,25 @@
+<th scope="col" class="@Class" aria-sort="@AriaSort">
+    <button type="button" class="sort" @onclick="() => Vm.SortByCommand.Execute(Key)">
+        @Label
+        @if (Vm.SortKey == Key)
+        {
+            <Icon Name="@(Vm.SortDescending ? "down" : "up")" Size="14" />
+        }
+    </button>
+    @ChildContent
+</th>
+
+@code {
+    [Parameter, EditorRequired] public AttendanceStatisticsViewModel Vm { get; set; } = default!;
+
+    [Parameter, EditorRequired] public MemberSortKey Key { get; set; }
+
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Extra content under the sort button, e.g. the label of the required-attendance line.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string AriaSort => Vm.SortKey != Key ? "none" : Vm.SortDescending ? "descending" : "ascending";
+}

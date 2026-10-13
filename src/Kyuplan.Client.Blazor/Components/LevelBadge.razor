@@ -1,0 +1,18 @@
+@* Engagement score with its band. The meter shows the band by shape, so it does not rely on colour alone. *@
+<span class="level level-@Css" title="@Strings.Col_EngagementTip">
+    <i class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i></i>
+    <b>@Member.EngagementScore</b>
+    <span>@Member.LevelText</span>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public MemberRowViewModel Member { get; set; } = default!;
+
+    private string Css => Member.Level switch
+    {
+        EngagementLevel.Excellent => "excellent",
+        EngagementLevel.Good => "good",
+        EngagementLevel.Irregular => "irregular",
+        _ => "risk",
+    };
+}

@@ -1,0 +1,229 @@
+@implements IDisposable
+@using System.ComponentModel
+
+@* The settings as cards: the same on the setup screen and on the settings page. Each field says what is wrong with it as soon as it is. *@
+
+<section class="card card-form" aria-labelledby="set-databases">
+    <h2 id="set-databases">@Strings.Settings_DatabasesTitle</h2>
+
+    <label class="field">
+        <span>@Strings.Settings_DatabasePath</span>
+        <input type="text" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.DatabasePath" @bind:event="oninput" />
+        @if (Form.DatabasePathProblem is { } problem)
+        {
+            <p class="field-error" role="alert">@problem</p>
+        }
+        else
+        {
+            <small>@Strings.Settings_DatabasePathHint</small>
+        }
+    </label>
+
+    <label class="field">
+        <span>@Strings.Settings_AccountsDatabasePath</span>
+        <input type="text" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.AccountsDatabasePath" @bind:event="oninput" />
+        @if (Form.AccountsDatabasePathProblem is { } accountsProblem)
+        {
+            <p class="field-error" role="alert">@accountsProblem</p>
+        }
+        else
+        {
+            <small>@Strings.Settings_AccountsDatabasePathHint</small>
+        }
+    </label>
+</section>
+
+<section class="card card-form" aria-labelledby="set-spond">
+    <h2 id="set-spond">@Strings.Settings_SpondTitle</h2>
+
+    <label class="check">
+        <input type="checkbox" disabled="@Disabled" @bind="Form.UseDemoData" />
+        <span>@Strings.Settings_UseDemoData<small>@Strings.Settings_UseDemoDataHint</small></span>
+    </label>
+
+    @if (!Form.UseDemoData)
+    {
+        <div class="grid two">
+            <label class="field">
+                <span>@Strings.Settings_SpondEmail</span>
+                <input type="email" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.SpondEmail" @bind:event="oninput" />
+            </label>
+
+            <label class="field">
+                <span>@Strings.Settings_SpondPhone</span>
+                <input type="tel" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.SpondPhoneNumber" @bind:event="oninput" />
+            </label>
+        </div>
+
+        <label class="field">
+            <span>@Strings.Settings_SpondPassword</span>
+            <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="Form.SpondPassword" />
+            @if (Form.SpondProblem is { } spondProblem)
+            {
+                <p class="field-error" role="alert">@spondProblem</p>
+            }
+            else
+            {
+                <small>@(Form.HasSpondPassword ? Strings.Settings_SpondPasswordStored : Strings.Settings_SpondPasswordMissing)</small>
+            }
+        </label>
+
+        <h3>@Strings.Settings_BackupAccounts</h3>
+        <p class="hint">@Strings.Settings_BackupAccountsHint</p>
+
+        @foreach (var account in Form.BackupAccounts)
+        {
+            <div class="grid two">
+                <label class="field">
+                    <span>@Strings.Settings_SpondEmail</span>
+                    <input type="email" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="account.Email" @bind:event="oninput" />
+                </label>
+
+                <label class="field">
+                    <span>@Strings.Settings_SpondPhone</span>
+                    <input type="tel" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="account.PhoneNumber" @bind:event="oninput" />
+                </label>
+            </div>
+
+            <div class="grid two">
+                <label class="field">
+                    <span>@Strings.Settings_SpondPassword</span>
+                    <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="account.Password" />
+                    @if (account.HasPassword)
+                    {
+                        <small>@Strings.Settings_SpondPasswordStored</small>
+                    }
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => Form.RemoveBackupAccountCommand.Execute(account)">@Strings.Settings_BackupRemove</button>
+                </div>
+            </div>
+        }
+
+        @if (Form.BackupProblem is { } backupProblem)
+        {
+            <p class="field-error" role="alert">@backupProblem</p>
+        }
+
+        <div class="form-actions">
+            <button type="button" class="btn secondary" disabled="@(Disabled || Form.BackupAccounts.Count >= SettingsRules.MaxBackupAccounts)" @onclick="() => Form.AddBackupAccountCommand.Execute(null)">@Strings.Settings_BackupAdd</button>
+        </div>
+
+        <label class="check">
+            <input type="checkbox" disabled="@Disabled" @bind="Form.IgnoreAdministrators" />
+            <span>@Strings.Settings_IgnoreAdministrators<small>@Strings.Settings_IgnoreAdministratorsHint</small></span>
+        </label>
+    }
+</section>
+
+<section class="card card-form" aria-labelledby="set-statistics">
+    <h2 id="set-statistics">@Strings.Settings_StatisticsTitle</h2>
+
+    <div class="grid two">
+        <label class="field">
+            <span>@Strings.Settings_TimeZone</span>
+            <input type="text" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.TimeZone" @bind:event="oninput" />
+            @if (Form.TimeZoneProblem is { } zoneProblem)
+            {
+                <p class="field-error" role="alert">@zoneProblem</p>
+            }
+            else
+            {
+                <small>@Strings.Settings_TimeZoneHint</small>
+            }
+        </label>
+
+        <label class="field">
+            <span>@Strings.Settings_ExamKeyword</span>
+            <input type="text" autocomplete="off" maxlength="@SettingsRules.MaxTextLength" disabled="@Disabled" @bind="Form.ExamKeyword" @bind:event="oninput" />
+            <small>@Strings.Settings_ExamKeywordHint</small>
+        </label>
+    </div>
+
+    <div class="grid two">
+        <label class="field">
+            <span>@Strings.Settings_MinAttendance</span>
+            <input type="number" min="0" max="100" disabled="@Disabled" @bind="Form.DefaultMinAttendancePercent" />
+            @if (Form.PercentProblem is { } percentProblem)
+            {
+                <p class="field-error" role="alert">@percentProblem</p>
+            }
+        </label>
+
+        <label class="field">
+            <span>@Strings.Settings_MinInvited</span>
+            <input type="number" min="0" max="1000" disabled="@Disabled" @bind="Form.DefaultMinInvitedEvents" />
+            @if (Form.InvitedEventsProblem is { } invitedProblem)
+            {
+                <p class="field-error" role="alert">@invitedProblem</p>
+            }
+        </label>
+    </div>
+</section>
+
+<section class="card card-form" aria-labelledby="set-sync">
+    <h2 id="set-sync">@Strings.Settings_SyncTitle</h2>
+
+    <label class="check">
+        <input type="checkbox" disabled="@Disabled" @bind="Form.SyncEnabled" />
+        <span>@Strings.Settings_SyncEnabled<small>@Strings.Settings_SyncEnabledHint</small></span>
+    </label>
+
+    @if (Form.SyncEnabled)
+    {
+        <label class="field">
+            <span>@Strings.Settings_SyncInterval</span>
+            <input type="number" min="0" max="@SettingsRules.MaxSyncIntervalMinutes" disabled="@Disabled" @bind="Form.SyncIntervalMinutes" />
+            @if (Form.SyncIntervalProblem is { } intervalProblem)
+            {
+                <p class="field-error" role="alert">@intervalProblem</p>
+            }
+            else
+            {
+                <small>@Strings.Settings_SyncIntervalHint</small>
+            }
+        </label>
+    }
+</section>
+
+<section class="card card-form" aria-labelledby="set-security">
+    <h2 id="set-security">@Strings.Settings_SecurityTitle</h2>
+
+    <label class="field">
+        <span>@Strings.Settings_AllowedHosts</span>
+        <input type="text" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.AllowedHosts" @bind:event="oninput" />
+        @if (Form.AllowedHostsProblem is { } hostsProblem)
+        {
+            <p class="field-error" role="alert">@hostsProblem</p>
+        }
+        else
+        {
+            <small>@Strings.Settings_AllowedHostsHint</small>
+        }
+    </label>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public SettingsForm Form { get; set; } = default!;
+
+    [Parameter] public bool Disabled { get; set; }
+
+    private SettingsForm? _observed;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_observed, Form)) return;
+
+        if (_observed is not null) _observed.PropertyChanged -= OnFormChanged;
+        _observed = Form;
+        _observed.PropertyChanged += OnFormChanged;
+    }
+
+    private void OnFormChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_observed is not null) _observed.PropertyChanged -= OnFormChanged;
+    }
+}

@@ -1,0 +1,24 @@
+<Window x:Class="Kyuplan.Client.WpfApp.ApiAddressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+        Title="kyuplan"
+        Width="460" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+
+    <StackPanel Margin="36,28,36,28">
+        <TextBlock Text="{loc:Loc ApiAddress_Title}" Style="{StaticResource PageTitleText}" />
+        <TextBlock Text="{loc:Loc ApiAddress_Lede}" Style="{StaticResource LedeText}" Margin="0,4,0,20" />
+
+        <TextBlock Text="{loc:Loc ApiAddress_Label}" Style="{StaticResource FieldLabelText}" />
+        <TextBox x:Name="AddressBox" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBlock Text="{loc:Loc ApiAddress_Invalid}" Style="{StaticResource ProblemText}"
+                   Visibility="{Binding HasProblem, Converter={StaticResource BoolToVisibility}}" />
+
+        <DockPanel Margin="0,22,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right" MinWidth="110" IsDefault="True" Command="{Binding AcceptCommand}"
+                    Content="{loc:Loc ApiAddress_Save}" Style="{StaticResource AccentButtonStyle}" />
+            <Button DockPanel.Dock="Right" MinWidth="90" Margin="0,0,10,0" IsCancel="True" Content="{loc:Loc ApiAddress_Cancel}" />
+        </DockPanel>
+    </StackPanel>
+</Window>

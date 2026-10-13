@@ -1,0 +1,252 @@
+@page "/members"
+@inherits ViewModelComponent<MembersViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.MemberPage_Lede</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.IsShowingComments)
+        {
+            @* The comments on one member take the place of the list until the user goes back. *@
+            <MemberComments Vm="Vm.Comments" OnClose="() => Vm.CloseCommentsCommand.Execute(null)" />
+        }
+        else
+        {
+        if (Vm.CanEdit && Vm.IsFormOpen)
+        {
+            <form class="card card-form" aria-labelledby="member-form-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="member-form-title">@Vm.FormTitle</h2>
+
+                <div class="grid two">
+                    <label class="field">
+                        <span>@Strings.Belts_ColBelt</span>
+                        <select @ref="_beltSelect" value="@BeltKey(Vm.FormBelt)" @onchange="OnBeltChanged">
+                            @foreach (var option in Vm.BeltOptions)
+                            {
+                                <option value="@BeltKey(option)">@option.Label</option>
+                            }
+                        </select>
+                    </label>
+
+                    <div class="field">
+                        <label for="member-started">@Strings.MemberPage_ColStarted</label>
+                        <div class="color-row">
+                            <input id="member-started" type="date" min="@MemberRules.EarliestStart.ToString("yyyy-MM-dd")"
+                                   @bind="Vm.FormStartedAt" @bind:event="onchange" />
+                            <button type="button" class="btn ghost" disabled="@(!Vm.ClearStartedAtCommand.CanExecute(null))"
+                                    @onclick="() => Vm.ClearStartedAtCommand.Execute(null)">@Strings.MemberPage_ClearStarted</button>
+                        </div>
+                        @if (Vm.StartedAtProblem is { } startedProblem)
+                        {
+                            <p class="field-error" role="alert">@startedProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.MemberPage_FormStartedHint</small>
+                        }
+                    </div>
+
+                    <div class="field">
+                        <label for="member-belt-since">@Strings.MemberPage_ColBeltSince</label>
+                        <div class="color-row">
+                            <input id="member-belt-since" type="date" min="@MemberRules.EarliestStart.ToString("yyyy-MM-dd")"
+                                   disabled="@(!Vm.CanSetBeltSince)" @bind="Vm.FormBeltSince" @bind:event="onchange" />
+                            <button type="button" class="btn ghost" disabled="@(!Vm.ClearBeltSinceCommand.CanExecute(null))"
+                                    @onclick="() => Vm.ClearBeltSinceCommand.Execute(null)">@Strings.MemberPage_ClearStarted</button>
+                        </div>
+                        @if (Vm.BeltSinceProblem is { } beltSinceProblem)
+                        {
+                            <p class="field-error" role="alert">@beltSinceProblem</p>
+                        }
+                        else
+                        {
+                            <small>@(Vm.CanSetBeltSince ? Strings.MemberPage_FormBeltSinceHint : Strings.MemberPage_BeltSinceNeedsBelt)</small>
+                        }
+                    </div>
+
+                    <div class="field">
+                        <label for="member-birth">@Strings.MemberPage_ColBirth</label>
+                        <div class="color-row">
+                            <input id="member-birth" type="date" min="@MemberRules.EarliestBirth.ToString("yyyy-MM-dd")"
+                                   @bind="Vm.FormBirthDate" @bind:event="onchange" />
+                            <button type="button" class="btn ghost" disabled="@(!Vm.ClearBirthDateCommand.CanExecute(null))"
+                                    @onclick="() => Vm.ClearBirthDateCommand.Execute(null)">@Strings.MemberPage_ClearBirth</button>
+                        </div>
+                        @if (Vm.BirthDateProblem is { } birthProblem)
+                        {
+                            <p class="field-error" role="alert">@birthProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.MemberPage_FormBirthHint</small>
+                        }
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.SaveCommand.CanExecute(null))">@Strings.MemberPage_Save</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelFormCommand.Execute(null)">@Strings.MemberPage_Cancel</button>
+                </div>
+            </form>
+        }
+
+        if (Vm.IsNobodyHere)
+        {
+            <p class="empty">@Strings.Members_NobodyHere</p>
+        }
+        else if (Vm.Members.Count > 0)
+        {
+            // the comments and the form are for those who may use them: without either there is no column of buttons
+            var hasActions = Vm.CanViewComments || Vm.CanEdit;
+            <article class="card results">
+                <div class="card-head">
+                    <div class="toolbar">
+                        <label class="search">
+                            <Icon Name="search" Size="16" />
+                            <input type="search" placeholder="@Strings.Stats_FindMember" aria-label="@Strings.Stats_FindMember"
+                                   @bind="Vm.SearchText" @bind:event="oninput" />
+                        </label>
+                        <label class="check inline">
+                            <input type="checkbox" @bind="Vm.OnlyWithoutBelt" />
+                            <span>@Strings.MemberPage_OnlyWithoutBelt</span>
+                        </label>
+                    </div>
+                    <small class="count" role="status">@Vm.CountText</small>
+                </div>
+
+                @if (Vm.NoneMatch)
+                {
+                    <p class="empty-inline pad">@Strings.MemberPage_NoneMatch</p>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>@Strings.Col_Member</th>
+                                    <th>@Strings.Belts_ColBelt</th>
+                                    <th>@Strings.MemberPage_ColStarted</th>
+                                    <th>@Strings.MemberPage_ColBeltSince</th>
+                                    <th>@Strings.MemberPage_ColBirth</th>
+                                    @if (hasActions)
+                                    {
+                                        <th></th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var member in Vm.VisibleMembers)
+                                {
+                                    <tr @key="member.Id">
+                                        <td><strong>@member.Name</strong></td>
+                                        <td>
+                                            <div class="belt-name">
+                                                @if (member.HasBelt)
+                                                {
+                                                    <i class="belt" style="@BeltStyle(member.Belt)" aria-hidden="true"></i>
+                                                    <span>@member.Belt.Label</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="none">@member.Belt.Label</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td class="@(member.Member.StartedAt is null ? "none" : "")">@member.StartedText</td>
+                                        <td class="@(!member.HasBelt || member.Member.BeltSince is null ? "none" : "")">@member.BeltSinceText</td>
+                                        <td class="@(member.Member.BirthDate is null ? "none" : "")">@member.BirthText</td>
+                                        @if (hasActions)
+                                        {
+                                            <td class="row-actions">
+                                                @if (Vm.CanViewComments)
+                                                {
+                                                    <button type="button" class="btn ghost" aria-label="@($"{Strings.MemberPage_Comments}: {member.Name}")"
+                                                            disabled="@(!Vm.OpenCommentsCommand.CanExecute(member))" @onclick="() => Vm.OpenCommentsCommand.ExecuteAsync(member)">
+                                                        <Icon Name="message" /><span>@member.CommentsText</span>
+                                                    </button>
+                                                }
+                                                @if (Vm.CanEdit)
+                                                {
+                                                    <button type="button" class="btn ghost" aria-label="@($"{Strings.MemberPage_Edit}: {member.Name}")"
+                                                            disabled="@(!Vm.BeginEditCommand.CanExecute(member))" @onclick="() => BeginEdit(member)">
+                                                        <Icon Name="edit" /><span>@Strings.MemberPage_Edit</span>
+                                                    </button>
+                                                }
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </article>
+        }
+        }
+    </PageGate>
+</section>
+
+@code {
+    private ElementReference _beltSelect;
+    private bool _focusBelt;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    // Opening the form puts the cursor in its first field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusBelt || !Vm.IsFormOpen) return;
+
+        _focusBelt = false;
+        await _beltSelect.FocusAsync();
+    }
+
+    private void BeginEdit(MemberRow member)
+    {
+        _focusBelt = true;
+        Vm.BeginEditCommand.Execute(member);
+    }
+
+    /// <summary>Only when the list could not be loaded: a failed save is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    /// <summary>A select holds text, so a belt is told by its id (empty for "no belt").</summary>
+    private static string BeltKey(BeltOption? option) => option?.Id?.ToString() ?? "";
+
+    private void OnBeltChanged(ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString() ?? "";
+        Vm.FormBelt = Vm.BeltOptions.FirstOrDefault(o => BeltKey(o) == key) ?? Vm.BeltOptions[0];
+    }
+
+    private static string BeltStyle(BeltOption belt) =>
+        $"--c:{(BeltRules.IsColor(belt.Color) ? belt.Color : "transparent")};--s:{(BeltRules.IsColor(belt.SecondaryColor) ? belt.SecondaryColor : "transparent")}";
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

@@ -1,0 +1,46 @@
+@implements IDisposable
+@using System.ComponentModel
+
+@* The body of a page: shown only to a user who may use the page, so a page opened by its address does not show (or load) what the user may not see. *@
+@if (Page.Shell.CurrentUser is null)
+{
+    @* Who is signed in is not known yet; the layout is asking. *@
+    <ErrorBanner Message="@Page.ErrorMessage" />
+}
+else if (!Page.CanView)
+{
+    <p class="empty">@Strings.Page_NotAllowed</p>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter, EditorRequired] public PageViewModel Page { get; set; } = default!;
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private ShellViewModel? _observed;
+
+    // The page re-renders for what its own view model announces (also when the permissions change); this is for the moment the shell learns
+    // who is signed in, which a user without any permission does not announce on the page.
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_observed, Page.Shell)) return;
+
+        if (_observed is not null) _observed.PropertyChanged -= OnShellChanged;
+        _observed = Page.Shell;
+        _observed.PropertyChanged += OnShellChanged;
+    }
+
+    private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(ShellViewModel.CurrentUser)) _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (_observed is not null) _observed.PropertyChanged -= OnShellChanged;
+    }
+}

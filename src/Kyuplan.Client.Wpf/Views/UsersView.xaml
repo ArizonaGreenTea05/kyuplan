@@ -1,0 +1,283 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.UsersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
+
+    <UserControl.Resources>
+        <!-- The page's data context for the columns of the grid, which are not in the visual tree. -->
+        <ctl:BindingProxy x:Key="Page" Data="{Binding}" />
+
+        <Style x:Key="GridHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DefaultDataGridColumnHeaderStyle}">
+            <Setter Property="Padding" Value="8,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- The list is the page's main content, so it only shows once there is something in it: before that comes the reason
+             the users could not be loaded. -->
+        <Style x:Key="ListCard" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+            <Setter Property="Padding" Value="0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Users.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The roles: administrators stand out in the accent colour. -->
+        <Style x:Key="RolePill" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasAdministratorRole}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,6,24,32">
+
+                <!-- Title + new user -->
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Command="{Binding BeginCreateCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                            <TextBlock Text="{loc:Loc Users_New}" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                        <TextBlock Text="{loc:Loc Users_Lede}" Style="{StaticResource LedeText}" />
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Somebody who may not see the users gets here only by a mistake of the navigation: the API would refuse them anyway. -->
+                <TextBlock Margin="0,40,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center" MaxWidth="560"
+                           Text="{loc:Loc Page_NotAllowed}"
+                           Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                <StackPanel Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+
+                    <!-- What went wrong / what was achieved. Trying again only makes sense while there is no list: a failed save or
+                         delete is not helped by loading again. -->
+                    <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                    Visibility="{Binding Users.Count, Converter={StaticResource ZeroToVisible}}" />
+                            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </Border>
+
+                    <!-- The form: a new user, or the one being edited. A PasswordBox cannot be bound: the code-behind copies it over. -->
+                    <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding FormTitle}" Style="{StaticResource SectionTitleText}" />
+
+                            <StackPanel HorizontalAlignment="Left" Width="480">
+                                <TextBlock Text="{loc:Loc Users_FormUserName}" Style="{StaticResource FieldLabelText}" />
+                                <TextBox x:Name="UserNameBox" MaxLength="{x:Static contracts:AccountRules.MaxUserNameLength}"
+                                         AutomationProperties.Name="{loc:Loc Users_FormUserName}"
+                                         Text="{Binding FormUserName, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{Binding UserNameProblem}" Style="{StaticResource ProblemText}"
+                                           Visibility="{Binding UserNameProblem, Converter={StaticResource StringToVisibility}}" />
+
+                                <TextBlock Text="{loc:Loc Account_DisplayName}" Style="{StaticResource FieldLabelText}" Margin="0,14,0,4" />
+                                <TextBox MaxLength="{x:Static contracts:AccountRules.MaxDisplayNameLength}"
+                                         AutomationProperties.Name="{loc:Loc Account_DisplayName}"
+                                         Text="{Binding FormDisplayName, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{Binding DisplayNameProblem}" Style="{StaticResource ProblemText}"
+                                           Visibility="{Binding DisplayNameProblem, Converter={StaticResource StringToVisibility}}" />
+                                <TextBlock Text="{loc:Loc Account_DisplayNameHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                                <TextBlock Text="{loc:Loc Account_Aliases}" Style="{StaticResource FieldLabelText}" Margin="0,14,0,4" />
+                                <TextBox AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                                         AutomationProperties.Name="{loc:Loc Account_Aliases}"
+                                         Text="{Binding FormAliases, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{Binding AliasesProblem}" Style="{StaticResource ProblemText}" TextWrapping="Wrap"
+                                           Visibility="{Binding AliasesProblem, Converter={StaticResource StringToVisibility}}" />
+                                <TextBlock Text="{Binding AliasesHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+
+                                <TextBlock Text="{loc:Loc Users_FormPassword}" Style="{StaticResource FieldLabelText}" Margin="0,14,0,4" />
+                                <ctl:RevealPasswordBox x:Name="FormPasswordBox" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
+                                             AutomationProperties.Name="{loc:Loc Users_FormPassword}"
+                                             PasswordChanged="OnPasswordChanged" />
+                                <TextBlock Text="{Binding PasswordProblem}" Style="{StaticResource ProblemText}"
+                                           Visibility="{Binding PasswordProblem, Converter={StaticResource StringToVisibility}}" />
+                                <TextBlock Text="{Binding PasswordHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                            </StackPanel>
+
+                            <!-- Roles and own permissions: only for somebody who may give them. -->
+                            <StackPanel Margin="0,20,0,0" Visibility="{Binding CanGrant, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{loc:Loc Users_FormRoles}" Style="{StaticResource FieldLabelText}" />
+                                <TextBlock Text="{loc:Loc Users_FormRolesHint}" Style="{StaticResource MutedText}" Margin="0,0,0,8" />
+                                <ItemsControl ItemsSource="{Binding RoleChoices}" Focusable="False" KeyboardNavigation.TabNavigation="Continue">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:RoleChoice}">
+                                            <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsEnabled}" Margin="0,0,24,6"
+                                                      AutomationProperties.Name="{Binding Name}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                                    <TextBlock Text="{loc:Loc Roles_AllPermissions}" Style="{StaticResource MutedText}"
+                                                               Visibility="{Binding IsSystem, Converter={StaticResource BoolToVisibility}}" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="{loc:Loc Users_FormOnlyAdminHint}" Style="{StaticResource MutedText}" Margin="0,2,0,0"
+                                           Visibility="{Binding HasLockedRole, Converter={StaticResource BoolToVisibility}}" />
+
+                                <TextBlock Text="{loc:Loc Users_FormPermissions}" Style="{StaticResource FieldLabelText}" Margin="0,16,0,0" />
+                                <TextBlock Text="{loc:Loc Users_FormPermissionsHint}" Style="{StaticResource MutedText}" />
+                                <TextBlock Text="{loc:Loc Roles_FormPermissionsHint}" Style="{StaticResource MutedText}" Margin="0,0,0,8" />
+                                <ctl:PermissionPicker DataContext="{Binding Picker}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" IsDefault="True">
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{loc:Loc Users_Save}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCreating}" Value="True">
+                                                        <Setter Property="Text" Value="{loc:Loc Users_Create}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                                <Button Command="{Binding CancelFormCommand}" Content="{loc:Loc Users_Cancel}" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Nothing is deleted before this question is answered -->
+                    <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BoolToVisibility}}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                <Button Command="{Binding ConfirmDeleteCommand}" Content="{loc:Loc Users_ConfirmYes}" />
+                                <Button Command="{Binding CancelDeleteCommand}" Content="{loc:Loc Users_Cancel}" Margin="8,0,0,0" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding ConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+
+                    <!-- The users, by name -->
+                    <Border Style="{StaticResource ListCard}" Margin="0,16,0,0">
+                        <DataGrid ItemsSource="{Binding Users}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False" CanUserSortColumns="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" MinRowHeight="52" FontSize="13"
+                                  ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single"
+                                  KeyboardNavigation.TabNavigation="Continue"
+                                  Background="Transparent" BorderThickness="0"
+                                  AutomationProperties.Name="{loc:Loc Nav_Users}" PreviewMouseWheel="OnGridMouseWheel">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="{loc:Loc Users_ColUserName}" Width="*" MinWidth="200">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel VerticalAlignment="Center" Margin="8,0">
+                                                <TextBlock Text="{Binding UserName}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding UserName}" />
+                                                <TextBlock Text="{loc:Loc Users_SignedIn}" Style="{StaticResource MutedText}"
+                                                           Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Users_ColDisplayName}" Width="*" MinWidth="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" Margin="8,0"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayName}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Users_ColAliases}" Width="*" MinWidth="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding AliasesText}" VerticalAlignment="Center" Margin="8,0"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding AliasesText}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Users_ColRole}" Width="*" MinWidth="160">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource RolePill}" Margin="8,4">
+                                                <TextBlock Text="{Binding RolesText}" TextWrapping="Wrap" ToolTip="{Binding RolesText}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Wide enough for both buttons in both languages: an automatic width is not worked out again when the language changes.
+                                     Somebody who may neither change nor delete users has no use for the column. -->
+                                <DataGridTemplateColumn Width="200" MinWidth="190">
+                                    <DataGridTemplateColumn.Visibility>
+                                        <MultiBinding Converter="{StaticResource AnyToVisibility}">
+                                            <Binding Path="Data.CanEdit" Source="{StaticResource Page}" />
+                                            <Binding Path="Data.CanDeleteUsers" Source="{StaticResource Page}" />
+                                        </MultiBinding>
+                                    </DataGridTemplateColumn.Visibility>
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                <Button Content="{loc:Loc Users_Edit}"
+                                                        Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}"
+                                                        Visibility="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BoolToVisibility}}" />
+                                                <!-- Everybody but oneself can be deleted: the button is off for the own row, and its tooltip says why. -->
+                                                <Button Content="{loc:Loc Users_Delete}" Margin="8,0,0,0"
+                                                        Command="{Binding DataContext.AskDeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" ToolTipService.ShowOnDisabled="True"
+                                                        Visibility="{Binding DataContext.CanDeleteUsers, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BoolToVisibility}}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                    <Setter Property="ToolTip" Value="{loc:Loc Users_DeleteSelfHint}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                </Button>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</UserControl>

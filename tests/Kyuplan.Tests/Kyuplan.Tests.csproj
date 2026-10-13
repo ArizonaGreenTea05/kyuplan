@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <!-- Part of the Windows desktop framework in the WPF client, a package everywhere else. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+
+  <!-- The WPF project targets net10.0-windows and cannot be referenced from here, so the classes of it that have tests and need no
+       WPF (the encrypted login file, the shades of the accent colour, the check of SVG logos, the navigation) are compiled into this
+       project as well. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\DpapiLoginStore.cs" Link="Wpf\DpapiLoginStore.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\AccentShades.cs" Link="Wpf\AccentShades.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\SvgSafety.cs" Link="Wpf\SvgSafety.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Wpf\ViewModels\MainViewModel.cs" Link="Wpf\MainViewModel.cs" />
+  </ItemGroup>
+
+  <!-- The XAML of the WPF client is read (as text) by DesignContractTests: every design must define what the pages ask the design for. -->
+  <ItemGroup>
+    <None Include="..\..\src\Kyuplan.Client.Wpf\**\*.xaml" Exclude="..\..\src\Kyuplan.Client.Wpf\bin\**;..\..\src\Kyuplan.Client.Wpf\obj\**"
+          Link="WpfXaml\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kyuplan.Api\Kyuplan.Api.csproj" />
+    <ProjectReference Include="..\..\src\Kyuplan.Client.Shared\Kyuplan.Client.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

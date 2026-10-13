@@ -1,0 +1,90 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.SubGroupPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+             x:Name="Root" IsTabStop="False">
+
+    <!-- Picks any number of subgroups. A ComboBox cannot: choosing an entry closes it and shows one entry only. The field
+         names the ticked subgroups; the list holds a tick box per subgroup. "Everyone" is ticked while nothing else is,
+         and unticks the others when chosen. The ticks live in the options (SubGroupOption.IsSelected), so there is no
+         selected value to bind. -->
+    <UserControl.Resources>
+        <!-- A tick box for a bool: filled and ticked when it is true. -->
+        <DataTemplate x:Key="Tick">
+            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1.5" VerticalAlignment="Center"
+                    BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}">
+                <TextBlock x:Name="Mark" Style="{StaticResource GlyphText}" FontSize="11" Text="&#xE73E;" Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center" Visibility="Collapsed" />
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding}" Value="True">
+                    <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- The field: the ticked subgroups by name; a click opens the list. -->
+        <Button x:Name="Trigger" Click="OnTriggerClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                MinHeight="56" Padding="12,6"
+                AutomationProperties.Name="{Binding (AutomationProperties.Name), ElementName=Root}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Summary, ElementName=Root}" Style="{StaticResource BodyStrongTextBlockStyle}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Margin="12,0,0,0" Style="{StaticResource GlyphText}" FontSize="12" Text="&#xE70D;"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Button>
+
+        <!-- The list: "Everyone", then one tick box per subgroup. -->
+        <Popup x:Name="Pop" PlacementTarget="{Binding ElementName=Trigger}" Placement="Bottom" VerticalOffset="4"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+               Opened="OnPopupOpened" Closed="OnPopupClosed">
+            <Border MinWidth="240" Width="{Binding ActualWidth, ElementName=Trigger}" Padding="8" BorderThickness="1"
+                    Background="{DynamicResource ComboBoxDropDownBackground}"
+                    BorderBrush="{DynamicResource ComboBoxDropDownBorderBrush}"
+                    CornerRadius="{DynamicResource OverlayCornerRadius}"
+                    PreviewKeyDown="OnPanelKeyDown" IsKeyboardFocusWithinChanged="OnPanelFocusChanged">
+                <StackPanel>
+                    <Button x:Name="EveryoneRow" Command="{Binding ClearCommand, ElementName=Root}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Background="Transparent" BorderThickness="0" Padding="8,7">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentControl Content="{Binding IsEveryone, ElementName=Root}" ContentTemplate="{StaticResource Tick}"
+                                            Focusable="False" />
+                            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{loc:Loc Stats_Everyone}" />
+                        </StackPanel>
+                    </Button>
+
+                    <ListBox x:Name="List" ItemsSource="{Binding Options, ElementName=Root}" SelectionMode="Multiple"
+                             MaxHeight="336" Margin="0,4,0,0" BorderThickness="0" Background="Transparent"
+                             HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                                <Setter Property="Padding" Value="8,0" />
+                                <Setter Property="MinHeight" Value="0" />
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SubGroupOption}">
+                                <StackPanel Orientation="Horizontal" Margin="0,7">
+                                    <ContentControl Content="{Binding IsSelected}" ContentTemplate="{StaticResource Tick}" Focusable="False" />
+                                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding Name, Mode=OneWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

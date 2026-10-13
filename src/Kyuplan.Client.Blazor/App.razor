@@ -1,0 +1,39 @@
+@inherits ViewModelComponent<SetupViewModel>
+@inject Kyuplan.Client.Api.LoginSession Session
+
+@* Before anything else the API is asked whether it still has to be set up (it has no user yet); if so, the setup replaces the application. *@
+@if (Vm.NeedsSetup)
+{
+    <SetupScreen />
+}
+else if (!Vm.IsChecked && !Vm.HasError)
+{
+    <p class="empty">@Strings.Setup_Checking</p>
+}
+else if (Session.Login is null)
+{
+    <LoginScreen />
+}
+else
+{
+    <Router AppAssembly="typeof(App).Assembly">
+        <Found Context="routeData">
+            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <BrandedTitle Title="@Strings.Shell_NotFoundTitle" />
+            <LayoutView Layout="typeof(MainLayout)">
+                <p class="empty">@Strings.Shell_NotFound <a href="">@Strings.Shell_BackToDashboard</a></p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+}
+
+@code {
+    // The application replaces the login screen as soon as a login was accepted (and the other way round after signing out).
+    protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Session];
+
+    // A failed question is no reason to hold the application back: it shows its own errors.
+    protected override async Task OnInitializedAsync() => await Vm.CheckAsync();
+}

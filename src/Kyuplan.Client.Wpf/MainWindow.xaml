@@ -1,0 +1,252 @@
+<Window x:Class="Kyuplan.Client.WpfApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+        xmlns:views="clr-namespace:Kyuplan.Client.WpfApp.Views"
+        xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+        xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+        Title="{Binding Shell.Brand.WindowTitle}"
+        ctl:RemoteImage.WindowIcon="{Binding Shell.Brand.IconUrl}"
+        Width="1440" Height="880" MinWidth="980" MinHeight="680"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- View-model-first navigation: the page view model picks its view. -->
+        <DataTemplate DataType="{x:Type vm:ExamsViewModel}">
+            <views:ExamsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AttendanceStatisticsViewModel}">
+            <views:AttendanceStatisticsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MembersViewModel}">
+            <views:MembersView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BeltsViewModel}">
+            <views:BeltsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:TagsViewModel}">
+            <views:TagsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AccountViewModel}">
+            <views:AccountView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PreferencesViewModel}">
+            <views:PreferencesView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:UserAdminViewModel}">
+            <views:UsersView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RolesViewModel}">
+            <views:RolesView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BrandingAdminViewModel}">
+            <views:BrandingView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="216" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Navigation pane. In the Windows 11 design it has no fill of its own: Windows' Mica material shows through, as in Windows 11's
+             own apps; the other designs fill it (AppNavPaneBrush). -->
+        <Border Grid.Column="0" Background="{DynamicResource AppNavPaneBrush}" />
+        <Grid Grid.Column="0" Margin="12,4,12,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Logo, as the API says: the one for dark surfaces on the dark theme, the other on the light one. No logo, no space for it. -->
+            <Grid Grid.Row="0" Height="176" HorizontalAlignment="Center" Margin="0,4,0,8"
+                  Visibility="{Binding Shell.Brand.HasLogo, Converter={StaticResource BoolToVisibility}}">
+                <Image ctl:RemoteImage.Source="{Binding Shell.Brand.LogoOnDarkUrl}"
+                       AutomationProperties.Name="{Binding Shell.Brand.LogoDescription}"
+                       Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       Visibility="{Binding Theme.IsDark, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}" />
+                <Image ctl:RemoteImage.Source="{Binding Shell.Brand.LogoUrl}"
+                       AutomationProperties.Name="{Binding Shell.Brand.LogoDescription}"
+                       Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       Visibility="{Binding Theme.IsDark, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVisibility}}" />
+            </Grid>
+
+            <TextBlock Grid.Row="1" Text="{Binding Shell.Brand.ProductName}" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                       Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="17" />
+
+            <ListBox Grid.Row="2" Margin="0,18,0,0" Background="Transparent" BorderThickness="0"
+                     AutomationProperties.Name="{loc:Loc Nav_Main}"
+                     ItemsSource="{Binding Items}" SelectedItem="{Binding MainSelection}"
+                     ItemContainerStyle="{StaticResource NavItem}" />
+
+            <StackPanel Grid.Row="4">
+                <!-- The documentation the user may read; each opens in the browser (the server asks for the login there). -->
+                <ItemsControl ItemsSource="{Binding Shell.HelpLinks}" Margin="0,0,0,6">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Click="OnOpenHelp" Tag="{Binding Address}" HorizontalContentAlignment="Left"
+                                    Background="Transparent" BorderThickness="0" Padding="12,7" Margin="0,0,0,2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE897;" /> <!-- help -->
+                                    <TextBlock Text="{Binding Title}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Only while the server carries a newer version than this program. -->
+                <StackPanel Margin="0,0,0,12" Visibility="{Binding Update.IsUpdateAvailable, Converter={StaticResource BoolToVisibility}}">
+                    <Button Command="{Binding Update.InstallCommand}" ToolTip="{Binding Update.Hint}" Style="{StaticResource AccentButtonStyle}"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12,10">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE896;" /> <!-- download -->
+                            <TextBlock Text="{Binding Update.ButtonText}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding Update.ErrorMessage}" TextWrapping="Wrap" Margin="4,6,4,0" Style="{StaticResource MutedText}"
+                               Visibility="{Binding Update.HasError, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <!-- Administration (only while the user may use one of its pages) and the account, directly above each other. Their pages
+                     fly out to the right like a context menu. -->
+                <Grid Margin="0,0,0,4">
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AdminItems.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Button x:Name="AdminTrigger" Click="OnFlyoutClick" Tag="{Binding ElementName=AdminPop}" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0" Padding="12,9">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource IconTextBlock}" Text="&#xE76C;" Margin="8,0,0,0" /> <!-- chevron right -->
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE713;" /> <!-- settings -->
+                            <TextBlock Text="{loc:Loc Nav_Administration}" FontWeight="SemiBold" />
+                        </DockPanel>
+                    </Button>
+                    <Popup x:Name="AdminPop" PlacementTarget="{Binding ElementName=AdminTrigger}" Placement="Right" HorizontalOffset="4"
+                           StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnFlyoutClosed">
+                        <Border Margin="12" MinWidth="200" Padding="6" CornerRadius="8" BorderThickness="1"
+                                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.3" /></Border.Effect>
+                            <ListBox Background="Transparent" BorderThickness="0" AutomationProperties.Name="{loc:Loc Nav_Administration}"
+                                     ItemsSource="{Binding AdminItems}" SelectedItem="{Binding AdminSelection}"
+                                     ItemContainerStyle="{StaticResource NavItem}" PreviewMouseLeftButtonUp="OnFlyoutPicked" />
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <Grid Margin="0,0,0,10">
+                    <Button x:Name="AccountTrigger" Click="OnFlyoutClick" Tag="{Binding ElementName=AccountPop}" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0" Padding="12,9"
+                            ToolTip="{Binding SignedInText}">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource IconTextBlock}" Text="&#xE76C;" Margin="8,0,0,0" />
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE77B;" /> <!-- contact -->
+                            <TextBlock Text="{loc:Loc Nav_Account}" FontWeight="SemiBold" />
+                        </DockPanel>
+                    </Button>
+                    <Popup x:Name="AccountPop" PlacementTarget="{Binding ElementName=AccountTrigger}" Placement="Right" HorizontalOffset="4"
+                           StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnFlyoutClosed">
+                        <Border Margin="12" MinWidth="200" Padding="6" CornerRadius="8" BorderThickness="1"
+                                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <Border.Effect><DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.3" /></Border.Effect>
+                            <StackPanel>
+                                <ListBox Background="Transparent" BorderThickness="0" AutomationProperties.Name="{loc:Loc Nav_Account}"
+                                         ItemsSource="{Binding AccountItems}" SelectedItem="{Binding AccountSelection}"
+                                         ItemContainerStyle="{StaticResource NavItem}" PreviewMouseLeftButtonUp="OnFlyoutPicked" />
+                                <Button Click="OnSignOut" HorizontalContentAlignment="Left" ToolTip="{loc:Loc Shell_SignOutHint}"
+                                        Background="Transparent" BorderThickness="0" Padding="14,9" Margin="0,2,0,0" HorizontalAlignment="Stretch">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE7E8;" /> <!-- power: sign out -->
+                                        <TextBlock Text="{loc:Loc Shell_SignOut}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                </Grid>
+
+                <TextBlock Text="{Binding Shell.ApiVersionText}" Style="{StaticResource MutedText}" Margin="12,0,0,0" />
+
+                <!-- Fixed, not branding: stays visible whatever the instance's branding says. -->
+                <StackPanel Orientation="Horizontal" Margin="12,8,0,0" Opacity="0.6">
+                    <Image Source="pack://application:,,,/Assets/watermark.ico" Width="16" Height="16" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Style="{StaticResource MutedText}" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center">powered by <Hyperlink NavigateUri="{Binding Shell.RepositoryUrl, Mode=OneWay}" RequestNavigate="OnOpenRepository">kyuplan</Hyperlink></TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+
+        <!-- Content layer: a rounded, slightly lighter sheet over the Mica pane, like WinUI's NavigationView. -->
+        <Border Grid.Column="1" CornerRadius="{DynamicResource AppContentCornerRadius}" BorderThickness="{DynamicResource AppContentBorderThickness}"
+                Background="{DynamicResource LayerFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Top bar: group picker, demo marker, refresh. Group and refresh are of no use to somebody who may use no page that shows
+                     what Spond knows. -->
+                <DockPanel Grid.Row="0" Margin="24,14,24,12" LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left" Text="{loc:Loc Shell_Group}" Style="{StaticResource FieldLabelText}"
+                               VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13"
+                               Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}" />
+                    <ComboBox DockPanel.Dock="Left" MinWidth="300"
+                              ItemsSource="{Binding Shell.Groups}" SelectedValuePath="Id"
+                              SelectedValue="{Binding Shell.SelectedGroupId}"
+                              Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding MemberCount, StringFormat=' ({0})'}"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <Button DockPanel.Dock="Right" Command="{Binding Shell.RefreshDataCommand}" ToolTip="{loc:Loc Shell_RefreshHint}"
+                            Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE72C;" />
+                            <TextBlock Text="{loc:Loc Shell_Refresh}" />
+                        </StackPanel>
+                    </Button>
+                    <Border DockPanel.Dock="Right" Style="{StaticResource DemoChip}" Margin="0,0,12,0"
+                            Visibility="{Binding Shell.IsDemoData, Converter={StaticResource BoolToVisibility}}"
+                            ToolTip="{loc:Loc Shell_DemoDataHint}">
+                        <TextBlock Text="{loc:Loc Shell_DemoData}" />
+                    </Border>
+                </DockPanel>
+
+                <!-- Connection / loading problems of the shell (the pages show their own) -->
+                <Border Grid.Row="1" Style="{StaticResource BannerBorder}" Margin="24,0,24,6"
+                        Visibility="{Binding Shell.HasError, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding Shell.RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0" />
+                        <TextBlock Text="{Binding Shell.ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+
+                <ContentControl Grid.Row="2" Content="{Binding SelectedItem.Page}" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

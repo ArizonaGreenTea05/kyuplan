@@ -1,0 +1,7 @@
+<Application x:Class="Kyuplan.Client.WpfApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- No resources and no theme here on purpose: the look depends on the design the user picked (Windows 11, Windows 10, Aero, native).
+         ThemeService.Initialize switches on the theme for it (Application.ThemeMode: the Fluent theme that ships with WPF is only the
+         design "Windows 11"), loads Themes/Design.*.xaml, then Themes/Styles.xaml, and adds the colours and the data palette. -->
+</Application>

@@ -1,0 +1,32 @@
+@* Plain CSS column chart; each bar's height is --f (0–1) of the plot area. *@
+@if (Bars.Count == 0)
+{
+    <p class="empty-inline">@Strings.Chart_Empty</p>
+}
+else
+{
+    <div class="barchart @(Thresholded ? "thresholded" : "")" role="img" aria-label="@Label">
+        @foreach (var bar in Bars)
+        {
+            <div class="col @(bar.IsHighlighted ? "hi" : "")" title="@bar.Tooltip">
+                <div class="plot">
+                    <span class="val">@bar.Value</span>
+                    <span class="bar" style="--f:@CssNum.Num(bar.Fraction)"></span>
+                </div>
+                <span class="lbl">@bar.Label</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<BarViewModel> Bars { get; set; } = [];
+
+    [Parameter] public string Label { get; set; } = "";
+
+    /// <summary>
+    /// The highlighted bars are the ones that reach the required attendance; the rest are drawn grey.
+    /// Without it every bar is a plain attendance figure and drawn in the brand colour.
+    /// </summary>
+    [Parameter] public bool Thresholded { get; set; }
+}

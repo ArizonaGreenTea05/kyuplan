@@ -1,0 +1,59 @@
+<Window x:Class="Kyuplan.Client.WpfApp.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+        xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+        Title="{Binding Brand.WindowTitle, RelativeSource={RelativeSource Self}}"
+        ctl:RemoteImage.WindowIcon="{Binding Brand.IconUrl, RelativeSource={RelativeSource Self}}"
+        Width="420" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen">
+
+    <StackPanel Margin="36,20,36,28">
+        <!-- Logo, as the API says: the one for dark surfaces on the dark theme, the other on the light one. No logo, no space for it. -->
+        <Grid Height="140" HorizontalAlignment="Center"
+              Visibility="{Binding Brand.HasLogo, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}">
+            <Image ctl:RemoteImage.Source="{Binding Brand.LogoOnDarkUrl, RelativeSource={RelativeSource AncestorType=Window}}"
+                   Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                   Visibility="{Binding Theme.IsDark, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}" />
+            <Image ctl:RemoteImage.Source="{Binding Brand.LogoUrl, RelativeSource={RelativeSource AncestorType=Window}}"
+                   Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                   Visibility="{Binding Theme.IsDark, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource InverseBoolToVisibility}}" />
+        </Grid>
+
+        <TextBlock Text="{loc:Loc Login_Title}" Style="{StaticResource PageTitleText}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+        <TextBlock Text="{loc:Loc Login_Lede}" Style="{StaticResource LedeText}" TextAlignment="Center" Margin="0,4,0,20" />
+
+        <!-- Where the login goes. The address itself is asked for in a dialog of its own; the app starts again with the new one. -->
+        <TextBlock Text="{loc:Loc Login_Server}" Style="{StaticResource FieldLabelText}" />
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding ApiAddress, RelativeSource={RelativeSource AncestorType=Window}}"
+                       ToolTip="{Binding ApiAddress, RelativeSource={RelativeSource AncestorType=Window}}"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            <Button Grid.Column="1" Margin="10,0,0,0" Content="{loc:Loc Login_ChangeServer}" Click="OnChangeServer" />
+        </Grid>
+
+        <TextBlock Text="{loc:Loc Login_UserName}" Style="{StaticResource FieldLabelText}" />
+        <TextBox x:Name="UserNameBox" Margin="0,0,0,12" Text="{Binding UserName, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock Text="{loc:Loc Login_Password}" Style="{StaticResource FieldLabelText}" />
+        <ctl:RevealPasswordBox x:Name="PasswordBox" Margin="0,0,0,14" PasswordChanged="OnPasswordChanged" />
+
+        <CheckBox IsChecked="{Binding RememberMe}" Content="{loc:Loc Login_Remember}" />
+        <TextBlock Text="{loc:Loc Login_RememberHint}" Style="{StaticResource MutedText}" Margin="28,0,0,0" />
+
+        <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </Border>
+
+        <DockPanel Margin="0,22,0,0" LastChildFill="False">
+            <Button DockPanel.Dock="Right" MinWidth="110" IsDefault="True" Command="{Binding SignInCommand}"
+                    Content="{loc:Loc Login_SignIn}" Style="{StaticResource AccentButtonStyle}" />
+            <Button DockPanel.Dock="Right" MinWidth="90" Margin="0,0,10,0" IsCancel="True" Content="{loc:Loc Login_Exit}" />
+        </DockPanel>
+    </StackPanel>
+</Window>

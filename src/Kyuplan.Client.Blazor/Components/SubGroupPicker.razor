@@ -1,0 +1,156 @@
+@inject IJSRuntime Js
+
+@* Picks any number of subgroups: the field names the ticked ones, the popup lists all of them with a tick box. The
+   first entry, "Everyone", is ticked while nothing else is and clears the others when chosen. The ticks live in the
+   options themselves (SubGroupOption.IsSelected), so there is nothing to bind: Options="Vm.SubGroupOptions". *@
+<div class="field picker multi @(_open ? "open" : "")">
+    <span id="@LabelId">@Label</span>
+
+    <button type="button" id="@TriggerId" class="picker-trigger" @ref="_trigger" @onclick="Toggle"
+            aria-haspopup="listbox" aria-expanded="@(_open ? "true" : "false")" aria-labelledby="@LabelId @TriggerId">
+        <span class="picker-text"><strong>@Summary</strong></span>
+        <Icon Name="@(_open ? "up" : "down")" Size="16" />
+    </button>
+
+    @if (_open)
+    {
+        <div class="picker-backdrop" @onclick="() => Close(restoreFocus: false)"></div>
+        <div class="picker-pop">
+            <ul id="@ListId" class="picker-list" role="listbox" aria-multiselectable="true" aria-labelledby="@LabelId"
+                tabindex="0" aria-activedescendant="@ItemId(_active)" @ref="_list" @onkeydown="OnKeyDown">
+                <li id="@ItemId(0)" role="option" aria-selected="@(IsEveryone ? "true" : "false")"
+                    class="@(IsEveryone ? "selected" : "") @(_active == 0 ? "active" : "")"
+                    @onclick="() => Pick(0)">
+                    @Tick(IsEveryone)
+                    <span class="picker-text"><strong>@Strings.Stats_Everyone</strong></span>
+                </li>
+                @for (var i = 0; i < Options.Count; i++)
+                {
+                    var option = Options[i];
+                    var index = i + 1;
+                    <li @key="option.Id" id="@ItemId(index)" role="option" aria-selected="@(option.IsSelected ? "true" : "false")"
+                        class="@(option.IsSelected ? "selected" : "") @(index == _active ? "active" : "")"
+                        @onclick="() => Pick(index)">
+                        @Tick(option.IsSelected)
+                        <span class="picker-text"><strong>@option.Name</strong></span>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+</div>
+
+@code {
+    private static int _instances;
+
+    private readonly string _id = $"subgroup-picker-{Interlocked.Increment(ref _instances)}";
+
+    private bool _open;
+    private bool _focusList;
+    private bool _focusTrigger;
+    private bool _scrollToActive;
+    private int _active;
+    private ElementReference _trigger, _list;
+
+    /// <summary>Names the field, e.g. "Members".</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    /// <summary>The subgroups to choose from; the picker ticks and unticks them.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<SubGroupOption> Options { get; set; } = [];
+
+    /// <summary>What the closed field shows: the ticked subgroups, or "Everyone".</summary>
+    [Parameter, EditorRequired] public string Summary { get; set; } = "";
+
+    /// <summary>True while no subgroup is ticked: the "Everyone" entry is then the ticked one.</summary>
+    [Parameter] public bool IsEveryone { get; set; } = true;
+
+    /// <summary>Raised when "Everyone" is chosen: the owner unticks every subgroup.</summary>
+    [Parameter] public EventCallback OnClear { get; set; }
+
+    private string LabelId => _id + "-label";
+    private string TriggerId => _id + "-trigger";
+    private string ListId => _id + "-list";
+    private string ItemId(int index) => $"{_id}-option-{index}";
+
+    /// <summary>The "Everyone" entry plus the subgroups.</summary>
+    private int EntryCount => Options.Count + 1;
+
+    private void Toggle()
+    {
+        if (_open)
+        {
+            Close(restoreFocus: false);
+            return;
+        }
+
+        _active = 0;
+        _open = _focusList = _scrollToActive = true;
+    }
+
+    private void Close(bool restoreFocus)
+    {
+        _open = false;
+        _focusTrigger = restoreFocus;
+    }
+
+    /// <summary>Entry 0 is "Everyone", entry n is subgroup n - 1.</summary>
+    private async Task Pick(int index)
+    {
+        _active = index;
+
+        if (index == 0)
+        {
+            await OnClear.InvokeAsync();
+            return;
+        }
+
+        var option = Options[index - 1];
+        option.IsSelected = !option.IsSelected;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown": Move(1); break;
+            case "ArrowUp": Move(-1); break;
+            case "Home": Move(-EntryCount); break;
+            case "End": Move(EntryCount); break;
+            case " " or "Enter": await Pick(_active); break;
+            case "Escape": Close(restoreFocus: true); break;
+            case "Tab": Close(restoreFocus: false); break;
+        }
+    }
+
+    private void Move(int by)
+    {
+        _active = Math.Clamp(_active + by, 0, EntryCount - 1);
+        _scrollToActive = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusList)
+        {
+            _focusList = false;
+            await Js.InvokeVoidAsync("ppPicker.trapKeys", _list, new[] { " ", "Enter", "ArrowUp", "ArrowDown", "Home", "End" });
+            await _list.FocusAsync();
+        }
+
+        if (_focusTrigger)
+        {
+            _focusTrigger = false;
+            await _trigger.FocusAsync();
+        }
+
+        if (_scrollToActive && _open)
+        {
+            _scrollToActive = false;
+            await Js.InvokeVoidAsync("ppPicker.reveal", _list, _active, false);
+        }
+    }
+
+    /// <summary>The tick box in front of an entry.</summary>
+    private static RenderFragment Tick(bool ticked) =>
+        @<span class="tick" aria-hidden="true">@if (ticked) {<Icon Name="check" Size="14" />}</span>;
+}

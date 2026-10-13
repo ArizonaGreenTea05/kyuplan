@@ -1,0 +1,214 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.RolesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
+
+    <UserControl.Resources>
+        <!-- The page's data context for the columns of the grid, which are not in the visual tree. -->
+        <ctl:BindingProxy x:Key="Page" Data="{Binding}" />
+
+        <Style x:Key="GridHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DefaultDataGridColumnHeaderStyle}">
+            <Setter Property="Padding" Value="8,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- The list is the page's main content, so it only shows once there is something in it: before that comes the reason
+             the roles could not be loaded. -->
+        <Style x:Key="ListCard" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+            <Setter Property="Padding" Value="0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Roles.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Which permissions a role has: the administrator role, which has all of them, stands out in the accent colour. -->
+        <Style x:Key="PermissionsPill" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- The administrator role cannot be changed: it has no buttons, and says why under its name. -->
+        <Style x:Key="RoleButtons" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="8,0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSystem}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,6,24,32">
+
+                <!-- Title + new role -->
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Command="{Binding BeginCreateCommand}"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                            <TextBlock Text="{loc:Loc Roles_New}" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                        <TextBlock Text="{loc:Loc Roles_Lede}" Style="{StaticResource LedeText}" />
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- Somebody who may not see the roles gets here only by a mistake of the navigation: the API would refuse them anyway. -->
+                <TextBlock Margin="0,40,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center" MaxWidth="560"
+                           Text="{loc:Loc Page_NotAllowed}"
+                           Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                <StackPanel Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+
+                    <!-- What went wrong / what was achieved. Trying again only makes sense while there is no list: a failed save or
+                         delete is not helped by loading again. -->
+                    <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                    Visibility="{Binding Roles.Count, Converter={StaticResource ZeroToVisible}}" />
+                            <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </Border>
+
+                    <!-- The form: a new role, or the one being edited -->
+                    <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding FormTitle}" Style="{StaticResource SectionTitleText}" />
+
+                            <StackPanel HorizontalAlignment="Left" Width="480">
+                                <TextBlock Text="{loc:Loc Roles_FormName}" Style="{StaticResource FieldLabelText}" />
+                                <TextBox x:Name="NameBox" MaxLength="{x:Static contracts:RoleRules.MaxNameLength}"
+                                         AutomationProperties.Name="{loc:Loc Roles_FormName}"
+                                         Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{Binding NameProblem}" Style="{StaticResource ProblemText}"
+                                           Visibility="{Binding NameProblem, Converter={StaticResource StringToVisibility}}" />
+                            </StackPanel>
+
+                            <TextBlock Text="{loc:Loc Roles_FormPermissions}" Style="{StaticResource FieldLabelText}" Margin="0,16,0,0" />
+                            <TextBlock Text="{loc:Loc Roles_FormPermissionsHint}" Style="{StaticResource MutedText}" Margin="0,0,0,8" />
+                            <ctl:PermissionPicker DataContext="{Binding Picker}" />
+
+                            <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                                <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" IsDefault="True">
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{loc:Loc Roles_Save}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsCreating}" Value="True">
+                                                        <Setter Property="Text" Value="{loc:Loc Roles_Create}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Button>
+                                <Button Command="{Binding CancelFormCommand}" Content="{loc:Loc Roles_Cancel}" Margin="8,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Nothing is deleted before this question is answered -->
+                    <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                            Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BoolToVisibility}}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                <Button Command="{Binding ConfirmDeleteCommand}" Content="{loc:Loc Roles_ConfirmYes}" />
+                                <Button Command="{Binding CancelDeleteCommand}" Content="{loc:Loc Roles_Cancel}" Margin="8,0,0,0" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding ConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+
+                    <!-- The roles, the administrator role first -->
+                    <Border Style="{StaticResource ListCard}" Margin="0,16,0,0">
+                        <DataGrid ItemsSource="{Binding Roles}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False" CanUserSortColumns="False"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" MinRowHeight="52" FontSize="13"
+                                  ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single"
+                                  KeyboardNavigation.TabNavigation="Continue"
+                                  Background="Transparent" BorderThickness="0"
+                                  AutomationProperties.Name="{loc:Loc Nav_Roles}" PreviewMouseWheel="OnGridMouseWheel">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="{loc:Loc Roles_ColName}" Width="*" MinWidth="220">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel VerticalAlignment="Center" Margin="8,4">
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                                <TextBlock Text="{loc:Loc Roles_SystemHint}" Style="{StaticResource MutedText}"
+                                                           Visibility="{Binding IsSystem, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Roles_ColPermissions}" Width="200" MinWidth="160">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Style="{StaticResource PermissionsPill}" Margin="8,0">
+                                                <TextBlock Text="{Binding PermissionsText}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Roles_ColUsers}" Width="140" MinWidth="110">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding UsersText}" VerticalAlignment="Center" Margin="8,0" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!-- Wide enough for both buttons in both languages: an automatic width is not worked out again when the language changes.
+                                     Somebody who may not change roles has no use for the column. -->
+                                <DataGridTemplateColumn Width="200" MinWidth="190"
+                                                        Visibility="{Binding Data.CanEdit, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Style="{StaticResource RoleButtons}">
+                                                <Button Content="{loc:Loc Roles_Edit}"
+                                                        Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="{loc:Loc Roles_Delete}" Margin="8,0,0,0"
+                                                        Command="{Binding DataContext.AskDeleteCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</UserControl>

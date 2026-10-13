@@ -1,0 +1,85 @@
+@page "/account/preferences"
+@using System.ComponentModel
+@inherits ViewModelComponent<PreferencesViewModel>
+@inject IJSRuntime Js
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Preferences_Lede</p>
+        </div>
+    </header>
+
+    <ErrorBanner Message="@(Vm.ErrorMessage ?? Vm.Themes.ErrorMessage)" />
+
+    <div class="grid two">
+        <div class="card card-form">
+            <h2>@Strings.Shell_Design</h2>
+
+            @* The user's own theme, kept with the account; the first entry follows what the administrators chose. *@
+            <label class="field">
+                <span>@Strings.Shell_Design</span>
+                <select value="@Vm.Themes.SelectedId" @onchange="OnThemeChanged" disabled="@(Vm.Shell.CurrentUser is null)">
+                    @foreach (var choice in Vm.Themes.Choices)
+                    {
+                        <option value="@choice.Id">@choice.Name</option>
+                    }
+                </select>
+                <small>@Strings.Shell_DesignHint</small>
+            </label>
+
+            @* Light and dark, per browser; a theme that has only one (Dracula, ...) leaves nothing to switch. *@
+            <div class="form-actions">
+                <button type="button" class="btn" @onclick="ToggleThemeAsync" title="@Strings.Shell_ThemeHint"
+                        disabled="@(ThemeRules.FixedScheme(Vm.Themes.Effective) is not null)">
+                    <span class="only-light"><Icon Name="moon" /></span>
+                    <span class="only-dark"><Icon Name="sun" /></span>
+                    <span>@Strings.Shell_Theme</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card card-form">
+            <h2>@Strings.Preferences_LanguageTitle</h2>
+
+            <label class="field">
+                <span>@Strings.Shell_Language</span>
+                <select value="@Vm.SelectedLanguage.Code" @onchange="OnLanguageChanged" disabled="@(Vm.Shell.CurrentUser is null)">
+                    @foreach (var option in Vm.Languages)
+                    {
+                        <option value="@option.Code" lang="@option.Code">@option.Name</option>
+                    }
+                </select>
+                <small>@Strings.Shell_LanguageHint</small>
+            </label>
+        </div>
+    </div>
+</section>
+
+@code {
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell, Vm.Themes];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    private async Task OnThemeChanged(ChangeEventArgs e) => await Vm.Themes.ChooseAsync(e.Value?.ToString() ?? "");
+
+    // Blazor WebAssembly loads its translations when it starts: the shell switches to the saved language and the layout reloads the page.
+    private async Task OnLanguageChanged(ChangeEventArgs e)
+    {
+        var language = LanguageService.Resolve(e.Value?.ToString());
+        await Vm.ChooseLanguageAsync(language);
+    }
+
+    private async Task ToggleThemeAsync() => await Js.InvokeVoidAsync("ppTheme.toggle");
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

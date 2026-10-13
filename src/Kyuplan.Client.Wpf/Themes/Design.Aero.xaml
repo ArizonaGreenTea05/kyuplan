@@ -1,0 +1,86 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Design "Windows Vista / 7 (Aero)": rounded glass. Segoe UI at 9 pt, small rounded corners, buttons, scroll thumbs and tabs
+         with a gradient and a bright inner frame, blue glass under the pointer, a green progress bar, scroll bars with arrows, a pale
+         blue navigation pane like Explorer's, dark blue headings. Same templates as "Windows 10" (Controls.Classic.xaml); the
+         look is in these shapes and in Colors.Aero.xaml. -->
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Controls.Classic.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- ===== Shapes ===== -->
+    <CornerRadius x:Key="ControlCornerRadius">3</CornerRadius>
+    <CornerRadius x:Key="OverlayCornerRadius">4</CornerRadius>
+    <CornerRadius x:Key="CtlInnerCornerRadius">2</CornerRadius>
+    <CornerRadius x:Key="CtlInputCornerRadius">2</CornerRadius>
+    <CornerRadius x:Key="CtlCheckCornerRadius">2</CornerRadius>
+    <Thickness x:Key="CtlBorderThickness">1</Thickness>
+    <Thickness x:Key="CtlGlyphBorderThickness">1</Thickness>
+    <sys:Double x:Key="CtlGlyphStroke">1</sys:Double>
+    <sys:Double x:Key="CtlGlyphSize">14</sys:Double>
+    <Thickness x:Key="CtlButtonPadding">12,4,12,4</Thickness>
+    <Thickness x:Key="CtlInputPadding">5,3,5,3</Thickness>
+    <sys:Double x:Key="CtlPopupShadowOpacity">0.35</sys:Double>
+
+    <Visibility x:Key="CtlScrollArrowVisibility">Visible</Visibility>
+    <sys:Double x:Key="CtlScrollSize">17</sys:Double>
+    <Thickness x:Key="CtlScrollThumbMarginV">0</Thickness>
+    <Thickness x:Key="CtlScrollThumbMarginH">0</Thickness>
+    <CornerRadius x:Key="CtlScrollThumbCornerRadius">2</CornerRadius>
+
+    <sys:Double x:Key="CtlProgressHeight">16</sys:Double>
+    <Thickness x:Key="CtlProgressBorderThickness">1</Thickness>
+    <CornerRadius x:Key="CtlProgressCornerRadius">2</CornerRadius>
+    <sys:Double x:Key="CtlSliderTrackHeight">5</sys:Double>
+    <sys:Double x:Key="CtlSliderThumbWidth">11</sys:Double>
+    <sys:Double x:Key="CtlSliderThumbHeight">20</sys:Double>
+    <CornerRadius x:Key="CtlSliderThumbCornerRadius">3</CornerRadius>
+
+    <!-- ===== The app's own tokens (see Design.Fluent.xaml) ===== -->
+    <FontFamily x:Key="AppFontFamily">Segoe UI</FontFamily>
+    <sys:Double x:Key="AppFontSize">12</sys:Double>
+    <FontFamily x:Key="SymbolThemeFontFamily">Segoe MDL2 Assets</FontFamily>
+    <Visibility x:Key="AppNavIndicatorVisibility">Collapsed</Visibility>
+    <CornerRadius x:Key="AppContentCornerRadius">0</CornerRadius>
+    <Thickness x:Key="AppContentBorderThickness">1,0,0,0</Thickness>
+    <CornerRadius x:Key="AppPillCornerRadius">3</CornerRadius>
+    <CornerRadius x:Key="AppSwatchCornerRadius">3</CornerRadius>
+    <CornerRadius x:Key="AppTabCornerRadius">3,3,0,0</CornerRadius>
+    <Thickness x:Key="AppTabBorderThickness">1,1,1,0</Thickness>
+    <Thickness x:Key="AppTabContentBorderThickness">0</Thickness>
+    <Thickness x:Key="AppTabPadding">12,5,12,5</Thickness>
+
+    <!-- A dotted frame, as in every Windows up to 7. -->
+    <Style x:Key="DefaultControlFocusVisualStyle">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Rectangle Margin="2" Stroke="#FF000000" StrokeThickness="1" StrokeDashArray="1 2" SnapsToDevicePixels="True" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Type ramp: Segoe UI, headings in dark blue ===== -->
+    <Style x:Key="BodyTextBlockStyle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="BodyStrongTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="CaptionTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style x:Key="SubtitleTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Foreground" Value="{DynamicResource AppHeadingBrush}" />
+    </Style>
+    <Style x:Key="TitleTextBlockStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="FontSize" Value="21" />
+        <Setter Property="Foreground" Value="{DynamicResource AppHeadingBrush}" />
+    </Style>
+</ResourceDictionary>

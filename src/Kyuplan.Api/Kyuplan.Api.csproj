@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>kyuplan-api</UserSecretsId>
+    <InternalsVisibleTo>Kyuplan.Tests</InternalsVisibleTo>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spond.API" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Serilog.Extensions.Logging" />
+    <PackageReference Include="Serilog.Sinks.File" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kyuplan.Contracts\Kyuplan.Contracts.csproj" />
+    <!-- The API serves the web client (Blazor WebAssembly) itself, from the same address, so that it needs no API address. -->
+    <ProjectReference Include="..\Kyuplan.Client.Blazor\Kyuplan.Client.Blazor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="$(InternalsVisibleTo)" />
+  </ItemGroup>
+
+  <!--
+    The logos and the icon that appsettings.json's Branding section points to ("branding/..." is relative to the folder of the
+    program files, i.e. the build and publish output). They are the placeholder files in /assets/branding. Another instance
+    points Branding:Logo etc. at files of its own, e.g. on a mounted volume, and does not need these.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\assets\branding\*" Link="branding\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

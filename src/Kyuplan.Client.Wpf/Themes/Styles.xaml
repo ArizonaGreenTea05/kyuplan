@@ -1,0 +1,499 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+                    xmlns:conv="clr-namespace:Kyuplan.Client.WpfApp.Converters"
+                    xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+                    xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+
+    <!-- The app's own styles, the same in every design (Themes/Design.*.xaml). The design provides the controls, the type ramp and the
+         neutral brushes under Fluent's names (TextFillColor*, CardBackground*, SubtleFill*, ...) plus the app's tokens (App*); everything
+         here is built from those, so it follows the design, light/dark and the accent colour. Only the data colours come from
+         Palette.Light/Dark.xaml. -->
+
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    <conv:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    <conv:AnyToVisibilityConverter x:Key="AnyToVisibility" />
+    <conv:StringToVisibilityConverter x:Key="StringToVisibility" />
+    <conv:ZeroToVisibleConverter x:Key="ZeroToVisible" />
+    <conv:EnumToBooleanConverter x:Key="EnumToBoolean" />
+    <conv:PositiveToBooleanConverter x:Key="LengthToBool" />
+    <conv:MarkTextConverter x:Key="MarkText" />
+    <conv:FractionToMarginConverter x:Key="FractionToMargin" />
+    <conv:HexToBrushConverter x:Key="HexToBrush" />
+    <conv:FormatTextConverter x:Key="FormatText" />
+    <conv:IndentToMarginConverter x:Key="IndentToMargin" />
+
+    <!-- ===== Text: the design's type ramp ===== -->
+    <Style x:Key="PageTitleText" TargetType="TextBlock" BasedOn="{StaticResource TitleTextBlockStyle}" />
+
+    <Style x:Key="LedeText" TargetType="TextBlock" BasedOn="{StaticResource BodyTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+
+    <Style x:Key="SectionTitleText" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style x:Key="MutedText" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="FieldLabelText" TargetType="TextBlock" BasedOn="{StaticResource CaptionTextBlockStyle}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <!-- An icon from Segoe Fluent Icons (Windows 11; falls back to Segoe MDL2 Assets on Windows 10). -->
+    <Style x:Key="GlyphText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource SymbolThemeFontFamily}" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ===== Surfaces ===== -->
+    <Style x:Key="CardBorder" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+        <Setter Property="Padding" Value="20" />
+    </Style>
+
+    <!-- Like Windows' InfoBar: severity colours from the system, so they match in light and dark. -->
+    <Style x:Key="BannerBorder" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource DataRiskWashBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+    </Style>
+
+    <!-- What a save achieved: the same InfoBar, in the "attended" colours. -->
+    <Style x:Key="NoticeBorder" TargetType="Border" BasedOn="{StaticResource BannerBorder}">
+        <Setter Property="Background" Value="{DynamicResource DataYesWashBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource DataYesTextBrush}" />
+    </Style>
+
+    <!-- A problem with what was typed, under the field. -->
+    <Style x:Key="ProblemText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+        <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+
+    <!-- A page the user may not use: said in the middle of the page. The navigation does not offer such a page, so this is only seen
+         for a moment while the permissions change. -->
+    <Style x:Key="NotAllowedText" TargetType="TextBlock" BasedOn="{StaticResource LedeText}">
+        <Setter Property="Margin" Value="24,60,24,0" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="MaxWidth" Value="560" />
+    </Style>
+
+    <!-- ===== Key figures ===== -->
+    <Style x:Key="KpiValueText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="28" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Tone}" Value="Success">
+                <Setter Property="Foreground" Value="{DynamicResource DataYesTextBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Tone}" Value="Warning">
+                <Setter Property="Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Full tile (dashboard): label, value, hint. -->
+    <DataTemplate x:Key="KpiTemplate" DataType="{x:Type vm:KpiViewModel}">
+        <Border Style="{StaticResource CardBorder}" Padding="16,12,16,14">
+            <StackPanel>
+                <TextBlock Text="{Binding Label}" Style="{StaticResource FieldLabelText}" Margin="0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Value}" Style="{StaticResource KpiValueText}" Margin="0,2,0,2" />
+                <TextBlock Text="{Binding Hint}" Style="{StaticResource MutedText}"
+                           Visibility="{Binding Hint, Converter={StaticResource StringToVisibility}}" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- Compact tile (statistics page): the hint moves into a tooltip to save height. -->
+    <DataTemplate x:Key="KpiCompactTemplate" DataType="{x:Type vm:KpiViewModel}">
+        <Border Style="{StaticResource CardBorder}" Padding="14,9,14,10" ToolTip="{Binding Hint}">
+            <StackPanel>
+                <TextBlock Text="{Binding Label}" Style="{StaticResource FieldLabelText}" Margin="0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Value}" Style="{StaticResource KpiValueText}" FontSize="22" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- ===== Badges (status / engagement) ===== -->
+    <Style x:Key="PillBorder" TargetType="Border">
+        <Setter Property="CornerRadius" Value="{DynamicResource AppPillCornerRadius}" />
+        <Setter Property="Padding" Value="8,2,8,3" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+        <Setter Property="TextElement.FontSize" Value="12" />
+    </Style>
+
+    <Style x:Key="StatusPill" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status}" Value="Qualified">
+                <Setter Property="Background" Value="{DynamicResource DataYesWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataYesTextBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="BelowThreshold">
+                <Setter Property="Background" Value="{DynamicResource DataOpenWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="LevelPill" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Level}" Value="Excellent">
+                <Setter Property="Background" Value="{DynamicResource DataYesWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataYesTextBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Level}" Value="Good">
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Level}" Value="Irregular">
+                <Setter Property="Background" Value="{DynamicResource DataOpenWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Level}" Value="AtRisk">
+                <Setter Property="Background" Value="{DynamicResource DataRiskWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="DemoChip" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+        <Setter Property="Background" Value="{DynamicResource DataOpenWashBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+    </Style>
+
+    <!-- ===== Bars, marks, trend ===== -->
+    <Style x:Key="MemberRateBar" TargetType="ctl:RateBar">
+        <Setter Property="TrackBrush" Value="{DynamicResource DataTrackBrush}" />
+        <Setter Property="LineBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="FillBrush" Value="{DynamicResource DataYesBrush}" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Status}" Value="BelowThreshold">
+                <Setter Property="FillBrush" Value="{DynamicResource DataOpenBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Status}" Value="InsufficientData">
+                <Setter Property="FillBrush" Value="{DynamicResource DataNoBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="PlainRateBar" TargetType="ctl:RateBar">
+        <Setter Property="TrackBrush" Value="{DynamicResource DataTrackBrush}" />
+        <Setter Property="FillBrush" Value="{DynamicResource DataYesBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <Style x:Key="RsvpBar" TargetType="ctl:StackedBar">
+        <Setter Property="TrackBrush" Value="{DynamicResource DataTrackBrush}" />
+        <Setter Property="YesBrush" Value="{DynamicResource DataYesBrush}" />
+        <Setter Property="NoBrush" Value="{DynamicResource DataNoBrush}" />
+        <Setter Property="OpenBrush" Value="{DynamicResource DataOpenBrush}" />
+    </Style>
+
+    <Style x:Key="MarkSquare" TargetType="Border">
+        <Setter Property="Width" Value="10" />
+        <Setter Property="Height" Value="10" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Margin" Value="0,0,2,0" />
+        <Setter Property="Background" Value="{DynamicResource DataTrackBrush}" />
+        <Setter Property="ToolTip" Value="{Binding Converter={StaticResource MarkText}}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding}" Value="Attended">
+                <Setter Property="Background" Value="{DynamicResource DataYesBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding}" Value="Declined">
+                <Setter Property="Background" Value="{DynamicResource DataNoBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding}" Value="Unanswered">
+                <Setter Property="Background" Value="{DynamicResource DataOpenBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding}" Value="Other">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Setter Property="BorderThickness" Value="1.5" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="LegendSquare" TargetType="Border" BasedOn="{StaticResource MarkSquare}">
+        <Setter Property="Margin" Value="0,0,6,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="ToolTip" Value="{x:Null}" />
+    </Style>
+
+    <Style x:Key="TrendText" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Margin" Value="8,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="ToolTip" Value="{Binding TrendText}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Trend}" Value="Rising">
+                <Setter Property="Foreground" Value="{DynamicResource DataYesTextBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Trend}" Value="Falling">
+                <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="MarkList" TargetType="ItemsControl">
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Border Style="{StaticResource MarkSquare}" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ===== Charts ===== -->
+    <!-- Attendance by month: every bar is a plain attendance figure. -->
+    <Style x:Key="AttendanceColumnChart" TargetType="ctl:ColumnChart">
+        <Setter Property="BarBrush" Value="{DynamicResource DataYesBrush}" />
+        <Setter Property="HighlightBrush" Value="{DynamicResource DataYesBrush}" />
+        <Setter Property="BaselineBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="TextBrush" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="Height" Value="220" />
+    </Style>
+
+    <!-- Distribution: only the bands that reach the required attendance take the accent colour. -->
+    <Style x:Key="ThresholdColumnChart" TargetType="ctl:ColumnChart" BasedOn="{StaticResource AttendanceColumnChart}">
+        <Setter Property="BarBrush" Value="{DynamicResource DataNoBrush}" />
+    </Style>
+
+    <!-- ===== Navigation pane: like Windows' NavigationView — an accent bar marks the current page ===== -->
+    <Style x:Key="NavItem" TargetType="ListBoxItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource DefaultControlFocusVisualStyle}" />
+        <!-- Without this, screen readers announce the record's ToString(). -->
+        <Setter Property="AutomationProperties.Name" Value="{Binding Page.Title}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Grid>
+                        <Border x:Name="Root" Padding="14,9" CornerRadius="{DynamicResource ControlCornerRadius}" Background="Transparent"
+                                BorderThickness="1" BorderBrush="Transparent">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource GlyphText}" Text="{Binding Glyph}" FontSize="16" />
+                                <TextBlock Text="{Binding Page.Title}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border x:Name="Indicator" Width="3" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                CornerRadius="1.5" Background="{DynamicResource AccentFillColorDefaultBrush}" Visibility="Collapsed" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource AppNavSelectedBorderBrush}" />
+                            <Setter TargetName="Indicator" Property="Visibility" Value="{DynamicResource AppNavIndicatorVisibility}" />
+                            <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Tabs: text with an accent line under the selected one, like the sections of a Windows 11 settings page ===== -->
+    <Style x:Key="UnderlineTab" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource DefaultControlFocusVisualStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TabItem">
+                    <Border x:Name="Bar" Padding="{DynamicResource AppTabPadding}" Margin="0,0,4,0" Background="Transparent"
+                            BorderThickness="{DynamicResource AppTabBorderThickness}" BorderBrush="Transparent"
+                            CornerRadius="{DynamicResource AppTabCornerRadius}">
+                        <ContentPresenter ContentSource="Header" TextElement.Foreground="{TemplateBinding Foreground}" RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter TargetName="Bar" Property="Background" Value="{DynamicResource AppTabHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter TargetName="Bar" Property="Background" Value="{DynamicResource AppTabSelectedBrush}" />
+                            <Setter TargetName="Bar" Property="BorderBrush" Value="{DynamicResource AppTabSelectedBorderBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ===== Segmented control: radio buttons that look like toggle buttons; the chosen one takes the accent colour ===== -->
+    <Style x:Key="SegmentButton" TargetType="RadioButton" BasedOn="{StaticResource DefaultToggleButtonStyle}">
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Padding" Value="12,5" />
+    </Style>
+
+    <!-- ===== Colour swatches (belts, accent colour) ===== -->
+    <!-- The colour as typed, next to the box. -->
+    <Style x:Key="PreviewSwatch" TargetType="Border">
+        <Setter Property="Width" Value="32" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="CornerRadius" Value="{DynamicResource AppSwatchCornerRadius}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrongStrokeColorDefaultBrush}" />
+    </Style>
+
+    <!-- A colour to pick. The one in use cannot be picked again, so its button is off: it keeps its colour and shows a
+         ring in the accent colour instead of going grey. -->
+    <Style x:Key="ColorSwatchButton" TargetType="Button">
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Margin" Value="0,0,4,4" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource DefaultControlFocusVisualStyle}" />
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Ring" CornerRadius="6" BorderThickness="2" BorderBrush="Transparent" Padding="2">
+                        <Border CornerRadius="3" BorderThickness="1" Background="{TemplateBinding Background}"
+                                BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource ControlStrongStrokeColorDefaultBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            <Setter Property="Cursor" Value="Arrow" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Colours to choose from, as swatches: a page sets ItemsSource to its colours; Tag is the command that takes one (the item's own context is the colour). -->
+    <Style x:Key="SwatchList" TargetType="ItemsControl">
+        <Setter Property="Margin" Value="-4,0,0,0" /> <!-- the ring around a swatch hangs out, so the colours line up with the box above -->
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
+        <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
+        <Setter Property="ItemsPanel">
+            <Setter.Value>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </Setter.Value>
+        </Setter>
+        <Setter Property="ItemTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Button Style="{StaticResource ColorSwatchButton}"
+                            Background="{Binding Converter={StaticResource HexToBrush}}"
+                            Command="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}">
+                        <Button.ToolTip>
+                            <MultiBinding Converter="{StaticResource FormatText}">
+                                <Binding Source="{x:Static loc:LocalizationSource.Instance}" Path="[Belts_PickColor]" />
+                                <Binding />
+                            </MultiBinding>
+                        </Button.ToolTip>
+                        <AutomationProperties.Name>
+                            <MultiBinding Converter="{StaticResource FormatText}">
+                                <Binding Source="{x:Static loc:LocalizationSource.Instance}" Path="[Belts_PickColor]" />
+                                <Binding />
+                            </MultiBinding>
+                        </AutomationProperties.Name>
+                    </Button>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A button with an icon in front of its text; the icon is a Segoe Fluent Icons glyph in Tag. -->
+    <Style x:Key="IconTextBlock" TargetType="TextBlock" BasedOn="{StaticResource GlyphText}">
+        <Setter Property="Margin" Value="0,1,8,0" />
+    </Style>
+
+    <!-- ===== Tags and comments ===== -->
+    <!-- A tag: a small label; one that is about an event is tinted. -->
+    <Style x:Key="TagPill" TargetType="Border" BasedOn="{StaticResource PillBorder}">
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding HasEvent}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource DataYesWashBrush}" />
+                <Setter Property="TextElement.Foreground" Value="{DynamicResource DataYesTextBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- The buttons of the comment editor that style the selected words (B, I, U, S). -->
+    <Style x:Key="FormatButton" TargetType="Button">
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+    </Style>
+
+    <!-- "Edited by …": a line of text that opens the history of a comment. -->
+    <Style x:Key="LinkButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="6,2" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <TextBlock x:Name="Label" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                                   TextDecorations="Underline" TextWrapping="Wrap" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

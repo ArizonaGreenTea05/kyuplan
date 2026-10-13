@@ -1,0 +1,17 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="banner error" role="alert">
+        <Icon Name="alert" />
+        <span>@Message</span>
+        @if (OnRetry.HasDelegate)
+        {
+            <button type="button" class="btn" @onclick="OnRetry">@Strings.Shell_TryAgain</button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+
+    [Parameter] public EventCallback OnRetry { get; set; }
+}

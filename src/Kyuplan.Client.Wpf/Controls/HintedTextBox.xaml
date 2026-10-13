@@ -1,0 +1,53 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.HintedTextBox"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root" IsTabStop="False">
+
+    <!-- A text box with what WinUI's has and WPF's does not: a hint while empty, an optional leading icon and a clear
+         button. The hint and the icon are drawn over the box, so the box itself stays the stock Fluent TextBox. -->
+    <Grid>
+        <TextBox x:Name="Box" VerticalContentAlignment="Center"
+                 AutomationProperties.Name="{Binding (AutomationProperties.Name), ElementName=Root}"
+                 Text="{Binding Text, ElementName=Root, UpdateSourceTrigger=PropertyChanged}" />
+
+        <TextBlock x:Name="GlyphBlock" Style="{StaticResource GlyphText}" FontSize="14" IsHitTestVisible="False"
+                   HorizontalAlignment="Left" Margin="11,0,0,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{Binding Glyph, ElementName=Root}" />
+
+        <TextBlock x:Name="HintBlock" IsHitTestVisible="False" HorizontalAlignment="Left" VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis"
+                   Text="{Binding Hint, ElementName=Root}">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Text, ElementName=Box}" Value="">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <Button x:Name="ClearButton" HorizontalAlignment="Right" VerticalAlignment="Center" Width="26" Height="24" Margin="0,0,4,0"
+                Padding="0" Focusable="False" Click="OnClear" Background="Transparent" BorderThickness="0"
+                AutomationProperties.Name="Clear">
+            <TextBlock Style="{StaticResource GlyphText}" FontSize="10" Text="&#xE711;" />
+            <Button.Style>
+                <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding IsKeyboardFocusWithin, ElementName=Root}" Value="True" />
+                                <Condition Binding="{Binding Text.Length, ElementName=Box, Converter={StaticResource LengthToBool}}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible" />
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Button.Style>
+        </Button>
+    </Grid>
+</UserControl>

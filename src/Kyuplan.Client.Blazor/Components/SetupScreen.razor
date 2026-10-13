@@ -1,0 +1,124 @@
+@inherits ViewModelComponent<SetupViewModel>
+@inject NavigationManager Navigation
+
+<PageTitle>@Strings.Setup_Title</PageTitle>
+
+@* Shown instead of the application while the API has no user: the settings and the first administrator. *@
+<main class="setup">
+    <section class="page">
+        <div class="progress @(Vm.IsBusy || Vm.IsRestarting ? "on" : "")" role="progressbar" aria-hidden="@(!(Vm.IsBusy || Vm.IsRestarting))"></div>
+
+        <header class="page-head">
+            <div>
+                <h1>@Strings.Setup_Title</h1>
+                <p class="lede">@Strings.Setup_Lede</p>
+            </div>
+        </header>
+
+        <ErrorBanner Message="@Vm.ErrorMessage" />
+
+        @if (Vm.IsRestarting || Vm.IsDone)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@(Vm.IsDone ? Strings.Setup_Done : Strings.Setup_Restarting)</span>
+            </div>
+        }
+        else
+        {
+            <form class="page" @onsubmit="() => Vm.FinishCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <section class="card card-form" aria-labelledby="setup-admin">
+                    <h2 id="setup-admin">@Strings.Setup_AdminTitle</h2>
+
+                    <label class="field">
+                        <span>@Strings.Setup_AdminUserName</span>
+                        <input type="text" autocomplete="username" spellcheck="false" maxlength="@AccountRules.MaxUserNameLength"
+                               @bind="Vm.AdminUserName" @bind:event="oninput" />
+                        @if (Vm.AdminUserNameProblem is { } nameProblem)
+                        {
+                            <p class="field-error" role="alert">@nameProblem</p>
+                        }
+                    </label>
+
+                    <div class="grid two">
+                        <label class="field">
+                            <span>@Strings.Setup_AdminPassword</span>
+                            <PasswordInput autocomplete="new-password" maxlength="@AccountRules.MaxPasswordLength"
+                                   @bind-Value="Vm.AdminPassword" />
+                            @if (Vm.AdminPassword.Length > 0 && Vm.AdminPasswordProblem is { } passwordProblem)
+                            {
+                                <p class="field-error" role="alert">@passwordProblem</p>
+                            }
+                            else
+                            {
+                                <small>@string.Format(Strings.Setup_PasswordInvalid, AccountRules.MinPasswordLength, AccountRules.MaxPasswordLength)</small>
+                            }
+                        </label>
+
+                        <label class="field">
+                            <span>@Strings.Setup_AdminPasswordRepeat</span>
+                            <PasswordInput autocomplete="new-password" maxlength="@AccountRules.MaxPasswordLength"
+                                   @bind-Value="Vm.AdminPasswordRepeat" />
+                            @if (Vm.RepeatProblem is { } repeatProblem)
+                            {
+                                <p class="field-error" role="alert">@repeatProblem</p>
+                            }
+                        </label>
+                    </div>
+                </section>
+
+                <section class="card card-form" aria-labelledby="setup-settings-file">
+                    <h2 id="setup-settings-file">@Strings.Setup_SettingsFileTitle</h2>
+
+                    <label class="field">
+                        <span>@Strings.Setup_SettingsFilePath</span>
+                        <input type="text" autocomplete="off" spellcheck="false" disabled="@(Vm.IsBusy || Vm.SettingsFileLocked)"
+                               @bind="Vm.SettingsFilePath" @bind:event="oninput" />
+                        @if (!Vm.SettingsFileLocked && Vm.SettingsFilePathProblem is { } filePathProblem)
+                        {
+                            <p class="field-error" role="alert">@filePathProblem</p>
+                        }
+                        else
+                        {
+                            <small>@(Vm.SettingsFileLocked ? Strings.Setup_SettingsFileLocked : Strings.Setup_SettingsFileHint)</small>
+                        }
+                    </label>
+                </section>
+
+                <SettingsFields Form="Vm.Form" Disabled="@Vm.IsBusy" />
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.CanFinish)">@Strings.Setup_Finish</button>
+                </div>
+            </form>
+        }
+    </section>
+</main>
+
+@code {
+    // The finish button follows what is typed, which the form (not the page) announces.
+    protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Vm.Form];
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Vm.PropertyChanged += OnChanged;
+    }
+
+    // The settings are applied; the page loads anew and meets the API that runs with them (the browser asks for the login of the
+    // administrator that was just created).
+    private void OnChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SetupViewModel.IsDone) && Vm.IsDone) Navigation.NavigateTo("", forceLoad: true);
+
+        // The first start proposes the address the administrator is using right now, so that the API answers to that one name from the start.
+        if (e.PropertyName == nameof(SetupViewModel.IsChecked) && Vm.IsChecked && Vm.NeedsSetup && Vm.Form.AllowedHosts == SettingsRules.AnyHost)
+            Vm.Form.AllowedHosts = new Uri(Navigation.Uri).Authority;
+    }
+
+    public override void Dispose()
+    {
+        Vm.PropertyChanged -= OnChanged;
+        base.Dispose();
+    }
+}

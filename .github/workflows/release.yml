@@ -1,0 +1,220 @@
+name: Release
+
+# A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every desktop client (today Windows, built with Inno Setup;
+# further systems get a job beside "windows" that uploads its installer as Kyuplan-<platform>-<version>.<ext>) is built and goes
+# into the Docker image of the server (API + web client), which offers them for download and as the update of the installed clients, and
+# the image is pushed to ghcr.io/<owner>/kyuplan. The GitHub release carries the installers and the documentation archive as well.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  windows:
+    # The test suite includes tests of the WPF client's Windows-only encrypted login file, and the installer is built here.
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - name: Test
+        run: dotnet test tests/Kyuplan.Tests -c Release
+
+      # Self-contained: the installed client needs no .NET runtime on the computer.
+      - name: Publish the WPF client
+        run: >
+          dotnet publish src/Kyuplan.Client.Wpf -c Release -r win-x64 --self-contained
+          -p:Version=${{ steps.v.outputs.version }} -o artifacts/wpf
+
+      # Authenticode signing: the installed program only runs an update that is signed with its own certificate (WindowsClientUpdater), so a
+      # release without one cannot update itself. Secrets: WINDOWS_CERT_PFX (the .pfx file, Base64) and WINDOWS_CERT_PASSWORD.
+      - name: Sign the program
+        shell: pwsh
+        env:
+          CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if (-not $env:CERT_PFX) { Write-Warning 'No WINDOWS_CERT_PFX secret: the release is not signed and cannot update itself.'; exit 0 }
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:CERT_PFX))
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
+          & $signtool sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 artifacts\wpf\Kyuplan.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Inno Setup is part of the runner image.
+      - name: Build the installer
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          # Windows file versions have four numbers: 0.1 -> 0.1.0.0, 1.2.3-beta.1 -> 1.2.3.0
+          $info = ((($env:VERSION -split '-')[0] + '.0.0') -split '\.')[0..3] -join '.'
+          & $iscc "/DAppVersion=$env:VERSION" "/DVersionInfo=$info" `
+            "/DSourceDir=$PWD\artifacts\wpf" "/DOutputDir=$PWD\artifacts\installer" installer\Kyuplan.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Sign the installer
+        shell: pwsh
+        env:
+          CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+        run: |
+          if (-not (Test-Path "$env:RUNNER_TEMP\cert.pfx")) { exit 0 }
+          $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
+          & $signtool sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 artifacts\installer\Kyuplan-windows-${{ steps.v.outputs.version }}.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Update key: the installed program runs an update whose signature (made here with the private key, checked with the public key built into
+      # the program, installer/update-key.pub.pem) is valid, which needs no certificate. Secret UPDATE_SIGNING_KEY: the private key as PEM text.
+      # This comes after the Authenticode signing, which changes the file.
+      - name: Sign the installer with the update key
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::No UPDATE_SIGNING_KEY secret: the installer has no update signature."
+            exit 0
+          fi
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          installer="artifacts/installer/Kyuplan-windows-$VERSION.exe"
+          openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
+          rm "$RUNNER_TEMP/update-key.pem"
+
+      # Every client job uploads its installer as an artifact "installer-<platform>"; the image job collects them all.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows
+          path: |
+            artifacts/installer/Kyuplan-windows-${{ steps.v.outputs.version }}.exe
+            artifacts/installer/Kyuplan-windows-${{ steps.v.outputs.version }}.exe.sig
+          if-no-files-found: error
+
+  # The documentation (Docusaurus, website/): the image carries the guides the server shows its users (the Dockerfile builds them itself), the
+  # release carries all of them, the developer guide too, as one archive that any web server can serve at /docs/.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build the documentation
+        working-directory: website
+        env:
+          DOCS_REPO_REF: ${{ github.ref_name }}
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/build-all.mjs
+
+      - name: Pack the archive
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          mkdir -p artifacts/docs
+          (cd website/build && zip -qr "$GITHUB_WORKSPACE/artifacts/docs/Kyuplan-docs-$VERSION.zip" .)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: artifacts/docs/Kyuplan-docs-${{ steps.v.outputs.version }}.zip
+          if-no-files-found: error
+
+  image:
+    needs: [windows, docs] # add every further client job here
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: artifacts/installer
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: artifacts/docs
+
+      - name: Work out the image tags
+        id: image
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          # Registry paths are lower case, owners are not.
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kyuplan"
+          {
+            echo "name=$image"
+            echo "tags<<EOF"
+            echo "$image:$VERSION"
+            if [ "$PRERELEASE" = false ]; then
+              [[ "$VERSION" == *.*.* ]] && echo "$image:${VERSION%.*}"  # 1.2.3 also moves 1.2
+              [ "${VERSION%%.*}" != 0 ] && echo "$image:${VERSION%%.*}"  # 1.x moves 1; 0.x has no such line, its minors may break
+              echo "$image:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The Dockerfile's "installer" stage is empty; here it is the folder with the installer built above.
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/Kyuplan.Api/Dockerfile
+          build-contexts: installer=artifacts/installer
+          # The Dockerfile cross-compiles, so the second platform needs no emulation. One image for amd64 (PCs, servers, TrueNAS, Azure) and arm64 (Raspberry Pi, Apple silicon, Graviton/Cobalt).
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.v.outputs.version }}
+            DOCS_REPO_REF=${{ github.ref_name }}
+            REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.v.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - uses: ./.github/actions/publish-release
+        with:
+          title: Kyuplan ${{ steps.v.outputs.version }}
+          notes: |-
+            Docker image (server, web client and the installers of the desktop apps in one): `${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}`
+
+            ```
+            docker pull ${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}
+            ```
+
+            The web client offers the desktop apps (the installers attached below) for download, and an installed app updates itself from the server. The documentation is part of the server (Help in the web client and the desktop app, each user sees the guides they may read) and is attached as well (`Kyuplan-docs-${{ steps.v.outputs.version }}.zip`: every guide, the developer guide too). Settings, volumes and the TrueNAS setup are described in [docs/deployment.md](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/docs/deployment.md).
+          prerelease: ${{ steps.v.outputs.prerelease }}
+          previous-tag: ${{ steps.v.outputs.previous-tag }}
+          files: artifacts/installer/* artifacts/docs/*

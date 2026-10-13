@@ -1,0 +1,63 @@
+@using System.ComponentModel
+@implements IDisposable
+
+@* The fields that make or change a tag: its name and the event it is about. Used on the tags page and inside the comment being written.
+   It is no <form> itself (the comment's composer is not one either, and forms do not nest): Enter in the name saves. *@
+<div class="tag-form" role="group" aria-label="@Editor.Title">
+    <h3 class="tag-form-title">@Editor.Title</h3>
+
+    <label class="field">
+        <span>@Strings.Tags_FormName</span>
+        <input type="text" @ref="_name" maxlength="@TagRules.MaxNameLength" autocomplete="off"
+               @bind="Editor.Name" @bind:event="oninput" @onkeydown="OnKeyDown" />
+        @if (Editor.NameProblem is { } problem)
+        {
+            <p class="field-error" role="alert">@problem</p>
+        }
+    </label>
+
+    <div class="field-with-action">
+        <EventPicker Label="@Strings.Tags_FormEvent" Options="Editor.EventOptions" @bind-Value="Editor.EventId" />
+        <button type="button" class="btn ghost" disabled="@(!Editor.ClearEventCommand.CanExecute(null))"
+                @onclick="() => Editor.ClearEventCommand.Execute(null)">@Strings.Tags_ClearEvent</button>
+    </div>
+    <small>@Strings.Tags_FormEventHint</small>
+
+    @if (Editor.HasError)
+    {
+        <p class="field-error" role="alert">@Editor.ErrorMessage</p>
+    }
+
+    <div class="form-actions">
+        <button type="button" class="btn" disabled="@(!Editor.SaveCommand.CanExecute(null))"
+                @onclick="() => Editor.SaveCommand.ExecuteAsync(null)">@(Editor.IsCreating ? Strings.Tags_Create : Strings.Tags_Save)</button>
+        <button type="button" class="btn ghost" @onclick="() => Editor.CancelCommand.Execute(null)">@Strings.Tags_Cancel</button>
+    </div>
+</div>
+
+@code {
+    private ElementReference _name;
+    private bool _focusName = true;
+
+    [Parameter, EditorRequired] public TagEditorViewModel Editor { get; set; } = null!;
+
+    protected override void OnInitialized() => Editor.PropertyChanged += OnEditorChanged;
+
+    private void OnEditorChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    // Opening the form puts the cursor in its first field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusName) return;
+
+        _focusName = false;
+        await _name.FocusAsync();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && Editor.SaveCommand.CanExecute(null)) await Editor.SaveCommand.ExecuteAsync(null);
+    }
+
+    public void Dispose() => Editor.PropertyChanged -= OnEditorChanged;
+}

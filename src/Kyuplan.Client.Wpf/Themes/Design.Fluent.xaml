@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Design "Windows 11". The controls, the type ramp and the neutral brushes come from the Fluent theme that ships with WPF
+         (Application.ThemeMode); this only holds the app's own design tokens, the ones Styles.xaml and the windows read in every
+         design. Every Design.*.xaml defines the same tokens. -->
+
+    <!-- The navigation pane has no fill of its own: Windows' Mica material shows through. -->
+    <SolidColorBrush x:Key="AppNavPaneBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="AppNavSelectedBorderBrush" Color="Transparent" />
+    <Visibility x:Key="AppNavIndicatorVisibility">Visible</Visibility>
+    <CornerRadius x:Key="AppContentCornerRadius">8,0,0,0</CornerRadius>
+    <Thickness x:Key="AppContentBorderThickness">1,1,0,0</Thickness>
+
+    <CornerRadius x:Key="AppPillCornerRadius">4</CornerRadius>
+    <CornerRadius x:Key="AppSwatchCornerRadius">4</CornerRadius>
+
+    <!-- Tabs: text with an accent line under the selected one. -->
+    <CornerRadius x:Key="AppTabCornerRadius">0</CornerRadius>
+    <Thickness x:Key="AppTabBorderThickness">0,0,0,3</Thickness>
+    <Thickness x:Key="AppTabPadding">14,11,14,9</Thickness>
+    <SolidColorBrush x:Key="AppTabSelectedBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="AppTabHoverBrush" Color="Transparent" />
+    <!-- AppTabSelectedBorderBrush (the line under the selected tab) is the accent colour: ThemeService sets it with the accent. -->
+</ResourceDictionary>

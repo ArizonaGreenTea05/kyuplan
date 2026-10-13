@@ -1,0 +1,234 @@
+@page "/branding"
+@inherits ViewModelComponent<BrandingAdminViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Branding_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit && Vm.IsLoaded)
+        {
+            <button type="button" class="btn ghost" disabled="@(!Vm.CanReset || Vm.IsConfirmingReset)"
+                    title="@(Vm.IsCustomized ? null : Strings.Branding_ResetHint)" @onclick="() => Vm.AskResetCommand.Execute(null)">
+                <Icon Name="reset" /><span>@Strings.Branding_Reset</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save or upload is no reason to offer "try again"; only a page that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.IsConfirmingReset)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Strings.Branding_ConfirmReset">
+                <span>@Strings.Branding_ConfirmReset</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmResetCommand.ExecuteAsync(null)">
+                    <span>@Strings.Branding_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelResetCommand.Execute(null)">
+                    <span>@Strings.Branding_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.IsLoaded)
+        {
+            <p class="state">@(Vm.IsCustomized ? Strings.Branding_StateCustom : Strings.Branding_StateDefault)</p>
+
+            <form class="card card-form" aria-labelledby="branding-texts" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="branding-texts">@Strings.Branding_TextsTitle</h2>
+
+                <div class="grid two">
+                    <label class="field">
+                        <span>@Strings.Branding_ProductName</span>
+                        <input type="text" maxlength="@BrandingRules.MaxProductNameLength" autocomplete="off" disabled="@(!Vm.CanEdit)"
+                               @bind="Vm.FormProductName" @bind:event="oninput" />
+                        @if (Vm.ProductNameProblem is { } productProblem)
+                        {
+                            <p class="field-error" role="alert">@productProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.Branding_ProductNameHint</small>
+                        }
+                    </label>
+
+                    <label class="field">
+                        <span>@Strings.Branding_OrganizationName</span>
+                        <input type="text" maxlength="@BrandingRules.MaxOrganizationNameLength" autocomplete="off" disabled="@(!Vm.CanEdit)"
+                               @bind="Vm.FormOrganizationName" @bind:event="oninput" />
+                        @if (Vm.OrganizationNameProblem is { } organizationProblem)
+                        {
+                            <p class="field-error" role="alert">@organizationProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.Branding_OrganizationNameHint</small>
+                        }
+                    </label>
+                </div>
+
+                <div class="field">
+                    <span id="branding-accent">@Strings.Branding_AccentColor</span>
+                    <div class="color-row">
+                        <input type="color" aria-label="@Strings.Branding_PickColor" value="@Vm.AccentPickerValue" disabled="@(!Vm.CanEdit)" @oninput="OnPickColor" />
+                        <input type="text" class="hex" aria-labelledby="branding-accent" maxlength="7" autocomplete="off" spellcheck="false"
+                               disabled="@(!Vm.CanEdit)" @bind="Vm.FormAccentColor" @bind:event="oninput" />
+                    </div>
+                    @if (Vm.AccentColorProblem is { } accentProblem)
+                    {
+                        <p class="field-error" role="alert">@accentProblem</p>
+                    }
+                    else
+                    {
+                        <small>@Strings.Branding_AccentColorHint</small>
+                    }
+                </div>
+
+                <div class="field">
+                    <span id="branding-themes">@Strings.Branding_ThemesTitle</span>
+                    <label>
+                        <small>@Strings.Branding_DefaultWebTheme</small>
+                        <select value="@Vm.FormDefaultWebTheme" disabled="@(!Vm.CanEdit)" @onchange="e => Vm.FormDefaultWebTheme = e.Value?.ToString() ?? Vm.FormDefaultWebTheme">
+                            @foreach (var choice in Vm.WebThemes)
+                            {
+                                <option value="@choice.Id">@choice.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        <small>@Strings.Branding_DefaultWindowsTheme</small>
+                        <select value="@Vm.FormDefaultWindowsTheme" disabled="@(!Vm.CanEdit)" @onchange="e => Vm.FormDefaultWindowsTheme = e.Value?.ToString() ?? Vm.FormDefaultWindowsTheme">
+                            @foreach (var choice in Vm.WindowsThemes)
+                            {
+                                <option value="@choice.Id">@choice.Name</option>
+                            }
+                        </select>
+                    </label>
+                    <small>@Strings.Branding_ThemesLede</small>
+                </div>
+
+                @if (Vm.CanEdit)
+                {
+                    <div class="form-actions">
+                        <button type="submit" class="btn" disabled="@(!Vm.CanSave)">@Strings.Branding_Save</button>
+                    </div>
+                }
+            </form>
+
+            <form class="card card-form" aria-labelledby="branding-images" @onsubmit="() => Vm.SaveImagesCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <div>
+                    <h2 id="branding-images">@Strings.Branding_ImagesTitle</h2>
+                    <p class="note">@string.Format(Strings.Branding_ImagesLede, BrandingRules.MaxImageBytes / 1024)</p>
+                </div>
+
+                <div class="slots">
+                    @foreach (var row in Vm.Images)
+                    {
+                        <div class="slot">
+                            <div class="slot-head">
+                                <strong>@row.Title</strong>
+                                <small>@row.Hint</small>
+                                @if (row.IsPending)
+                                {
+                                    <small class="pending">@Strings.Branding_NotSavedYet</small>
+                                }
+                            </div>
+
+                            <div class="slot-preview @(row.OnDark ? "dark" : "")">
+                                @if (row.PreviewUrl is { } url)
+                                {
+                                    <img src="@url" alt="@row.Title" />
+                                }
+                                else
+                                {
+                                    <span>@row.EmptyText</span>
+                                }
+                            </div>
+
+                            @if (Vm.CanEdit)
+                            {
+                                <div class="slot-actions">
+                                    @* The file input lies invisibly over its button: a click opens the file dialog, and the keyboard reaches it. *@
+                                    <span class="btn file-btn @(Vm.IsBusy ? "disabled" : "")">
+                                        <Icon Name="upload" /><span>@(row.HasImage ? Strings.Branding_Replace : Strings.Branding_Upload)</span>
+                                        <InputFile @key="KeyOf(row.Slot)" accept="@row.Accept" disabled="@Vm.IsBusy"
+                                                   aria-label="@($"{(row.HasImage ? Strings.Branding_Replace : Strings.Branding_Upload)} {row.Title}")"
+                                                   OnChange="e => UploadAsync(row, e)" />
+                                    </span>
+                                    <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Branding_Remove}: {row.Title}")"
+                                            disabled="@(!Vm.CanRemove(row))" @onclick="() => Vm.RemoveImageCommand.Execute(row)">
+                                        <Icon Name="trash" /><span>@Strings.Branding_Remove</span>
+                                    </button>
+                                    @if (row.IsPending)
+                                    {
+                                        <button type="button" class="btn ghost" aria-label="@($"{Strings.Branding_Undo}: {row.Title}")"
+                                                disabled="@(!Vm.CanUndo(row))" @onclick="() => Vm.UndoImageCommand.Execute(row)">
+                                            <Icon Name="reset" /><span>@Strings.Branding_Undo</span>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @if (Vm.CanEdit)
+                {
+                    <div class="form-actions">
+                        <button type="submit" class="btn" disabled="@(!Vm.CanSaveImages)">@Strings.Branding_Save</button>
+                    </div>
+                }
+            </form>
+        }
+    </PageGate>
+</section>
+
+@code {
+    // Choosing the file that was chosen before does not raise a change: each slot's input is made anew after an upload.
+    private readonly Dictionary<string, int> _inputKeys = [];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    private int KeyOf(string slot) => _inputKeys.GetValueOrDefault(slot);
+
+    private void OnPickColor(ChangeEventArgs e) => Vm.FormAccentColor = e.Value?.ToString() ?? Vm.FormAccentColor;
+
+    private async Task UploadAsync(BrandingImageRow row, InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        try
+        {
+            await Vm.PickImageAsync(row.Slot, file.Size, () => file.OpenReadStream(BrandingRules.MaxImageBytes));
+        }
+        finally
+        {
+            // Not before: the browser's file belongs to the input, which must stay until the upload has read it.
+            _inputKeys[row.Slot] = KeyOf(row.Slot) + 1;
+        }
+    }
+
+    /// <summary>Only when there is nothing to show: a failed save or upload is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.IsLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

@@ -1,0 +1,19 @@
+<div class="kpi @Tone">
+    <span class="kpi-label">@Kpi.Label</span>
+    <span class="kpi-value">@Kpi.Value</span>
+    @if (Kpi.Hint is { } hint)
+    {
+        <span class="kpi-hint">@hint</span>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public KpiViewModel Kpi { get; set; } = default!;
+
+    private string Tone => Kpi.Tone switch
+    {
+        KpiTone.Success => "success",
+        KpiTone.Warning => "warning",
+        _ => "",
+    };
+}

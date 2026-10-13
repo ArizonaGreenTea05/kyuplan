@@ -1,0 +1,41 @@
+# kyuplan on TrueNAS SCALE (24.10 or newer), SQLite in a dataset. The same file works on any Docker host that has a user 568.
+# For PostgreSQL see the end of this file; the other ways to run the container are in docker-compose.yml and docs/deployment.md.
+#
+# TrueNAS: Apps -> Discover Apps -> Custom App -> Install via YAML, paste this file, replace what says CHANGE-ME.
+# (TrueNAS does not read a ".env" file: write the values into the YAML.)
+
+name: kyuplan
+
+services:
+  kyuplan:
+    # A version of the "v<version>" releases without the "v", e.g. :0.1 (recommended: you decide when to update), or :latest.
+    image: ghcr.io/arizonagreentea05/kyuplan:latest
+    restart: unless-stopped
+    # TrueNAS's "apps" user: the dataset below must be writable for it.
+    user: "568:568"
+    ports:
+      # The web client and the API, both at http://<server>:30100/ (the API is below /api).
+      - "30100:8080"
+    volumes:
+      # The SQLite databases, the settings file and the log files. Keep it on a dataset, and back it up.
+      - /mnt/CHANGE-ME-pool/apps/kyuplan/data:/data
+      # Only for your own logos (see Branding in docs/deployment.md): a dataset with the image files, readable for the user above.
+      # - /mnt/CHANGE-ME-pool/apps/kyuplan/branding:/branding:ro
+    environment:
+      # Nothing else has to be set: open the site once, and the web client asks for the Spond login, the other settings and the first
+      # administrator. A value set here wins over the Settings page, so only pin what must not be changed there.
+      Statistics__TimeZone: "Europe/Berlin"
+      # Spond__Email: "CHANGE ME"
+      # Spond__Password: "CHANGE ME"
+      # Accounts__InitialAdminPassword: "CHANGE ME (12 to 128 characters)"
+      # The API only takes logins over HTTPS (from other machines): put a reverse proxy that ends HTTPS in front and set
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # (Only on a network you trust completely, plain HTTP can be allowed instead: Api__AllowInsecureHttp: "true")
+      # Branding__ProductName: "kyuplan"
+      # Branding__OrganizationName: "Karate Club Beispiel"
+      # Branding__AccentColor: "#1a5fb4"
+      #
+      # --- PostgreSQL instead of the SQLite files: the "postgres" TrueNAS app, or any server (databases may be one) ---
+      # Database__Provider: PostgreSql
+      # Database__ConnectionString: "Host=CHANGE-ME-host;Database=kyuplan;Username=kyuplan;Password=CHANGE ME"
+      # Accounts__ConnectionString: "Host=CHANGE-ME-host;Database=kyuplan;Username=kyuplan;Password=CHANGE ME"

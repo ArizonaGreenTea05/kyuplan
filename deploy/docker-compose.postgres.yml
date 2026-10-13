@@ -1,0 +1,54 @@
+# kyuplan with its own PostgreSQL server next to it, in the same Compose project. Both data folders live in volumes (or folders, see
+# below) on this host; the application itself keeps only its settings file and logs in /data. Everything is explained in docs/deployment.md.
+#
+#   cp .env.example .env       # set POSTGRES_PASSWORD (required), the rest is optional
+#   docker compose -f docker-compose.postgres.yml up -d
+#   -> open http://<host>:8080/ ; the first visit asks for the Spond login and the first administrator.
+#
+# Need PostgreSQL to be somewhere else (another machine, Azure Database for PostgreSQL, ...)? Use docker-compose.yml with the block at its end.
+
+name: kyuplan
+
+services:
+  kyuplan:
+    image: ${KYUPLAN_IMAGE:-ghcr.io/arizonagreentea05/kyuplan:latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${KYUPLAN_PORT:-8080}:8080"
+    volumes:
+      # The settings file and the log files (the databases are in PostgreSQL). Back it up together with the database.
+      - kyuplan-data:/data
+    environment:
+      Database__Provider: PostgreSql
+      # Both databases (the club's data and the user accounts) may be one PostgreSQL database: their tables do not clash.
+      # A password with ";" or "=" in it must be put in double quotes inside the string: Password="a;b".
+      Database__ConnectionString: "Host=db;Database=kyuplan;Username=kyuplan;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the file .env}"
+      Accounts__ConnectionString: "Host=db;Database=kyuplan;Username=kyuplan;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the file .env}"
+      # More settings (Spond login, reverse proxy, branding, ...): see docker-compose.yml.
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+
+  db:
+    # 17 keeps its files in /var/lib/postgresql/data. Updating to another major version needs a dump and restore (docs/deployment.md).
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kyuplan
+      POSTGRES_USER: kyuplan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the file .env}
+    volumes:
+      # A named volume (managed by Docker), or a folder you choose, e.g. "/srv/kyuplan/postgres:/var/lib/postgresql/data" (not on a
+      # Windows or macOS shared folder: PostgreSQL needs real file permissions).
+      - kyuplan-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kyuplan -d kyuplan"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # PostgreSQL is only for the application: no "ports" here. Add "127.0.0.1:5432:5432" if you want to look into it from this host.
+
+volumes:
+  kyuplan-data:
+  kyuplan-db:

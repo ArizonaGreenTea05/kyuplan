@@ -1,0 +1,24 @@
+{
+  "name": "kyuplan-docs",
+  "private": true,
+  "version": "0.0.0",
+  "description": "The kyuplan documentation: one Docusaurus site per audience, built from ../docs by scripts/build-all.mjs",
+  "scripts": {
+    "build": "node scripts/build-all.mjs",
+    "start": "node scripts/prepare.mjs && docusaurus start",
+    "clear": "docusaurus clear"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.9.2",
+    "@docusaurus/preset-classic": "3.9.2",
+    "@mdx-js/react": "^3.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "overrides": {
+    "webpack": "5.102.1"
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}

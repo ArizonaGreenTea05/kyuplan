@@ -1,0 +1,432 @@
+@page "/exams"
+@using System.ComponentModel
+@inherits ViewModelComponent<ExamsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy || Detail.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!(Vm.IsBusy || Detail.IsBusy))"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Exams_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginAddCommand.CanExecute(null))"
+                    @onclick="() => Vm.BeginAddCommand.ExecuteAsync(null)">
+                <Icon Name="plus" /><span>@Strings.Exams_Add</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.IsAdding)
+        {
+            @* An exam is a Spond event: a new one is made by choosing the event. *@
+            <form class="card card-form" aria-labelledby="exam-add-title" @onsubmit="() => Vm.AddCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="exam-add-title">@Strings.Exams_AddTitle</h2>
+                <EventPicker Label="@Strings.Exams_AddEvent" Options="Vm.EventOptions" @bind-Value="Vm.NewEventId" />
+                <p class="note">@Strings.Exams_AddHint</p>
+                @if (Vm.HasSubGroups)
+                {
+                    <SubGroupPicker Label="@Strings.Exams_AddSubGroups" Options="Vm.SubGroupOptions" Summary="@Vm.SubGroupSummary"
+                                    IsEveryone="Vm.IsEveryoneSelected" OnClear="() => Vm.ClearSubGroupsCommand.Execute(null)" />
+                    <p class="note">@Strings.Exams_AddSubGroupsHint</p>
+                }
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.AddCommand.CanExecute(null))">@Strings.Exams_AddSave</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelAddCommand.Execute(null)">@Strings.Saved_Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (Vm.CanEdit && Vm.IsConfirmingDelete)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.DeleteQuestion">
+                <span>@Vm.DeleteQuestion</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                    <span>@Strings.Saved_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                    <span>@Strings.Saved_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.IsEmpty)
+        {
+            <p class="empty">@Strings.Exams_None</p>
+        }
+        else if (Vm.Exams.Count > 0)
+        {
+            <article class="card results" aria-label="@Vm.Title">
+                <div class="table-wrap short">
+                    <table class="data exams">
+                        <thead>
+                            <tr>
+                                <th>@Strings.Exams_ColDate</th>
+                                <th>@Strings.Exams_ColExam</th>
+                                <th>@Strings.Exams_ColWhen</th>
+                                <th>@Strings.Exams_ColAccepted</th>
+                                <th>@Strings.Exams_ColPlan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var exam in Vm.Exams)
+                            {
+                                var chosen = ReferenceEquals(exam, Vm.SelectedExam);
+                                <tr @key="exam.Id" class="@(chosen ? "sel" : "") @(exam.IsPast ? "past" : "")"
+                                    aria-current="@(chosen ? "true" : null)" @onclick="() => Vm.SelectedExam = exam">
+                                    <td>
+                                        <span class="cal" aria-hidden="true"><i>@exam.Weekday</i><b>@exam.DayNumber</b><em>@exam.MonthText</em></span>
+                                    </td>
+                                    <td class="name">
+                                        <button type="button" class="row-pick" @onclick="() => Vm.SelectedExam = exam" @onclick:stopPropagation>
+                                            <strong>@exam.Name</strong>
+                                        </button>
+                                        <small>@exam.DateText · @exam.StatusText</small>
+                                    </td>
+                                    <td class="@(exam.IsUpcoming ? "when-soon" : "muted")">@exam.WhenText</td>
+                                    <td class="num">@exam.PeopleText</td>
+                                    <td class="num">@exam.ExtraText</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+
+        @if (Detail.HasExam)
+        {
+            <section class="detail" aria-label="@Detail.Heading">
+                <div class="detail-head">
+                    <h2>@Detail.Heading</h2>
+                    @if (Vm.CanEdit)
+                    {
+                        <button type="button" class="btn ghost danger" disabled="@(!Vm.AskDeleteCommand.CanExecute(null))"
+                                @onclick="() => Vm.AskDeleteCommand.Execute(null)">
+                            <Icon Name="trash" /><span>@Strings.Exams_Delete</span>
+                        </button>
+                    }
+                </div>
+
+                <ErrorBanner Message="@Detail.ErrorMessage" />
+
+                @if (Detail.HasNotice)
+                {
+                    <div class="banner ok" role="status">
+                        <Icon Name="check" />
+                        <span>@Detail.NoticeText</span>
+                    </div>
+                }
+
+                @if (Detail.ShowsPlan)
+                {
+                    @* ---- Who is fit for this exam ------------------------------------------------------------------ *@
+                    <article class="card results plan" aria-labelledby="plan-title">
+                        <div class="card-intro">
+                            <h2 id="plan-title">@Strings.Plan_Title</h2>
+                            <p class="lede">@Strings.Plan_Lede</p>
+                        </div>
+
+                        <div class="filter-row basis">
+                            <label class="field basis-pick">
+                                <span>@Strings.Plan_Basis</span>
+                                <select value="@BasisKey(Detail.SelectedBasis)" @onchange="OnBasisChosen">
+                                    @foreach (var option in Detail.BasisOptions)
+                                    {
+                                        <option value="@BasisKey(option)">@option.Label</option>
+                                    }
+                                </select>
+                                <small>@Strings.Plan_BasisHint</small>
+                            </label>
+                        </div>
+                        @if (Vm.CanOpenStatistics)
+                        {
+                            <p class="note"><a href="statistics">@Strings.Plan_BasisDefine</a></p>
+                        }
+                        @if (Detail.BasisSummary.Length > 0)
+                        {
+                            <p class="note basis-summary">@Detail.BasisSummary</p>
+                        }
+
+                        @if (Detail.HasNoBelts)
+                        {
+                            <div class="banner warn" role="status">
+                                <Icon Name="alert" />
+                                <span>@Strings.Plan_NoBelts</span>
+                            </div>
+                        }
+
+                        @if (Detail.HasSuggestions)
+                        {
+                            <div class="card-head">
+                                <div class="toolbar">
+                                    <div class="segmented" role="group" aria-label="@Strings.Plan_Show">
+                                        @foreach (var option in Detail.FilterOptions)
+                                        {
+                                            var on = ReferenceEquals(option, Detail.SelectedFilter);
+                                            <button type="button" class="@(on ? "on" : "")" aria-pressed="@(on ? "true" : "false")"
+                                                    @onclick="() => Detail.SelectedFilter = option">@option.Label</button>
+                                        }
+                                    </div>
+                                    <label class="search">
+                                        <Icon Name="search" Size="16" />
+                                        <input type="search" placeholder="@Strings.Stats_FindMember" aria-label="@Strings.Stats_FindMember"
+                                               @bind="Detail.SearchText" @bind:event="oninput" />
+                                    </label>
+                                </div>
+                            </div>
+
+                            @if (Detail.NoneMatch)
+                            {
+                                <p class="empty-inline pad" role="status">@Detail.EmptyText</p>
+                            }
+                            else
+                            {
+                                <div class="table-wrap">
+                                    <table class="data suggestions">
+                                        <thead>
+                                            <tr>
+                                                @if (Detail.CanPlan)
+                                                {
+                                                    <th class="pick">@Strings.Plan_ColSave</th>
+                                                }
+                                                <th>@Strings.Col_Member</th>
+                                                <th>@Strings.Belts_ColBelt → @Strings.Plan_ColNext</th>
+                                                <th>@Strings.Plan_ColAge</th>
+                                                <th>@Strings.Plan_ColWait</th>
+                                                <th>@Strings.Plan_ColAttendance</th>
+                                                <th>@Strings.Plan_ColLastExam</th>
+                                                <th>@Strings.Plan_ColVerdict</th>
+                                                <th>@Strings.Plan_ColSpond</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var row in Detail.VisibleSuggestions)
+                                            {
+                                                <tr @key="row.MemberId" class="@(row.IsSelected ? "ticked" : "")">
+                                                    @if (Detail.CanPlan)
+                                                    {
+                                                        <td class="pick">
+                                                            <input type="checkbox" @bind="row.IsSelected"
+                                                                   aria-label="@string.Format(Strings.Plan_SelectRow, row.Name)" />
+                                                        </td>
+                                                    }
+                                                    <td class="name">
+                                                        <strong>@row.Name</strong>
+                                                        <small>@row.SubGroupsText</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="belt-move">
+                                                            <BeltBadge Belt="row.Belt" ShowName="true" />
+                                                            <span class="arrow" aria-hidden="true">→</span>
+                                                            <BeltBadge Belt="row.NextBelt" />
+                                                        </span>
+                                                    </td>
+                                                    <td class="req-cell @StateClass(row.AgeState)">@row.AgeText</td>
+                                                    <td class="req-cell @StateClass(row.WaitState)" title="@row.WaitTip">@row.WaitText</td>
+                                                    <td class="att">
+                                                        <div class="rate">
+                                                            <RateBar Fraction="row.AttendanceFraction" Status="row.AttendanceStatus" Label="@row.AttendanceAriaText" />
+                                                            <span class="num">@row.AttendanceText</span>
+                                                        </div>
+                                                        <small>@row.AttendedOfInvitedText</small>
+                                                    </td>
+                                                    <td class="last">@row.LastExamText</td>
+                                                    <td class="verdict-cell">
+                                                        <span class="status @VerdictClass(row.Verdict)" title="@row.VerdictTip">@row.VerdictText</span>
+                                                        @if (row.ReasonText.Length > 0)
+                                                        {
+                                                            <small class="reason">@row.ReasonText</small>
+                                                        }
+                                                    </td>
+                                                    <td class="spond">
+                                                        <span class="@(row.IsInvited ? "" : "none")">@row.InvitationText</span>
+                                                        @if (row.IsSaved)
+                                                        {
+                                                            <small>@Strings.Plan_SavedMark</small>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+
+                            @* Saving members for the exam is for those who may plan it; the others only look at the list. *@
+                            @if (Detail.CanPlan)
+                            {
+                                <div class="plan-actions">
+                                    <div class="filter-actions start">
+                                        <button type="button" class="btn ghost" disabled="@(!Detail.SelectFitCommand.CanExecute(null))"
+                                                @onclick="() => Detail.SelectFitCommand.Execute(null)">
+                                            <span>@Strings.Plan_SelectFit</span>
+                                        </button>
+                                        <button type="button" class="btn ghost" disabled="@(!Detail.ClearSelectionCommand.CanExecute(null))"
+                                                @onclick="() => Detail.ClearSelectionCommand.Execute(null)">
+                                            <span>@Strings.Plan_ClearSelection</span>
+                                        </button>
+                                    </div>
+                                    <small class="count" role="status">@Detail.SelectionText</small>
+                                    <div class="filter-actions">
+                                        <button type="button" class="btn ghost" disabled="@(!Detail.DiscardChangesCommand.CanExecute(null))"
+                                                @onclick="() => Detail.DiscardChangesCommand.Execute(null)">
+                                            <span>@Strings.Plan_Discard</span>
+                                        </button>
+                                        <button type="button" class="btn" disabled="@(!Detail.SaveSelectionCommand.CanExecute(null))"
+                                                @onclick="() => Detail.SaveSelectionCommand.ExecuteAsync(null)">
+                                            <span>@Strings.Plan_Save</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="note">@Strings.Plan_SaveHint</p>
+                            }
+                            @if (Detail.HasSavedNotInvited)
+                            {
+                                <p class="note"><strong>@Detail.SavedNotInvitedText</strong></p>
+                            }
+                        }
+                    </article>
+                }
+
+                @if (Detail.ShowsResults)
+                {
+                    @* ---- Who attended, and which belt each received -------------------------------------------------- *@
+                    <article class="card results outcome" aria-labelledby="result-title">
+                        <div class="card-intro">
+                            <h2 id="result-title">@Strings.Res_Title</h2>
+                            <p class="lede">@Strings.Res_Lede</p>
+                        </div>
+
+                        @if (Detail.ResultKpis.Count > 0)
+                        {
+                            <div class="kpis dense">
+                                @foreach (var kpi in Detail.ResultKpis)
+                                {
+                                    <KpiCard Kpi="kpi" />
+                                }
+                            </div>
+                        }
+
+                        @if (Detail.NobodyAttended)
+                        {
+                            <p class="empty-inline pad">@Strings.Res_Nobody</p>
+                        }
+                        else if (Detail.HasAttendees)
+                        {
+                            <div class="table-wrap">
+                                <table class="data attendees">
+                                    <thead>
+                                        <tr>
+                                            <th>@Strings.Col_Member</th>
+                                            <th>@Strings.Res_ColAnswer</th>
+                                            <th>@Strings.Res_ColBelt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in Detail.Attendees)
+                                        {
+                                            <tr @key="row.MemberId">
+                                                <td class="name"><strong>@row.Name</strong></td>
+                                                <td>@row.AnswerText</td>
+                                                <td>
+                                                    @if (Detail.CanRecordResults)
+                                                    {
+                                                        <div class="belt-name">
+                                                            <BeltBadge Belt="row.SelectedBelt" />
+                                                            @* A new key after a refusal: the page cannot tell that a select went back to the value it had. *@
+                                                            <select @key="@($"{row.MemberId}-{row.Revision}")" value="@BeltKey(row.SelectedBelt)"
+                                                                    @onchange="e => OnAttendeeBelt(row, e)"
+                                                                    aria-label="@($"{Strings.Res_ColBelt}: {row.Name}")">
+                                                                @foreach (var option in Detail.BeltOptions)
+                                                                {
+                                                                    <option value="@BeltKey(option)">@option.Label</option>
+                                                                }
+                                                            </select>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        @* Without the right to record belts, who received which is only to look at. *@
+                                                        <BeltBadge Belt="row.SelectedBelt" ShowName="true" />
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </article>
+                }
+            </section>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private ExamDetailViewModel Detail => Vm.Detail;
+
+    /// <summary>The page also follows the detail: it is another view model, one instance for every exam.</summary>
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Detail];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    /// <summary>Only when the list could not be loaded: a failed save is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    /// <summary>A select holds text, so a basis is told by the id of its filter (empty for the default).</summary>
+    private static string BasisKey(BasisOption? option) => option?.FilterId?.ToString() ?? "";
+
+    private void OnBasisChosen(ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString() ?? "";
+        if (Detail.BasisOptions.FirstOrDefault(o => BasisKey(o) == key) is { } basis) Detail.SelectedBasis = basis;
+    }
+
+    /// <summary>A select holds text, so a belt is told by its id (empty for "no belt").</summary>
+    private static string BeltKey(BeltOption? option) => option?.Id?.ToString() ?? "";
+
+    private void OnAttendeeBelt(AttendeeRow row, ChangeEventArgs e)
+    {
+        var key = e.Value?.ToString() ?? "";
+        row.SelectedBelt = Detail.BeltOptions.FirstOrDefault(o => BeltKey(o) == key) ?? Detail.BeltOptions[0];
+    }
+
+    private static string StateClass(CheckState state) => state switch
+    {
+        CheckState.NotMet => "miss",
+        CheckState.Unknown => "unknown",
+        _ => "met",
+    };
+
+    private static string VerdictClass(SuggestionVerdict verdict) => verdict switch
+    {
+        SuggestionVerdict.Fit => "ok",
+        SuggestionVerdict.NotYet => "warn",
+        _ => "",
+    };
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

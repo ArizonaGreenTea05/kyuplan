@@ -1,0 +1,16 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.BeltSwatch"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root" IsTabStop="False" Focusable="False" Width="40" Height="16" VerticalAlignment="Center">
+
+    <!-- A belt as a small strap: its colour, with the colour of the stripe as a narrower band along it. It is decorative
+         (the name of the belt is always next to it), and shows nothing while the colour is empty, e.g. for "No belt".
+         The outline keeps a white belt visible on a light page and a black one on a dark page. -->
+    <Grid Visibility="{Binding Color, ElementName=Root, Converter={StaticResource StringToVisibility}}">
+        <Border CornerRadius="3" BorderThickness="1" BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}"
+                Background="{Binding Color, ElementName=Root, Converter={StaticResource HexToBrush}}" />
+        <Border Height="6" Margin="1,0" VerticalAlignment="Center"
+                Background="{Binding Stripe, ElementName=Root, Converter={StaticResource HexToBrush}}"
+                Visibility="{Binding Stripe, ElementName=Root, Converter={StaticResource StringToVisibility}}" />
+    </Grid>
+</UserControl>

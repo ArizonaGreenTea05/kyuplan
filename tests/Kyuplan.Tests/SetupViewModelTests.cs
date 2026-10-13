@@ -1,0 +1,289 @@
+using Kyuplan.Client.Api;
+using Kyuplan.Client.Localization;
+using Kyuplan.Client.Resources;
+using Kyuplan.Client.ViewModels;
+using Kyuplan.Contracts;
+using static Kyuplan.Tests.TestAccounts;
+
+namespace Kyuplan.Tests;
+
+/// <summary>The setup screen and the settings page: what they ask, when they let the user save, and how they wait for the API to restart.</summary>
+public sealed class SetupViewModelTests : IDisposable
+{
+    private readonly FakePlannerApi _api = new() { NeedsSetup = true };
+
+    public void Dispose()
+    {
+        // Selecting a language applies its culture process-wide; do not leak it into other tests.
+        System.Globalization.CultureInfo.DefaultThreadCurrentCulture = null;
+        System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = null;
+    }
+
+    private ApiRestartWatcher Watcher() => new(_api) { Delay = (_, _) => Task.CompletedTask };
+
+    private SetupViewModel Setup() => new(_api, Watcher());
+
+    private static async Task<SetupViewModel> CheckedAsync(SetupViewModel vm)
+    {
+        await vm.CheckAsync();
+        return vm;
+    }
+
+    private static void FillAdmin(SetupViewModel vm, string password = "a good password")
+    {
+        vm.AdminUserName = "boss";
+        vm.AdminPassword = password;
+        vm.AdminPasswordRepeat = password;
+    }
+
+    [Fact]
+    public async Task The_form_starts_with_what_the_api_runs_with()
+    {
+        var vm = await CheckedAsync(Setup());
+
+        Assert.True(vm.IsChecked);
+        Assert.True(vm.NeedsSetup);
+        Assert.Equal("data/kyuplan.db", vm.Form.DatabasePath);
+        Assert.Equal("Europe/Berlin", vm.Form.TimeZone);
+    }
+
+    [Fact]
+    public async Task An_api_that_is_set_up_needs_nothing()
+    {
+        _api.NeedsSetup = false;
+
+        var vm = await CheckedAsync(Setup());
+
+        Assert.True(vm.IsChecked);
+        Assert.False(vm.NeedsSetup);
+    }
+
+    [Fact]
+    public async Task A_failed_question_is_an_error_and_does_not_claim_the_api_needs_a_setup()
+    {
+        _api.FailWith = new PlannerApiException("Not reachable.", null);
+
+        var vm = await CheckedAsync(Setup());
+
+        Assert.False(vm.IsChecked);
+        Assert.False(vm.NeedsSetup);
+        Assert.Equal("Not reachable.", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task Finishing_needs_a_good_administrator_and_valid_settings()
+    {
+        var vm = await CheckedAsync(Setup());
+        Assert.False(vm.FinishCommand.CanExecute(null)); // no password yet
+
+        FillAdmin(vm, "short");
+        Assert.False(vm.FinishCommand.CanExecute(null));
+        Assert.NotNull(vm.AdminPasswordProblem);
+
+        FillAdmin(vm);
+        Assert.True(vm.FinishCommand.CanExecute(null));
+
+        vm.AdminPasswordRepeat = "something else";
+        Assert.False(vm.FinishCommand.CanExecute(null));
+        Assert.Equal(Strings.Setup_PasswordsDiffer, vm.RepeatProblem);
+
+        FillAdmin(vm);
+        vm.Form.AccountsDatabasePath = vm.Form.DatabasePath;
+        Assert.False(vm.FinishCommand.CanExecute(null));
+        Assert.Equal(Strings.Settings_DatabasesSame, vm.Form.AccountsDatabasePathProblem);
+    }
+
+    [Fact]
+    public async Task A_half_spond_login_is_a_problem_but_no_login_at_all_is_not()
+    {
+        var vm = await CheckedAsync(Setup());
+        Assert.Null(vm.Form.SpondProblem);
+
+        vm.Form.SpondEmail = "me@example.org";
+        Assert.Equal(Strings.Settings_SpondIncomplete, vm.Form.SpondProblem);
+
+        vm.Form.SpondPassword = "secret";
+        Assert.Null(vm.Form.SpondProblem);
+
+        vm.Form.SpondPassword = "";
+        vm.Form.UseDemoData = true; // the demo does not ask Spond
+        Assert.Null(vm.Form.SpondProblem);
+    }
+
+    [Fact]
+    public async Task Finishing_sends_the_settings_and_the_administrator_and_is_done_when_nothing_restarts()
+    {
+        _api.SaveRestarts = false;
+        var vm = await CheckedAsync(Setup());
+        FillAdmin(vm);
+        vm.Form.TimeZone = "UTC";
+
+        await vm.FinishCommand.ExecuteAsync(null);
+
+        var call = Assert.Single(_api.SetupCalls);
+        Assert.Equal("boss", call.AdminUserName);
+        Assert.Equal("a good password", call.AdminPassword);
+        Assert.Equal("UTC", call.Settings.TimeZone);
+        Assert.Null(call.Settings.SpondPassword); // nothing typed = keep
+        Assert.True(vm.IsDone);
+        Assert.False(vm.FinishCommand.CanExecute(null)); // no second setup
+    }
+
+    [Fact]
+    public async Task When_the_api_restarts_the_screen_waits_until_it_answers_again()
+    {
+        var vm = await CheckedAsync(Setup());
+        FillAdmin(vm);
+        _api.SetupQuestionsFailing = 3; // the API is down for three questions
+        var questionsBefore = _api.SetupQuestions;
+        var states = new List<bool>();
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SetupViewModel.IsRestarting)) states.Add(vm.IsRestarting);
+        };
+
+        await vm.FinishCommand.ExecuteAsync(null);
+
+        Assert.Equal([true, false], states);
+        Assert.Equal(4, _api.SetupQuestions - questionsBefore); // three that failed, one that worked
+        Assert.True(vm.IsDone);
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task An_api_that_does_not_come_back_is_reported_and_the_screen_is_not_done()
+    {
+        var vm = await CheckedAsync(Setup());
+        FillAdmin(vm);
+        _api.SetupQuestionsFailing = int.MaxValue;
+
+        await vm.FinishCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsDone);
+        Assert.False(vm.IsRestarting);
+        Assert.Equal(Strings.Setup_NotBack, vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task A_refused_setup_keeps_what_was_typed_and_says_why()
+    {
+        var vm = await CheckedAsync(Setup());
+        FillAdmin(vm);
+        _api.NeedsSetup = false; // somebody else was faster
+
+        await vm.FinishCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsDone);
+        Assert.Equal("The API is set up already.", vm.ErrorMessage);
+        Assert.Equal("boss", vm.AdminUserName);
+    }
+
+    // --- The settings page -------------------------------------------------------------------------------------
+
+    private SettingsViewModel Page(UserDto? user = null)
+    {
+        _api.NeedsSetup = false;
+        _api.Account = user ?? Dto(1, "admin", "admin", [], isAdmin: true);
+        var language = new LanguageService();
+        language.Select("en");
+        return new SettingsViewModel(new ShellViewModel(_api, language, new LoginSession()), _api, Watcher());
+    }
+
+    [Fact]
+    public async Task The_page_shows_the_settings_to_a_user_who_may_see_them_and_offers_no_save_before_something_changed()
+    {
+        var page = Page();
+
+        await page.ActivateAsync();
+
+        Assert.True(page.IsLoaded);
+        Assert.Equal("Europe/Berlin", page.Form.TimeZone);
+        Assert.False(page.CanSave);
+
+        page.Form.TimeZone = "UTC";
+        Assert.True(page.CanSave);
+
+        page.Form.TimeZone = "Europe/Berlin"; // typed back: nothing to save again
+        Assert.False(page.CanSave);
+
+        page.Form.SpondEmail = "me@example.org";
+        page.Form.SpondPassword = "secret"; // a password is a change though the stored one is not shown
+        Assert.True(page.SaveCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_user_who_may_only_look_cannot_save_and_one_who_may_not_look_loads_nothing()
+    {
+        var viewer = Page(WithPermissions(2, "viewer", Permission.SettingsView));
+        await viewer.ActivateAsync();
+        viewer.Form.TimeZone = "UTC";
+
+        Assert.True(viewer.IsLoaded);
+        Assert.False(viewer.CanEdit);
+        Assert.False(viewer.CanSave);
+
+        var nobody = Page(Nobody(3, "nobody"));
+        await nobody.ActivateAsync();
+
+        Assert.False(nobody.IsLoaded);
+        Assert.False(nobody.CanView);
+    }
+
+    [Fact]
+    public async Task An_invalid_form_cannot_be_saved()
+    {
+        var page = Page();
+        await page.ActivateAsync();
+
+        page.Form.DefaultMinAttendancePercent = 120;
+
+        Assert.Equal(Strings.Settings_PercentInvalid, page.Form.PercentProblem);
+        Assert.False(page.CanSave);
+    }
+
+    [Fact]
+    public async Task Saving_something_that_restarts_the_api_waits_for_it_and_reads_the_settings_again()
+    {
+        var page = Page();
+        await page.ActivateAsync();
+        page.Form.ExamKeyword = "Exam";
+        _api.SetupQuestionsFailing = 2;
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Exam", Assert.Single(_api.SettingsSaves).ExamKeyword);
+        Assert.False(page.IsRestarting);
+        Assert.Equal(Strings.Settings_Restarted, page.NoticeText);
+        Assert.False(page.CanSave); // what is shown is what the API runs with now
+    }
+
+    [Fact]
+    public async Task Saving_something_the_api_applies_without_a_restart_does_not_wait()
+    {
+        _api.SaveRestarts = false;
+        var page = Page();
+        await page.ActivateAsync();
+        page.Form.ExamKeyword = "Exam";
+        var questionsBefore = _api.SetupQuestions;
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(questionsBefore, _api.SetupQuestions);
+        Assert.Equal(Strings.Settings_NothingChanged, page.NoticeText);
+    }
+
+    [Fact]
+    public async Task A_refused_save_keeps_what_was_typed_and_shows_the_reason()
+    {
+        var page = Page();
+        await page.ActivateAsync();
+        page.Form.ExamKeyword = "Exam";
+        _api.FailWith = new PlannerApiException("The database cannot be opened.", System.Net.HttpStatusCode.BadRequest);
+
+        await page.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal("The database cannot be opened.", page.ErrorMessage);
+        Assert.Equal("Exam", page.Form.ExamKeyword);
+        Assert.False(page.IsRestarting);
+    }
+}

@@ -1,0 +1,2366 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Nav_Dashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="Nav_Statistics" xml:space="preserve">
+    <value>Attendance Statistics</value>
+  </data>
+  <data name="Nav_Main" xml:space="preserve">
+    <value>Main</value>
+    <comment>Accessible name of the navigation landmark.</comment>
+  </data>
+  <data name="Shell_Group" xml:space="preserve">
+    <value>Group</value>
+  </data>
+  <data name="Shell_DemoData" xml:space="preserve">
+    <value>Demo data</value>
+  </data>
+  <data name="Shell_DemoDataHint" xml:space="preserve">
+    <value>The API serves generated sample data, not your Spond groups.</value>
+  </data>
+  <data name="Shell_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Shell_RefreshHint" xml:space="preserve">
+    <value>Fetch fresh data from Spond</value>
+  </data>
+  <data name="Shell_Theme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Shell_ThemeHint" xml:space="preserve">
+    <value>Switch between light and dark mode</value>
+  </data>
+  <data name="Shell_Design" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Shell_DesignHint" xml:space="preserve">
+    <value>Choose the theme of the program. It is kept with your account.</value>
+  </data>
+  <data name="Shell_DesignRestart" xml:space="preserve">
+    <value>The program has to restart to change its appearance. Unsaved input is lost. Restart now?</value>
+  </data>
+  <data name="Design_Windows11" xml:space="preserve">
+    <value>Windows 11</value>
+  </data>
+  <data name="Design_Windows10" xml:space="preserve">
+    <value>Windows 10</value>
+  </data>
+  <data name="Design_Aero" xml:space="preserve">
+    <value>Vista / 7 (Aero)</value>
+  </data>
+  <data name="Design_Native" xml:space="preserve">
+    <value>Native WPF</value>
+  </data>
+  <data name="Shell_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Shell_LanguageHint" xml:space="preserve">
+    <value>Choose the language of the program. It is kept with your account.</value>
+  </data>
+  <data name="Shell_ApiVersion" xml:space="preserve">
+    <value>API v{0}</value>
+    <comment>{0} = version number of the API.</comment>
+  </data>
+  <data name="Update_Button" xml:space="preserve">
+    <value>Update to {0}</value>
+    <comment>{0} = the new version.</comment>
+  </data>
+  <data name="Update_Hint" xml:space="preserve">
+    <value>This program is version {0}; the server offers {1}. The program closes, installs the update and starts again.</value>
+    <comment>{0} = installed version, {1} = new version.</comment>
+  </data>
+  <data name="Download_Button" xml:space="preserve">
+    <value>Download for {0}</value>
+    <comment>{0} = name of the operating system (Windows, macOS, Linux).</comment>
+  </data>
+  <data name="Download_Hint" xml:space="preserve">
+    <value>Installer of the {0} app, version {1}. It tells you about updates by itself.</value>
+    <comment>{0} = name of the operating system, {1} = version of the installer.</comment>
+  </data>
+  <data name="Shell_TryAgain" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="Shell_NotFoundTitle" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="Shell_NotFound" xml:space="preserve">
+    <value>There is nothing at this address.</value>
+  </data>
+  <data name="Shell_BackToDashboard" xml:space="preserve">
+    <value>Back to the exams</value>
+  </data>
+  <data name="Shell_BrandAria" xml:space="preserve">
+    <value>{0} – {1}</value>
+    <comment>{0} = name of the application (set by the API), {1} = name of the start page.</comment>
+  </data>
+  <data name="Shell_SignedInAs" xml:space="preserve">
+    <value>Signed in as {0}</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Shell_SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="Shell_SignOutHint" xml:space="preserve">
+    <value>Sign out and forget the login saved on this computer</value>
+  </data>
+  <data name="Error_Unexpected" xml:space="preserve">
+    <value>Unexpected error: {0}</value>
+  </data>
+  <data name="Api_Empty" xml:space="preserve">
+    <value>The API returned an empty response.</value>
+  </data>
+  <data name="Api_Unreadable" xml:space="preserve">
+    <value>The API returned data this client cannot read. Are client and API the same version?</value>
+  </data>
+  <data name="Api_Unreachable" xml:space="preserve">
+    <value>Cannot reach the Kyuplan API at {0}. Is it running?</value>
+    <comment>{0} = address of the API.</comment>
+  </data>
+  <data name="Api_Timeout" xml:space="preserve">
+    <value>The Kyuplan API did not answer in time.</value>
+  </data>
+  <data name="Api_Unauthorized" xml:space="preserve">
+    <value>The API rejected the request: you are not signed in, the login is no longer valid, or the API key is missing or wrong.</value>
+  </data>
+  <data name="Api_Status" xml:space="preserve">
+    <value>The API answered {0} {1}.</value>
+    <comment>{0} = HTTP status code, {1} = reason phrase.</comment>
+  </data>
+  <data name="Format_Date" xml:space="preserve">
+    <value>d MMM yyyy</value>
+    <comment>Custom date format, e.g. 14 Oct 2026.</comment>
+  </data>
+  <data name="Format_EventStart" xml:space="preserve">
+    <value>ddd, d MMM · HH:mm</value>
+    <comment>Custom date format for the start of an event.</comment>
+  </data>
+  <data name="Format_EventDay" xml:space="preserve">
+    <value>ddd, d MMM yyyy</value>
+    <comment>Custom date format for the day of an event, with the year, e.g. Sat, 26 Sep 2026.</comment>
+  </data>
+  <data name="Format_Month" xml:space="preserve">
+    <value>MMM yy</value>
+    <comment>Custom date format for the month labels of the charts.</comment>
+  </data>
+  <data name="Dashboard_Lede" xml:space="preserve">
+    <value>How active is the group right now?</value>
+  </data>
+  <data name="Dashboard_Period" xml:space="preserve">
+    <value>Period</value>
+  </data>
+  <data name="Period_30Days" xml:space="preserve">
+    <value>Last 30 days</value>
+  </data>
+  <data name="Period_90Days" xml:space="preserve">
+    <value>Last 90 days</value>
+  </data>
+  <data name="Period_6Months" xml:space="preserve">
+    <value>Last 6 months</value>
+  </data>
+  <data name="Period_12Months" xml:space="preserve">
+    <value>Last 12 months</value>
+  </data>
+  <data name="Dashboard_Upcoming" xml:space="preserve">
+    <value>Upcoming events</value>
+  </data>
+  <data name="Dashboard_NothingScheduled" xml:space="preserve">
+    <value>Nothing scheduled in the next two weeks.</value>
+  </data>
+  <data name="Dashboard_TopMembers" xml:space="preserve">
+    <value>Most engaged</value>
+  </data>
+  <data name="Dashboard_TopMembersEmpty" xml:space="preserve">
+    <value>Not enough events to rank members yet.</value>
+  </data>
+  <data name="Dashboard_NeedsAttention" xml:space="preserve">
+    <value>Needs attention</value>
+  </data>
+  <data name="Dashboard_NeedsAttentionEmpty" xml:space="preserve">
+    <value>Nobody stands out negatively in this period.</value>
+  </data>
+  <data name="Dashboard_OpenStatistics" xml:space="preserve">
+    <value>Open the full attendance statistics</value>
+  </data>
+  <data name="Dashboard_Empty" xml:space="preserve">
+    <value>No events were held in this period.</value>
+  </data>
+  <data name="Upcoming_Coming" xml:space="preserve">
+    <value>{0} of {1} coming</value>
+    <comment>{0} = accepted, {1} = invited.</comment>
+  </data>
+  <data name="Upcoming_EveryoneAnswered" xml:space="preserve">
+    <value>everyone answered</value>
+  </data>
+  <data name="Upcoming_Open" xml:space="preserve">
+    <value>{0} open</value>
+    <comment>{0} = invitations without an answer.</comment>
+  </data>
+  <data name="Upcoming_Aria" xml:space="preserve">
+    <value>{0} coming, {1} declined, {2} not answered yet</value>
+  </data>
+  <data name="Members_NobodyHere" xml:space="preserve">
+    <value>Nobody here.</value>
+  </data>
+  <data name="Kpi_EventsHeld" xml:space="preserve">
+    <value>Events held</value>
+  </data>
+  <data name="Kpi_EventsHeldHint" xml:space="preserve">
+    <value>Trainings and events that took place</value>
+  </data>
+  <data name="Kpi_Members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Kpi_MembersHint" xml:space="preserve">
+    <value>Invited to at least one event</value>
+  </data>
+  <data name="Kpi_Attendance" xml:space="preserve">
+    <value>Attendance</value>
+  </data>
+  <data name="Kpi_AttendanceHint" xml:space="preserve">
+    <value>Share of invitations accepted</value>
+  </data>
+  <data name="Kpi_AttendanceOverallHint" xml:space="preserve">
+    <value>Accepted invitations overall</value>
+  </data>
+  <data name="Kpi_AverageAttendeesPerEvent" xml:space="preserve">
+    <value>Ø attendees / event</value>
+  </data>
+  <data name="Kpi_AverageAttendeesPerEventHint" xml:space="preserve">
+    <value>Accepted per event</value>
+  </data>
+  <data name="Kpi_Meeting" xml:space="preserve">
+    <value>Meeting {0} %</value>
+    <comment>{0} = required attendance in percent.</comment>
+  </data>
+  <data name="Kpi_MeetingDashboardHint" xml:space="preserve">
+    <value>Members at or above the attendance target</value>
+  </data>
+  <data name="Kpi_MeetingStatsHint" xml:space="preserve">
+    <value>Attended at least {0} % of their invitations</value>
+    <comment>{0} = required attendance in percent.</comment>
+  </data>
+  <data name="Kpi_OfAssessed" xml:space="preserve">
+    <value>{0} of {1}</value>
+    <comment>{0} = members who qualify, {1} = members with a verdict.</comment>
+  </data>
+  <data name="Kpi_AtRisk" xml:space="preserve">
+    <value>At risk</value>
+  </data>
+  <data name="Kpi_AtRiskHint" xml:space="preserve">
+    <value>Low engagement score</value>
+  </data>
+  <data name="Kpi_BelowTarget" xml:space="preserve">
+    <value>Below target</value>
+  </data>
+  <data name="Kpi_BelowTargetHint" xml:space="preserve">
+    <value>Enough events, but under the target</value>
+  </data>
+  <data name="Kpi_TooFew" xml:space="preserve">
+    <value>Too few events</value>
+  </data>
+  <data name="Kpi_TooFewHint" xml:space="preserve">
+    <value>Invited to fewer than {0} events</value>
+    <comment>{0} = minimum number of invitations.</comment>
+  </data>
+  <data name="Kpi_EventsAnalysed" xml:space="preserve">
+    <value>Events analysed</value>
+  </data>
+  <data name="Kpi_EventsAnalysedHint" xml:space="preserve">
+    <value>Held, not cancelled, matching the filters</value>
+  </data>
+  <data name="Kpi_ResponseRate" xml:space="preserve">
+    <value>Response rate</value>
+  </data>
+  <data name="Kpi_ResponseRateHint" xml:space="preserve">
+    <value>Invitations that got an answer</value>
+  </data>
+  <data name="Kpi_AverageAttendees" xml:space="preserve">
+    <value>Ø attendees</value>
+  </data>
+  <data name="Kpi_AverageAttendeesHint" xml:space="preserve">
+    <value>Accepted invitations per event</value>
+  </data>
+  <data name="Stats_Filters" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Stats_From" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Stats_To" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="Stats_QuickRanges" xml:space="preserve">
+    <value>Quick range</value>
+  </data>
+  <data name="Range_3Months" xml:space="preserve">
+    <value>3 months</value>
+  </data>
+  <data name="Range_6Months" xml:space="preserve">
+    <value>6 months</value>
+  </data>
+  <data name="Range_12Months" xml:space="preserve">
+    <value>12 months</value>
+  </data>
+  <data name="Range_ThisYear" xml:space="preserve">
+    <value>This year</value>
+  </data>
+  <data name="Stats_Members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Stats_Everyone" xml:space="preserve">
+    <value>Everyone</value>
+  </data>
+  <data name="Stats_MinAttendance" xml:space="preserve">
+    <value>Minimum attendance</value>
+  </data>
+  <data name="Stats_MinAttendanceHint" xml:space="preserve">
+    <value>Share of the events a member was invited to that they accepted.</value>
+  </data>
+  <data name="Stats_MinInvited" xml:space="preserve">
+    <value>Invited to at least</value>
+  </data>
+  <data name="Stats_MinInvitedHint" xml:space="preserve">
+    <value>events — fewer get no verdict</value>
+    <comment>Follows the number field: 'Invited to at least [3] events — fewer get no verdict'.</comment>
+  </data>
+  <data name="Stats_NameContains" xml:space="preserve">
+    <value>Only events containing</value>
+  </data>
+  <data name="Stats_NameContainsHint" xml:space="preserve">
+    <value>Several terms: separate with , or ;</value>
+  </data>
+  <data name="Stats_NameContainsPlaceholder" xml:space="preserve">
+    <value>e.g. Training</value>
+    <comment>Event names come from Spond and are German, so the examples stay German.</comment>
+  </data>
+  <data name="Stats_NameExcludes" xml:space="preserve">
+    <value>Ignore events containing</value>
+  </data>
+  <data name="Stats_NameExcludesHint" xml:space="preserve">
+    <value>Leave out exams, tournaments, parties …</value>
+  </data>
+  <data name="Stats_NameExcludesPlaceholder" xml:space="preserve">
+    <value>e.g. Prüfung, Turnier</value>
+    <comment>Event names come from Spond and are German, so the examples stay German.</comment>
+  </data>
+  <data name="Stats_FromEvent" xml:space="preserve">
+    <value>From event</value>
+    <comment>The event whose day starts the time span (by default the previous exam).</comment>
+  </data>
+  <data name="Stats_ToEvent" xml:space="preserve">
+    <value>To event</value>
+    <comment>The event whose day ends the time span (by default the next exam).</comment>
+  </data>
+  <data name="Stats_ChooseEvent" xml:space="preserve">
+    <value>Choose an event …</value>
+    <comment>Empty entry of the event lists.</comment>
+  </data>
+  <data name="Stats_SearchEvents" xml:space="preserve">
+    <value>Search by name or date …</value>
+    <comment>Search box of the event pickers. Dates can be typed as 26.9., 2026-09 or Sep, names as they are in Spond.</comment>
+  </data>
+  <data name="Stats_NoEventMatches" xml:space="preserve">
+    <value>No event matches your search.</value>
+  </data>
+  <data name="Stats_Advanced" xml:space="preserve">
+    <value>Advanced filters</value>
+  </data>
+  <data name="Stats_SpanHintEvents" xml:space="preserve">
+    <value>The events chosen above define the time span. Changing a date replaces them.</value>
+  </data>
+  <data name="Stats_SpanHintDates" xml:space="preserve">
+    <value>These dates define the time span. Choosing an event above replaces them.</value>
+  </data>
+  <data name="Stats_SelectBothEvents" xml:space="preserve">
+    <value>Choose both events, or set the time span with dates under Advanced filters.</value>
+  </data>
+  <data name="Stats_EventOrderError" xml:space="preserve">
+    <value>The "From" event must not be after the "To" event.</value>
+  </data>
+  <data name="Stats_PeriodEvents" xml:space="preserve">
+    <value>between "{0}" ({1}) and "{2}" ({3})</value>
+    <comment>The time span in Stats_Summary when events define it: {0} = name of the first event, {1} = its date, {2} = name of the last event, {3} = its date.</comment>
+  </data>
+  <data name="Stats_Reset" xml:space="preserve">
+    <value>Reset filters</value>
+  </data>
+  <data name="Stats_FilterError" xml:space="preserve">
+    <value>The start date must not be after the end date.</value>
+  </data>
+  <data name="Stats_Summary" xml:space="preserve">
+    <value>Who attended at least {0} of the events they were invited to, {1}? Members with fewer than {2} invitations get no verdict.</value>
+    <comment>{0} = required attendance, {1} = time span, {2} = minimum number of invitations. The order of the placeholders may change.</comment>
+  </data>
+  <data name="Stats_SummaryOnly" xml:space="preserve">
+    <value>Only events matching "{0}".</value>
+    <comment>{0} = the search terms the user typed.</comment>
+  </data>
+  <data name="Stats_SummaryIgnoring" xml:space="preserve">
+    <value>Ignoring events matching "{0}".</value>
+    <comment>{0} = the search terms the user typed.</comment>
+  </data>
+  <data name="Stats_NoResults" xml:space="preserve">
+    <value>No events were held in this period with these filters. Try a longer time span or loosen the event name filters.</value>
+  </data>
+  <data name="Stats_NoMemberMatches" xml:space="preserve">
+    <value>No member matches the search or status filter.</value>
+  </data>
+  <data name="Stats_Show" xml:space="preserve">
+    <value>Show</value>
+    <comment>Accessible name of the status filter (everyone / qualified / below …).</comment>
+  </data>
+  <data name="Stats_FindMember" xml:space="preserve">
+    <value>Find a member</value>
+  </data>
+  <data name="Stats_MembersCount" xml:space="preserve">
+    <value>{0} members</value>
+  </data>
+  <data name="Stats_MembersCountOf" xml:space="preserve">
+    <value>{0} of {1} members</value>
+  </data>
+  <data name="Filter_Below" xml:space="preserve">
+    <value>Below</value>
+    <comment>Short label of the status filter 'below the required attendance'.</comment>
+  </data>
+  <data name="Tab_Members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Tab_Insights" xml:space="preserve">
+    <value>Insights</value>
+  </data>
+  <data name="Tab_Events" xml:space="preserve">
+    <value>Events</value>
+  </data>
+  <data name="Col_Member" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Col_Attendance" xml:space="preserve">
+    <value>Attendance</value>
+  </data>
+  <data name="Col_Answered" xml:space="preserve">
+    <value>Answered</value>
+  </data>
+  <data name="Col_Streak" xml:space="preserve">
+    <value>Streak</value>
+  </data>
+  <data name="Col_LastAttended" xml:space="preserve">
+    <value>Last attended</value>
+  </data>
+  <data name="Col_PerWeek" xml:space="preserve">
+    <value>Per week</value>
+  </data>
+  <data name="Col_Form" xml:space="preserve">
+    <value>Form</value>
+  </data>
+  <data name="Col_Engagement" xml:space="preserve">
+    <value>Engagement</value>
+  </data>
+  <data name="Col_Event" xml:space="preserve">
+    <value>Event</value>
+  </data>
+  <data name="Col_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Col_Declined" xml:space="preserve">
+    <value>Declined</value>
+  </data>
+  <data name="Col_NoAnswer" xml:space="preserve">
+    <value>No answer</value>
+  </data>
+  <data name="Col_FormTip" xml:space="preserve">
+    <value>Last 10 invitations, oldest first, and whether recent attendance is rising or falling</value>
+  </data>
+  <data name="Col_StreakTip" xml:space="preserve">
+    <value>Consecutive events attended, counting back from the latest</value>
+  </data>
+  <data name="Col_EngagementTip" xml:space="preserve">
+    <value>Engagement score: 60 % attendance, 25 % recent form, 15 % responsiveness</value>
+  </data>
+  <data name="Caption_Members" xml:space="preserve">
+    <value>Attendance per member</value>
+  </data>
+  <data name="Caption_Events" xml:space="preserve">
+    <value>Attendance per event</value>
+  </data>
+  <data name="Row_AttendedOfInvited" xml:space="preserve">
+    <value>{0} / {1} events</value>
+    <comment>{0} = events attended, {1} = events invited to.</comment>
+  </data>
+  <data name="Row_InvitedCame" xml:space="preserve">
+    <value>{0} / {1} invited came</value>
+    <comment>{0} = people who came, {1} = people invited.</comment>
+  </data>
+  <data name="Row_NotInPeriod" xml:space="preserve">
+    <value>Not in this period</value>
+  </data>
+  <data name="Row_Today" xml:space="preserve">
+    <value>today</value>
+  </data>
+  <data name="Row_Yesterday" xml:space="preserve">
+    <value>yesterday</value>
+  </data>
+  <data name="Row_DaysAgo" xml:space="preserve">
+    <value>{0} days ago</value>
+    <comment>{0} = number of days, always 2 or more.</comment>
+  </data>
+  <data name="Row_PerWeek" xml:space="preserve">
+    <value>{0} / week</value>
+  </data>
+  <data name="Row_Streak" xml:space="preserve">
+    <value>{0} (best {1})</value>
+    <comment>{0} = current streak, {1} = longest streak.</comment>
+  </data>
+  <data name="Rate_RequiredShort" xml:space="preserve">
+    <value>{0} required</value>
+    <comment>Label above the line in the attendance column. {0} = e.g. 75 %.</comment>
+  </data>
+  <data name="Rate_Aria" xml:space="preserve">
+    <value>{0}, {1} events</value>
+    <comment>{0} = attendance in percent, {1} = e.g. '7 / 9'.</comment>
+  </data>
+  <data name="Legend_Attended" xml:space="preserve">
+    <value>attended</value>
+  </data>
+  <data name="Legend_Declined" xml:space="preserve">
+    <value>declined</value>
+  </data>
+  <data name="Legend_NoAnswer" xml:space="preserve">
+    <value>no answer</value>
+  </data>
+  <data name="Legend_WaitingList" xml:space="preserve">
+    <value>waiting list</value>
+  </data>
+  <data name="Legend_Coming" xml:space="preserve">
+    <value>coming</value>
+  </data>
+  <data name="Legend_NoAnswerYet" xml:space="preserve">
+    <value>no answer yet</value>
+  </data>
+  <data name="Legend_RequiredLine" xml:space="preserve">
+    <value>The line marks the required attendance.</value>
+  </data>
+  <data name="Mark_Attended" xml:space="preserve">
+    <value>Attended</value>
+  </data>
+  <data name="Mark_Declined" xml:space="preserve">
+    <value>Declined</value>
+  </data>
+  <data name="Mark_NoAnswer" xml:space="preserve">
+    <value>Did not answer</value>
+  </data>
+  <data name="Mark_Other" xml:space="preserve">
+    <value>Waiting list / unconfirmed</value>
+  </data>
+  <data name="Mark_StripAria" xml:space="preserve">
+    <value>Last {0} invitations</value>
+    <comment>{0} = number of invitations shown.</comment>
+  </data>
+  <data name="Status_Qualified" xml:space="preserve">
+    <value>Qualified</value>
+  </data>
+  <data name="Status_BelowThreshold" xml:space="preserve">
+    <value>Below threshold</value>
+  </data>
+  <data name="Status_TooFew" xml:space="preserve">
+    <value>Too few events</value>
+  </data>
+  <data name="StatusTip_Qualified" xml:space="preserve">
+    <value>Attended at least the required share of their invitations</value>
+  </data>
+  <data name="StatusTip_BelowThreshold" xml:space="preserve">
+    <value>Enough invitations to judge, but below the required share</value>
+  </data>
+  <data name="StatusTip_TooFew" xml:space="preserve">
+    <value>Invited to too few events in this period to judge</value>
+  </data>
+  <data name="Level_Excellent" xml:space="preserve">
+    <value>Excellent</value>
+  </data>
+  <data name="Level_Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="Level_Irregular" xml:space="preserve">
+    <value>Irregular</value>
+  </data>
+  <data name="Level_AtRisk" xml:space="preserve">
+    <value>At risk</value>
+  </data>
+  <data name="Trend_Unknown" xml:space="preserve">
+    <value>Not enough events yet</value>
+  </data>
+  <data name="Trend_Delta" xml:space="preserve">
+    <value>{0} {1} pts vs. earlier</value>
+    <comment>{0} = arrow, {1} = signed change in percentage points.</comment>
+  </data>
+  <data name="Chart_Empty" xml:space="preserve">
+    <value>Nothing to chart yet.</value>
+  </data>
+  <data name="Chart_TrendTitle" xml:space="preserve">
+    <value>Attendance by month</value>
+  </data>
+  <data name="Chart_TrendAria" xml:space="preserve">
+    <value>Share of invitations accepted, per month</value>
+  </data>
+  <data name="Chart_TrendNoteDashboard" xml:space="preserve">
+    <value>Share of invitations accepted at events that were held.</value>
+  </data>
+  <data name="Chart_TrendNote" xml:space="preserve">
+    <value>Share of invitations accepted at the events that were held in each month.</value>
+  </data>
+  <data name="Chart_MonthTip" xml:space="preserve">
+    <value>{0}: {1} events, Ø {2} attendees, {3} attendance</value>
+    <comment>{0} = month, {1} = events, {2} = average attendees, {3} = attendance in percent.</comment>
+  </data>
+  <data name="Chart_DistributionTitle" xml:space="preserve">
+    <value>How attendance is spread</value>
+  </data>
+  <data name="Chart_DistributionAria" xml:space="preserve">
+    <value>Number of members per attendance band</value>
+  </data>
+  <data name="Chart_DistributionNote" xml:space="preserve">
+    <value>Members per attendance band (percent of their invitations). Highlighted bands lie at or above the required attendance. Members with too few events are not included.</value>
+  </data>
+  <data name="Chart_BandTipOne" xml:space="preserve">
+    <value>{0} member attended {1}–{2} % of their invitations</value>
+    <comment>{0} = 1. Singular form.</comment>
+  </data>
+  <data name="Chart_BandTipMany" xml:space="preserve">
+    <value>{0} members attended {1}–{2} % of their invitations</value>
+    <comment>{0} = number of members (not 1). Plural form.</comment>
+  </data>
+  <data name="Col_SubGroups" xml:space="preserve">
+    <value>Subgroups</value>
+  </data>
+  <data name="Saved_Title" xml:space="preserve">
+    <value>Saved filters</value>
+  </data>
+  <data name="Saved_Pick" xml:space="preserve">
+    <value>Saved filter</value>
+  </data>
+  <data name="Saved_PickPrompt" xml:space="preserve">
+    <value>Choose a saved filter …</value>
+  </data>
+  <data name="Saved_PickEmpty" xml:space="preserve">
+    <value>Nothing saved yet</value>
+  </data>
+  <data name="Saved_SaveAs" xml:space="preserve">
+    <value>Save as …</value>
+  </data>
+  <data name="Saved_Update" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Saved_UpdateTip" xml:space="preserve">
+    <value>Replace the chosen saved filter with the filters as they are now</value>
+  </data>
+  <data name="Saved_Reload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="Saved_ReloadTip" xml:space="preserve">
+    <value>Put the chosen saved filter into the filters again, discarding what you changed since</value>
+  </data>
+  <data name="Saved_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Saved_FilterName" xml:space="preserve">
+    <value>Name of the filter</value>
+  </data>
+  <data name="Saved_Exam" xml:space="preserve">
+    <value>Exam</value>
+  </data>
+  <data name="Saved_NewExam" xml:space="preserve">
+    <value>New exam …</value>
+  </data>
+  <data name="Saved_ExamEvent" xml:space="preserve">
+    <value>Event of the exam</value>
+  </data>
+  <data name="Saved_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Saved_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Saved_DeleteExam" xml:space="preserve">
+    <value>Delete exam</value>
+  </data>
+  <data name="Saved_DefaultFilterName" xml:space="preserve">
+    <value>Filter for {0} on {1}</value>
+    <comment>Name suggested for a new saved filter: {0} = name of the exam, {1} = its date.</comment>
+  </data>
+  <data name="Saved_ConfirmUpdate" xml:space="preserve">
+    <value>Replace the filter "{0}" with the filters as they are now?</value>
+  </data>
+  <data name="Saved_ConfirmDeleteFilter" xml:space="preserve">
+    <value>Delete the filter "{0}"?</value>
+  </data>
+  <data name="Saved_ConfirmDeleteExam" xml:space="preserve">
+    <value>Delete the exam "{0}" together with its saved filters ({1})?</value>
+    <comment>{0} = name of the exam, {1} = number of filters saved for it.</comment>
+  </data>
+  <data name="Saved_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Saved_ConfirmYesUpdate" xml:space="preserve">
+    <value>Yes, replace</value>
+  </data>
+  <data name="Saved_NameRequired" xml:space="preserve">
+    <value>Give the filter a name.</value>
+  </data>
+  <data name="Saved_ExamEventRequired" xml:space="preserve">
+    <value>Choose the event that is the exam.</value>
+  </data>
+  <data name="Saved_GroupGone" xml:space="preserve">
+    <value>The group of this filter is no longer available.</value>
+  </data>
+  <data name="Saved_NoGroup" xml:space="preserve">
+    <value>Choose a group first.</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login_Lede" xml:space="preserve">
+    <value>Use the account you got from your administrator.</value>
+  </data>
+  <data name="Login_UserName" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="Login_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Login_Remember" xml:space="preserve">
+    <value>Remember me on this computer</value>
+  </data>
+  <data name="Login_RememberHint" xml:space="preserve">
+    <value>The login is saved encrypted and can only be read by your Windows account.</value>
+  </data>
+  <data name="Login_SignIn" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="Login_Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="Login_Rejected" xml:space="preserve">
+    <value>The user name or the password is wrong.</value>
+  </data>
+  <data name="Login_SavedRejected" xml:space="preserve">
+    <value>The saved login no longer works. Please sign in again.</value>
+  </data>
+  <data name="ApiAddress_Title" xml:space="preserve">
+    <value>Server address</value>
+  </data>
+  <data name="ApiAddress_Lede" xml:space="preserve">
+    <value>Enter the address of the kyuplan server, for example https://planner.example.org/. Your administrator can tell you.</value>
+  </data>
+  <data name="ApiAddress_Label" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="ApiAddress_Invalid" xml:space="preserve">
+    <value>The address has to start with http:// or https://, for example https://planner.example.org/.</value>
+  </data>
+  <data name="ApiAddress_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ApiAddress_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Login_Server" xml:space="preserve">
+    <value>Server address</value>
+  </data>
+  <data name="Login_ChangeServer" xml:space="preserve">
+    <value>Change …</value>
+  </data>
+  <data name="Nav_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Nav_Preferences" xml:space="preserve">
+    <value>Personal settings</value>
+  </data>
+  <data name="Preferences_Lede" xml:space="preserve">
+    <value>How the program looks and speaks for you. These choices are kept with your account and follow you to every computer.</value>
+  </data>
+  <data name="Preferences_LanguageTitle" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Nav_Administration" xml:space="preserve">
+    <value>Administration</value>
+  </data>
+  <data name="Nav_Users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Api_Forbidden" xml:space="preserve">
+    <value>The API refused the request: your user is not allowed to do this.</value>
+  </data>
+  <data name="Account_Lede" xml:space="preserve">
+    <value>Change your names (user name, display name, aliases) or your password. Your roles and permissions are set by whoever manages users.</value>
+  </data>
+  <data name="Account_Rights" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Account_NamesTitle" xml:space="preserve">
+    <value>Names</value>
+  </data>
+  <data name="Account_UserNameTitle" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="Account_DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Account_DisplayNameHint" xml:space="preserve">
+    <value>Other users see this name, e.g. next to comments. Leave it empty to show the user name.</value>
+  </data>
+  <data name="Account_DisplayNameInvalid" xml:space="preserve">
+    <value>A display name is at most {0} characters long, without line breaks.</value>
+    <comment>{0} = the longest allowed display name.</comment>
+  </data>
+  <data name="Account_Aliases" xml:space="preserve">
+    <value>Aliases</value>
+  </data>
+  <data name="Account_AliasesHint" xml:space="preserve">
+    <value>More names that sign in as this user with the same password, one per line (at most {0}). Other users do not see them.</value>
+    <comment>{0} = the most aliases a user can have.</comment>
+  </data>
+  <data name="Account_AliasesInvalid" xml:space="preserve">
+    <value>At most {0} aliases, one per line, each written like a user name (at most {1} characters, no colon). None may appear twice or equal the user name.</value>
+    <comment>{0} = the most aliases a user can have, {1} = the longest allowed user name.</comment>
+  </data>
+  <data name="Account_SaveProfile" xml:space="preserve">
+    <value>Save names</value>
+  </data>
+  <data name="Account_UserNameInvalid" xml:space="preserve">
+    <value>A user name is required, at most {0} characters long, without a colon.</value>
+    <comment>{0} = the longest allowed user name.</comment>
+  </data>
+  <data name="Account_UserNameTaken" xml:space="preserve">
+    <value>This user name or alias is already taken.</value>
+  </data>
+  <data name="Account_ProfileSaved" xml:space="preserve">
+    <value>Names saved.</value>
+  </data>
+  <data name="Account_PasswordTitle" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Account_CurrentPassword" xml:space="preserve">
+    <value>Current password</value>
+  </data>
+  <data name="Account_NewPassword" xml:space="preserve">
+    <value>New password</value>
+  </data>
+  <data name="Account_ConfirmPassword" xml:space="preserve">
+    <value>New password again</value>
+  </data>
+  <data name="Account_PasswordHint" xml:space="preserve">
+    <value>{0} to {1} characters; spaces, umlauts and colons are fine.</value>
+    <comment>{0}/{1} = shortest/longest allowed password.</comment>
+  </data>
+  <data name="Account_ChangePassword" xml:space="preserve">
+    <value>Change password</value>
+  </data>
+  <data name="Account_PasswordInvalid" xml:space="preserve">
+    <value>The new password needs {0} to {1} characters.</value>
+    <comment>{0}/{1} = shortest/longest allowed password.</comment>
+  </data>
+  <data name="Account_PasswordSame" xml:space="preserve">
+    <value>The new password is the current one.</value>
+  </data>
+  <data name="Account_PasswordMismatch" xml:space="preserve">
+    <value>The two new passwords differ.</value>
+  </data>
+  <data name="Account_CurrentPasswordWrong" xml:space="preserve">
+    <value>The current password is wrong.</value>
+  </data>
+  <data name="Account_PasswordSaved" xml:space="preserve">
+    <value>Password changed.</value>
+  </data>
+  <data name="Account_BrowserAsksAgain" xml:space="preserve">
+    <value>The browser still holds the old login and will ask for the new one with the next request.</value>
+  </data>
+  <data name="Users_Lede" xml:space="preserve">
+    <value>Create users, change their names, display names and aliases, reset passwords, and give them roles and permissions.</value>
+  </data>
+  <data name="Users_New" xml:space="preserve">
+    <value>New user</value>
+  </data>
+  <data name="Users_ColUserName" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="Users_ColDisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Users_ColAliases" xml:space="preserve">
+    <value>Aliases</value>
+  </data>
+  <data name="Users_ColRole" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Users_SignedIn" xml:space="preserve">
+    <value>signed in</value>
+    <comment>Marks the row of the user who is looking at the list.</comment>
+  </data>
+  <data name="Users_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Users_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Users_DeleteSelfHint" xml:space="preserve">
+    <value>The signed-in user cannot delete themselves.</value>
+  </data>
+  <data name="Users_FormNew" xml:space="preserve">
+    <value>New user</value>
+  </data>
+  <data name="Users_FormEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Users_FormUserName" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="Users_FormPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Users_FormPasswordKeep" xml:space="preserve">
+    <value>Leave empty to keep the current password.</value>
+  </data>
+  <data name="Users_FormOnlyAdminHint" xml:space="preserve">
+    <value>The only user with the administrator role keeps it.</value>
+  </data>
+  <data name="Users_Create" xml:space="preserve">
+    <value>Create user</value>
+  </data>
+  <data name="Users_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Users_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Users_ConfirmDelete" xml:space="preserve">
+    <value>Delete the user “{0}”? The login stops working at once.</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Users_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Users_Created" xml:space="preserve">
+    <value>User “{0}” created.</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Users_Saved" xml:space="preserve">
+    <value>User “{0}” saved.</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Users_Deleted" xml:space="preserve">
+    <value>User “{0}” deleted.</value>
+    <comment>{0} = user name.</comment>
+  </data>
+  <data name="Nav_Belts" xml:space="preserve">
+    <value>Belts</value>
+  </data>
+  <data name="Nav_Members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Belts_Lede" xml:space="preserve">
+    <value>The belts of the club and what it takes to be allowed to take each one: the belt a member comes from and, depending on that belt, a minimum age and a waiting time.</value>
+  </data>
+  <data name="Belts_New" xml:space="preserve">
+    <value>New belt</value>
+  </data>
+  <data name="Belts_Empty" xml:space="preserve">
+    <value>There are no belts yet. Create the first one, usually the belt everybody starts with.</value>
+  </data>
+  <data name="Belts_ColBelt" xml:space="preserve">
+    <value>Belt</value>
+  </data>
+  <data name="Belts_ColPrerequisites" xml:space="preserve">
+    <value>Previous belt and requirements</value>
+  </data>
+  <data name="Belts_ColMinAge" xml:space="preserve">
+    <value>Minimum age (years)</value>
+  </data>
+  <data name="Belts_ColMinWait" xml:space="preserve">
+    <value>Waiting time (months)</value>
+  </data>
+  <data name="Belts_ColMembers" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Belts_NoPrerequisite" xml:space="preserve">
+    <value>None (first belt)</value>
+  </data>
+  <data name="Belts_RequirementAge" xml:space="preserve">
+    <value>min. age {0} y</value>
+    <comment>{0} = the minimum age in years, as part of a line like 'White: min. age 8 y, waiting time 3 mo'.</comment>
+  </data>
+  <data name="Belts_RequirementWait" xml:space="preserve">
+    <value>waiting time {0} mo</value>
+    <comment>{0} = the waiting time in months, as part of a line like 'White: min. age 8 y, waiting time 3 mo'.</comment>
+  </data>
+  <data name="Belts_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Belts_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Belts_HeldBy" xml:space="preserve">
+    <value>Cannot be deleted: members with this belt: {0}.</value>
+    <comment>{0} = how many members hold the belt.</comment>
+  </data>
+  <data name="Belts_RequiredBy" xml:space="preserve">
+    <value>Cannot be deleted: required for {0}.</value>
+    <comment>{0} = the names of the belts that require it.</comment>
+  </data>
+  <data name="Belts_FormNew" xml:space="preserve">
+    <value>New belt</value>
+  </data>
+  <data name="Belts_FormEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+    <comment>{0} = belt name.</comment>
+  </data>
+  <data name="Belts_FormName" xml:space="preserve">
+    <value>Name of the belt</value>
+  </data>
+  <data name="Belts_NameInvalid" xml:space="preserve">
+    <value>A name is required, at most {0} characters long.</value>
+    <comment>{0} = the longest allowed name.</comment>
+  </data>
+  <data name="Belts_NameTaken" xml:space="preserve">
+    <value>There already is a belt with this name.</value>
+  </data>
+  <data name="Belts_FormColor" xml:space="preserve">
+    <value>Colour</value>
+  </data>
+  <data name="Belts_FormStripe" xml:space="preserve">
+    <value>Colour of the stripe (optional)</value>
+  </data>
+  <data name="Belts_ColorInvalid" xml:space="preserve">
+    <value>Write the colour as #RRGGBB, for example #FF8C00.</value>
+  </data>
+  <data name="Belts_ColorHint" xml:space="preserve">
+    <value>Type a colour as #RRGGBB or pick one below.</value>
+  </data>
+  <data name="Belts_PickColor" xml:space="preserve">
+    <value>Use the colour {0}</value>
+    <comment>{0} = a colour like #FF8C00.</comment>
+  </data>
+  <data name="Belts_NoStripe" xml:space="preserve">
+    <value>No stripe</value>
+  </data>
+  <data name="Belts_FormPrerequisites" xml:space="preserve">
+    <value>Taken from one of these belts</value>
+  </data>
+  <data name="Belts_FormPrerequisitesHint" xml:space="preserve">
+    <value>A member must hold one of the ticked belts before taking this one. Tick none for the first belt. Age and waiting time (months since the member got that belt) are set for each ticked belt, because they depend on it. 0 = no requirement.</value>
+  </data>
+  <data name="Belts_FormNoOtherBelts" xml:space="preserve">
+    <value>There is no other belt yet.</value>
+  </data>
+  <data name="Belts_Create" xml:space="preserve">
+    <value>Create belt</value>
+  </data>
+  <data name="Belts_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Belts_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Belts_ConfirmDelete" xml:space="preserve">
+    <value>Delete the belt “{0}”?</value>
+    <comment>{0} = belt name.</comment>
+  </data>
+  <data name="Belts_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Belts_Created" xml:space="preserve">
+    <value>Belt “{0}” created.</value>
+    <comment>{0} = belt name.</comment>
+  </data>
+  <data name="Belts_Saved" xml:space="preserve">
+    <value>Belt “{0}” saved.</value>
+    <comment>{0} = belt name.</comment>
+  </data>
+  <data name="Belts_Deleted" xml:space="preserve">
+    <value>Belt “{0}” deleted.</value>
+    <comment>{0} = belt name.</comment>
+  </data>
+  <data name="MemberPage_Lede" xml:space="preserve">
+    <value>Which belt each member holds and since when they train. The names come from Spond and are kept up to date automatically.</value>
+  </data>
+  <data name="MemberPage_OnlyWithoutBelt" xml:space="preserve">
+    <value>Only members without a belt</value>
+  </data>
+  <data name="MemberPage_NoneMatch" xml:space="preserve">
+    <value>No member matches.</value>
+  </data>
+  <data name="MemberPage_ColStarted" xml:space="preserve">
+    <value>Training since</value>
+  </data>
+  <data name="MemberPage_NoBelt" xml:space="preserve">
+    <value>No belt</value>
+  </data>
+  <data name="MemberPage_NotKnown" xml:space="preserve">
+    <value>not known</value>
+  </data>
+  <data name="MemberPage_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="MemberPage_FormEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="MemberPage_FormStartedHint" xml:space="preserve">
+    <value>Filled in from the first event the member accepted. A day you set here is kept.</value>
+  </data>
+  <data name="MemberPage_ClearStarted" xml:space="preserve">
+    <value>Clear the day</value>
+  </data>
+  <data name="MemberPage_StartedInvalid" xml:space="preserve">
+    <value>The day must be between {0} and today.</value>
+    <comment>{0} = the earliest allowed day.</comment>
+  </data>
+  <data name="MemberPage_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="MemberPage_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="MemberPage_Saved" xml:space="preserve">
+    <value>{0} saved.</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="Belts_NumberInvalid" xml:space="preserve">
+    <value>Enter a whole number from 0 to {0}.</value>
+    <comment>{0} = the largest allowed number.</comment>
+  </data>
+  <data name="Nav_Exams" xml:space="preserve">
+    <value>Exams</value>
+  </data>
+  <data name="Exams_Lede" xml:space="preserve">
+    <value>Belt exams: who is fit for the next one, and who attended the past ones and received which belt.</value>
+  </data>
+  <data name="Exams_Add" xml:space="preserve">
+    <value>Add exam</value>
+  </data>
+  <data name="Exams_AddTitle" xml:space="preserve">
+    <value>Make an event an exam</value>
+  </data>
+  <data name="Exams_AddEvent" xml:space="preserve">
+    <value>Spond event</value>
+  </data>
+  <data name="Exams_AddHint" xml:space="preserve">
+    <value>Choose the event that is the exam. Its name and day follow it on Spond.</value>
+  </data>
+  <data name="Exams_AddSubGroups" xml:space="preserve">
+    <value>Subgroups for the suggestions</value>
+  </data>
+  <data name="Exams_AddSubGroupsHint" xml:space="preserve">
+    <value>The suggestions for this exam only judge the members of the subgroups you tick. None ticked: everyone in the group.</value>
+  </data>
+  <data name="Exams_AddSave" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Exams_None" xml:space="preserve">
+    <value>There are no exams yet. Add the Spond event of a belt exam to plan it.</value>
+  </data>
+  <data name="Exams_ColDate" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Exams_ColExam" xml:space="preserve">
+    <value>Exam</value>
+  </data>
+  <data name="Exams_ColWhen" xml:space="preserve">
+    <value>When</value>
+  </data>
+  <data name="Exams_ColAccepted" xml:space="preserve">
+    <value>Accepted</value>
+  </data>
+  <data name="Exams_ColPlan" xml:space="preserve">
+    <value>Saved / belts</value>
+  </data>
+  <data name="Exams_Upcoming" xml:space="preserve">
+    <value>Upcoming</value>
+  </data>
+  <data name="Exams_Past" xml:space="preserve">
+    <value>Past</value>
+  </data>
+  <data name="Exams_Tomorrow" xml:space="preserve">
+    <value>tomorrow</value>
+  </data>
+  <data name="Exams_InDays" xml:space="preserve">
+    <value>in {0} days</value>
+  </data>
+  <data name="Exams_Accepted" xml:space="preserve">
+    <value>{0} of {1} accepted</value>
+  </data>
+  <data name="Exams_SavedCount" xml:space="preserve">
+    <value>{0} saved</value>
+  </data>
+  <data name="Exams_BeltsCount" xml:space="preserve">
+    <value>{0} belts</value>
+  </data>
+  <data name="Exams_Added" xml:space="preserve">
+    <value>{0} was added.</value>
+  </data>
+  <data name="Exams_Deleted" xml:space="preserve">
+    <value>{0} was deleted.</value>
+  </data>
+  <data name="Exams_Delete" xml:space="preserve">
+    <value>Delete exam</value>
+  </data>
+  <data name="Exams_DeleteAsk" xml:space="preserve">
+    <value>Delete {0}? The filters saved for it, the members saved for it and the belts recorded at it are deleted with it. The event on Spond and the belts the members hold stay.</value>
+  </data>
+  <data name="Plan_Title" xml:space="preserve">
+    <value>Who is fit for this exam</value>
+  </data>
+  <data name="Plan_Lede" xml:space="preserve">
+    <value>Members are judged for the next belt on the day of the exam: age, waiting time since their last belt, and attendance.</value>
+  </data>
+  <data name="Plan_Basis" xml:space="preserve">
+    <value>Measure attendance with</value>
+  </data>
+  <data name="Plan_BasisDefault" xml:space="preserve">
+    <value>Default: previous exam to this exam</value>
+  </data>
+  <data name="Plan_BasisOfExam" xml:space="preserve">
+    <value>{0} (saved for {1}, {2})</value>
+  </data>
+  <data name="Plan_BasisHint" xml:space="preserve">
+    <value>The filters you saved on the Attendance Statistics page. Choose which one decides who attended often enough.</value>
+  </data>
+  <data name="Plan_BasisDefine" xml:space="preserve">
+    <value>Define a filter on the Attendance Statistics page</value>
+  </data>
+  <data name="Plan_Summary" xml:space="preserve">
+    <value>Attendance counted from {0} to {1}: at least {2} of the events a member was invited to, and at least {3} invitations.</value>
+  </data>
+  <data name="Plan_SummarySubGroups" xml:space="preserve">
+    <value>Only members of {0}.</value>
+  </data>
+  <data name="Plan_NoBelts" xml:space="preserve">
+    <value>There are no belts yet. Create them on the Belts page and give them to the members on the Members page; the suggestions need them.</value>
+  </data>
+  <data name="Plan_Show" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Plan_FilterFit" xml:space="preserve">
+    <value>Fit</value>
+  </data>
+  <data name="Plan_FilterNeedsData" xml:space="preserve">
+    <value>Needs data</value>
+  </data>
+  <data name="Plan_FilterNotYet" xml:space="preserve">
+    <value>Not yet</value>
+  </data>
+  <data name="Plan_FilterNoNext" xml:space="preserve">
+    <value>Top belt</value>
+  </data>
+  <data name="Plan_FilterAll" xml:space="preserve">
+    <value>Everyone</value>
+  </data>
+  <data name="Plan_VerdictFit" xml:space="preserve">
+    <value>Fit</value>
+  </data>
+  <data name="Plan_VerdictNeedsData" xml:space="preserve">
+    <value>Needs data</value>
+  </data>
+  <data name="Plan_VerdictNotYet" xml:space="preserve">
+    <value>Not yet</value>
+  </data>
+  <data name="Plan_VerdictNoNext" xml:space="preserve">
+    <value>Top belt</value>
+  </data>
+  <data name="Plan_VerdictTipFit" xml:space="preserve">
+    <value>Meets everything the next belt asks for on the day of the exam.</value>
+  </data>
+  <data name="Plan_VerdictTipNeedsData" xml:space="preserve">
+    <value>Nothing is missed so far, but something cannot be checked yet: set the belt, the day it was received or the birth date on the Members page.</value>
+  </data>
+  <data name="Plan_VerdictTipNotYet" xml:space="preserve">
+    <value>Misses at least one requirement: attendance, waiting time or age.</value>
+  </data>
+  <data name="Plan_VerdictTipNoNext" xml:space="preserve">
+    <value>Holds the highest belt: there is no exam left to take.</value>
+  </data>
+  <data name="Plan_ColNext" xml:space="preserve">
+    <value>Next belt</value>
+  </data>
+  <data name="Plan_ColAge" xml:space="preserve">
+    <value>Age</value>
+  </data>
+  <data name="Plan_ColWait" xml:space="preserve">
+    <value>Waiting time</value>
+  </data>
+  <data name="Plan_ColAttendance" xml:space="preserve">
+    <value>Attendance</value>
+  </data>
+  <data name="Plan_ColLastExam" xml:space="preserve">
+    <value>Last exam</value>
+  </data>
+  <data name="Plan_ColVerdict" xml:space="preserve">
+    <value>Verdict</value>
+  </data>
+  <data name="Plan_ColSpond" xml:space="preserve">
+    <value>On Spond</value>
+  </data>
+  <data name="Plan_ColSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Plan_SavedMark" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="Plan_Months" xml:space="preserve">
+    <value>{0} mo.</value>
+  </data>
+  <data name="Plan_CellMin" xml:space="preserve">
+    <value>{0} (min. {1})</value>
+  </data>
+  <data name="Plan_WaitFromBelt" xml:space="preserve">
+    <value>Counted from the day the belt was received, {0}.</value>
+  </data>
+  <data name="Plan_WaitFromExam" xml:space="preserve">
+    <value>The day the belt was received is not known: counted from the last exam, {0}.</value>
+  </data>
+  <data name="Plan_WaitFromUnknown" xml:space="preserve">
+    <value>Neither the day the belt was received nor an earlier exam is known.</value>
+  </data>
+  <data name="Plan_ReasonFit" xml:space="preserve">
+    <value>Meets all requirements for: {0}.</value>
+  </data>
+  <data name="Plan_ReasonNoBelt" xml:space="preserve">
+    <value>No belt assigned yet: set it on the Members page.</value>
+  </data>
+  <data name="Plan_ReasonTop" xml:space="preserve">
+    <value>Holds the highest belt.</value>
+  </data>
+  <data name="Plan_ReasonAttendance" xml:space="preserve">
+    <value>Attendance {0} ({1} of {2} events), {3} needed.</value>
+  </data>
+  <data name="Plan_ReasonNoEvents" xml:space="preserve">
+    <value>Not invited to any event in the period.</value>
+  </data>
+  <data name="Plan_ReasonFewEvents" xml:space="preserve">
+    <value>Invited to {0} events, at least {1} are needed for a verdict.</value>
+  </data>
+  <data name="Plan_ReasonAge" xml:space="preserve">
+    <value>Age {0} on the exam day, {1} needed.</value>
+  </data>
+  <data name="Plan_ReasonAgeUnknown" xml:space="preserve">
+    <value>Birth date not known ({0} years needed).</value>
+  </data>
+  <data name="Plan_ReasonWait" xml:space="preserve">
+    <value>Waited {0} months by the exam day, {1} needed.</value>
+  </data>
+  <data name="Plan_ReasonWaitUnknown" xml:space="preserve">
+    <value>Waiting time not known: no belt date and no earlier exam.</value>
+  </data>
+  <data name="Plan_NotInvited" xml:space="preserve">
+    <value>Not invited</value>
+  </data>
+  <data name="Plan_InvAccepted" xml:space="preserve">
+    <value>Accepted</value>
+  </data>
+  <data name="Plan_InvDeclined" xml:space="preserve">
+    <value>Declined</value>
+  </data>
+  <data name="Plan_InvNoAnswer" xml:space="preserve">
+    <value>No answer yet</value>
+  </data>
+  <data name="Plan_InvOther" xml:space="preserve">
+    <value>Waiting list</value>
+  </data>
+  <data name="Plan_NoneMatch" xml:space="preserve">
+    <value>Nobody matches.</value>
+  </data>
+  <data name="Plan_NobodyFit" xml:space="preserve">
+    <value>Nobody is fit for this exam yet. {0} other members are listed under the other filters.</value>
+  </data>
+  <data name="Plan_SelectedCount" xml:space="preserve">
+    <value>{0} selected</value>
+  </data>
+  <data name="Plan_SavedNotInvited" xml:space="preserve">
+    <value>{0} saved members are not invited on Spond yet.</value>
+  </data>
+  <data name="Plan_Saved" xml:space="preserve">
+    <value>{0} members saved for {1}.</value>
+  </data>
+  <data name="Plan_SelectFit" xml:space="preserve">
+    <value>Select the fit</value>
+  </data>
+  <data name="Plan_ClearSelection" xml:space="preserve">
+    <value>Clear selection</value>
+  </data>
+  <data name="Plan_Discard" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="Plan_Save" xml:space="preserve">
+    <value>Save selection</value>
+  </data>
+  <data name="Plan_SaveHint" xml:space="preserve">
+    <value>Saving only keeps the list in the planner. Nobody is invited on Spond; invite them there when you are ready.</value>
+  </data>
+  <data name="Plan_SelectRow" xml:space="preserve">
+    <value>Save {0} for the exam</value>
+  </data>
+  <data name="Res_Title" xml:space="preserve">
+    <value>Who attended</value>
+  </data>
+  <data name="Res_Lede" xml:space="preserve">
+    <value>Choosing a belt records it and makes it the belt the member holds, from the day of the exam.</value>
+  </data>
+  <data name="Res_ColAnswer" xml:space="preserve">
+    <value>Answer</value>
+  </data>
+  <data name="Res_ColBelt" xml:space="preserve">
+    <value>Belt received</value>
+  </data>
+  <data name="Res_Nobody" xml:space="preserve">
+    <value>Nobody accepted this exam.</value>
+  </data>
+  <data name="Res_Invited" xml:space="preserve">
+    <value>Invited</value>
+  </data>
+  <data name="Res_Attended" xml:space="preserve">
+    <value>Attended</value>
+  </data>
+  <data name="Res_AttendedHint" xml:space="preserve">
+    <value>Accepted the invitation</value>
+  </data>
+  <data name="Res_Declined" xml:space="preserve">
+    <value>Declined</value>
+  </data>
+  <data name="Res_NoAnswer" xml:space="preserve">
+    <value>No answer</value>
+  </data>
+  <data name="Res_Awarded" xml:space="preserve">
+    <value>Belts handed out</value>
+  </data>
+  <data name="Res_AwardedHint" xml:space="preserve">
+    <value>Recorded for this exam</value>
+  </data>
+  <data name="Res_Recorded" xml:space="preserve">
+    <value>{0} received: {1}.</value>
+  </data>
+  <data name="Res_Cleared" xml:space="preserve">
+    <value>Result of {0} removed. The belt the member holds is unchanged; correct it on the Members page if needed.</value>
+  </data>
+  <data name="MemberPage_ColBirth" xml:space="preserve">
+    <value>Birth date</value>
+  </data>
+  <data name="MemberPage_ColBeltSince" xml:space="preserve">
+    <value>Belt since</value>
+  </data>
+  <data name="MemberPage_FormBirthHint" xml:space="preserve">
+    <value>Taken over from Spond when Spond has it. A day you set here is kept. Needed for the minimum age of a belt.</value>
+  </data>
+  <data name="MemberPage_FormBeltSinceHint" xml:space="preserve">
+    <value>The day the member got this belt; the waiting time for the next belt counts from it. Recording a belt at an exam sets it.</value>
+  </data>
+  <data name="MemberPage_ClearBirth" xml:space="preserve">
+    <value>Clear the date</value>
+  </data>
+  <data name="MemberPage_BirthInvalid" xml:space="preserve">
+    <value>The date must be between {0} and today.</value>
+  </data>
+  <data name="MemberPage_BeltSinceNeedsBelt" xml:space="preserve">
+    <value>Choose a belt first.</value>
+  </data>
+  <data name="Nav_Branding" xml:space="preserve">
+    <value>Branding</value>
+  </data>
+  <data name="Branding_Lede" xml:space="preserve">
+    <value>The name, the accent colour, the logos and the tab icon that both clients show. What is saved here applies instead of the settings of the API, until it is reset to them. A change reaches the clients that are open by itself, within about half a minute; no reload or restart is needed.</value>
+  </data>
+  <data name="Branding_StateDefault" xml:space="preserve">
+    <value>Nothing was saved here: the settings of the API apply.</value>
+  </data>
+  <data name="Branding_StateCustom" xml:space="preserve">
+    <value>What is saved here applies instead of the settings of the API.</value>
+  </data>
+  <data name="Branding_TextsTitle" xml:space="preserve">
+    <value>Name and colour</value>
+  </data>
+  <data name="Branding_ProductName" xml:space="preserve">
+    <value>Product name</value>
+  </data>
+  <data name="Branding_ProductNameHint" xml:space="preserve">
+    <value>Shown in the navigation and in the titles of windows and tabs.</value>
+  </data>
+  <data name="Branding_OrganizationName" xml:space="preserve">
+    <value>Club or organisation</value>
+  </data>
+  <data name="Branding_OrganizationNameHint" xml:space="preserve">
+    <value>Shown after the product name in titles, and as the text of the logo. Leave empty if there is none.</value>
+  </data>
+  <data name="Branding_AccentColor" xml:space="preserve">
+    <value>Accent colour</value>
+  </data>
+  <data name="Branding_AccentColorHint" xml:space="preserve">
+    <value>Links, focus, selection, buttons and what means “attended” in both clients. Type #RGB or #RRGGBB, or pick a colour.</value>
+  </data>
+  <data name="Branding_PickColor" xml:space="preserve">
+    <value>Pick a colour</value>
+  </data>
+  <data name="Branding_ProductNameInvalid" xml:space="preserve">
+    <value>A product name is required, at most {0} characters long.</value>
+    <comment>{0} = the longest allowed product name.</comment>
+  </data>
+  <data name="Branding_OrganizationNameInvalid" xml:space="preserve">
+    <value>At most {0} characters, no control characters.</value>
+    <comment>{0} = the longest allowed organisation name.</comment>
+  </data>
+  <data name="Branding_AccentColorInvalid" xml:space="preserve">
+    <value>A colour like #2563eb or #26e is needed.</value>
+  </data>
+  <data name="Branding_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Branding_Saved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="Branding_ImagesTitle" xml:space="preserve">
+    <value>Logos and icon</value>
+  </data>
+  <data name="Branding_ImagesLede" xml:space="preserve">
+    <value>Up to {0} KB each; the format is recognised from the file itself. Choosing or removing an image changes nothing until it is saved.</value>
+    <comment>{0} = the largest allowed image, in KB.</comment>
+  </data>
+  <data name="Branding_SlotLogo" xml:space="preserve">
+    <value>Logo, light surfaces</value>
+  </data>
+  <data name="Branding_SlotLogoOnDark" xml:space="preserve">
+    <value>Logo, dark surfaces</value>
+  </data>
+  <data name="Branding_SlotIcon" xml:space="preserve">
+    <value>Tab icon</value>
+  </data>
+  <data name="Branding_HintLogo" xml:space="preserve">
+    <value>Shown by both clients. An SVG is sharp at any size; PNG, JPEG, GIF or BMP work too.</value>
+  </data>
+  <data name="Branding_HintLogoOnDark" xml:space="preserve">
+    <value>The same for dark surfaces. SVG, PNG, JPEG, GIF or BMP.</value>
+  </data>
+  <data name="Branding_HintIcon" xml:space="preserve">
+    <value>The icon in the browser tab. PNG, SVG or ICO.</value>
+  </data>
+  <data name="Branding_EmptyLogo" xml:space="preserve">
+    <value>No logo: the clients show just the name.</value>
+  </data>
+  <data name="Branding_EmptyLogoOnDark" xml:space="preserve">
+    <value>No image of its own: the logo for light surfaces is used.</value>
+  </data>
+  <data name="Branding_EmptyIcon" xml:space="preserve">
+    <value>No icon: the browser shows its own.</value>
+  </data>
+  <data name="Branding_NoPreview" xml:space="preserve">
+    <value>This program cannot draw the image: no preview here.</value>
+  </data>
+  <data name="Branding_Upload" xml:space="preserve">
+    <value>Upload …</value>
+  </data>
+  <data name="Branding_Replace" xml:space="preserve">
+    <value>Replace …</value>
+  </data>
+  <data name="Branding_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Branding_Undo" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="Branding_NotSavedYet" xml:space="preserve">
+    <value>Not saved yet</value>
+  </data>
+  <data name="Branding_ImagesSaved" xml:space="preserve">
+    <value>Images saved.</value>
+  </data>
+  <data name="Branding_ImageNotAccepted" xml:space="preserve">
+    <value>{0}: the file must be an image of one of these formats: {1}.</value>
+    <comment>{0} = name of the image slot, {1} = the formats it takes, e.g. "SVG, PNG".</comment>
+  </data>
+  <data name="Branding_ImageTooLarge" xml:space="preserve">
+    <value>The file is larger than {0} KB.</value>
+    <comment>{0} = the largest allowed image, in KB.</comment>
+  </data>
+  <data name="Branding_Reset" xml:space="preserve">
+    <value>Back to the settings of the API</value>
+  </data>
+  <data name="Branding_ResetHint" xml:space="preserve">
+    <value>Nothing is saved here yet.</value>
+  </data>
+  <data name="Branding_ConfirmReset" xml:space="preserve">
+    <value>Forget everything saved here, the uploaded images too, and use the settings of the API again? The images cannot be got back.</value>
+  </data>
+  <data name="Branding_ConfirmYes" xml:space="preserve">
+    <value>Yes, go back</value>
+  </data>
+  <data name="Branding_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Branding_ResetDone" xml:space="preserve">
+    <value>The settings of the API apply again.</value>
+  </data>
+  <data name="Nav_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Format_Moment" xml:space="preserve">
+    <value>d MMM yyyy, HH:mm</value>
+    <comment>Custom date format for a moment, e.g. when a comment was written: 15 Oct 2026, 09:12.</comment>
+  </data>
+  <data name="MemberPage_Comments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="MemberPage_CommentsCount" xml:space="preserve">
+    <value>Comments ({0})</value>
+    <comment>{0} = how many comments there are on the member.</comment>
+  </data>
+  <data name="Comments_Title" xml:space="preserve">
+    <value>Comments on “{0}”</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="Comments_Back" xml:space="preserve">
+    <value>Back to the members</value>
+  </data>
+  <data name="Comments_Lede" xml:space="preserve">
+    <value>What the users noted about this member. Every change to a comment is kept in its history.</value>
+  </data>
+  <data name="Comments_CountOne" xml:space="preserve">
+    <value>1 comment</value>
+  </data>
+  <data name="Comments_CountMany" xml:space="preserve">
+    <value>{0} comments</value>
+    <comment>{0} = how many comments.</comment>
+  </data>
+  <data name="Comments_Empty" xml:space="preserve">
+    <value>No comments yet.</value>
+  </data>
+  <data name="Comments_ComposerNew" xml:space="preserve">
+    <value>Write a comment</value>
+  </data>
+  <data name="Comments_ComposerReply" xml:space="preserve">
+    <value>Reply to {0}</value>
+    <comment>{0} = the user who wrote the comment that is replied to.</comment>
+  </data>
+  <data name="Comments_ComposerEdit" xml:space="preserve">
+    <value>Edit comment</value>
+  </data>
+  <data name="Comments_Placeholder" xml:space="preserve">
+    <value>Write a comment …</value>
+  </data>
+  <data name="Comments_Bold" xml:space="preserve">
+    <value>Bold</value>
+  </data>
+  <data name="Comments_Italic" xml:space="preserve">
+    <value>Italic</value>
+  </data>
+  <data name="Comments_Underline" xml:space="preserve">
+    <value>Underline</value>
+  </data>
+  <data name="Comments_Strike" xml:space="preserve">
+    <value>Strikethrough</value>
+  </data>
+  <data name="Comments_FormatHint" xml:space="preserve">
+    <value>Select text and press a button, or write **bold**, *italic*, __underlined__ and ~~crossed out~~ yourself. A backslash (\*) writes the sign itself.</value>
+  </data>
+  <data name="Comments_Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Comments_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Comments_NoTags" xml:space="preserve">
+    <value>There are no tags yet.</value>
+  </data>
+  <data name="Comments_NewTag" xml:space="preserve">
+    <value>New tag</value>
+  </data>
+  <data name="Comments_EditTag" xml:space="preserve">
+    <value>Edit tag “{0}”</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Comments_Post" xml:space="preserve">
+    <value>Post comment</value>
+  </data>
+  <data name="Comments_PostReply" xml:space="preserve">
+    <value>Post reply</value>
+  </data>
+  <data name="Comments_SaveEdit" xml:space="preserve">
+    <value>Save changes</value>
+  </data>
+  <data name="Comments_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Comments_TooLong" xml:space="preserve">
+    <value>The comment is too long (at most {0} characters).</value>
+    <comment>{0} = the longest allowed length.</comment>
+  </data>
+  <data name="Comments_Reply" xml:space="preserve">
+    <value>Reply</value>
+  </data>
+  <data name="Comments_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Comments_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Comments_DeleteBlocked" xml:space="preserve">
+    <value>You are not allowed to delete this comment.</value>
+  </data>
+  <data name="Comments_EditedBy" xml:space="preserve">
+    <value>Edited by {0}, {1}</value>
+    <comment>{0} = user name, {1} = when.</comment>
+  </data>
+  <data name="Comments_EditedMany" xml:space="preserve">
+    <value>Edited by {0}, {1} · {2} edits</value>
+    <comment>{0} = user name of the latest edit, {1} = when, {2} = how many edits there were.</comment>
+  </data>
+  <data name="Comments_ChangedText" xml:space="preserve">
+    <value>changed the text</value>
+  </data>
+  <data name="Comments_ChangedFormatting" xml:space="preserve">
+    <value>changed the formatting</value>
+  </data>
+  <data name="Comments_TagsAdded" xml:space="preserve">
+    <value>tags added: {0}</value>
+    <comment>{0} = tag names.</comment>
+  </data>
+  <data name="Comments_TagsRemoved" xml:space="preserve">
+    <value>tags removed: {0}</value>
+    <comment>{0} = tag names.</comment>
+  </data>
+  <data name="Comments_Before" xml:space="preserve">
+    <value>Before:</value>
+  </data>
+  <data name="Comments_ConfirmDelete" xml:space="preserve">
+    <value>Delete this comment?</value>
+  </data>
+  <data name="Comments_ConfirmDeleteReply" xml:space="preserve">
+    <value>Delete this comment and its reply?</value>
+  </data>
+  <data name="Comments_ConfirmDeleteReplies" xml:space="preserve">
+    <value>Delete this comment and its {0} replies?</value>
+    <comment>{0} = how many replies (2 or more).</comment>
+  </data>
+  <data name="Comments_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Tags_Lede" xml:space="preserve">
+    <value>Topics that comments about members can be about. A tag can be connected to an event, such as a training or an exam.</value>
+  </data>
+  <data name="Tags_New" xml:space="preserve">
+    <value>New tag</value>
+  </data>
+  <data name="Tags_ColTag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Tags_ColEvent" xml:space="preserve">
+    <value>Event</value>
+  </data>
+  <data name="Tags_ColComments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="Tags_NoEvent" xml:space="preserve">
+    <value>No event</value>
+  </data>
+  <data name="Tags_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Tags_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Tags_Empty" xml:space="preserve">
+    <value>There are no tags yet. Create one here, or while writing a comment.</value>
+  </data>
+  <data name="Tags_FormNew" xml:space="preserve">
+    <value>New tag</value>
+  </data>
+  <data name="Tags_FormEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Tags_FormName" xml:space="preserve">
+    <value>Name of the tag</value>
+  </data>
+  <data name="Tags_FormEvent" xml:space="preserve">
+    <value>Event the tag is about</value>
+  </data>
+  <data name="Tags_FormEventHint" xml:space="preserve">
+    <value>A tag is about one event or none. One event can have many tags.</value>
+  </data>
+  <data name="Tags_ClearEvent" xml:space="preserve">
+    <value>Disconnect event</value>
+  </data>
+  <data name="Tags_NameInvalid" xml:space="preserve">
+    <value>The name must have 1 to {0} characters.</value>
+    <comment>{0} = the longest allowed name.</comment>
+  </data>
+  <data name="Tags_NameTaken" xml:space="preserve">
+    <value>There already is a tag with this name.</value>
+  </data>
+  <data name="Tags_Create" xml:space="preserve">
+    <value>Create tag</value>
+  </data>
+  <data name="Tags_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Tags_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Tags_Created" xml:space="preserve">
+    <value>Tag “{0}” created.</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Tags_Saved" xml:space="preserve">
+    <value>Tag “{0}” saved.</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Tags_Deleted" xml:space="preserve">
+    <value>Tag “{0}” deleted.</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Tags_ConfirmDelete" xml:space="preserve">
+    <value>Delete the tag “{0}”? It is taken off the comments that carry it ({1}); the comments stay.</value>
+    <comment>{0} = tag name, {1} = how many comments carry it.</comment>
+  </data>
+  <data name="Tags_ConfirmDeleteUnused" xml:space="preserve">
+    <value>Delete the tag “{0}”?</value>
+    <comment>{0} = tag name.</comment>
+  </data>
+  <data name="Tags_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Nav_Roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Role_None" xml:space="preserve">
+    <value>No role</value>
+  </data>
+  <data name="Page_NotAllowed" xml:space="preserve">
+    <value>Your user is not allowed to use this page.</value>
+  </data>
+  <data name="Users_FormRoles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Users_FormRolesHint" xml:space="preserve">
+    <value>A user may do everything their roles allow, plus the permissions below.</value>
+  </data>
+  <data name="Users_FormPermissions" xml:space="preserve">
+    <value>Own permissions</value>
+  </data>
+  <data name="Users_FormPermissionsHint" xml:space="preserve">
+    <value>Only for this user. What many users share belongs in a role.</value>
+  </data>
+  <data name="Roles_Lede" xml:space="preserve">
+    <value>Roles bundle permissions so that they can be given to many users at once. The administrator role has every permission.</value>
+  </data>
+  <data name="Roles_New" xml:space="preserve">
+    <value>New role</value>
+  </data>
+  <data name="Roles_ColName" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="Roles_ColPermissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="Roles_ColUsers" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Roles_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Roles_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Roles_SystemHint" xml:space="preserve">
+    <value>The administrator role cannot be changed or deleted.</value>
+  </data>
+  <data name="Roles_FormNew" xml:space="preserve">
+    <value>New role</value>
+  </data>
+  <data name="Roles_FormEdit" xml:space="preserve">
+    <value>Edit “{0}”</value>
+  </data>
+  <data name="Roles_FormName" xml:space="preserve">
+    <value>Role name</value>
+  </data>
+  <data name="Roles_NameInvalid" xml:space="preserve">
+    <value>A name is required, at most {0} characters long.</value>
+  </data>
+  <data name="Roles_NameTaken" xml:space="preserve">
+    <value>There is already a role with this name.</value>
+  </data>
+  <data name="Roles_FormPermissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="Roles_FormPermissionsHint" xml:space="preserve">
+    <value>Ticking a permission also ticks the one that lets the user see its area; unticking that one unticks the rest.</value>
+  </data>
+  <data name="Roles_Create" xml:space="preserve">
+    <value>Create role</value>
+  </data>
+  <data name="Roles_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Roles_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Roles_ConfirmDelete" xml:space="preserve">
+    <value>Delete the role “{0}”? It is taken from its {1} users; their other roles and own permissions stay.</value>
+  </data>
+  <data name="Roles_ConfirmDeleteUnused" xml:space="preserve">
+    <value>Delete the role “{0}”? Nobody has it.</value>
+  </data>
+  <data name="Roles_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Roles_Created" xml:space="preserve">
+    <value>Role “{0}” created.</value>
+  </data>
+  <data name="Roles_Saved" xml:space="preserve">
+    <value>Role “{0}” saved.</value>
+  </data>
+  <data name="Roles_Deleted" xml:space="preserve">
+    <value>Role “{0}” deleted.</value>
+  </data>
+  <data name="Roles_AllPermissions" xml:space="preserve">
+    <value>All permissions</value>
+  </data>
+  <data name="Roles_PermissionCount" xml:space="preserve">
+    <value>{0} of {1} permissions</value>
+  </data>
+  <data name="Roles_UsersOne" xml:space="preserve">
+    <value>1 user</value>
+  </data>
+  <data name="Roles_UsersMany" xml:space="preserve">
+    <value>{0} users</value>
+  </data>
+  <data name="PermissionGroup_dashboard" xml:space="preserve">
+    <value>Dashboard</value>
+  </data>
+  <data name="PermissionGroup_statistics" xml:space="preserve">
+    <value>Attendance statistics</value>
+  </data>
+  <data name="PermissionGroup_exams" xml:space="preserve">
+    <value>Exams</value>
+  </data>
+  <data name="PermissionGroup_members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="PermissionGroup_belts" xml:space="preserve">
+    <value>Belts</value>
+  </data>
+  <data name="PermissionGroup_comments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="PermissionGroup_tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="PermissionGroup_branding" xml:space="preserve">
+    <value>Branding</value>
+  </data>
+  <data name="PermissionGroup_users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="PermissionGroup_roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Permission_dashboard_view" xml:space="preserve">
+    <value>See the dashboard</value>
+  </data>
+  <data name="Permission_statistics_view" xml:space="preserve">
+    <value>See the attendance statistics</value>
+  </data>
+  <data name="Permission_exams_view" xml:space="preserve">
+    <value>See exams, who is fit for them and the saved filters</value>
+  </data>
+  <data name="Permission_exams_edit" xml:space="preserve">
+    <value>Make events exams, delete exams</value>
+  </data>
+  <data name="Permission_exams_filters" xml:space="preserve">
+    <value>Save, replace and delete filters</value>
+  </data>
+  <data name="Permission_exams_candidates" xml:space="preserve">
+    <value>Save members for an exam</value>
+  </data>
+  <data name="Permission_exams_results" xml:space="preserve">
+    <value>Record the belts handed out at an exam</value>
+  </data>
+  <data name="Permission_members_view" xml:space="preserve">
+    <value>See the members</value>
+  </data>
+  <data name="Permission_members_edit" xml:space="preserve">
+    <value>Set a member’s belt and days</value>
+  </data>
+  <data name="Permission_belts_view" xml:space="preserve">
+    <value>See the belts</value>
+  </data>
+  <data name="Permission_belts_edit" xml:space="preserve">
+    <value>Create, change and delete belts</value>
+  </data>
+  <data name="Permission_comments_view" xml:space="preserve">
+    <value>Read the comments on members</value>
+  </data>
+  <data name="Permission_comments_write" xml:space="preserve">
+    <value>Write comments and replies</value>
+  </data>
+  <data name="Permission_comments_edit" xml:space="preserve">
+    <value>Change comments</value>
+  </data>
+  <data name="Permission_comments_delete" xml:space="preserve">
+    <value>Delete your own comments</value>
+  </data>
+  <data name="Permission_comments_deleteAny" xml:space="preserve">
+    <value>Delete the comments of others</value>
+  </data>
+  <data name="Permission_tags_view" xml:space="preserve">
+    <value>See the tags</value>
+  </data>
+  <data name="Permission_tags_edit" xml:space="preserve">
+    <value>Create, change and delete tags</value>
+  </data>
+  <data name="Permission_branding_view" xml:space="preserve">
+    <value>See the branding settings</value>
+  </data>
+  <data name="Permission_branding_edit" xml:space="preserve">
+    <value>Change the name, colour and logos</value>
+  </data>
+  <data name="Permission_users_view" xml:space="preserve">
+    <value>See the users</value>
+  </data>
+  <data name="Permission_users_edit" xml:space="preserve">
+    <value>Create users, change names and passwords</value>
+  </data>
+  <data name="Permission_users_delete" xml:space="preserve">
+    <value>Delete users</value>
+  </data>
+  <data name="Permission_users_grant" xml:space="preserve">
+    <value>Give roles and permissions to users</value>
+  </data>
+  <data name="Permission_roles_view" xml:space="preserve">
+    <value>See the roles</value>
+  </data>
+  <data name="Permission_roles_edit" xml:space="preserve">
+    <value>Create, change and delete roles</value>
+  </data>
+  <data name="Belts_EmptyView" xml:space="preserve">
+    <value>There are no belts yet.</value>
+  </data>
+  <data name="Tags_EmptyView" xml:space="preserve">
+    <value>There are no tags yet.</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="PermissionGroup_settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Permission_settings_view" xml:space="preserve">
+    <value>See the settings</value>
+  </data>
+  <data name="Permission_settings_edit" xml:space="preserve">
+    <value>Change the settings</value>
+  </data>
+  <data name="Settings_Lede" xml:space="preserve">
+    <value>Where the data is kept, how Spond is reached and how the statistics read the calendar. Changes are saved on the server and kept across restarts; the API restarts itself to apply them.</value>
+  </data>
+  <data name="Settings_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Settings_NothingChanged" xml:space="preserve">
+    <value>Nothing changed.</value>
+  </data>
+  <data name="Settings_SavedRestarting" xml:space="preserve">
+    <value>Saved. The API is restarting to apply the changes …</value>
+  </data>
+  <data name="Settings_Restarted" xml:space="preserve">
+    <value>Saved. The API restarted with the new settings.</value>
+  </data>
+  <data name="Settings_DatabasesTitle" xml:space="preserve">
+    <value>Databases</value>
+  </data>
+  <data name="Settings_DatabasePath" xml:space="preserve">
+    <value>Planner database</value>
+  </data>
+  <data name="Settings_DatabasePathHint" xml:space="preserve">
+    <value>SQLite file with exams, members, belts and comments. A relative path starts in the API's program folder. A file that exists is used as it is; a new path starts an empty database (nothing is moved).</value>
+  </data>
+  <data name="Settings_AccountsDatabasePath" xml:space="preserve">
+    <value>Accounts database</value>
+  </data>
+  <data name="Settings_AccountsDatabasePathHint" xml:space="preserve">
+    <value>SQLite file with the users and roles. Keep it apart from the planner database, so that the logins can be backed up separately.</value>
+  </data>
+  <data name="Settings_PathInvalid" xml:space="preserve">
+    <value>Enter a file path.</value>
+  </data>
+  <data name="Settings_DatabasesSame" xml:space="preserve">
+    <value>The two databases must be different files.</value>
+  </data>
+  <data name="Settings_SpondTitle" xml:space="preserve">
+    <value>Spond</value>
+  </data>
+  <data name="Settings_UseDemoData" xml:space="preserve">
+    <value>Use demo data instead of Spond</value>
+  </data>
+  <data name="Settings_UseDemoDataHint" xml:space="preserve">
+    <value>Generated sample data, to try the planner out. Spond is not asked.</value>
+  </data>
+  <data name="Settings_SpondEmail" xml:space="preserve">
+    <value>Spond email</value>
+  </data>
+  <data name="Settings_SpondPhone" xml:space="preserve">
+    <value>Spond phone number (instead of the email)</value>
+  </data>
+  <data name="Settings_SpondPassword" xml:space="preserve">
+    <value>Spond password</value>
+  </data>
+  <data name="Settings_SpondPasswordStored" xml:space="preserve">
+    <value>A password is stored. Leave this empty to keep it.</value>
+  </data>
+  <data name="Settings_SpondPasswordMissing" xml:space="preserve">
+    <value>Without a Spond login the planner has no data; you can add it later.</value>
+  </data>
+  <data name="Settings_SpondIncomplete" xml:space="preserve">
+    <value>A Spond login needs the email (or phone number) and the password.</value>
+  </data>
+  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
+    <value>Ignore group administrators</value>
+  </data>
+  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
+    <value>Leave members who administer their Spond group (usually the login account) out of the statistics, members and exams.</value>
+  </data>
+  <data name="Settings_StatisticsTitle" xml:space="preserve">
+    <value>Statistics and exams</value>
+  </data>
+  <data name="Settings_TimeZone" xml:space="preserve">
+    <value>Time zone</value>
+  </data>
+  <data name="Settings_TimeZoneHint" xml:space="preserve">
+    <value>Days and weekdays are read in this time zone, e.g. Europe/Berlin.</value>
+  </data>
+  <data name="Settings_TimeZoneInvalid" xml:space="preserve">
+    <value>Enter a time zone.</value>
+  </data>
+  <data name="Settings_ExamKeyword" xml:space="preserve">
+    <value>Exam keyword</value>
+  </data>
+  <data name="Settings_ExamKeywordHint" xml:space="preserve">
+    <value>Events whose name contains this word are exams.</value>
+  </data>
+  <data name="Settings_MinAttendance" xml:space="preserve">
+    <value>Default minimum attendance (%)</value>
+  </data>
+  <data name="Settings_MinInvited" xml:space="preserve">
+    <value>Default minimum invited events</value>
+  </data>
+  <data name="Settings_PercentInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 100.</value>
+  </data>
+  <data name="Settings_InvitedInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 1000.</value>
+  </data>
+  <data name="Settings_SyncTitle" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+  <data name="Settings_SyncEnabled" xml:space="preserve">
+    <value>Sync with Spond automatically</value>
+  </data>
+  <data name="Settings_SyncEnabledHint" xml:space="preserve">
+    <value>Keeps the members and the invitations of the exams in line with Spond.</value>
+  </data>
+  <data name="Settings_SyncInterval" xml:space="preserve">
+    <value>Minutes between two syncs</value>
+  </data>
+  <data name="Settings_SyncIntervalHint" xml:space="preserve">
+    <value>0 = only when the API starts.</value>
+  </data>
+  <data name="Settings_SyncIntervalInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to {0}.</value>
+  </data>
+  <data name="Setup_Title" xml:space="preserve">
+    <value>Set up</value>
+  </data>
+  <data name="Setup_Lede" xml:space="preserve">
+    <value>This installation has no user yet. Say where the data is kept and how Spond is reached, and create the first administrator. You can change everything later on the settings page.</value>
+  </data>
+  <data name="Setup_Checking" xml:space="preserve">
+    <value>Asking the server …</value>
+  </data>
+  <data name="Setup_AdminTitle" xml:space="preserve">
+    <value>Administrator</value>
+  </data>
+  <data name="Setup_AdminUserName" xml:space="preserve">
+    <value>User name</value>
+  </data>
+  <data name="Setup_AdminPassword" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Setup_AdminPasswordRepeat" xml:space="preserve">
+    <value>Repeat the password</value>
+  </data>
+  <data name="Setup_UserNameInvalid" xml:space="preserve">
+    <value>Enter a user name of up to {0} characters, without a colon.</value>
+  </data>
+  <data name="Setup_PasswordInvalid" xml:space="preserve">
+    <value>The password needs {0} to {1} characters.</value>
+  </data>
+  <data name="Setup_PasswordsDiffer" xml:space="preserve">
+    <value>The passwords differ.</value>
+  </data>
+  <data name="Setup_Finish" xml:space="preserve">
+    <value>Finish the setup</value>
+  </data>
+  <data name="Setup_Restarting" xml:space="preserve">
+    <value>Setup is done. The API is restarting to apply the settings …</value>
+  </data>
+  <data name="Setup_Done" xml:space="preserve">
+    <value>Setup is done. Loading the application …</value>
+  </data>
+  <data name="Setup_NotBack" xml:space="preserve">
+    <value>The API did not come back within a minute. Check that it is running, then reload this page.</value>
+  </data>
+  <data name="Settings_BackupAccounts" xml:space="preserve">
+    <value>Backup Spond accounts</value>
+  </data>
+  <data name="Settings_BackupAccountsHint" xml:space="preserve">
+    <value>Asked in this order when the first account yields nothing (Spond sometimes answers an account that sent too many requests with nothing at all). All accounts must see the same groups.</value>
+  </data>
+  <data name="Settings_BackupAdd" xml:space="preserve">
+    <value>Add backup account</value>
+  </data>
+  <data name="Settings_BackupRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Settings_BackupIncomplete" xml:space="preserve">
+    <value>A backup Spond login needs the email (or phone number) and the password.</value>
+  </data>
+  <data name="Setup_SettingsFileTitle" xml:space="preserve">
+    <value>Settings file</value>
+  </data>
+  <data name="Setup_SettingsFilePath" xml:space="preserve">
+    <value>Settings file</value>
+  </data>
+  <data name="Setup_SettingsFileHint" xml:space="preserve">
+    <value>JSON file where the settings below are kept. A relative path starts in the API's program folder. The location is remembered in settings-location.txt next to the program.</value>
+  </data>
+  <data name="Setup_SettingsFileLocked" xml:space="preserve">
+    <value>The location is fixed by the API's configuration (Setup:SettingsFile or an environment variable) and cannot be changed here.</value>
+  </data>
+  <data name="Settings_SecurityTitle" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="Settings_AllowedHosts" xml:space="preserve">
+    <value>Allowed host names</value>
+  </data>
+  <data name="Settings_AllowedHostsHint" xml:space="preserve">
+    <value>The address(es) this server answers to, separated by ";" (for example kyuplan.example.com). Requests for any other name are refused. "*" allows every name. Applies after the restart; if you lock yourself out, change AllowedHosts in the settings file.</value>
+  </data>
+  <data name="Settings_AllowedHostsInvalid" xml:space="preserve">
+    <value>Enter host names separated by ";", e.g. kyuplan.example.com or *.example.com, or just *.</value>
+  </data>
+  <data name="Help_User" xml:space="preserve">
+    <value>Help</value>
+  </data>
+  <data name="Help_Admin" xml:space="preserve">
+    <value>Help for administrators</value>
+  </data>
+  <data name="Help_Deployment" xml:space="preserve">
+    <value>Help for installing</value>
+  </data>
+  <data name="Password_Show" xml:space="preserve">
+    <value>Show password</value>
+  </data>
+  <data name="Password_Hide" xml:space="preserve">
+    <value>Hide password</value>
+  </data>
+  <data name="Theme_Default" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Theme_DefaultWindows" xml:space="preserve">
+    <value>Windows (automatic)</value>
+  </data>
+  <data name="Theme_Dracula" xml:space="preserve">
+    <value>Dracula</value>
+  </data>
+  <data name="Theme_CatppuccinLatte" xml:space="preserve">
+    <value>Catppuccin Latte</value>
+  </data>
+  <data name="Theme_CatppuccinMocha" xml:space="preserve">
+    <value>Catppuccin Mocha</value>
+  </data>
+  <data name="Theme_LiquidGlass" xml:space="preserve">
+    <value>Liquid Glass</value>
+  </data>
+  <data name="Theme_ServerDefault" xml:space="preserve">
+    <value>Server default ({0})</value>
+  </data>
+  <data name="Branding_ThemesTitle" xml:space="preserve">
+    <value>Default themes</value>
+  </data>
+  <data name="Branding_ThemesLede" xml:space="preserve">
+    <value>The theme each client shows to users who have not picked one themselves. Every user can choose their own in the navigation.</value>
+  </data>
+  <data name="Branding_DefaultWebTheme" xml:space="preserve">
+    <value>Web client</value>
+  </data>
+  <data name="Branding_DefaultWindowsTheme" xml:space="preserve">
+    <value>Windows client</value>
+  </data>
+</root>

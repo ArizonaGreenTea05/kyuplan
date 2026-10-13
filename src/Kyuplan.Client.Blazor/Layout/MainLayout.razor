@@ -1,0 +1,253 @@
+@using System.ComponentModel
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject ShellViewModel Shell
+@inject ThemeViewModel Themes
+@inject IJSRuntime Js
+@inject NavigationManager Navigation
+@inject Kyuplan.Client.Api.LoginSession Session
+@inject Microsoft.Extensions.Options.IOptions<Kyuplan.Client.Api.PlannerClientOptions> ClientOptions
+
+<div class="app">
+    <aside class="sidebar">
+        @if (Shell.Brand.LogoUrl is { } logo)
+        {
+            <a class="brand" href="" aria-label="@string.Format(Strings.Shell_BrandAria, Shell.Brand.ProductName, Strings.Nav_Dashboard)">
+                @* The API says which logo: one for light surfaces and one for dark ones; app.css shows the matching variant. *@
+                <img class="logo logo-light" src="@logo" alt="@Shell.Brand.LogoDescription" />
+                @if (Shell.Brand.LogoOnDarkUrl is { } logoOnDark)
+                {
+                    <img class="logo logo-dark" src="@logoOnDark" alt="" />
+                }
+            </a>
+        }
+        <p class="product">@Shell.Brand.ProductName</p>
+
+        <nav aria-label="@Strings.Nav_Main">
+            @* Only the pages the user may use; each one needs its own .view permission. *@
+            @if (Shell.Can(Permission.DashboardView))
+            {
+                <NavLink class="nav-item" href="" Match="NavLinkMatch.All">
+                    <Icon Name="dashboard" /><span>@Strings.Nav_Dashboard</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.StatisticsView))
+            {
+                <NavLink class="nav-item" href="statistics">
+                    <Icon Name="chart" /><span>@Strings.Nav_Statistics</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.ExamsView))
+            {
+                <NavLink class="nav-item" href="exams">
+                    <Icon Name="calendar" /><span>@Strings.Nav_Exams</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.MembersView))
+            {
+                <NavLink class="nav-item" href="members">
+                    <Icon Name="members" /><span>@Strings.Nav_Members</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.BeltsView))
+            {
+                <NavLink class="nav-item" href="belts">
+                    <Icon Name="belt" /><span>@Strings.Nav_Belts</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.TagsView))
+            {
+                <NavLink class="nav-item" href="tags">
+                    <Icon Name="tag" /><span>@Strings.Nav_Tags</span>
+                </NavLink>
+            }
+        </nav>
+
+        @* The documentation the user may read (the user guide for everybody, more for administrators), each in a tab of its own. *@
+        @if (Shell.HelpLinks.Count > 0)
+        {
+            <nav class="help-links" aria-label="@Strings.Help_User">
+                @foreach (var link in Shell.HelpLinks)
+                {
+                    <a class="nav-item" href="@link.Address" target="_blank" rel="noopener">
+                        <Icon Name="help" /><span>@link.Title</span>
+                    </a>
+                }
+            </nav>
+        }
+
+        @* The server carries the installers of the desktop apps: a visitor is pointed to the one for their system, if there is one. *@
+        @if (Shell.Info?.ClientVersion(_platform) is { } clientVersion)
+        {
+            var system = ClientPlatform.DisplayName(_platform);
+            <a class="download-cta" href="@(new Uri(ClientOptions.Value.BaseUri, ClientDownload.PathFor(_platform)))" download
+               title="@string.Format(Strings.Download_Hint, system, clientVersion)">
+                <Icon Name="download" Size="22" /><span>@string.Format(Strings.Download_Button, system)</span>
+            </a>
+        }
+
+        @* Administration (what an administrator may use) above the account; signing out forgets the login held in memory. *@
+        <nav class="nav-groups" aria-label="@Strings.Nav_Account">
+            @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView]))
+            {
+                <div class="nav-group">
+                    <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="sliders" /><span>@Strings.Nav_Administration</span></button>
+                    <div class="flyout" role="menu">
+                    @if (Shell.Can(Permission.UsersView))
+                    {
+                        <NavLink class="nav-item" href="users">
+                            <Icon Name="users" /><span>@Strings.Nav_Users</span>
+                        </NavLink>
+                    }
+                    @if (Shell.Can(Permission.RolesView))
+                    {
+                        <NavLink class="nav-item" href="roles">
+                            <Icon Name="shield" /><span>@Strings.Nav_Roles</span>
+                        </NavLink>
+                    }
+                    @if (Shell.Can(Permission.SettingsView))
+                    {
+                        <NavLink class="nav-item" href="settings">
+                            <Icon Name="sliders" /><span>@Strings.Nav_Settings</span>
+                        </NavLink>
+                    }
+                    @if (Shell.Can(Permission.BrandingView))
+                    {
+                        <NavLink class="nav-item" href="branding">
+                            <Icon Name="palette" /><span>@Strings.Nav_Branding</span>
+                        </NavLink>
+                    }
+                    </div>
+                </div>
+            }
+            <div class="nav-group">
+                <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="user" /><span>@Strings.Nav_Account</span></button>
+                <div class="flyout" role="menu">
+                    <NavLink class="nav-item" href="account" title="@(Shell.CurrentUser is { } me ? string.Format(Strings.Shell_SignedInAs, me.DisplayName) : null)">
+                        <Icon Name="user" /><span>@Strings.Nav_Account</span>
+                    </NavLink>
+                    <NavLink class="nav-item" href="account/preferences">
+                        <Icon Name="palette" /><span>@Strings.Nav_Preferences</span>
+                    </NavLink>
+                    <button type="button" class="nav-item" role="menuitem" @onclick="SignOut"><Icon Name="logout" /><span>@Strings.Shell_SignOut</span></button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar-foot">
+            @* Theme and language are the user's own settings: they have a page under Account. *@
+            @if (Shell.Info is { } info)
+            {
+                <small>@string.Format(Strings.Shell_ApiVersion, info.Version)</small>
+            }
+
+            @* Fixed, not branding: stays visible whatever the instance's branding says. *@
+            <div class="watermark"><img src="watermark.svg" alt="" /><span>powered by @if (Shell.RepositoryUrl is { } repository){<a href="@repository" target="_blank" rel="noopener noreferrer">kyuplan</a>}else{<text>kyuplan</text>}</span></div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            @* The group and the refresh button are for what Spond knows; a user who may use no page that shows it has no use for them. *@
+            @if (Shell.UsesSpond)
+            {
+                <label class="group-picker">
+                    <span>@Strings.Shell_Group</span>
+                    <select value="@Shell.SelectedGroupId" @onchange="OnGroupChanged" disabled="@(Shell.Groups.Count == 0)">
+                        @foreach (var group in Shell.Groups)
+                        {
+                            <option value="@group.Id">@group.Name (@group.MemberCount)</option>
+                        }
+                    </select>
+                </label>
+            }
+
+            <span class="spacer"></span>
+
+            @if (Shell.IsDemoData)
+            {
+                <span class="chip demo" title="@Strings.Shell_DemoDataHint">@Strings.Shell_DemoData</span>
+            }
+
+            @if (Shell.UsesSpond)
+            {
+                <button type="button" class="btn" disabled="@Shell.IsBusy" @onclick="() => Shell.RefreshDataCommand.ExecuteAsync(null)"
+                        title="@Strings.Shell_RefreshHint">
+                    <Icon Name="refresh" /><span>@Strings.Shell_Refresh</span>
+                </button>
+            }
+        </header>
+
+        <ErrorBanner Message="@Shell.ErrorMessage" OnRetry="() => Shell.RetryCommand.ExecuteAsync(null)" />
+
+        <div class="content">
+            @Body
+        </div>
+    </div>
+</div>
+
+@code {
+    // The desktop system of the browser (ClientPlatform), "" when it is none that has an app.
+    private string _platform = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        _platform = await Js.InvokeAsync<string>("ppPlatform.current");
+        if (_platform.Length > 0) StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Shell.PropertyChanged += OnShellChanged;
+        Shell.Brand.PropertyChanged += OnShellChanged;
+        Shell.Brand.Changed += OnBrandChanged;
+        Themes.Changed += OnThemeApplied;
+        Themes.PropertyChanged += OnShellChanged;
+        Shell.Language.Changed += OnLanguageChanged;
+
+        // The branding is public, so it is shown even while the browser asks for the login that the shell's first request needs.
+        await Shell.Brand.LoadAsync();
+        Shell.Brand.Watch(); // from now on a change made on the Branding page (by anybody) shows up here by itself
+        await Shell.InitializeAsync();
+    }
+
+    private void OnShellChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    // The accent colour and the tab icon live outside the components: js/brand.js sets them on the page. (The tab title is each page's, see
+    // BrandedTitle; the name and the logos are bound.) Raised again whenever the branding changes.
+    private void OnBrandChanged(object? sender, EventArgs e) => _ = InvokeAsync(async () =>
+    {
+        var brand = Shell.Brand;
+        await Js.InvokeVoidAsync("ppBrand.apply", brand.AccentColor, brand.IconUrl);
+    });
+
+    // The skin lives on the page (js/theme.js): put it on whenever the theme in effect changes (a choice, the server's default, a login).
+    private void OnThemeApplied(object? sender, EventArgs e) => _ = InvokeAsync(() => Js.InvokeVoidAsync("ppTheme.setSkin", Themes.Effective).AsTask());
+
+    private void OnGroupChanged(ChangeEventArgs e) => Shell.SelectedGroupId = e.Value?.ToString() ?? "";
+
+    // The login lives in memory only: loading the page anew drops it (and everything else the old user saw) and shows the login screen.
+    private void SignOut()
+    {
+        Session.Login = null;
+        Session.User = null;
+        Navigation.NavigateTo("", forceLoad: true);
+    }
+
+    // Blazor WebAssembly loads its translations when it starts, so a new language (picked on the preferences page, or the one of the
+    // user who just signed in) is a stored choice plus a reload; the reload starts in that language, so nothing changes again.
+    private void OnLanguageChanged(object? sender, EventArgs e) =>
+        _ = InvokeAsync(() => Js.InvokeVoidAsync("ppLang.set", Shell.Language.Current.Code).AsTask());
+
+    public void Dispose()
+    {
+        Shell.PropertyChanged -= OnShellChanged;
+        Shell.Brand.PropertyChanged -= OnShellChanged;
+        Shell.Brand.Changed -= OnBrandChanged;
+        Themes.Changed -= OnThemeApplied;
+        Themes.PropertyChanged -= OnShellChanged;
+        Shell.Language.Changed -= OnLanguageChanged;
+    }
+}

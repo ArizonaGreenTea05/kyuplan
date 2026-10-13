@@ -1,0 +1,31 @@
+@* Compact member list used on the dashboard. *@
+@if (Members.Count == 0)
+{
+    <p class="empty-inline">@(EmptyText ?? Strings.Members_NobodyHere)</p>
+}
+else
+{
+    <ul class="memberlist">
+        @foreach (var m in Members)
+        {
+            <li>
+                <div class="who">
+                    <strong>@m.Name</strong>
+                    <small>@m.LastAttendedText</small>
+                </div>
+                <div class="rate">
+                    <RateBar Fraction="m.AttendanceFraction" Status="m.Status" Label="@m.AttendanceAriaText" />
+                    <span class="num">@m.AttendanceText</span>
+                </div>
+                <TrendMark Member="m" />
+                <LevelBadge Member="m" />
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MemberRowViewModel> Members { get; set; } = [];
+
+    [Parameter] public string? EmptyText { get; set; }
+}

@@ -1,0 +1,19 @@
+@* A comment's words as the styled stretches CommentFormat made of them. Only text is rendered (never markup), so nothing a user typed
+   can inject HTML; the spans sit on one line of markup because the container keeps white space as it is (new lines of the comment). *@
+<span class="comment-text">@foreach (var span in Spans){<span class="@Classes(span.Style)">@span.Text</span>}</span>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<CommentSpan> Spans { get; set; } = [];
+
+    private static string? Classes(CommentStyle style)
+    {
+        if (style == CommentStyle.None) return null;
+
+        List<string> classes = [];
+        if (style.HasFlag(CommentStyle.Bold)) classes.Add("fmt-b");
+        if (style.HasFlag(CommentStyle.Italic)) classes.Add("fmt-i");
+        if (style.HasFlag(CommentStyle.Underline)) classes.Add("fmt-u");
+        if (style.HasFlag(CommentStyle.Strikethrough)) classes.Add("fmt-s");
+        return string.Join(' ', classes);
+    }
+}

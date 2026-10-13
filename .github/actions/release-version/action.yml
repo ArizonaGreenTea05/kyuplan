@@ -1,0 +1,46 @@
+name: Release version
+description: >
+  Reads the version out of the "v<version>" tag that started the workflow (v0.1 -> 0.1, v1.2.3 -> 1.2.3), fails if the tag is not
+  of that form, and finds the previous version tag, which the release notes start from.
+
+outputs:
+  version:
+    description: The version without the "v" of the tag, e.g. 0.1, 1.2.3 or 1.2.3-beta.1.
+    value: ${{ steps.read.outputs.version }}
+  prerelease:
+    description: "true when the version has a prerelease suffix (-beta.1), otherwise false."
+    value: ${{ steps.read.outputs.prerelease }}
+  previous-tag:
+    description: The previous version tag, empty for the first one.
+    value: ${{ steps.read.outputs.previous-tag }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      env:
+        TAG: ${{ github.ref_name }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        version="$TAG"
+        if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+          echo "::error::The tag '$TAG' is not of the form v<major>.<minor>[.<patch>][-<prerelease>], for example v0.1 or v1.2.3."
+          exit 1
+        fi
+        version="${version#v}"
+
+        prerelease=false
+        [[ "$version" == *-* ]] && prerelease=true
+
+        # The tag just before this one among the version tags (the API is asked, so no full clone is needed). Older per-app tags like api/v0.1 do not match.
+        previous=$(gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/v" --jq '.[].ref' \
+          | sed 's#^refs/tags/##' | sort -V | grep -x -F -B1 -- "$TAG" | head -n1 || true)
+        [[ "$previous" == "$TAG" ]] && previous=
+
+        {
+          echo "version=$version"
+          echo "prerelease=$prerelease"
+          echo "previous-tag=$previous"
+        } >> "$GITHUB_OUTPUT"
+        echo "Releasing $version (prerelease: $prerelease, previous tag: ${previous:-none})"

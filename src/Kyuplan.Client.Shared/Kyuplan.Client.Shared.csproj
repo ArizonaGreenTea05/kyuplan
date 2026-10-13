@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>API client and view models shared by the Blazor and WPF clients. Contains no UI framework code.</Description>
+    <!-- The code lives in Kyuplan.Client.*; the resource names are derived from this. -->
+    <RootNamespace>Kyuplan.Client</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kyuplan.Contracts\Kyuplan.Contracts.csproj" />
+  </ItemGroup>
+
+  <!--
+    All user-facing text lives in Resources/Strings.resx (English, the neutral language) and one Strings.<culture>.resx
+    per translation. MSBuild generates the typed `Strings` class at build time, so there is no designer file to keep
+    in sync. To add a language: add Strings.<culture>.resx and list it in Localization/LanguageService.Supported.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\Strings.resx">
+      <StronglyTypedFileName>$(IntermediateOutputPath)Strings.g.cs</StronglyTypedFileName>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>Kyuplan.Client.Resources</StronglyTypedNamespace>
+      <StronglyTypedClassName>Strings</StronglyTypedClassName>
+      <StronglyTypedManifestPrefix>Kyuplan.Client.Resources</StronglyTypedManifestPrefix>
+      <PublicClass>true</PublicClass>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

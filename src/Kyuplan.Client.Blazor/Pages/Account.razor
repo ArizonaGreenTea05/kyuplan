@@ -1,0 +1,141 @@
+@page "/account"
+@using System.ComponentModel
+@inherits ViewModelComponent<AccountViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Account_Lede</p>
+        </div>
+        @if (Vm.Account is not null)
+        {
+            <div class="inline-field">
+                <span>@Strings.Account_Rights</span>
+                @if (Vm.RoleNames.Count == 0)
+                {
+                    <span class="chip role">@Vm.RoleText</span>
+                }
+                else
+                {
+                    @foreach (var role in Vm.RoleNames)
+                    {
+                        <span class="chip role @(role == RoleRules.AdministratorName ? "admin" : "")">@role</span>
+                    }
+                }
+            </div>
+        }
+    </header>
+
+    <ErrorBanner Message="@Vm.ErrorMessage" />
+
+    @if (Vm.HasNotice)
+    {
+        <div class="banner ok" role="status">
+            <Icon Name="check" />
+            <span>@Vm.NoticeText</span>
+        </div>
+    }
+
+    <div class="grid two">
+        <form class="card card-form" aria-labelledby="account-name" @onsubmit="() => Vm.SaveProfileCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+            <h2 id="account-name">@Strings.Account_NamesTitle</h2>
+
+            <label class="field">
+                <span>@Strings.Account_UserNameTitle</span>
+                <input type="text" maxlength="@AccountRules.MaxUserNameLength" autocomplete="username"
+                       disabled="@(Vm.Account is null)" @bind="Vm.UserName" @bind:event="oninput" />
+                @if (Vm.UserNameProblem is { } problem)
+                {
+                    <p class="field-error" role="alert">@problem</p>
+                }
+            </label>
+
+            <label class="field">
+                <span>@Strings.Account_DisplayName</span>
+                <input type="text" maxlength="@AccountRules.MaxDisplayNameLength" autocomplete="nickname"
+                       disabled="@(Vm.Account is null)" @bind="Vm.DisplayName" @bind:event="oninput" />
+                @if (Vm.DisplayNameProblem is { } displayProblem)
+                {
+                    <p class="field-error" role="alert">@displayProblem</p>
+                }
+                else
+                {
+                    <small>@Strings.Account_DisplayNameHint</small>
+                }
+            </label>
+
+            <label class="field">
+                <span>@Strings.Account_Aliases</span>
+                <textarea rows="3" autocomplete="off" spellcheck="false" disabled="@(Vm.Account is null)"
+                          @bind="Vm.AliasesText" @bind:event="oninput"></textarea>
+                @if (Vm.AliasesProblem is { } aliasesProblem)
+                {
+                    <p class="field-error" role="alert">@aliasesProblem</p>
+                }
+                else
+                {
+                    <small>@Vm.AliasesHint</small>
+                }
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="btn" disabled="@(!Vm.CanSaveProfile)">@Strings.Account_SaveProfile</button>
+            </div>
+        </form>
+
+        <form class="card card-form" aria-labelledby="account-password" @onsubmit="() => Vm.ChangePasswordCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+            <h2 id="account-password">@Strings.Account_PasswordTitle</h2>
+
+            <label class="field">
+                <span>@Strings.Account_CurrentPassword</span>
+                <PasswordInput autocomplete="current-password" maxlength="@AccountRules.MaxPasswordLength"
+                       disabled="@(Vm.Account is null)" @bind-Value="Vm.CurrentPassword" />
+            </label>
+
+            <label class="field">
+                <span>@Strings.Account_NewPassword</span>
+                <PasswordInput autocomplete="new-password" maxlength="@AccountRules.MaxPasswordLength"
+                       disabled="@(Vm.Account is null)" @bind-Value="Vm.NewPassword" />
+                @if (Vm.PasswordProblem is { } passwordProblem)
+                {
+                    <p class="field-error" role="alert">@passwordProblem</p>
+                }
+                else
+                {
+                    <small>@Vm.PasswordHint</small>
+                }
+            </label>
+
+            <label class="field">
+                <span>@Strings.Account_ConfirmPassword</span>
+                <PasswordInput autocomplete="new-password" maxlength="@AccountRules.MaxPasswordLength"
+                       disabled="@(Vm.Account is null)" @bind-Value="Vm.ConfirmPassword" />
+                @if (Vm.ConfirmProblem is { } confirmProblem)
+                {
+                    <p class="field-error" role="alert">@confirmProblem</p>
+                }
+            </label>
+
+            <div class="form-actions">
+                <button type="submit" class="btn" disabled="@(!Vm.CanChangePassword)">@Strings.Account_ChangePassword</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+@code {
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

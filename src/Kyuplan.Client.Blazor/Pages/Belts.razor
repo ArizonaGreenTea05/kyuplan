@@ -1,0 +1,276 @@
+@page "/belts"
+@inherits ViewModelComponent<BeltsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Belts_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="BeginCreate">
+                <Icon Name="plus" /><span>@Strings.Belts_New</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save or delete is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.IsFormOpen)
+        {
+            <form class="card card-form" aria-labelledby="belt-form-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="belt-form-title">@Vm.FormTitle</h2>
+
+                <label class="field">
+                    <span>@Strings.Belts_FormName</span>
+                    <input type="text" @ref="_nameInput" maxlength="@BeltRules.MaxNameLength" autocomplete="off"
+                           @bind="Vm.FormName" @bind:event="oninput" />
+                    @if (Vm.NameProblem is { } nameProblem)
+                    {
+                        <p class="field-error" role="alert">@nameProblem</p>
+                    }
+                </label>
+
+                <div class="grid two">
+                    <div class="field" role="group" aria-label="@Strings.Belts_FormColor">
+                        <span>@Strings.Belts_FormColor</span>
+                        <div class="color-row">
+                            <i class="belt" style="@BeltStyle(Vm.PrimaryPreview, Vm.SecondaryPreview)" aria-hidden="true"></i>
+                            <input type="color" class="picker" value="@PickerValue(Vm.FormPrimaryColor)" aria-label="@Strings.Belts_FormColor"
+                                   @onchange="e => Vm.FormPrimaryColor = e.Value?.ToString() ?? string.Empty" />
+                            <input type="text" class="hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="@Strings.Belts_FormColor"
+                                   @bind="Vm.FormPrimaryColor" @bind:event="oninput" />
+                        </div>
+                        <div class="presets">
+                            @foreach (var color in BeltsViewModel.ColorPresets)
+                            {
+                                var hex = color;
+                                <button type="button" class="preset @(BeltsViewModel.Matches(Vm.FormPrimaryColor, hex) ? "on" : "")" style="@($"--c:{hex}")"
+                                        title="@hex" aria-label="@string.Format(Strings.Belts_PickColor, hex)"
+                                        aria-pressed="@BeltsViewModel.Matches(Vm.FormPrimaryColor, hex)"
+                                        disabled="@(!Vm.PickPrimaryColorCommand.CanExecute(hex))"
+                                        @onclick="() => Vm.PickPrimaryColorCommand.Execute(hex)"></button>
+                            }
+                        </div>
+                        @if (Vm.PrimaryColorProblem is { } primaryProblem)
+                        {
+                            <p class="field-error" role="alert">@primaryProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.Belts_ColorHint</small>
+                        }
+                    </div>
+
+                    <div class="field" role="group" aria-label="@Strings.Belts_FormStripe">
+                        <span>@Strings.Belts_FormStripe</span>
+                        <div class="color-row">
+                            <input type="color" class="picker @(Vm.FormSecondaryColor.Length == 0 ? "unset" : "")" value="@PickerValue(Vm.FormSecondaryColor)" aria-label="@Strings.Belts_FormStripe"
+                                   @onchange="e => Vm.FormSecondaryColor = e.Value?.ToString() ?? string.Empty" />
+                            <input type="text" class="hex" maxlength="7" spellcheck="false" autocomplete="off" aria-label="@Strings.Belts_FormStripe"
+                                   @bind="Vm.FormSecondaryColor" @bind:event="oninput" />
+                            <button type="button" class="btn ghost" disabled="@(!Vm.ClearSecondaryColorCommand.CanExecute(null))"
+                                    @onclick="() => Vm.ClearSecondaryColorCommand.Execute(null)">@Strings.Belts_NoStripe</button>
+                        </div>
+                        <div class="presets">
+                            @foreach (var color in BeltsViewModel.ColorPresets)
+                            {
+                                var hex = color;
+                                <button type="button" class="preset @(BeltsViewModel.Matches(Vm.FormSecondaryColor, hex) ? "on" : "")" style="@($"--c:{hex}")"
+                                        title="@hex" aria-label="@string.Format(Strings.Belts_PickColor, hex)"
+                                        aria-pressed="@BeltsViewModel.Matches(Vm.FormSecondaryColor, hex)"
+                                        disabled="@(!Vm.PickSecondaryColorCommand.CanExecute(hex))"
+                                        @onclick="() => Vm.PickSecondaryColorCommand.Execute(hex)"></button>
+                            }
+                        </div>
+                        @if (Vm.SecondaryColorProblem is { } secondaryProblem)
+                        {
+                            <p class="field-error" role="alert">@secondaryProblem</p>
+                        }
+                    </div>
+                </div>
+
+                <div class="field" role="group" aria-label="@Strings.Belts_FormPrerequisites">
+                    <span>@Strings.Belts_FormPrerequisites</span>
+                    @if (Vm.PrerequisiteOptions.Count == 0)
+                    {
+                        <p class="empty-inline">@Strings.Belts_FormNoOtherBelts</p>
+                    }
+                    else
+                    {
+                        @* What a member must meet depends on the belt they come from, so a ticked belt brings its own age and waiting time. *@
+                        <div class="prereqs">
+                            @foreach (var option in Vm.PrerequisiteOptions)
+                            {
+                                <div class="prereq" @key="option.Id">
+                                    <label class="check pick">
+                                        <input type="checkbox" @bind="option.IsSelected" />
+                                        <span><i class="belt" style="@BeltStyle(option.Color, null)" aria-hidden="true"></i>@option.Name</span>
+                                    </label>
+                                    @if (option.IsSelected)
+                                    {
+                                        <div class="prereq-fields">
+                                            <label class="field">
+                                                <span>@Strings.Belts_ColMinAge</span>
+                                                <input type="number" min="0" max="@BeltRules.MaxMinAgeYears" step="1" aria-label="@($"{option.Name}: {Strings.Belts_ColMinAge}")"
+                                                       @bind="option.MinAgeYears" @bind:event="oninput" />
+                                                @if (option.MinAgeProblem is { } ageProblem)
+                                                {
+                                                    <p class="field-error" role="alert">@ageProblem</p>
+                                                }
+                                            </label>
+
+                                            <label class="field">
+                                                <span>@Strings.Belts_ColMinWait</span>
+                                                <input type="number" min="0" max="@BeltRules.MaxMinWaitMonths" step="1" aria-label="@($"{option.Name}: {Strings.Belts_ColMinWait}")"
+                                                       @bind="option.MinWaitMonths" @bind:event="oninput" />
+                                                @if (option.MinWaitProblem is { } waitProblem)
+                                                {
+                                                    <p class="field-error" role="alert">@waitProblem</p>
+                                                }
+                                            </label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    <small>@Strings.Belts_FormPrerequisitesHint</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.SaveCommand.CanExecute(null))">@(Vm.IsCreating ? Strings.Belts_Create : Strings.Belts_Save)</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelFormCommand.Execute(null)">@Strings.Belts_Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (Vm.CanEdit && Vm.IsConfirmingDelete)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+                <span>@Vm.ConfirmText</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                    <span>@Strings.Belts_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                    <span>@Strings.Belts_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.IsEmpty)
+        {
+            <p class="empty">@Vm.EmptyText</p>
+        }
+        else if (Vm.Belts.Count > 0)
+        {
+            <article class="card results">
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>@Strings.Belts_ColBelt</th>
+                                <th>@Strings.Belts_ColPrerequisites</th>
+                                <th class="num">@Strings.Belts_ColMembers</th>
+                                @if (Vm.CanEdit)
+                                {
+                                    <th></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var belt in Vm.Belts)
+                            {
+                                <tr @key="belt.Id">
+                                    <td>
+                                        <div class="belt-name">
+                                            <i class="belt" style="@BeltStyle(belt.PrimaryColor, belt.SecondaryColor)" aria-hidden="true"></i>
+                                            <strong>@belt.Name</strong>
+                                        </div>
+                                    </td>
+                                    <td class="subgroups reqs">@belt.PrerequisitesText</td>
+                                    <td class="num">@belt.MemberCount</td>
+                                    @if (Vm.CanEdit)
+                                    {
+                                        <td class="row-actions">
+                                            <button type="button" class="btn ghost" aria-label="@($"{Strings.Belts_Edit}: {belt.Name}")"
+                                                    disabled="@(!Vm.BeginEditCommand.CanExecute(belt))" @onclick="() => BeginEdit(belt)">
+                                                <Icon Name="edit" /><span>@Strings.Belts_Edit</span>
+                                            </button>
+                                            <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Belts_Delete}: {belt.Name}")"
+                                                    title="@belt.DeleteBlockedText" disabled="@(!Vm.AskDeleteCommand.CanExecute(belt))"
+                                                    @onclick="() => Vm.AskDeleteCommand.Execute(belt)">
+                                                <Icon Name="trash" /><span>@Strings.Belts_Delete</span>
+                                            </button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private ElementReference _nameInput;
+    private bool _focusName;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    // Opening the form puts the cursor in its first field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusName || !Vm.IsFormOpen) return;
+
+        _focusName = false;
+        await _nameInput.FocusAsync();
+    }
+
+    private void BeginCreate()
+    {
+        _focusName = true;
+        Vm.BeginCreateCommand.Execute(null);
+    }
+
+    private void BeginEdit(BeltRow belt)
+    {
+        _focusName = true;
+        Vm.BeginEditCommand.Execute(belt);
+    }
+
+    /// <summary>Only when the list could not be loaded: a failed save or delete is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    /// <summary>The belt's colours as CSS custom properties; only what is a colour, so that nothing else ever reaches a style.</summary>
+    private static string BeltStyle(string? primary, string? stripe) =>
+        $"--c:{(BeltRules.IsColor(primary) ? primary : "transparent")};--s:{(BeltRules.IsColor(stripe) ? stripe : "transparent")}";
+
+    /// <summary>What the browser's colour picker shows: it only takes <c>#rrggbb</c>, so a colour that is not one yet shows as white.</summary>
+    private static string PickerValue(string typed) =>
+        BeltRules.IsColor(typed.Trim()) ? typed.Trim().ToLowerInvariant() : "#ffffff";
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

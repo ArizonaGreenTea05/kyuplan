@@ -1,0 +1,278 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.MembersView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
+
+    <UserControl.Resources>
+        <!-- The page's data context for the columns of the grid, which are not in the visual tree. -->
+        <ctl:BindingProxy x:Key="Page" Data="{Binding}" />
+
+        <Style x:Key="TextCell" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="8,0" />
+        </Style>
+
+        <Style x:Key="GridHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DefaultDataGridColumnHeaderStyle}">
+            <Setter Property="Padding" Value="8,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- The list is the page's main content: it, and the search above it, only show once there are members. -->
+        <Style x:Key="ListCard" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+            <Setter Property="Padding" Value="0" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Members.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsShowingComments}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="Toolbar" TargetType="DockPanel">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Members.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsShowingComments}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A belt in a list: its swatch and its name; "No belt" is shown in the muted colour. -->
+        <DataTemplate x:Key="BeltCell">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                <ctl:BeltSwatch Color="{Binding Belt.Color}" Stripe="{Binding Belt.SecondaryColor}" Margin="0,0,10,0"
+                                Visibility="{Binding HasBelt, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding Belt.Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasBelt}" Value="False">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid Margin="24,6,24,20" Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Title -->
+            <StackPanel Grid.Row="0">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                <TextBlock Text="{loc:Loc MemberPage_Lede}" Style="{StaticResource LedeText}" />
+            </StackPanel>
+
+            <!-- What went wrong / what was achieved. Trying again only makes sense while there is no list. -->
+            <Border Grid.Row="1" Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                            Visibility="{Binding Members.Count, Converter={StaticResource ZeroToVisible}}" />
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+            <Border Grid.Row="2" Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                    Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </Border>
+
+            <!-- Search, filter, how many -->
+            <DockPanel Grid.Row="3" Style="{StaticResource Toolbar}" Margin="0,16,0,0">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Style="{StaticResource MutedText}"
+                           VerticalAlignment="Center" Margin="16,0,0,0" />
+                <ctl:HintedTextBox DockPanel.Dock="Left" Width="280" Glyph="&#xE721;"
+                                   Hint="{loc:Loc Stats_FindMember}"
+                                   Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                   AutomationProperties.Name="{loc:Loc Stats_FindMember}" />
+                <CheckBox Content="{loc:Loc MemberPage_OnlyWithoutBelt}" IsChecked="{Binding OnlyWithoutBelt}" Margin="20,0,0,0" />
+            </DockPanel>
+
+            <!-- While the comments on a member are open the list is out of sight: this is the way back to it. -->
+            <Button Grid.Row="3" Margin="0,16,0,0" HorizontalAlignment="Left" Command="{Binding CloseCommentsCommand}"
+                    Visibility="{Binding IsShowingComments, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE72B;" />
+                    <TextBlock Text="{loc:Loc Comments_Back}" />
+                </StackPanel>
+            </Button>
+
+            <!-- The form: the belt and the start day of one member -->
+            <Border Grid.Row="4" Style="{StaticResource CardBorder}" Margin="0,14,0,0"
+                    Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding FormTitle}" Style="{StaticResource SectionTitleText}" />
+
+                    <ctl:ResponsiveGrid MinItemWidth="300" Gap="24">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc Belts_ColBelt}" Style="{StaticResource FieldLabelText}" />
+                            <ComboBox ItemsSource="{Binding BeltOptions}" SelectedItem="{Binding FormBelt}" HorizontalAlignment="Stretch"
+                                      AutomationProperties.Name="{loc:Loc Belts_ColBelt}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:BeltOption}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <ctl:BeltSwatch Color="{Binding Color}" Stripe="{Binding SecondaryColor}" Margin="0,0,10,0" />
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc MemberPage_ColStarted}" Style="{StaticResource FieldLabelText}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Command="{Binding ClearStartedAtCommand}" Content="{loc:Loc MemberPage_ClearStarted}"
+                                        Margin="8,0,0,0" />
+                                <DatePicker x:Name="StartedPicker" SelectedDateFormat="Short"
+                                            SelectedDate="{Binding FormStartedAt, UpdateSourceTrigger=PropertyChanged}"
+                                            AutomationProperties.Name="{loc:Loc MemberPage_ColStarted}" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding StartedAtProblem}" Style="{StaticResource ProblemText}"
+                                       Visibility="{Binding StartedAtProblem, Converter={StaticResource StringToVisibility}}" />
+                            <TextBlock Text="{loc:Loc MemberPage_FormStartedHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc MemberPage_ColBeltSince}" Style="{StaticResource FieldLabelText}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Command="{Binding ClearBeltSinceCommand}" Content="{loc:Loc MemberPage_ClearStarted}"
+                                        Margin="8,0,0,0" />
+                                <DatePicker x:Name="BeltSincePicker" SelectedDateFormat="Short" IsEnabled="{Binding CanSetBeltSince}"
+                                            SelectedDate="{Binding FormBeltSince, UpdateSourceTrigger=PropertyChanged}"
+                                            AutomationProperties.Name="{loc:Loc MemberPage_ColBeltSince}" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding BeltSinceProblem}" Style="{StaticResource ProblemText}"
+                                       Visibility="{Binding BeltSinceProblem, Converter={StaticResource StringToVisibility}}" />
+                            <TextBlock Text="{loc:Loc MemberPage_FormBeltSinceHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                                       Visibility="{Binding CanSetBeltSince, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{loc:Loc MemberPage_BeltSinceNeedsBelt}" Style="{StaticResource MutedText}" Margin="0,4,0,0"
+                                       Visibility="{Binding CanSetBeltSince, Converter={StaticResource InverseBoolToVisibility}}" />
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc MemberPage_ColBirth}" Style="{StaticResource FieldLabelText}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Command="{Binding ClearBirthDateCommand}" Content="{loc:Loc MemberPage_ClearBirth}"
+                                        Margin="8,0,0,0" />
+                                <DatePicker x:Name="BirthPicker" SelectedDateFormat="Short"
+                                            SelectedDate="{Binding FormBirthDate, UpdateSourceTrigger=PropertyChanged}"
+                                            AutomationProperties.Name="{loc:Loc MemberPage_ColBirth}" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding BirthDateProblem}" Style="{StaticResource ProblemText}"
+                                       Visibility="{Binding BirthDateProblem, Converter={StaticResource StringToVisibility}}" />
+                            <TextBlock Text="{loc:Loc MemberPage_FormBirthHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </ctl:ResponsiveGrid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                        <Button Command="{Binding SaveCommand}" Content="{loc:Loc MemberPage_Save}" Style="{StaticResource AccentButtonStyle}" />
+                        <Button Command="{Binding CancelFormCommand}" Content="{loc:Loc MemberPage_Cancel}" Margin="8,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- The members -->
+            <Border Grid.Row="5" Style="{StaticResource ListCard}" Margin="0,14,0,0">
+                <Grid>
+                    <DataGrid x:Name="MembersGrid" ItemsSource="{Binding VisibleMembers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                              CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" RowHeight="52" FontSize="13"
+                              ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single"
+                              KeyboardNavigation.TabNavigation="Continue"
+                              Background="Transparent" BorderThickness="0"
+                              AutomationProperties.Name="{Binding Title}" Sorting="OnSorting">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{loc:Loc Col_Member}" SortMemberPath="Name" Binding="{Binding Name, Mode=OneWay}"
+                                                Width="*" MinWidth="160">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+                                        <Setter Property="VerticalAlignment" Value="Center" />
+                                        <Setter Property="Margin" Value="8,0" />
+                                        <Setter Property="FontSize" Value="13" />
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTemplateColumn Header="{loc:Loc Belts_ColBelt}" SortMemberPath="Belt.Label" Width="240" MinWidth="180"
+                                                    CellTemplate="{StaticResource BeltCell}" />
+
+                            <DataGridTextColumn Header="{loc:Loc MemberPage_ColStarted}" SortMemberPath="StartedSort"
+                                                Binding="{Binding StartedText, Mode=OneWay}" Width="140" MinWidth="120" ElementStyle="{StaticResource TextCell}" />
+
+                            <DataGridTextColumn Header="{loc:Loc MemberPage_ColBeltSince}" SortMemberPath="BeltSinceSort"
+                                                Binding="{Binding BeltSinceText, Mode=OneWay}" Width="140" MinWidth="120" ElementStyle="{StaticResource TextCell}" />
+
+                            <DataGridTextColumn Header="{loc:Loc MemberPage_ColBirth}" SortMemberPath="BirthSort"
+                                                Binding="{Binding BirthText, Mode=OneWay}" Width="140" MinWidth="120" ElementStyle="{StaticResource TextCell}" />
+
+                            <!-- Wide enough for the count in both languages: an automatic width is not worked out again when the language changes.
+                                 Somebody who may not read comments has no use for the column (and is not told how many there are). -->
+                            <DataGridTemplateColumn Width="170" MinWidth="150"
+                                                    Visibility="{Binding Data.CanViewComments, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding CommentsText}" Margin="8,0" VerticalAlignment="Center"
+                                                Command="{Binding DataContext.OpenCommentsCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Wide enough for the button in both languages: an automatic width is not worked out again when the language changes.
+                                 Somebody who may not change members has no use for the column. -->
+                            <DataGridTemplateColumn Width="120" MinWidth="110"
+                                                    Visibility="{Binding Data.CanEdit, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{loc:Loc MemberPage_Edit}" Margin="8,0" VerticalAlignment="Center"
+                                                Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <TextBlock Margin="0,70,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Style="{StaticResource LedeText}"
+                               Text="{loc:Loc MemberPage_NoneMatch}"
+                               Visibility="{Binding NoneMatch, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+            </Border>
+
+            <ctl:MemberCommentsView Grid.Row="5" Margin="0,14,0,0" DataContext="{Binding Comments}"
+                                    Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
+
+            <TextBlock Grid.Row="5" Margin="0,40,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Style="{StaticResource LedeText}"
+                       Text="{loc:Loc Members_NobodyHere}"
+                       Visibility="{Binding IsNobodyHere, Converter={StaticResource BoolToVisibility}}" />
+
+            <ProgressBar Grid.RowSpan="6" IsIndeterminate="True" Height="3" VerticalAlignment="Top" Margin="-24,-6,-24,0"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+
+        <!-- Somebody who may not use the page gets here only by a mistake of the navigation: the API would refuse them anyway. -->
+        <TextBlock Style="{StaticResource NotAllowedText}" Text="{loc:Loc Page_NotAllowed}"
+                   Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+    </Grid>
+</UserControl>

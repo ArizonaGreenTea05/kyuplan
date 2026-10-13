@@ -1,0 +1,36 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.PermissionPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+
+    <!-- Every permission there is, by domain, to tick (the DataContext is a PermissionPickerViewModel). Used for a role and for the own
+         permissions of a user. While the picker is not enabled the ticks show what is given but cannot be changed. -->
+    <ItemsControl ItemsSource="{Binding Groups}" IsEnabled="{Binding IsEnabled}" Focusable="False"
+                  KeyboardNavigation.TabNavigation="Continue">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <ctl:ResponsiveGrid MinItemWidth="280" Gap="12" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type vm:PermissionGroupRow}">
+                <Border BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        CornerRadius="{DynamicResource ControlCornerRadius}" Padding="14,10,14,8">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Label}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,6" />
+                        <ItemsControl ItemsSource="{Binding Permissions}" Focusable="False" KeyboardNavigation.TabNavigation="Continue">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PermissionRow}">
+                                    <CheckBox IsChecked="{Binding IsSelected}" Margin="0,2" AutomationProperties.Name="{Binding Label}">
+                                        <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

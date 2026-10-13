@@ -1,0 +1,53 @@
+@inherits ViewModelComponent<LoginViewModel>
+@inject ShellViewModel Shell
+
+<PageTitle>@Strings.Login_Title</PageTitle>
+
+@* Shown instead of the application until the API has accepted a login. The login stays in memory: a reload asks again. *@
+<main class="setup login">
+    <section class="page">
+        <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+        <header class="page-head">
+            <div>
+                @if (Shell.Brand.LogoUrl is { } logo)
+                {
+                    <img class="logo logo-light" src="@logo" alt="@Shell.Brand.LogoDescription" />
+                    @if (Shell.Brand.LogoOnDarkUrl is { } logoOnDark)
+                    {
+                        <img class="logo logo-dark" src="@logoOnDark" alt="" />
+                    }
+                }
+                <h1>@Strings.Login_Title</h1>
+                <p class="lede">@Strings.Login_Lede</p>
+            </div>
+        </header>
+
+        <ErrorBanner Message="@Vm.ErrorMessage" />
+
+        <form class="page" @onsubmit="() => Vm.SignInCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+            <section class="card card-form">
+                <label class="field">
+                    <span>@Strings.Login_UserName</span>
+                    <input type="text" autocomplete="username" spellcheck="false" autofocus maxlength="@AccountRules.MaxUserNameLength"
+                           @bind="Vm.UserName" @bind:event="oninput" />
+                </label>
+
+                <label class="field">
+                    <span>@Strings.Login_Password</span>
+                    <PasswordInput autocomplete="current-password" maxlength="@AccountRules.MaxPasswordLength"
+                           @bind-Value="Vm.Password" />
+                </label>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.SignInCommand.CanExecute(null))">@Strings.Login_SignIn</button>
+                </div>
+            </section>
+        </form>
+    </section>
+</main>
+
+@code {
+    // The branding is public: the screen shows the name and logo of the instance before anybody is signed in.
+    protected override async Task OnInitializedAsync() => await Shell.Brand.LoadAsync();
+}

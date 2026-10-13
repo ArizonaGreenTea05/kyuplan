@@ -1,0 +1,14 @@
+**/bin
+**/obj
+**/.vs
+.git
+.github
+.claude
+.vs
+artifacts
+tests
+**/node_modules
+website/build
+website/.docusaurus
+website/.generated
+**/*.user

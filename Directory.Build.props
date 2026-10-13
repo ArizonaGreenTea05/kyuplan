@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <Authors>ArizonaGreenTea05</Authors>
+    <Product>Kyuplan</Product>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

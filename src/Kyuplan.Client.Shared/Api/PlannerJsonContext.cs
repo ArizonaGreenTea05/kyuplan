@@ -1,0 +1,59 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Kyuplan.Contracts;
+
+namespace Kyuplan.Client.Api;
+
+/// <summary>Source-generated JSON metadata: reflection-based serialization breaks once Blazor WebAssembly is trimmed.</summary>
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
+[JsonSerializable(typeof(ServerInfoDto))]
+[JsonSerializable(typeof(BrandingDto))]
+[JsonSerializable(typeof(BrandingInputDto))]
+[JsonSerializable(typeof(BrandingSettingsDto))]
+[JsonSerializable(typeof(SetupStatusDto))]
+[JsonSerializable(typeof(SetupInputDto))]
+[JsonSerializable(typeof(SettingsDto))]
+[JsonSerializable(typeof(SettingsInputDto))]
+[JsonSerializable(typeof(SettingsSavedDto))]
+[JsonSerializable(typeof(UserDto))]
+[JsonSerializable(typeof(List<UserDto>))]
+[JsonSerializable(typeof(UserInputDto))]
+[JsonSerializable(typeof(AccountUpdateDto))]
+[JsonSerializable(typeof(ThemePreferenceDto))]
+[JsonSerializable(typeof(LanguagePreferenceDto))]
+[JsonSerializable(typeof(List<RoleDto>))]
+[JsonSerializable(typeof(RoleDto))]
+[JsonSerializable(typeof(RoleInputDto))]
+[JsonSerializable(typeof(List<GroupDto>))]
+[JsonSerializable(typeof(DashboardDto))]
+[JsonSerializable(typeof(EventChoicesDto))]
+[JsonSerializable(typeof(AttendanceStatisticsDto))]
+[JsonSerializable(typeof(List<ExamDto>))]
+[JsonSerializable(typeof(ExamDto))]
+[JsonSerializable(typeof(ExamInputDto))]
+[JsonSerializable(typeof(SavedFilterDto))]
+[JsonSerializable(typeof(SavedFilterInputDto))]
+[JsonSerializable(typeof(FilterSettingsDto))]
+[JsonSerializable(typeof(List<ExamMemberDto>))]
+[JsonSerializable(typeof(ExamMemberDto))]
+[JsonSerializable(typeof(ExamSuggestionsDto))]
+[JsonSerializable(typeof(ExamCandidatesInputDto))]
+[JsonSerializable(typeof(ExamResultInputDto))]
+[JsonSerializable(typeof(List<BeltDto>))]
+[JsonSerializable(typeof(BeltDto))]
+[JsonSerializable(typeof(BeltInputDto))]
+[JsonSerializable(typeof(List<MemberDto>))]
+[JsonSerializable(typeof(MemberDto))]
+[JsonSerializable(typeof(MemberInputDto))]
+[JsonSerializable(typeof(List<CommentDto>))]
+[JsonSerializable(typeof(CommentDto))]
+[JsonSerializable(typeof(CommentInputDto))]
+[JsonSerializable(typeof(CommentUpdateDto))]
+[JsonSerializable(typeof(List<TagDto>))]
+[JsonSerializable(typeof(TagDto))]
+[JsonSerializable(typeof(TagInputDto))]
+[JsonSerializable(typeof(ProblemDetailsPayload))]
+internal sealed partial class PlannerJsonContext : JsonSerializerContext;
+
+/// <summary>The subset of RFC 9457 problem details the API returns (and ASP.NET Core's own 400/404 bodies).</summary>
+internal sealed record ProblemDetailsPayload(string? Title, string? Detail, Dictionary<string, string[]>? Errors);

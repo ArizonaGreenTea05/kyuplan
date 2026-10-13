@@ -1,0 +1,194 @@
+@inject IJSRuntime Js
+
+@* Picks one event of a long list: the date comes first (a small calendar page), and the list is searched by name or
+   date. The selection is a plain event id, so it binds like a select: @bind-Value="Vm.FromEventId". *@
+<div class="field event picker @(_open ? "open" : "")">
+    <span id="@LabelId">@Label</span>
+
+    <button type="button" id="@TriggerId" class="picker-trigger" @ref="_trigger" @onclick="Toggle"
+            aria-haspopup="listbox" aria-expanded="@(_open ? "true" : "false")" aria-labelledby="@LabelId @TriggerId">
+        @if (Selected is { } selected)
+        {
+            @DateBadge(selected)
+            <span class="picker-text">
+                <strong>@selected.EventName</strong>
+                <small>@selected.DateText · @selected.TimeText</small>
+            </span>
+        }
+        else
+        {
+            <span class="picker-placeholder">@Strings.Stats_ChooseEvent</span>
+        }
+        <Icon Name="@(_open ? "up" : "down")" Size="16" />
+    </button>
+
+    @if (_open)
+    {
+        <div class="picker-backdrop" @onclick="() => Close(restoreFocus: false)"></div>
+        <div class="picker-pop">
+            <label class="search">
+                <Icon Name="search" Size="16" />
+                <input type="search" role="combobox" @ref="_searchBox" autocomplete="off" spellcheck="false"
+                       placeholder="@Strings.Stats_SearchEvents" aria-label="@Strings.Stats_SearchEvents"
+                       aria-expanded="true" aria-autocomplete="list" aria-controls="@ListId" aria-activedescendant="@ActiveId"
+                       value="@_text" @oninput="OnInput" @onkeydown="OnKeyDown" />
+            </label>
+
+            <ul id="@ListId" class="picker-list" role="listbox" aria-labelledby="@LabelId" @ref="_list">
+                @for (var i = 0; i < _matches.Count; i++)
+                {
+                    var option = _matches[i];
+                    var index = i;
+                    <li @key="option.Id" id="@ItemId(i)" role="option" aria-selected="@(option.Id == Value ? "true" : "false")"
+                        class="@(option.Id == Value ? "selected" : "") @(i == _active ? "active" : "")"
+                        @onclick="() => Pick(option)">
+                        @DateBadge(option)
+                        <span class="picker-text">
+                            <strong>@option.EventName</strong>
+                            <small>@option.DateText</small>
+                        </span>
+                        <span class="picker-time num">@option.TimeText</span>
+                    </li>
+                }
+            </ul>
+
+            @if (_matches.Count == 0)
+            {
+                <p class="empty-inline">@Strings.Stats_NoEventMatches</p>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private static int _instances;
+
+    private readonly string _id = $"event-picker-{Interlocked.Increment(ref _instances)}";
+
+    private bool _open;
+    private bool _focusSearch;
+    private bool _focusTrigger;
+    private bool _scrollToActive;
+    private bool _centerActive;
+    private string _text = "";
+    private int _active;
+    private IReadOnlyList<EventOption> _matches = [];
+    private ElementReference _trigger, _searchBox, _list;
+
+    /// <summary>Names the field, e.g. "From event".</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+
+    /// <summary>The events to choose from. The empty entry the view model leads its list with is not offered.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<EventOption> Options { get; set; } = [];
+
+    /// <summary>Id of the chosen event; empty = none.</summary>
+    [Parameter] public string Value { get; set; } = EventOption.NoneId;
+
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private string LabelId => _id + "-label";
+    private string TriggerId => _id + "-trigger";
+    private string ListId => _id + "-list";
+    private string ItemId(int index) => $"{_id}-option-{index}";
+    private string? ActiveId => _active < _matches.Count ? ItemId(_active) : null;
+
+    private EventOption? Selected => string.IsNullOrEmpty(Value) ? null : Options.FirstOrDefault(o => o.Id == Value);
+
+    protected override void OnParametersSet()
+    {
+        if (_open) Filter();
+    }
+
+    /// <summary>The list after the search; keeps the highlighted entry inside it.</summary>
+    private void Filter()
+    {
+        _matches = Options.Where(o => o.Id != EventOption.NoneId && o.Matches(_text)).ToList();
+        _active = Math.Clamp(_active, 0, Math.Max(0, _matches.Count - 1));
+    }
+
+    private void Toggle()
+    {
+        if (_open)
+        {
+            Close(restoreFocus: false);
+            return;
+        }
+
+        _text = "";
+        _active = 0;
+        Filter();
+
+        // The list opens at the chosen event, so the surroundings of the current span are in view.
+        var chosen = _matches.ToList().FindIndex(o => o.Id == Value);
+        if (chosen >= 0) _active = chosen;
+
+        _open = _focusSearch = _scrollToActive = _centerActive = true;
+    }
+
+    private void Close(bool restoreFocus)
+    {
+        _open = false;
+        _focusTrigger = restoreFocus;
+    }
+
+    private async Task Pick(EventOption option)
+    {
+        Close(restoreFocus: true);
+        if (option.Id != Value) await ValueChanged.InvokeAsync(option.Id);
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _text = e.Value?.ToString() ?? "";
+        _active = 0;
+        Filter();
+        _scrollToActive = true;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "ArrowDown": Move(1); break;
+            case "ArrowUp": Move(-1); break;
+            case "PageDown": Move(8); break;
+            case "PageUp": Move(-8); break;
+            case "Enter" when _active < _matches.Count: await Pick(_matches[_active]); break;
+            case "Escape": Close(restoreFocus: true); break;
+            case "Tab": Close(restoreFocus: false); break;
+        }
+    }
+
+    private void Move(int by)
+    {
+        _active = Math.Clamp(_active + by, 0, Math.Max(0, _matches.Count - 1));
+        _scrollToActive = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusSearch)
+        {
+            _focusSearch = false;
+            await Js.InvokeVoidAsync("ppPicker.trapKeys", _searchBox);
+            await _searchBox.FocusAsync();
+        }
+
+        if (_focusTrigger)
+        {
+            _focusTrigger = false;
+            await _trigger.FocusAsync();
+        }
+
+        if (_scrollToActive && _open)
+        {
+            var center = _centerActive;
+            _scrollToActive = _centerActive = false;
+            await Js.InvokeVoidAsync("ppPicker.reveal", _list, _active, center);
+        }
+    }
+
+    /// <summary>A calendar page: weekday, day of the month, month.</summary>
+    private static RenderFragment DateBadge(EventOption option) =>
+        @<span class="cal" aria-hidden="true"><i>@option.Weekday</i><b>@option.DayNumber</b><em>@option.MonthText</em></span>;
+}

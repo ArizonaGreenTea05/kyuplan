@@ -1,0 +1,20 @@
+@* A percentage bar. In the member table the required attendance is drawn by the table itself, as one line through the column. *@
+<span class="ratebar @Css" role="img" aria-label="@Label">
+    <span class="fill" style="width:@CssNum.Pct(Fraction)%"></span>
+</span>
+
+@code {
+    [Parameter] public double Fraction { get; set; }
+
+    [Parameter] public QualificationStatus? Status { get; set; }
+
+    [Parameter] public string Label { get; set; } = "";
+
+    private string Css => Status switch
+    {
+        QualificationStatus.Qualified => "ok",
+        QualificationStatus.BelowThreshold => "warn",
+        QualificationStatus.InsufficientData => "muted",
+        _ => "ok",
+    };
+}

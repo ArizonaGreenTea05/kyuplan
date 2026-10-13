@@ -1,0 +1,258 @@
+@page "/users"
+@inherits ViewModelComponent<UserAdminViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Users_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="BeginCreate">
+                <Icon Name="plus" /><span>@Strings.Users_New</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed save or delete is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.IsFormOpen)
+        {
+            <form class="card card-form" aria-labelledby="user-form-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="user-form-title">@Vm.FormTitle</h2>
+
+                <div class="grid two">
+                    <label class="field">
+                        <span>@Strings.Users_FormUserName</span>
+                        <input type="text" @ref="_userNameInput" maxlength="@AccountRules.MaxUserNameLength" autocomplete="off"
+                               @bind="Vm.FormUserName" @bind:event="oninput" />
+                        @if (Vm.UserNameProblem is { } problem)
+                        {
+                            <p class="field-error" role="alert">@problem</p>
+                        }
+                    </label>
+
+                    <label class="field">
+                        <span>@Strings.Users_FormPassword</span>
+                        <PasswordInput maxlength="@AccountRules.MaxPasswordLength" autocomplete="new-password"
+                               @bind-Value="Vm.FormPassword" />
+                        @if (Vm.PasswordProblem is { } passwordProblem)
+                        {
+                            <p class="field-error" role="alert">@passwordProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Vm.PasswordHint</small>
+                        }
+                    </label>
+                </div>
+
+                <div class="grid two">
+                    <label class="field">
+                        <span>@Strings.Account_DisplayName</span>
+                        <input type="text" maxlength="@AccountRules.MaxDisplayNameLength" autocomplete="off"
+                               @bind="Vm.FormDisplayName" @bind:event="oninput" />
+                        @if (Vm.DisplayNameProblem is { } displayProblem)
+                        {
+                            <p class="field-error" role="alert">@displayProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.Account_DisplayNameHint</small>
+                        }
+                    </label>
+
+                    <label class="field">
+                        <span>@Strings.Account_Aliases</span>
+                        <textarea rows="3" autocomplete="off" spellcheck="false" @bind="Vm.FormAliases" @bind:event="oninput"></textarea>
+                        @if (Vm.AliasesProblem is { } aliasesProblem)
+                        {
+                            <p class="field-error" role="alert">@aliasesProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Vm.AliasesHint</small>
+                        }
+                    </label>
+                </div>
+
+                @* Roles and permissions are only for somebody who may give them (the API would refuse everybody else). *@
+                @if (Vm.CanGrant)
+                {
+                    <div class="field" role="group" aria-label="@Strings.Users_FormRoles">
+                        <span>@Strings.Users_FormRoles</span>
+                        @if (Vm.RoleChoices.Count == 0)
+                        {
+                            <p class="empty-inline">@Strings.Role_None</p>
+                        }
+                        else
+                        {
+                            <div class="options">
+                                @foreach (var role in Vm.RoleChoices)
+                                {
+                                    <label class="check inline" @key="role.Id">
+                                        <input type="checkbox" disabled="@(!role.IsEnabled)" @bind="role.IsSelected" />
+                                        <span>@role.Name</span>
+                                    </label>
+                                }
+                            </div>
+                        }
+                        <small>@(Vm.HasLockedRole ? Strings.Users_FormOnlyAdminHint : Strings.Users_FormRolesHint)</small>
+                    </div>
+
+                    <div class="field" role="group" aria-label="@Strings.Users_FormPermissions">
+                        <span>@Strings.Users_FormPermissions</span>
+                        <small>@Strings.Users_FormPermissionsHint</small>
+                        <PermissionPicker Picker="Vm.Picker" />
+                    </div>
+                }
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.CanSave)">@(Vm.IsCreating ? Strings.Users_Create : Strings.Users_Save)</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelFormCommand.Execute(null)">@Strings.Users_Cancel</button>
+                </div>
+            </form>
+        }
+
+        @if (Vm.CanDeleteUsers && Vm.IsConfirmingDelete)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+                <span>@Vm.ConfirmText</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                    <span>@Strings.Users_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                    <span>@Strings.Users_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.Users.Count > 0)
+        {
+            // a user who may change nothing gets no column of buttons
+            var hasActions = Vm.CanEdit || Vm.CanDeleteUsers;
+            <article class="card results">
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>@Strings.Users_ColUserName</th>
+                                <th>@Strings.Users_ColDisplayName</th>
+                                <th>@Strings.Users_ColAliases</th>
+                                <th>@Strings.Users_ColRole</th>
+                                @if (hasActions)
+                                {
+                                    <th></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in Vm.Users)
+                            {
+                                <tr>
+                                    <td class="name">
+                                        <strong>@user.UserName</strong>
+                                        @if (user.IsCurrent)
+                                        {
+                                            <small>@Strings.Users_SignedIn</small>
+                                        }
+                                    </td>
+                                    <td>@user.DisplayName</td>
+                                    <td>@user.AliasesText</td>
+                                    <td>
+                                        <span class="chips">
+                                            @if (user.User.Roles.Count == 0)
+                                            {
+                                                <span class="chip role">@user.RolesText</span>
+                                            }
+                                            else
+                                            {
+                                                @foreach (var role in user.User.Roles)
+                                                {
+                                                    <span class="chip role @(role.Name == RoleRules.AdministratorName ? "admin" : "")">@role.Name</span>
+                                                }
+                                            }
+                                        </span>
+                                    </td>
+                                    @if (hasActions)
+                                    {
+                                        <td class="row-actions">
+                                            @if (Vm.CanEdit)
+                                            {
+                                                <button type="button" class="btn ghost" aria-label="@($"{Strings.Users_Edit}: {user.UserName}")"
+                                                        disabled="@(!Vm.BeginEditCommand.CanExecute(user))" @onclick="() => BeginEdit(user)">
+                                                    <Icon Name="edit" /><span>@Strings.Users_Edit</span>
+                                                </button>
+                                            }
+                                            @if (Vm.CanDeleteUsers)
+                                            {
+                                                <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Users_Delete}: {user.UserName}")"
+                                                        title="@(user.IsCurrent ? Strings.Users_DeleteSelfHint : null)" disabled="@(!Vm.CanDelete(user))"
+                                                        @onclick="() => Vm.AskDeleteCommand.Execute(user)">
+                                                    <Icon Name="trash" /><span>@Strings.Users_Delete</span>
+                                                </button>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private ElementReference _userNameInput;
+    private bool _focusUserName;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    // Opening the form puts the cursor in its first field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusUserName || !Vm.IsFormOpen) return;
+
+        _focusUserName = false;
+        await _userNameInput.FocusAsync();
+    }
+
+    private void BeginCreate()
+    {
+        _focusUserName = true;
+        Vm.BeginCreateCommand.Execute(null);
+    }
+
+    private void BeginEdit(UserRow user)
+    {
+        _focusUserName = true;
+        Vm.BeginEditCommand.Execute(user);
+    }
+
+    /// <summary>Only when there is no list to show: a failed save or delete is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.Users.Count == 0 ? EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null)) : default;
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

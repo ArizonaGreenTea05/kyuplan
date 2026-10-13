@@ -1,0 +1,12 @@
+<span class="trend @Css" title="@Member.TrendText">@Member.TrendGlyph</span>
+
+@code {
+    [Parameter, EditorRequired] public MemberRowViewModel Member { get; set; } = default!;
+
+    private string Css => Member.Trend switch
+    {
+        AttendanceTrend.Rising => "up",
+        AttendanceTrend.Falling => "down",
+        _ => "flat",
+    };
+}

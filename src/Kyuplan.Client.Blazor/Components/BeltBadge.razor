@@ -1,0 +1,22 @@
+@* A belt as it is shown in lists: its colour strip and its name; a dash for "none" (no belt, nothing to take). *@
+@if (Belt is { IsNone: false } belt)
+{
+    <span class="belt-name">
+        <i class="belt" style="@Style(belt)" aria-hidden="true"></i>
+        <span>@belt.Label</span>
+    </span>
+}
+else
+{
+    <span class="none">@(Belt is { } none && ShowName ? none.Label : Display.None)</span>
+}
+
+@code {
+    [Parameter] public BeltOption? Belt { get; set; }
+
+    /// <summary>Show the name of the empty entry ("No belt") instead of a dash.</summary>
+    [Parameter] public bool ShowName { get; set; }
+
+    private static string Style(BeltOption belt) =>
+        $"--c:{(BeltRules.IsColor(belt.Color) ? belt.Color : "transparent")};--s:{(BeltRules.IsColor(belt.SecondaryColor) ? belt.SecondaryColor : "transparent")}";
+}

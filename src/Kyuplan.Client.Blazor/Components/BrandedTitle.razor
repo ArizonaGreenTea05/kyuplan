@@ -1,0 +1,16 @@
+@using System.ComponentModel
+@implements IDisposable
+@inject BrandingViewModel Brand
+
+@* The title of the browser tab: the page's own, then the name of the application as the API says it. *@
+<PageTitle>@Title · @Brand.ProductName</PageTitle>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+
+    protected override void OnInitialized() => Brand.PropertyChanged += OnBrandChanged;
+
+    private void OnBrandChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Brand.PropertyChanged -= OnBrandChanged;
+}

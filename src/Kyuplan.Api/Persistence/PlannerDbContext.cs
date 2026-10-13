@@ -1,0 +1,236 @@
+using Microsoft.EntityFrameworkCore;
+using Kyuplan.Api.Infrastructure;
+using Kyuplan.Contracts;
+
+namespace Kyuplan.Api.Persistence;
+
+/// <summary>
+/// The API's own database (SQLite, or PostgreSQL through <see cref="PlannerPostgresDbContext"/>): exams and the filters saved for them (one exam, many filters), belts and what they require,
+/// the club's members, and the branding as administrators changed it. An exam is a pointer to the Spond event that is the exam (plus that event's name and day, so that the
+/// list still reads when Spond cannot be reached) with who was invited to it. Members and those invitations are copies of what
+/// Spond says, kept in line by <see cref="SpondSync"/>; the belts, the belt a member holds (and since when), who is saved for an
+/// exam and who received which belt at it are the users' own.
+/// </summary>
+public class PlannerDbContext : DbContext
+{
+    public PlannerDbContext(DbContextOptions<PlannerDbContext> options) : base(options)
+    {
+    }
+
+    /// <summary>For <see cref="PlannerPostgresDbContext"/>.</summary>
+    protected PlannerDbContext(DbContextOptions options) : base(options)
+    {
+    }
+
+    public const int NameLength = 200;
+    public const int IdLength = 200;
+    public const int TermsLength = 500;
+    public const int ColorLength = 7;
+    private const int RsvpLength = 20;
+    private const int SlotLength = 30;
+    private const int ContentTypeLength = 50;
+
+    /// <summary>Check that a column holds <c>#RRGGBB</c>: the colours go straight into CSS and WPF brushes, so nothing else may be stored.</summary>
+    private static string IsColor(string column, bool postgres) => postgres
+        ? $"\"{column}\" ~ '^#[0-9A-Fa-f]{{6}}$'"
+        : $"\"{column}\" GLOB '#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]'";
+
+    // Filter names are unique per exam regardless of case ("filter a" is "Filter A"). Exam names keep the collation they
+    // got in the first migration: taking it off would make SQLite rebuild the Exams table, which EF cannot do in a transaction.
+    private const string NoCase = PostgresModel.NoCase;
+
+    public DbSet<Exam> Exams => Set<Exam>();
+
+    public DbSet<SavedFilter> SavedFilters => Set<SavedFilter>();
+
+    public DbSet<ExamParticipant> ExamParticipants => Set<ExamParticipant>();
+
+    public DbSet<ExamCandidate> ExamCandidates => Set<ExamCandidate>();
+
+    public DbSet<ExamResult> ExamResults => Set<ExamResult>();
+
+    public DbSet<Belt> Belts => Set<Belt>();
+
+    public DbSet<BeltPrerequisite> BeltPrerequisites => Set<BeltPrerequisite>();
+
+    public DbSet<Member> Members => Set<Member>();
+
+    public DbSet<Comment> Comments => Set<Comment>();
+
+    public DbSet<CommentEdit> CommentEdits => Set<CommentEdit>();
+
+    public DbSet<Tag> Tags => Set<Tag>();
+
+    public DbSet<CommentTag> CommentTags => Set<CommentTag>();
+
+    public DbSet<CustomBranding> CustomBranding => Set<CustomBranding>();
+
+    public DbSet<CustomBrandingImage> CustomBrandingImages => Set<CustomBrandingImage>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        var postgres = Database.IsNpgsql();
+
+        modelBuilder.Entity<CustomBranding>(branding =>
+        {
+            branding.Property(b => b.Id).ValueGeneratedNever();
+            branding.Property(b => b.ProductName).HasMaxLength(BrandingRules.MaxProductNameLength);
+            branding.Property(b => b.OrganizationName).HasMaxLength(BrandingRules.MaxOrganizationNameLength);
+            branding.Property(b => b.AccentColor).HasMaxLength(ColorLength);
+            branding.Property(b => b.DefaultWebTheme).HasMaxLength(ThemeRules.MaxLength).HasDefaultValue(ThemeIds.Default);
+            branding.Property(b => b.DefaultWindowsTheme).HasMaxLength(ThemeRules.MaxLength).HasDefaultValue(ThemeIds.Default);
+
+            branding.ToTable(table => table.HasCheckConstraint("CK_CustomBranding_Single", "\"Id\" = 1"));
+        });
+
+        modelBuilder.Entity<CustomBrandingImage>(image =>
+        {
+            image.HasKey(i => i.Slot);
+            image.Property(i => i.Slot).HasMaxLength(SlotLength);
+            image.Property(i => i.ContentType).HasMaxLength(ContentTypeLength);
+
+            image.ToTable(table => table.HasCheckConstraint("CK_CustomBrandingImages_ContentAndType", "(\"Content\" IS NULL) = (\"ContentType\" IS NULL)"));
+        });
+
+        modelBuilder.Entity<Exam>(exam =>
+        {
+            exam.Property(e => e.GroupId).HasMaxLength(IdLength);
+            exam.Property(e => e.EventId).HasMaxLength(IdLength);
+            exam.Property(e => e.Name).HasMaxLength(NameLength).UseCollation(NoCase);
+            exam.HasIndex(e => e.EventId).IsUnique();
+        });
+
+        modelBuilder.Entity<SavedFilter>(filter =>
+        {
+            filter.Property(f => f.Name).HasMaxLength(NameLength).UseCollation(NoCase);
+            filter.Property(f => f.GroupId).HasMaxLength(IdLength);
+            filter.Property(f => f.FromEventId).HasMaxLength(IdLength);
+            filter.Property(f => f.ToEventId).HasMaxLength(IdLength);
+            filter.Property(f => f.EventNameContains).HasMaxLength(TermsLength);
+            filter.Property(f => f.EventNameExcludes).HasMaxLength(TermsLength);
+
+            filter.HasOne(f => f.Exam).WithMany(e => e.Filters).HasForeignKey(f => f.ExamId).OnDelete(DeleteBehavior.Cascade);
+            filter.HasIndex(f => new { f.ExamId, f.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<Belt>(belt =>
+        {
+            belt.Property(b => b.Name).HasMaxLength(NameLength).UseCollation(NoCase);
+            belt.Property(b => b.PrimaryColor).HasMaxLength(ColorLength);
+            belt.Property(b => b.SecondaryColor).HasMaxLength(ColorLength);
+            belt.HasIndex(b => b.Name).IsUnique();
+
+            belt.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_Belts_PrimaryColor", IsColor("PrimaryColor", postgres));
+                table.HasCheckConstraint("CK_Belts_SecondaryColor", $"\"SecondaryColor\" IS NULL OR {IsColor("SecondaryColor", postgres)}");
+            });
+        });
+
+        modelBuilder.Entity<BeltPrerequisite>(prerequisite =>
+        {
+            prerequisite.HasKey(p => new { p.BeltId, p.RequiredBeltId });
+
+            // A belt takes its prerequisites with it; a belt that is somebody's prerequisite cannot be deleted.
+            prerequisite.HasOne(p => p.Belt).WithMany(b => b.Prerequisites).HasForeignKey(p => p.BeltId).OnDelete(DeleteBehavior.Cascade);
+            prerequisite.HasOne(p => p.RequiredBelt).WithMany().HasForeignKey(p => p.RequiredBeltId).OnDelete(DeleteBehavior.Restrict);
+
+            prerequisite.ToTable(table =>
+            {
+                table.HasCheckConstraint("CK_BeltPrerequisites_NotItself", "\"BeltId\" <> \"RequiredBeltId\"");
+                table.HasCheckConstraint("CK_BeltPrerequisites_MinAgeYears", "\"MinAgeYears\" >= 0");
+                table.HasCheckConstraint("CK_BeltPrerequisites_MinWaitMonths", "\"MinWaitMonths\" >= 0");
+            });
+        });
+
+        modelBuilder.Entity<Member>(member =>
+        {
+            member.Property(m => m.GroupId).HasMaxLength(IdLength);
+            member.Property(m => m.SpondId).HasMaxLength(IdLength);
+            member.Property(m => m.Name).HasMaxLength(NameLength);
+            member.HasIndex(m => new { m.GroupId, m.SpondId }).IsUnique();
+
+            // A belt that somebody holds cannot be deleted.
+            member.HasOne(m => m.Belt).WithMany().HasForeignKey(m => m.BeltId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExamParticipant>(participant =>
+        {
+            participant.HasKey(p => new { p.ExamId, p.MemberId });
+            participant.Property(p => p.Rsvp).HasConversion<string>().HasMaxLength(RsvpLength);
+            participant.Ignore(p => p.Attended);
+
+            participant.HasOne(p => p.Exam).WithMany(e => e.Participants).HasForeignKey(p => p.ExamId).OnDelete(DeleteBehavior.Cascade);
+            participant.HasOne(p => p.Member).WithMany(m => m.Participations).HasForeignKey(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExamCandidate>(candidate =>
+        {
+            candidate.HasKey(c => new { c.ExamId, c.MemberId });
+
+            candidate.HasOne(c => c.Exam).WithMany(e => e.Candidates).HasForeignKey(c => c.ExamId).OnDelete(DeleteBehavior.Cascade);
+            candidate.HasOne(c => c.Member).WithMany().HasForeignKey(c => c.MemberId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ExamResult>(result =>
+        {
+            result.HasKey(r => new { r.ExamId, r.MemberId });
+
+            result.HasOne(r => r.Exam).WithMany(e => e.Results).HasForeignKey(r => r.ExamId).OnDelete(DeleteBehavior.Cascade);
+            result.HasOne(r => r.Member).WithMany().HasForeignKey(r => r.MemberId).OnDelete(DeleteBehavior.Cascade);
+
+            // A belt that was handed out at an exam cannot be deleted.
+            result.HasOne(r => r.Belt).WithMany().HasForeignKey(r => r.BeltId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Comment>(comment =>
+        {
+            comment.Property(c => c.Body).HasMaxLength(CommentRules.MaxBodyLength);
+            comment.Property(c => c.AuthorName).HasMaxLength(AccountRules.MaxUserNameLength);
+
+            // A member's comments go with the member; the replies of a comment go with it.
+            comment.HasOne(c => c.Member).WithMany(m => m.Comments).HasForeignKey(c => c.MemberId).OnDelete(DeleteBehavior.Cascade);
+            comment.HasOne(c => c.Parent).WithMany(c => c.Replies).HasForeignKey(c => c.ParentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CommentEdit>(edit =>
+        {
+            edit.Property(e => e.EditorName).HasMaxLength(AccountRules.MaxUserNameLength);
+            edit.Property(e => e.PreviousBody).HasMaxLength(CommentRules.MaxBodyLength);
+
+            edit.HasOne(e => e.Comment).WithMany(c => c.Edits).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Tag>(tag =>
+        {
+            tag.Property(t => t.Name).HasMaxLength(TagRules.MaxNameLength).UseCollation(NoCase);
+            tag.Property(t => t.EventGroupId).HasMaxLength(IdLength);
+            tag.Property(t => t.EventId).HasMaxLength(IdLength);
+            tag.Property(t => t.EventName).HasMaxLength(NameLength);
+            tag.HasIndex(t => t.Name).IsUnique();
+
+            // A tag is about one event or none: what is known of the event is all there or all missing.
+            tag.ToTable(table => table.HasCheckConstraint(
+                "CK_Tags_Event",
+                "(\"EventId\" IS NULL AND \"EventGroupId\" IS NULL AND \"EventName\" IS NULL AND \"EventStart\" IS NULL) " +
+                "OR (\"EventId\" IS NOT NULL AND \"EventGroupId\" IS NOT NULL AND \"EventName\" IS NOT NULL AND \"EventStart\" IS NOT NULL)"));
+        });
+
+        modelBuilder.Entity<CommentTag>(commentTag =>
+        {
+            commentTag.HasKey(t => new { t.CommentId, t.TagId });
+
+            // A tag that is deleted is taken off the comments; a comment that is deleted lets go of its tags.
+            commentTag.HasOne(t => t.Comment).WithMany(c => c.Tags).HasForeignKey(t => t.CommentId).OnDelete(DeleteBehavior.Cascade);
+            commentTag.HasOne(t => t.Tag).WithMany(t => t.Comments).HasForeignKey(t => t.TagId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        if (postgres) PostgresModel.Adapt(modelBuilder);
+    }
+}
+
+/// <summary>
+/// <see cref="PlannerDbContext"/> on PostgreSQL: the same model, with migrations of its own (<c>Persistence/PostgresMigrations</c>), because
+/// the SQLite ones are SQL for SQLite.
+/// </summary>
+public sealed class PlannerPostgresDbContext(DbContextOptions<PlannerPostgresDbContext> options) : PlannerDbContext(options);

@@ -1,0 +1,268 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.MemberCommentsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+
+    <!-- The comments on one member (the DataContext is a MemberCommentsViewModel): the composer for a new comment, a reply or a change,
+         and the threads under it. -->
+    <UserControl.Resources>
+        <!-- A tag in a list: a small label with a mark in front. -->
+        <DataTemplate x:Key="TagTemplate" DataType="{x:Type vm:TagChip}">
+            <Border Style="{StaticResource TagPill}" ToolTip="{Binding ToolTip}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource GlyphText}" FontSize="11" Text="&#xE8EC;" Margin="0,1,5,0" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- A tag that can be ticked for the comment, with a pencil to change the tag. -->
+        <DataTemplate x:Key="TagOptionTemplate" DataType="{x:Type vm:TagOption}">
+            <Border Margin="0,0,8,8" Padding="8,2,2,2" CornerRadius="4" BorderThickness="1" ToolTip="{Binding ToolTip}"
+                    BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource DataYesWashBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox IsChecked="{Binding IsSelected}" MinWidth="0" AutomationProperties.Name="{Binding Name}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                            <TextBlock Style="{StaticResource GlyphText}" FontSize="11" Text="&#xE787;" Margin="6,1,0,0"
+                                       Visibility="{Binding HasEvent, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </CheckBox>
+                    <Button Padding="6,4" Margin="2,0,0,0" Background="Transparent" BorderThickness="0"
+                            Command="{Binding DataContext.EditTagCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}"
+                            Visibility="{Binding DataContext.CanEditTags, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource GlyphText}" FontSize="12" Text="&#xE70F;" />
+                        <AutomationProperties.Name>
+                            <MultiBinding StringFormat="{}{1} {0}">
+                                <Binding Path="Name" />
+                                <Binding Source="{x:Static loc:LocalizationSource.Instance}" Path="[Comments_Edit]" />
+                            </MultiBinding>
+                        </AutomationProperties.Name>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- One edit in the history of a comment. -->
+        <DataTemplate x:Key="EditTemplate" DataType="{x:Type vm:CommentEditRow}">
+            <StackPanel Margin="0,0,0,8">
+                <TextBlock TextWrapping="Wrap">
+                    <Run Text="{Binding EditorName, Mode=OneWay}" FontWeight="SemiBold" />
+                    <Run Text="{Binding WhenText, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Run Text="·" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Run Text="{Binding ChangesText, Mode=OneWay}" />
+                </TextBlock>
+                <DockPanel Margin="0,2,0,0" Visibility="{Binding HasPrevious, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock DockPanel.Dock="Left" Text="{loc:Loc Comments_Before}" Style="{StaticResource MutedText}" Margin="0,0,8,0" />
+                    <ctl:CommentTextBlock Spans="{Binding PreviousSpans}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </DockPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A comment: who wrote it and when, its words, its tags, what can be done with it, and (opened) the history of its edits. -->
+        <DataTemplate x:Key="CommentTemplate" DataType="{x:Type vm:CommentRow}">
+            <Border Style="{StaticResource CardBorder}" Padding="16,12,16,10"
+                    Margin="{Binding IndentWidth, Converter={StaticResource IndentToMargin}}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding AuthorName}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="{Binding CreatedText}" Style="{StaticResource MutedText}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <ctl:CommentTextBlock Spans="{Binding Spans}" Margin="0,4,0,0" />
+
+                    <ItemsControl ItemsSource="{Binding Tags}" ItemTemplate="{StaticResource TagTemplate}" Margin="0,8,0,0"
+                                  Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                    <DockPanel Margin="-8,6,0,0">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="{Binding EditedText}"
+                                Command="{Binding DataContext.ToggleHistoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Visibility="{Binding IsEdited, Converter={StaticResource BoolToVisibility}}" />
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Every button is only there for somebody who may use it: reply and edit are permissions of their own, and
+                                 deleting is up to this comment (its author may, and whoever may delete any comment). -->
+                            <Button Content="{loc:Loc Comments_Reply}" Margin="0,0,6,0"
+                                    Command="{Binding DataContext.ReplyCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Visibility="{Binding DataContext.CanWriteComments, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}" />
+                            <Button Content="{loc:Loc Comments_Edit}" Margin="0,0,6,0"
+                                    Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Visibility="{Binding DataContext.CanEditComments, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}" />
+                            <Button Content="{loc:Loc Comments_Delete}"
+                                    Command="{Binding DataContext.AskDeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding}"
+                                    Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Border Margin="0,8,0,0" Padding="12,10,12,2" CornerRadius="4" Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                            Visibility="{Binding IsHistoryOpen, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding Edits}" ItemTemplate="{StaticResource EditTemplate}" Focusable="False" />
+                    </Border>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,12,0">
+        <StackPanel Margin="0,0,0,24">
+
+            <!-- Who the comments are about, and how many there are -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitleText}" Margin="0" />
+                <TextBlock Text="{Binding CountText}" Style="{StaticResource MutedText}" Margin="12,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{loc:Loc Comments_Lede}" Style="{StaticResource LedeText}" Margin="0,2,0,0" />
+
+            <!-- What went wrong. Trying again only makes sense while the comments are not loaded. -->
+            <Border Style="{StaticResource BannerBorder}" Margin="0,14,0,0"
+                    Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                            Visibility="{Binding HasLoaded, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <!-- The composer: a new comment, a reply or a change. Only for somebody who may write comments (somebody who may only change them
+                 gets it while they change one). -->
+            <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0"
+                    Visibility="{Binding CanCompose, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Text="{Binding ComposerTitle}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,0,0,8" />
+
+                    <Border Margin="0,0,0,8" Padding="10,4" BorderThickness="3,0,0,0" BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}"
+                            Visibility="{Binding IsReplying, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal" TextElement.Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                            <TextBlock Text="{Binding ReplyingTo.AuthorName}" FontWeight="SemiBold" Margin="0,0,8,0" />
+                            <ctl:CommentTextBlock Spans="{Binding ReplyingTo.Spans}" MaxWidth="700" TextTrimming="CharacterEllipsis" MaxHeight="40" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- The styles: each puts markers around the selected words, or takes them off again. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <Button Style="{StaticResource FormatButton}" Click="OnFormat" Tag="{x:Static contracts:CommentStyle.Bold}"
+                                ToolTip="{loc:Loc Comments_Bold}" AutomationProperties.Name="{loc:Loc Comments_Bold}">
+                            <TextBlock Text="B" FontWeight="Bold" />
+                        </Button>
+                        <Button Style="{StaticResource FormatButton}" Click="OnFormat" Tag="{x:Static contracts:CommentStyle.Italic}"
+                                ToolTip="{loc:Loc Comments_Italic}" AutomationProperties.Name="{loc:Loc Comments_Italic}">
+                            <TextBlock Text="I" FontStyle="Italic" />
+                        </Button>
+                        <Button Style="{StaticResource FormatButton}" Click="OnFormat" Tag="{x:Static contracts:CommentStyle.Underline}"
+                                ToolTip="{loc:Loc Comments_Underline}" AutomationProperties.Name="{loc:Loc Comments_Underline}">
+                            <TextBlock Text="U" TextDecorations="Underline" />
+                        </Button>
+                        <Button Style="{StaticResource FormatButton}" Click="OnFormat" Tag="{x:Static contracts:CommentStyle.Strikethrough}"
+                                ToolTip="{loc:Loc Comments_Strike}" AutomationProperties.Name="{loc:Loc Comments_Strike}">
+                            <TextBlock Text="S" TextDecorations="Strikethrough" />
+                        </Button>
+                    </StackPanel>
+
+                    <TextBox x:Name="Box" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96" MaxHeight="260"
+                             VerticalScrollBarVisibility="Auto" SpellCheck.IsEnabled="True"
+                             AutomationProperties.Name="{Binding ComposerTitle}"
+                             Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                             PreviewKeyDown="OnBoxKeyDown" />
+                    <TextBlock Text="{Binding TextProblem}" Style="{StaticResource ProblemText}"
+                               Visibility="{Binding TextProblem, Converter={StaticResource StringToVisibility}}" />
+                    <TextBlock Text="{loc:Loc Comments_FormatHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+
+                    <Border Margin="0,10,0,0" Padding="12,8" CornerRadius="4" Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                            Visibility="{Binding HasPreview, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{loc:Loc Comments_Preview}" Style="{StaticResource MutedText}" />
+                            <ctl:CommentTextBlock Spans="{Binding Preview}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tags: tick the ones this comment is about; make a new one or change one right here. -->
+                    <TextBlock Text="{loc:Loc Comments_Tags}" Style="{StaticResource FieldLabelText}" Margin="0,14,0,6" />
+                    <ItemsControl ItemsSource="{Binding TagOptions}" ItemTemplate="{StaticResource TagOptionTemplate}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <TextBlock Text="{loc:Loc Comments_NoTags}" Style="{StaticResource MutedText}" Margin="0,0,0,8"
+                               Visibility="{Binding TagOptions.Count, Converter={StaticResource ZeroToVisible}}" />
+                    <Button Command="{Binding NewTagCommand}" HorizontalAlignment="Left"
+                            Visibility="{Binding CanEditTags, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                            <TextBlock Text="{loc:Loc Comments_NewTag}" />
+                        </StackPanel>
+                    </Button>
+
+                    <Border Margin="0,12,0,0" Padding="16" CornerRadius="4" Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                            Visibility="{Binding TagEditor.IsOpen, Converter={StaticResource BoolToVisibility}}">
+                        <ctl:TagForm DataContext="{Binding TagEditor}" />
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <Button Command="{Binding SaveCommand}" Content="{Binding SaveText}" Style="{StaticResource AccentButtonStyle}" />
+                        <!-- Only a reply or a change can be given up. -->
+                        <Button Command="{Binding CancelComposerCommand}" Content="{loc:Loc Comments_Cancel}" Margin="8,0,0,0">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsReplying}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Nothing is deleted before this question is answered -->
+            <Border Style="{StaticResource BannerBorder}" Margin="0,14,0,0"
+                    Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Button Command="{Binding ConfirmDeleteCommand}" Content="{loc:Loc Comments_ConfirmYes}" />
+                        <Button Command="{Binding CancelDeleteCommand}" Content="{loc:Loc Comments_Cancel}" Margin="8,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
+
+            <TextBlock Margin="0,32,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center"
+                       Text="{loc:Loc Comments_Empty}"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- The threads: a reply is moved in, under the comment it answers. -->
+            <ItemsControl ItemsSource="{Binding Comments}" ItemTemplate="{StaticResource CommentTemplate}" Margin="0,14,0,0" Focusable="False"
+                          AutomationProperties.Name="{Binding Title}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,55 @@
+# kyuplan on any Docker host (Linux, Windows, macOS, a NAS, a VM in Azure/AWS/..., Portainer, Synology, Unraid, ...).
+# The default database is SQLite: two files in the volume "kyuplan-data". For PostgreSQL use docker-compose.postgres.yml instead
+# (or the commented block below for a server you already have). Everything is explained in docs/deployment.md.
+#
+#   cp .env.example .env       # then edit it (optional: every value has a default)
+#   docker compose up -d
+#   -> open http://<host>:8080/ ; the first visit asks for the Spond login and the first administrator.
+#
+# Every setting of the application can be set as an environment variable: the name of the setting with ":" written as "__"
+# (Spond:Email -> Spond__Email). The settings are listed in the README ("Configuration") and in docs/deployment.md.
+
+name: kyuplan
+
+services:
+  kyuplan:
+    # :0.1 follows the 0.1.x releases (recommended: you decide when to update), :latest the newest, :0.1.3 stays exactly there.
+    # One container: the API, the web client and the installers of the desktop clients, which the web client offers for download.
+    image: ${KYUPLAN_IMAGE:-ghcr.io/arizonagreentea05/kyuplan:latest}
+    restart: unless-stopped
+    ports:
+      # The web client and the API, both at http://<host>:8080/ (the API is below /api). Behind a reverse proxy: "127.0.0.1:8080:8080".
+      - "${KYUPLAN_PORT:-8080}:8080"
+    volumes:
+      # The SQLite databases (exams, members, belts; the user accounts), the settings file and the log files. Back it up.
+      - kyuplan-data:/data
+      # Only for your own logos (see Branding in docs/deployment.md): a folder with the image files.
+      # - ./branding:/branding:ro
+    environment:
+      # The club's time zone (an IANA name): it decides which day an event belongs to. This is also the default.
+      Statistics__TimeZone: "Europe/Berlin"
+      # Nothing has to be set here: open the site once, and the web client asks for the Spond login, the other settings and the first
+      # administrator. They are kept in /data/settings.json and can be changed later on the Settings page. A value set here wins
+      # over that page, so only pin what must not be changed there.
+      # Spond__Email: ${SPOND_EMAIL:-}
+      # Spond__Password: ${SPOND_PASSWORD:-}
+      # Spond__UseDemoData: "true"                        # try it without a Spond account
+      # Accounts__InitialAdminPassword: ${ADMIN_PASSWORD:-}  # creates the user "admin" without the setup screen (12 to 128 characters)
+      # Behind a reverse proxy that ends HTTPS (the login is HTTP Basic: it must not cross a network unencrypted):
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Only on a network you trust completely, plain HTTP can be allowed instead:
+      # Api__AllowInsecureHttp: "true"
+      # Branding: the name, accent colour and logos both clients show. The image ships placeholders; or let an administrator set it in the web client.
+      # Branding__ProductName: "kyuplan"
+      # Branding__OrganizationName: "Karate Club Beispiel"
+      # Branding__AccentColor: "#1a5fb4"
+      # Branding__Logo: "/branding/logo.svg"
+      # Branding__LogoOnDark: "/branding/logo-white.svg"
+      #
+      # --- A PostgreSQL server you already have (managed or your own) instead of the SQLite files; the databases may be one ---
+      # Database__Provider: PostgreSql
+      # Database__ConnectionString: "Host=db.example.org;Database=kyuplan;Username=kyuplan;Password=CHANGE ME;SSL Mode=Require"
+      # Accounts__ConnectionString: "Host=db.example.org;Database=kyuplan;Username=kyuplan;Password=CHANGE ME;SSL Mode=Require"
+
+volumes:
+  kyuplan-data:

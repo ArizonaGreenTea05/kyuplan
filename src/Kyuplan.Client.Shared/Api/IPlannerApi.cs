@@ -1,0 +1,167 @@
+using Kyuplan.Contracts;
+
+namespace Kyuplan.Client.Api;
+
+/// <summary>Everything the clients can ask the Kyuplan API. Failures surface as <see cref="PlannerApiException"/>.</summary>
+public interface IPlannerApi
+{
+    Task<ServerInfoDto> GetInfoAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Writes the installer of the desktop client for a platform (<see cref="ClientPlatform"/>) that the server carries into <paramref name="destination"/>. 404 when it has none (<see cref="ServerInfoDto.ClientVersion"/> is <c>null</c>).</summary>
+    Task DownloadClientAsync(string platform, Stream destination, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes the signature of that installer into <paramref name="destination"/>; <c>false</c> (nothing written) when the release was not signed.</summary>
+    Task<bool> DownloadClientSignatureAsync(string platform, Stream destination, CancellationToken cancellationToken = default);
+
+    /// <summary>How the instance presents itself: name, accent colour, logos. Open to everybody, so it works before any login.</summary>
+    Task<BrandingDto> GetBrandingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The branding as it is edited: the texts and the colour in effect, each image slot's own image, and whether anything was saved. Needs <c>branding.view</c> (403 without it).</summary>
+    Task<BrandingSettingsDto> GetBrandingSettingsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the product name, the organisation and the accent colour; they apply instead of the API's settings from then on. Answers with the settings.</summary>
+    Task<BrandingSettingsDto> SaveBrandingAsync(BrandingInputDto branding, CancellationToken cancellationToken = default);
+
+    /// <summary>Uploads the image of a slot (one of <see cref="BrandingSlots"/>). 400 when it is not an image the slot takes or is larger than <see cref="BrandingRules.MaxImageBytes"/>. Answers with the settings.</summary>
+    Task<BrandingSettingsDto> UploadBrandingImageAsync(string slot, Stream image, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes the image of a slot away: it has none from now on. Answers with the settings.</summary>
+    Task<BrandingSettingsDto> RemoveBrandingImageAsync(string slot, CancellationToken cancellationToken = default);
+
+    /// <summary>Forgets everything saved: the API's own settings apply again. Answers with the settings.</summary>
+    Task<BrandingSettingsDto> ResetBrandingAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody, so it works before any login.</summary>
+    Task<SetupStatusDto> GetSetupAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The first start: saves the settings and creates the first administrator. 409 once the API has a user. The API may restart itself afterwards.</summary>
+    Task<SettingsSavedDto> SetupAsync(SetupInputDto setup, CancellationToken cancellationToken = default);
+
+    /// <summary>The settings the API runs with. Needs <c>settings.view</c> (403 without it).</summary>
+    Task<SettingsDto> GetSettingsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Saves the settings; the API restarts itself when something changed. Needs <c>settings.edit</c>.</summary>
+    Task<SettingsSavedDto> SaveSettingsAsync(SettingsInputDto settings, CancellationToken cancellationToken = default);
+
+    /// <summary>The user the request was made as, with their roles and what they may do. Fails with 401 when the login is wrong, so it is how a client checks one.</summary>
+    Task<UserDto> GetAccountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Changes the signed-in user's own user name and/or password. A new password needs the current one (else 400).</summary>
+    Task<UserDto> UpdateAccountAsync(AccountUpdateDto account, CancellationToken cancellationToken = default);
+
+    /// <summary>Chooses the signed-in user's own theme for a kind of client (<c>null</c>: follow the instance's default). Answers with the user.</summary>
+    Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default);
+
+    /// <summary>Chooses the signed-in user's own language (<c>null</c>: follow the client's system language). Answers with the user.</summary>
+    Task<UserDto> SetLanguageAsync(LanguagePreferenceDto preference, CancellationToken cancellationToken = default);
+
+    /// <summary>All users, by user name. Needs <c>users.view</c> (403 without it).</summary>
+    Task<IReadOnlyList<UserDto>> GetUsersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a user. Needs <c>users.edit</c>, and <c>users.grant</c> to give roles or permissions.</summary>
+    Task<UserDto> CreateUserAsync(UserInputDto user, CancellationToken cancellationToken = default);
+
+    /// <summary>Changes a user's name and, when the input has a password, the password; with <c>users.grant</c> also the roles and permissions.</summary>
+    Task<UserDto> UpdateUserAsync(int userId, UserInputDto user, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a user other than the one signed in. Needs <c>users.delete</c>.</summary>
+    Task DeleteUserAsync(int userId, CancellationToken cancellationToken = default);
+
+    /// <summary>All roles by name, the administrator role first, each with its permissions and how many users have it. Needs <c>roles.view</c> or <c>users.grant</c>.</summary>
+    Task<IReadOnlyList<RoleDto>> GetRolesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a role. 409 when the name is taken (in any case). Needs <c>roles.edit</c>.</summary>
+    Task<RoleDto> CreateRoleAsync(RoleInputDto role, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the name and the permissions of a role. 409 when the name is taken or it is the administrator role.</summary>
+    Task<RoleDto> UpdateRoleAsync(int roleId, RoleInputDto role, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a role and takes it from its users. 409 for the administrator role.</summary>
+    Task DeleteRoleAsync(int roleId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<GroupDto>> GetGroupsAsync(CancellationToken cancellationToken = default);
+
+    Task<DashboardDto> GetDashboardAsync(
+        string groupId, string? subGroupId = null, int? days = null, CancellationToken cancellationToken = default);
+
+    /// <summary>The events around today to pick a time span from, and the exam-to-exam span the server suggests.</summary>
+    Task<EventChoicesDto> GetEventChoicesAsync(string groupId, CancellationToken cancellationToken = default);
+
+    Task<AttendanceStatisticsDto> GetAttendanceAsync(AttendanceQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>Ask the server to drop its cached Spond data.</summary>
+    Task RefreshAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>All exams, the next one first, with the filters saved for each.</summary>
+    Task<IReadOnlyList<ExamDto>> GetExamsAsync(CancellationToken cancellationToken = default);
+
+    Task<ExamDto> CreateExamAsync(ExamInputDto exam, CancellationToken cancellationToken = default);
+
+    Task<ExamDto> UpdateExamAsync(int examId, ExamInputDto exam, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes the exam and the filters saved for it.</summary>
+    Task DeleteExamAsync(int examId, CancellationToken cancellationToken = default);
+
+    Task<SavedFilterDto> CreateFilterAsync(int examId, SavedFilterInputDto filter, CancellationToken cancellationToken = default);
+
+    Task<SavedFilterDto> UpdateFilterAsync(int examId, int filterId, SavedFilterInputDto filter, CancellationToken cancellationToken = default);
+
+    Task DeleteFilterAsync(int examId, int filterId, CancellationToken cancellationToken = default);
+
+    /// <summary>Everybody an exam knows: those invited on Spond with their answer, those saved for it, those who received a belt at it. By name.</summary>
+    Task<IReadOnlyList<ExamMemberDto>> GetExamMembersAsync(int examId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The members of the exam's group, judged for the exam with a saved filter of the group (<c>null</c> = the default: previous exam to this
+    /// one): the belt each would take, and whether they meet what it asks on the day of the exam.
+    /// </summary>
+    Task<ExamSuggestionsDto> GetExamSuggestionsAsync(int examId, int? filterId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Saves these members for the exam, replacing the ones saved before. Nobody is invited on Spond by it.</summary>
+    Task<IReadOnlyList<ExamMemberDto>> SetExamCandidatesAsync(int examId, ExamCandidatesInputDto candidates, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the belt a member received at an exam (<c>null</c> takes the result back). 400 while the exam has not taken place.</summary>
+    Task<ExamMemberDto> SetExamResultAsync(int examId, int memberId, ExamResultInputDto result, CancellationToken cancellationToken = default);
+
+    /// <summary>All belts in the order of the progression, each with its requirements and how many members hold it.</summary>
+    Task<IReadOnlyList<BeltDto>> GetBeltsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a belt. 409 when the name is taken (in any case), 400 when a required belt does not exist.</summary>
+    Task<BeltDto> CreateBeltAsync(BeltInputDto belt, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces everything about a belt. 409 when the name is taken, 400 when it would require itself.</summary>
+    Task<BeltDto> UpdateBeltAsync(int beltId, BeltInputDto belt, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a belt. 409 while a member holds it or another belt requires it.</summary>
+    Task DeleteBeltAsync(int beltId, CancellationToken cancellationToken = default);
+
+    /// <summary>The members of a Spond group the API holds, by name, with the belt they hold and the day they started.</summary>
+    Task<IReadOnlyList<MemberDto>> GetMembersAsync(string groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets the belt, the day it was received, the start day and the birth date of a member (<c>null</c> clears any).</summary>
+    Task<MemberDto> UpdateMemberAsync(int memberId, MemberInputDto member, CancellationToken cancellationToken = default);
+
+    /// <summary>The comments on a member, oldest first (a reply comes after the comment it replies to), with their tags and the history of their edits.</summary>
+    Task<IReadOnlyList<CommentDto>> GetCommentsAsync(int memberId, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes a comment on a member as the signed-in user, or a reply to one of the member's comments.</summary>
+    Task<CommentDto> CreateCommentAsync(int memberId, CommentInputDto comment, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the body and the tags of a comment; the change is recorded with who made it and how.</summary>
+    Task<CommentDto> UpdateCommentAsync(int commentId, CommentUpdateDto comment, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a comment and the replies to it. 403 unless the user may delete their own comments (and wrote it) or those of others.</summary>
+    Task DeleteCommentAsync(int commentId, CancellationToken cancellationToken = default);
+
+    /// <summary>All tags by name, with the event each is connected to and how many comments carry it.</summary>
+    Task<IReadOnlyList<TagDto>> GetTagsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Creates a tag, optionally connected to a Spond event. 409 when the name is taken (in any case), 404 when the event is not found.</summary>
+    Task<TagDto> CreateTagAsync(TagInputDto tag, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the name and the event of a tag (no event = disconnected). 409 when the name is taken.</summary>
+    Task<TagDto> UpdateTagAsync(int tagId, TagInputDto tag, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a tag and takes it off the comments that carry it.</summary>
+    Task DeleteTagAsync(int tagId, CancellationToken cancellationToken = default);
+}

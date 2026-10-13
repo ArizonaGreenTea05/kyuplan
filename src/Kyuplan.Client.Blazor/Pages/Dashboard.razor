@@ -1,0 +1,129 @@
+@page "/"
+@page "/dashboard"
+@using System.ComponentModel
+@inherits ViewModelComponent<DashboardViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">
+                @if (Vm.HasData)
+                {
+                    <text>@Vm.GroupName · @Vm.PeriodText</text>
+                }
+                else
+                {
+                    <text>@Vm.Lede</text>
+                }
+            </p>
+        </div>
+        @if (Vm.CanView)
+        {
+            <label class="inline-field">
+                <span>@Strings.Dashboard_Period</span>
+                <select value="@Vm.SelectedDays" @onchange="OnPeriodChanged">
+                    @foreach (var period in Vm.PeriodOptions)
+                    {
+                        <option value="@period.Days">@period.Label</option>
+                    }
+                </select>
+            </label>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="() => Vm.RefreshCommand.ExecuteAsync(null)" />
+
+        @if (Vm.HasData)
+        {
+            <div class="kpis">
+                @foreach (var kpi in Vm.Kpis)
+                {
+                    <KpiCard Kpi="kpi" />
+                }
+            </div>
+
+            <div class="grid two">
+                <article class="card">
+                    <h2>@Strings.Dashboard_Upcoming</h2>
+                    @if (Vm.Upcoming.Count == 0)
+                    {
+                        <p class="empty-inline">@Strings.Dashboard_NothingScheduled</p>
+                    }
+                    else
+                    {
+                        <ul class="eventlist">
+                            @foreach (var e in Vm.Upcoming)
+                            {
+                                <li>
+                                    <div class="when">
+                                        <strong>@e.Name</strong>
+                                        <small>@e.StartText</small>
+                                    </div>
+                                    <div class="rsvp">
+                                        <span class="stack" role="img" aria-label="@e.AriaText">
+                                            <i class="yes" style="width:@CssNum.Pct(e.AcceptedFraction)%"></i>
+                                            <i class="no" style="width:@CssNum.Pct(e.DeclinedFraction)%"></i>
+                                            <i class="open" style="width:@CssNum.Pct(e.UnansweredFraction)%"></i>
+                                        </span>
+                                        <small>@e.SummaryText</small>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                        <p class="legend">
+                            <span><i class="mk yes"></i>@Strings.Legend_Coming</span>
+                            <span><i class="mk no"></i>@Strings.Legend_Declined</span>
+                            <span><i class="mk open"></i>@Strings.Legend_NoAnswerYet</span>
+                        </p>
+                    }
+                </article>
+
+                <article class="card">
+                    <h2>@Strings.Chart_TrendTitle</h2>
+                    <BarChart Bars="Vm.Trend" Label="@Strings.Chart_TrendAria" />
+                    <p class="note">@Strings.Chart_TrendNoteDashboard</p>
+                </article>
+            </div>
+
+            <div class="grid two">
+                <article class="card">
+                    <h2>@Strings.Dashboard_TopMembers</h2>
+                    <MemberList Members="Vm.TopMembers" EmptyText="@Strings.Dashboard_TopMembersEmpty" />
+                </article>
+                <article class="card">
+                    <h2>@Strings.Dashboard_NeedsAttention</h2>
+                    <MemberList Members="Vm.NeedsAttention" EmptyText="@Strings.Dashboard_NeedsAttentionEmpty" />
+                </article>
+            </div>
+
+            @if (Vm.Shell.Can(Permission.StatisticsView))
+            {
+                <p class="footnote"><a href="statistics">@Strings.Dashboard_OpenStatistics</a></p>
+            }
+        }
+        else if (Vm.HasNoData)
+        {
+            <p class="empty">@Strings.Dashboard_Empty</p>
+        }
+    </PageGate>
+</section>
+
+@code {
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell];
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    private void OnPeriodChanged(ChangeEventArgs e) => Vm.SelectedDays = int.Parse(e.Value?.ToString() ?? "90");
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

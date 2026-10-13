@@ -1,0 +1,19 @@
+@* The outcome of the last invitations, oldest first: one small square each. *@
+<span class="form" role="img" aria-label="@string.Format(Strings.Mark_StripAria, Marks.Count)">
+    @foreach (var mark in Marks)
+    {
+        <i class="mk @Css(mark)" title="@Display.Mark(mark)"></i>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AttendanceMark> Marks { get; set; } = [];
+
+    private static string Css(AttendanceMark mark) => mark switch
+    {
+        AttendanceMark.Attended => "yes",
+        AttendanceMark.Declined => "no",
+        AttendanceMark.Unanswered => "open",
+        _ => "other",
+    };
+}

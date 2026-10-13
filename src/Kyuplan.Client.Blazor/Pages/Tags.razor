@@ -1,0 +1,128 @@
+@page "/tags"
+@inherits ViewModelComponent<TagsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Tags_Lede</p>
+        </div>
+        @if (Vm.CanView && Vm.CanEdit)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="() => Vm.BeginCreateCommand.ExecuteAsync(null)">
+                <Icon Name="plus" /><span>@Strings.Tags_New</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        @* A failed delete is no reason to offer "try again"; only a list that could not be loaded is. *@
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit && Vm.Editor.IsOpen)
+        {
+            <article class="card card-form">
+                <TagForm @key="Vm.Editor.Editing?.Id" Editor="Vm.Editor" />
+            </article>
+        }
+
+        @if (Vm.CanEdit && Vm.IsConfirmingDelete)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+                <span>@Vm.ConfirmText</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                    <span>@Strings.Tags_ConfirmYes</span>
+                </button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                    <span>@Strings.Tags_Cancel</span>
+                </button>
+            </div>
+        }
+
+        @if (Vm.IsEmpty)
+        {
+            <p class="empty">@Vm.EmptyText</p>
+        }
+        else if (Vm.Tags.Count > 0)
+        {
+            <article class="card results">
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>@Strings.Tags_ColTag</th>
+                                <th>@Strings.Tags_ColEvent</th>
+                                <th class="num">@Strings.Tags_ColComments</th>
+                                @if (Vm.CanEdit)
+                                {
+                                    <th></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var tag in Vm.Tags)
+                            {
+                                <tr @key="tag.Id">
+                                    <td><span class="tag"><Icon Name="tag" Size="13" /><span>@tag.Name</span></span></td>
+                                    <td class="@(tag.HasEvent ? "" : "none")">
+                                        @if (tag.HasEvent)
+                                        {
+                                            <div class="name"><strong>@tag.EventName</strong><small>@tag.EventWhenText</small></div>
+                                        }
+                                        else
+                                        {
+                                            @tag.EventText
+                                        }
+                                    </td>
+                                    <td class="num">@tag.CommentCount</td>
+                                    @if (Vm.CanEdit)
+                                    {
+                                        <td class="row-actions">
+                                            <button type="button" class="btn ghost" aria-label="@($"{Strings.Tags_Edit}: {tag.Name}")"
+                                                    disabled="@(!Vm.BeginEditCommand.CanExecute(tag))" @onclick="() => Vm.BeginEditCommand.ExecuteAsync(tag)">
+                                                <Icon Name="edit" /><span>@Strings.Tags_Edit</span>
+                                            </button>
+                                            <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Tags_Delete}: {tag.Name}")"
+                                                    disabled="@(!Vm.AskDeleteCommand.CanExecute(tag))" @onclick="() => Vm.AskDeleteCommand.Execute(tag)">
+                                                <Icon Name="trash" /><span>@Strings.Tags_Delete</span>
+                                            </button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+    </PageGate>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    /// <summary>The form raises its own events: the page re-renders for them too.</summary>
+    protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Vm.Editor];
+
+    /// <summary>Only when the list could not be loaded: a failed delete is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

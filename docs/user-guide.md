@@ -70,7 +70,7 @@ Your administrator uses this to try things out.
 
 ## Finding your way around
 
-- **Navigation** (left): the pages you may use. The pages are: Exams, Dashboard, Attendance Statistics, Members, Belts, Tags, and
+- **Navigation** (left): the pages you may use. The pages are: Exams, Dashboard, Attendance Statistics, Calendar, Members, Belts, Tags, and
   your Account. Administrators additionally see Users, Roles, Settings and Branding.
 - **Group**: the club's Spond group whose data you look at. Choosing another group reloads the page. (Most clubs have one group, with
   subgroups such as children and adults.)
@@ -80,8 +80,23 @@ Your administrator uses this to try things out.
   grey when everybody fit is already ticked, and so on. If a button is grey, it has nothing to do (the tooltip often says why).
 - **Dangerous actions ask first.** Deleting an exam, a filter, a belt, a tag or a comment always asks for confirmation.
 - Buttons for things you may not do are hidden.
+- **Event banner**: while an event of the selected group is going on (it has started and is not over, cancelled events do not count), a banner
+  at the top of **every** page says so. Choosing it opens the event on the Calendar page. It checks every minute.
 - **Help** (navigation, in the desktop app at the bottom): opens this guide in the browser. You only see the guides that apply to you: administrators additionally get
   *Help for administrators* (and, if they may change the settings, *Help for installing*). The browser asks for your login if it does not know it yet.
+
+## Calendar
+
+The **Calendar** page shows the events of the selected group as in any calendar app: **Day**, **Week** (Monday to Sunday) or **Month**, with
+*Previous*, *Next* and *Today*. Cancelled events are struck through. The calendar only knows the events kyuplan reads from Spond (about the
+last year and the next six months).
+
+Choosing an event opens its **detail**: when it takes place, how many accepted, declined or did not answer, and **everybody invited** with their
+answer. Below each member you see the comments written about them **for this event** and, if you may write comments, a box to add one. A
+comment written there is **tagged automatically** with the event: kyuplan uses the tag that is connected to the event, and creates one
+(named after the event and its day) if there is none yet. The comment is an ordinary comment on the member; you find it on the Members page, and
+the tag on the Tags page. A member who kyuplan does not know yet (they were invited since the last synchronisation with Spond) cannot be
+commented on until the next synchronisation.
 
 ## Dashboard
 

@@ -1,0 +1,249 @@
+@page "/calendar"
+@page "/calendar/{GroupId}/{EventId}"
+@inherits ViewModelComponent<CalendarViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Calendar_Lede</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasDetail && Vm.Detail is { } detail)
+        {
+            <article class="card event-detail">
+                <header class="comments-head">
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CloseEventCommand.Execute(null)">
+                        <Icon Name="back" /><span>@Strings.Calendar_Back</span>
+                    </button>
+                    <div>
+                        <h2>@detail.Name @if (detail.IsCancelled){<span class="chip cancelled">@Strings.Calendar_Cancelled</span>}</h2>
+                        <small>@detail.WhenText</small>
+                        <small>@detail.InvitedText · @detail.CountsText</small>
+                    </div>
+                </header>
+                <p class="lede">@Strings.Calendar_TagNote</p>
+
+                <h3>@Strings.Calendar_Attendees</h3>
+                @if (!Vm.HasAttendees)
+                {
+                    <p class="empty">@Strings.Calendar_NoAttendees</p>
+                }
+                else
+                {
+                    <div class="segmented" role="group" aria-label="@Strings.Calendar_FilterLabel">
+                        @foreach (var option in Vm.FilterOptions)
+                        {
+                            <button type="button" class="@(option.IsSelected ? "on" : "")" aria-pressed="@option.IsSelected"
+                                    @onclick="() => Vm.SetFilterCommand.Execute(option)">@option.Text</button>
+                        }
+                    </div>
+                    @if (Vm.NoMatch)
+                    {
+                        <p class="empty">@Strings.Calendar_NoMatch</p>
+                    }
+                    <div class="table-wrap">
+                        <table class="data attendees">
+                            <thead>
+                                <tr>
+                                    <th>@Strings.Calendar_ColMember</th>
+                                    <th>@Strings.Calendar_ColAnswer</th>
+                                    <th>@Strings.Calendar_ColComments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var attendee in Vm.VisibleAttendees)
+                                {
+                                    <tr @key="attendee.MemberId ?? attendee.Name.GetHashCode()">
+                                        <td><strong>@attendee.Name</strong></td>
+                                        <td><span class="answer @AnswerClass(attendee.Answer)">@attendee.AnswerText</span></td>
+                                        <td>
+                                            @foreach (var comment in attendee.Comments)
+                                            {
+                                                <div class="event-comment" style="margin-left:@(CssNum.Num(comment.IndentWidth))px">
+                                                    <small><strong>@comment.AuthorName</strong> · @comment.CreatedText</small>
+                                                    <CommentText Spans="comment.Spans" />
+                                                    @if (attendee.CanReply)
+                                                    {
+                                                        <button type="button" class="btn ghost" @onclick="() => attendee.ReplyCommand.Execute(comment)">
+                                                            <Icon Name="reply" /><span>@Strings.Comments_Reply</span>
+                                                        </button>
+                                                    }
+                                                    @if (comment.CanEdit)
+                                                    {
+                                                        <button type="button" class="btn ghost" disabled="@comment.IsBeingEdited" @onclick="() => attendee.EditCommand.Execute(comment)">
+                                                            <Icon Name="edit" /><span>@Strings.Comments_Edit</span>
+                                                        </button>
+                                                    }
+                                                    @if (comment.CanDelete)
+                                                    {
+                                                        <button type="button" class="btn ghost danger" @onclick="() => Vm.AskDeleteCommand.Execute(comment)">
+                                                            <Icon Name="trash" /><span>@Strings.Comments_Delete</span>
+                                                        </button>
+                                                    }
+                                                    @if (comment.IsEdited)
+                                                    {
+                                                        <small class="muted">@comment.EditedText</small>
+                                                    }
+                                                    @if (comment.IsConfirmingDelete)
+                                                    {
+                                                        <div class="confirm" role="alertdialog" aria-label="@comment.ConfirmText">
+                                                            <span>@comment.ConfirmText</span>
+                                                            <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(comment)">
+                                                                <span>@Strings.Comments_ConfirmYes</span>
+                                                            </button>
+                                                            <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(comment)">
+                                                                <span>@Strings.Comments_Cancel</span>
+                                                            </button>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (!attendee.CanComment)
+                                            {
+                                                <small class="muted">@Strings.Calendar_NotSynced</small>
+                                            }
+                                            else if (attendee.CanCompose)
+                                            {
+                                                @if (attendee.IsComposing)
+                                                {
+                                                    <div class="reply-to">
+                                                        <strong>@attendee.ComposingText</strong>
+                                                        <button type="button" class="btn ghost" @onclick="() => attendee.CancelReplyCommand.Execute(null)">
+                                                            <Icon Name="close" /><span>@Strings.Comments_Cancel</span>
+                                                        </button>
+                                                    </div>
+                                                }
+                                                <div class="event-compose">
+                                                    <textarea rows="1" maxlength="@CommentRules.MaxBodyLength" aria-label="@string.Format(Strings.Calendar_CommentHint, attendee.Name)"
+                                                              placeholder="@string.Format(Strings.Calendar_CommentHint, attendee.Name)"
+                                                              @bind="attendee.Draft" @bind:event="oninput"></textarea>
+                                                    <button type="button" class="btn" disabled="@(!Vm.PostCommentCommand.CanExecute(attendee))"
+                                                            @onclick="() => Vm.PostCommentCommand.ExecuteAsync(attendee)">
+                                                        <Icon Name="message" /><span>@(attendee.IsReplying ? Strings.Comments_PostReply : Strings.Calendar_Post)</span>
+                                                    </button>
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </article>
+        }
+        else
+        {
+            <div class="cal-bar">
+                <div class="cal-nav">
+                    <button type="button" class="btn" disabled="@(!Vm.PreviousCommand.CanExecute(null))" aria-label="@Strings.Calendar_Previous" title="@Strings.Calendar_Previous"
+                            @onclick="() => Vm.PreviousCommand.ExecuteAsync(null)"><Icon Name="back" /></button>
+                    <button type="button" class="btn" disabled="@(!Vm.TodayCommand.CanExecute(null))" @onclick="() => Vm.TodayCommand.ExecuteAsync(null)">@Strings.Calendar_Today</button>
+                    <button type="button" class="btn" disabled="@(!Vm.NextCommand.CanExecute(null))" aria-label="@Strings.Calendar_Next" title="@Strings.Calendar_Next"
+                            @onclick="() => Vm.NextCommand.ExecuteAsync(null)"><span class="flip"><Icon Name="back" /></span></button>
+                    <strong class="cal-period" aria-live="polite">@Vm.PeriodText</strong>
+                </div>
+                <div class="segmented" role="group" aria-label="@Strings.Calendar_ViewLabel">
+                    <button type="button" class="@(Vm.IsDay ? "on" : "")" aria-pressed="@Vm.IsDay" @onclick="() => Vm.ShowViewCommand.ExecuteAsync(CalendarViews.Day)">@Strings.Calendar_Day</button>
+                    <button type="button" class="@(Vm.IsWeek ? "on" : "")" aria-pressed="@Vm.IsWeek" @onclick="() => Vm.ShowViewCommand.ExecuteAsync(CalendarViews.Week)">@Strings.Calendar_Week</button>
+                    <button type="button" class="@(Vm.IsMonth ? "on" : "")" aria-pressed="@Vm.IsMonth" @onclick="() => Vm.ShowViewCommand.ExecuteAsync(CalendarViews.Month)">@Strings.Calendar_Month</button>
+                </div>
+            </div>
+
+            @if (string.IsNullOrEmpty(Vm.Shell.SelectedGroupId))
+            {
+                <p class="empty">@Strings.Calendar_NoGroup</p>
+            }
+            else if (Vm.UsesGrid)
+            {
+                <div class="cal-grid @(Vm.IsMonth ? "month" : "week")">
+                    @foreach (var name in Vm.WeekdayNames)
+                    {
+                        <div class="cal-head">@name</div>
+                    }
+                    @foreach (var day in Vm.Days)
+                    {
+                        <div class="cal-day @(day.IsToday ? "today" : "") @(day.IsOutside ? "outside" : "")">
+                            <span class="cal-num">@day.Number</span>
+                            @foreach (var e in day.Events)
+                            {
+                                <button type="button" class="cal-event @(e.IsCancelled ? "cancelled" : "")" title="@e.Name · @e.WhenText"
+                                        @onclick="() => Vm.OpenEventCommand.ExecuteAsync(e)">
+                                    <small>@e.TimeText</small> @e.Name
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+            else if (Vm.IsEmpty)
+            {
+                <p class="empty">@Strings.Calendar_NoEvents</p>
+            }
+            else
+            {
+                <div class="cal-list">
+                    @foreach (var e in Vm.Events)
+                    {
+                        <button type="button" class="card cal-item @(e.IsCancelled ? "cancelled" : "")" @onclick="() => Vm.OpenEventCommand.ExecuteAsync(e)">
+                            <strong>@e.Name</strong>
+                            @if (e.IsCancelled){<span class="chip cancelled">@Strings.Calendar_Cancelled</span>}
+                            <small>@e.TimeText</small>
+                            <small>@e.InvitedText · @e.CountsText</small>
+                        </button>
+                    }
+                </div>
+            }
+        }
+    </PageGate>
+</section>
+
+@code {
+    [Parameter] public string? GroupId { get; set; }
+
+    [Parameter] public string? EventId { get; set; }
+
+    private string? _opened;
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    // The banner of an event in progress links here: /calendar/{group}/{event}.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (GroupId is null || EventId is null)
+        {
+            _opened = null;
+            return;
+        }
+
+        if (_opened == $"{GroupId}/{EventId}") return;
+
+        _opened = $"{GroupId}/{EventId}";
+        await Vm.OpenEventAsync(GroupId, EventId);
+    }
+
+    private static string AnswerClass(AttendanceMark answer) => answer switch
+    {
+        AttendanceMark.Attended => "yes",
+        AttendanceMark.Declined => "no",
+        _ => "open",
+    };
+
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded || Vm.HasDetail ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

@@ -42,6 +42,13 @@ public sealed class CommentService(PlannerDbContext db, AccountsDbContext accoun
         return await ToDtosAsync(comments, cancellationToken);
     }
 
+    /// <summary>The comments that carry one of these tags, oldest first; a calendar page lists what was written about the members of one event.</summary>
+    public async Task<IReadOnlyList<CommentDto>> ListForTagsAsync(IReadOnlyList<int> tagIds, CancellationToken cancellationToken)
+    {
+        var comments = await Query().Where(c => c.Tags.Any(t => tagIds.Contains(t.TagId))).ToListAsync(cancellationToken);
+        return await ToDtosAsync(comments, cancellationToken);
+    }
+
     /// <summary>Writes a comment on a member, or a reply to one of the member's comments.</summary>
     /// <exception cref="MemberNotFoundException"/>
     /// <exception cref="InvalidInputException">The comment to reply to is not one of this member's, or a tag does not exist.</exception>

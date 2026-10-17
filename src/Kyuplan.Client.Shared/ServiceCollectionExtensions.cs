@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AttendanceStatisticsViewModel>();
         services.AddSingleton<AccountViewModel>();
         services.AddSingleton<PreferencesViewModel>();
+        services.AddSingleton<CalendarViewModel>();
+        services.AddSingleton<EventBannerViewModel>();
         services.AddSingleton<MembersViewModel>();
         services.AddSingleton<BeltsViewModel>();
         services.AddSingleton<TagsViewModel>();

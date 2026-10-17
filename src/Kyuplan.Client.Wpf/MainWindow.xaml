@@ -12,6 +12,9 @@
 
     <Window.Resources>
         <!-- View-model-first navigation: the page view model picks its view. -->
+        <DataTemplate DataType="{x:Type vm:CalendarViewModel}">
+            <views:CalendarView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ExamsViewModel}">
             <views:ExamsView />
         </DataTemplate>
@@ -198,12 +201,31 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
+                <!-- An event of the selected group is going on: whatever page is shown, each links to its detail page. -->
+                <ItemsControl Grid.Row="0" ItemsSource="{Binding Banner.Events}" Margin="0,0,0,2"
+                              Visibility="{Binding Banner.HasEvents, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.Banner.OpenCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}" Style="{StaticResource AccentButtonStyle}"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="24,9">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{loc:Loc Banner_Open}" FontWeight="SemiBold" TextDecorations="Underline" Margin="12,0,0,0" />
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE787;" />
+                                    <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <!-- Top bar: group picker, demo marker, refresh. Group and refresh are of no use to somebody who may use no page that shows
                      what Spond knows. -->
-                <DockPanel Grid.Row="0" Margin="24,14,24,12" LastChildFill="False">
+                <DockPanel Grid.Row="1" Margin="24,14,24,12" LastChildFill="False">
                     <TextBlock DockPanel.Dock="Left" Text="{loc:Loc Shell_Group}" Style="{StaticResource FieldLabelText}"
                                VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13"
                                Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}" />
@@ -237,7 +259,7 @@
                 </DockPanel>
 
                 <!-- Connection / loading problems of the shell (the pages show their own) -->
-                <Border Grid.Row="1" Style="{StaticResource BannerBorder}" Margin="24,0,24,6"
+                <Border Grid.Row="2" Style="{StaticResource BannerBorder}" Margin="24,0,24,6"
                         Visibility="{Binding Shell.HasError, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Command="{Binding Shell.RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0" />
@@ -245,7 +267,7 @@
                     </DockPanel>
                 </Border>
 
-                <ContentControl Grid.Row="2" Content="{Binding SelectedItem.Page}" />
+                <ContentControl Grid.Row="3" Content="{Binding SelectedItem.Page}" />
             </Grid>
         </Border>
     </Grid>

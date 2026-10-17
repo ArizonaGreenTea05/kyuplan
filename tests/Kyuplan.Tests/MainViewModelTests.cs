@@ -79,7 +79,7 @@ public sealed class MainViewModelTests : IDisposable
     {
         _session.User = Boss;
 
-        Assert.Equal(6, _main.Items.Count);
+        Assert.Equal(7, _main.Items.Count);
         Assert.Equal(3, _main.AdminItems.Count);
         Assert.IsType<UserAdminViewModel>(_main.AdminItems[0].Page);
         Assert.IsType<RolesViewModel>(_main.AdminItems[1].Page);
@@ -119,7 +119,7 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Empty(_main.AdminItems);
 
         _session.User = Boss;
-        Assert.Equal(6, _main.Items.Count);
+        Assert.Equal(7, _main.Items.Count);
         Assert.Equal(3, _main.AdminItems.Count);
     }
 
@@ -143,7 +143,7 @@ public sealed class MainViewModelTests : IDisposable
     public void The_navigation_keeps_the_page_that_is_open_when_the_permission_is_gone_from_another_page()
     {
         _session.User = Boss;
-        _main.SelectedItem = _main.Items[4]; // belts
+        _main.SelectedItem = _main.Items[5]; // belts
 
         _session.User = Anna;
 

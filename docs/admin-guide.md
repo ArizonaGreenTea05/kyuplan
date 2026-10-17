@@ -157,6 +157,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | --- | --- |
 | dashboard | `dashboard.view` |
 | statistics | `statistics.view` |
+| calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
 | belts | `belts.view`, `belts.edit` |
@@ -166,6 +167,8 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | settings | `settings.view`, `settings.edit` |
+
+`calendar.view` came with the calendar: the default roles of a **new** installation have it, but a role that already exists in your database does not until you tick it on the Roles page (administrators have every permission).
 
 Ticking a permission in the forms also ticks the `.view` of its domain; unticking `.view` unticks the rest of the domain.
 
@@ -180,9 +183,9 @@ Comments are deliberately **separate from members**: somebody who may view membe
 
   | Role | May |
   | --- | --- |
-  | **Leading Trainer** | Dashboard, statistics, run exams (add, filters, candidates, results), edit members and belts, write/edit/delete own comments, manage tags. Not: delete others' comments, users, roles, branding, settings. |
-  | **Trainer** | Look at everything (dashboard, statistics, exams, members, belts), write and edit comments, delete own, manage tags. Changes no exam, member or belt. |
-  | **Passive User** | Look only: dashboard, statistics, exams, members, belts, comments and tags. |
+  | **Leading Trainer** | Dashboard, statistics, calendar, run exams (add, filters, candidates, results), edit members and belts, write/edit/delete own comments, manage tags. Not: delete others' comments, users, roles, branding, settings. |
+  | **Trainer** | Look at everything (dashboard, statistics, calendar, exams, members, belts), write and edit comments, delete own, manage tags. Changes no exam, member or belt. |
+  | **Passive User** | Look only: dashboard, statistics, calendar, exams, members, belts, comments and tags. |
 
   They are a starting point: change them like any other role. Instances upgraded from the time when an "admin flag" existed keep
   working: administrators got the administrator role, everybody else a role *User* with what they could do before.

@@ -3,6 +3,7 @@
 @implements IDisposable
 @inject ShellViewModel Shell
 @inject ThemeViewModel Themes
+@inject EventBannerViewModel Banner
 @inject IJSRuntime Js
 @inject NavigationManager Navigation
 @inject Kyuplan.Client.Api.LoginSession Session
@@ -35,6 +36,12 @@
             {
                 <NavLink class="nav-item" href="statistics">
                     <Icon Name="chart" /><span>@Strings.Nav_Statistics</span>
+                </NavLink>
+            }
+            @if (Shell.Can(Permission.CalendarView))
+            {
+                <NavLink class="nav-item" href="calendar">
+                    <Icon Name="clock" /><span>@Strings.Nav_Calendar</span>
                 </NavLink>
             }
             @if (Shell.Can(Permission.ExamsView))
@@ -147,6 +154,19 @@
     </aside>
 
     <div class="main">
+        @* An event of the selected group is going on: whatever page is open, this links to it. *@
+        @if (Banner.HasEvents)
+        {
+            <div class="event-banner" role="status">
+                @foreach (var current in Banner.Events)
+                {
+                    <a href="calendar/@(Uri.EscapeDataString(current.Event.GroupId))/@(Uri.EscapeDataString(current.Event.Id))" title="@Strings.Banner_Open">
+                        <Icon Name="clock" /><span>@current.Text</span><strong>@Strings.Banner_Open</strong>
+                    </a>
+                }
+            </div>
+        }
+
         <header class="topbar">
             @* The group and the refresh button are for what Spond knows; a user who may use no page that shows it has no use for them. *@
             @if (Shell.UsesSpond)
@@ -206,11 +226,13 @@
         Themes.Changed += OnThemeApplied;
         Themes.PropertyChanged += OnShellChanged;
         Shell.Language.Changed += OnLanguageChanged;
+        Banner.PropertyChanged += OnShellChanged;
 
         // The branding is public, so it is shown even while the browser asks for the login that the shell's first request needs.
         await Shell.Brand.LoadAsync();
         Shell.Brand.Watch(); // from now on a change made on the Branding page (by anybody) shows up here by itself
         await Shell.InitializeAsync();
+        Banner.Watch();
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
@@ -249,5 +271,6 @@
         Themes.Changed -= OnThemeApplied;
         Themes.PropertyChanged -= OnShellChanged;
         Shell.Language.Changed -= OnLanguageChanged;
+        Banner.PropertyChanged -= OnShellChanged;
     }
 }

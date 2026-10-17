@@ -153,6 +153,18 @@ public interface IPlannerApi
     /// <summary>Deletes a comment and the replies to it. 403 unless the user may delete their own comments (and wrote it) or those of others.</summary>
     Task DeleteCommentAsync(int commentId, CancellationToken cancellationToken = default);
 
+    /// <summary>The events of a group within the day, week or month (<see cref="CalendarViews"/>) of a date (<c>null</c> = today).</summary>
+    Task<CalendarDto> GetCalendarAsync(string groupId, string view, DateOnly? date = null, CancellationToken cancellationToken = default);
+
+    /// <summary>The events of a group that are going on right now.</summary>
+    Task<IReadOnlyList<CalendarEventDto>> GetCurrentEventsAsync(string groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>One event with everybody invited to it, what they answered and the comments on them that carry the event's tag.</summary>
+    Task<CalendarEventDetailDto> GetCalendarEventAsync(string groupId, string eventId, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes a comment on a member of an event; the API tags it with the event's tag.</summary>
+    Task<CommentDto> CreateEventCommentAsync(string groupId, string eventId, int memberId, CalendarCommentInputDto comment, CancellationToken cancellationToken = default);
+
     /// <summary>All tags by name, with the event each is connected to and how many comments carry it.</summary>
     Task<IReadOnlyList<TagDto>> GetTagsAsync(CancellationToken cancellationToken = default);
 

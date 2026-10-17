@@ -71,6 +71,44 @@ public sealed class TagService(PlannerDbContext db, StatisticsService statistics
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>The ids of the tags that are about this event; none when nobody tagged anything with it yet.</summary>
+    public async Task<IReadOnlyList<int>> TagIdsOfEventAsync(string groupId, string eventId, CancellationToken cancellationToken) =>
+        await db.Tags.AsNoTracking().Where(t => t.EventGroupId == groupId && t.EventId == eventId).Select(t => t.Id).ToListAsync(cancellationToken);
+
+    /// <summary>
+    /// The tag that comments written about an event carry: the oldest tag already connected to it, or a new one named after the event and
+    /// its day (with a number behind it when that name is taken by another tag).
+    /// </summary>
+    public async Task<int> EnsureEventTagAsync(EventInfo info, string groupId, CancellationToken cancellationToken)
+    {
+        var existing = await db.Tags.Where(t => t.EventGroupId == groupId && t.EventId == info.Id).OrderBy(t => t.Id).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken);
+        if (existing is { } id) return id;
+
+        var baseName = $"{info.Name.Trim()} {info.Start:yyyy-MM-dd}";
+        for (var number = 1; ; number++)
+        {
+            var suffix = number == 1 ? "" : $" ({number})";
+            var name = (baseName.Length + suffix.Length > TagRules.MaxNameLength ? baseName[..(TagRules.MaxNameLength - suffix.Length)].TrimEnd() : baseName) + suffix;
+            var tag = new Tag
+            {
+                Name = name, CreatedAt = time.GetUtcNow(),
+                EventGroupId = groupId, EventId = info.Id, EventName = info.Name, EventStart = info.Start,
+            };
+            db.Tags.Add(tag);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return tag.Id;
+            }
+            catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+            {
+                db.Entry(tag).State = EntityState.Detached; // the name is taken (or a request made the event's tag meanwhile): look again, then try the next name
+                var made = await db.Tags.Where(t => t.EventGroupId == groupId && t.EventId == info.Id).OrderBy(t => t.Id).Select(t => (int?)t.Id).FirstOrDefaultAsync(cancellationToken);
+                if (made is { } madeId) return madeId;
+            }
+        }
+    }
+
     /// <summary>The event of a tag as the clients get it, or <c>null</c> for a tag without one.</summary>
     internal static TagEventDto? EventOf(Tag tag) =>
         tag.EventId is null ? null : new TagEventDto(tag.EventGroupId!, tag.EventId, tag.EventName!, tag.EventStart!.Value);

@@ -897,6 +897,65 @@ internal sealed class FakePlannerApi : IPlannerApi
             return created;
         });
 
+    // --- Calendar ---------------------------------------------------------------------------------------------
+
+    /// <summary>The events the server holds; the calendar answers with those that start within the asked days.</summary>
+    public List<CalendarEventDto> CalendarEvents { get; } = [];
+
+    /// <summary>Who is invited to which event (by event id); an event without an entry has nobody.</summary>
+    public Dictionary<string, List<CalendarAttendeeDto>> Attendees { get; } = [];
+
+    /// <summary>Today as the server says it.</summary>
+    public DateOnly CalendarToday { get; set; } = new(2026, 10, 13);
+
+    /// <summary>The events going on now.</summary>
+    public List<CalendarEventDto> CurrentEvents { get; } = [];
+
+    /// <summary>Every <c>calendar:view:date</c> and <c>current:group</c> asked for, in order.</summary>
+    public List<string> CalendarCalls { get; } = [];
+
+    public List<(string EventId, int MemberId, string Body)> EventComments { get; } = [];
+
+    public Task<CalendarDto> GetCalendarAsync(string groupId, string view, DateOnly? date = null, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            var day = date ?? CalendarToday;
+            CalendarCalls.Add($"calendar:{view}:{day:yyyy-MM-dd}");
+            var (from, to) = CalendarViews.Range(view, day);
+            return new CalendarDto(view, day, from, to, CalendarToday,
+                [.. CalendarEvents.Where(e => e.GroupId == groupId && DateOnly.FromDateTime(e.Start.Date) >= from && DateOnly.FromDateTime(e.Start.Date) <= to).OrderBy(e => e.Start)]);
+        });
+
+    public Task<IReadOnlyList<CalendarEventDto>> GetCurrentEventsAsync(string groupId, CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<CalendarEventDto>>(() =>
+        {
+            CalendarCalls.Add($"current:{groupId}");
+            return [.. CurrentEvents.Where(e => e.GroupId == groupId)];
+        });
+
+    public Task<CalendarEventDetailDto> GetCalendarEventAsync(string groupId, string eventId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            CalendarCalls.Add($"event:{eventId}");
+            var e = CalendarEvents.FirstOrDefault(e => e.GroupId == groupId && e.Id == eventId) ?? throw NotFound();
+            return new CalendarEventDetailDto(e, Attendees.GetValueOrDefault(eventId) ?? []);
+        });
+
+    public Task<CommentDto> CreateEventCommentAsync(string groupId, string eventId, int memberId, CalendarCommentInputDto comment, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            EventComments.Add((eventId, memberId, comment.Body));
+            var attendees = Attendees.GetValueOrDefault(eventId) ?? throw NotFound();
+            var index = attendees.FindIndex(a => a.MemberId == memberId);
+            if (index < 0) throw NotFound();
+
+            var tag = new CommentTagDto(1000, $"Event {eventId}", null);
+            if (comment.ParentId is { } parent && attendees[index].Comments.All(c => c.Id != parent)) throw BadRequest("No such comment to reply to.");
+            var created = new CommentDto(_nextId++, memberId, comment.ParentId, CommentFormat.Clean(comment.Body), Account.Id, Account.UserName, NextMoment(), [tag], []);
+            attendees[index] = attendees[index] with { Comments = [.. attendees[index].Comments, created] };
+            return created;
+        });
+
     public Task<CommentDto> UpdateCommentAsync(int commentId, CommentUpdateDto comment, CancellationToken cancellationToken = default) =>
         Run(() =>
         {

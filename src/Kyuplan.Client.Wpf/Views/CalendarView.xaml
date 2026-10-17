@@ -1,0 +1,312 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.CalendarView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization">
+
+    <UserControl.Resources>
+        <!-- One event in a day of the grid; opens the event. -->
+        <DataTemplate x:Key="GridEvent">
+            <Button Command="{Binding DataContext.OpenEventCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                    CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    Padding="6,3" Margin="0,2,0,0" FontSize="12" ToolTip="{Binding WhenText}">
+                <TextBlock TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCancelled}" Value="True">
+                                    <Setter Property="TextDecorations" Value="Strikethrough" />
+                                    <Setter Property="Opacity" Value="0.6" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                    <Run Text="{Binding TimeText, Mode=OneWay}" FontWeight="SemiBold" /> <Run Text="{Binding Name, Mode=OneWay}" />
+                </TextBlock>
+            </Button>
+        </DataTemplate>
+
+        <Style x:Key="DayCell" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0.5" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="MinHeight" Value="110" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOutside}" Value="True">
+                    <Setter Property="Opacity" Value="0.5" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                    <Setter Property="BorderThickness" Value="2" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ViewToggle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Margin="24,6,24,32">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                <TextBlock Text="{loc:Loc Calendar_Lede}" Style="{StaticResource LedeText}" />
+
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                Visibility="{Binding HasLoaded, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+
+                <!-- ===== One event ===== -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasDetail, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <Button Command="{Binding CloseEventCommand}" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE72B;" />
+                                <TextBlock Text="{loc:Loc Calendar_Back}" />
+                            </StackPanel>
+                        </Button>
+
+                        <StackPanel Margin="0,14,0,0" DataContext="{Binding Detail}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="20" />
+                                <TextBlock Text="{loc:Loc Calendar_Cancelled}" Style="{StaticResource ProblemText}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                           Visibility="{Binding IsCancelled, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding WhenText}" Style="{StaticResource MutedText}" />
+                            <TextBlock Style="{StaticResource MutedText}">
+                                <Run Text="{Binding InvitedText, Mode=OneWay}" /> · <Run Text="{Binding CountsText, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+
+                        <TextBlock Text="{loc:Loc Calendar_TagNote}" Style="{StaticResource LedeText}" Margin="0,12,0,0" />
+                        <TextBlock Text="{loc:Loc Calendar_Attendees}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
+                        <TextBlock Text="{loc:Loc Calendar_NoAttendees}" Style="{StaticResource MutedText}"
+                                   Visibility="{Binding HasAttendees, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                        <ItemsControl ItemsSource="{Binding FilterOptions}" Margin="0,0,0,8"
+                                      AutomationProperties.Name="{loc:Loc Calendar_FilterLabel}"
+                                      Visibility="{Binding HasAttendees, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Text}" Margin="0,0,6,0"
+                                            Command="{Binding DataContext.SetFilterCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ViewToggle}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="FontWeight" Value="Bold" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{loc:Loc Calendar_NoMatch}" Style="{StaticResource MutedText}"
+                                   Visibility="{Binding NoMatch, Converter={StaticResource BoolToVisibility}}" />
+
+                        <ItemsControl ItemsSource="{Binding VisibleAttendees}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="0,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="220" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                                <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding AnswerText}" Style="{StaticResource MutedText}" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1">
+                                                <ItemsControl ItemsSource="{Binding Comments}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <StackPanel Margin="{Binding IndentWidth, Converter={StaticResource IndentToMargin}}">
+                                                                <TextBlock Style="{StaticResource MutedText}">
+                                                                    <Run Text="{Binding AuthorName, Mode=OneWay}" FontWeight="SemiBold" /> · <Run Text="{Binding CreatedText, Mode=OneWay}" />
+                                                                </TextBlock>
+                                                                <DockPanel Margin="0,0,0,4">
+                                                                <ctl:CommentTextBlock DockPanel.Dock="Left" Spans="{Binding Spans}" VerticalAlignment="Center" />
+                                                                <Button Content="{loc:Loc Comments_Reply}" HorizontalAlignment="Left" Margin="8,0,0,0"
+                                                                        MinHeight="0" Padding="8,1" FontSize="12"
+                                                                        Visibility="{Binding DataContext.CanReply, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibility}}"
+                                                                        Command="{Binding DataContext.ReplyCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Content="{loc:Loc Comments_Edit}" Margin="4,0,0,0" MinHeight="0" Padding="8,1" FontSize="12"
+                                                                        DockPanel.Dock="Right" HorizontalAlignment="Left"
+                                                                        Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}"
+                                                                        Command="{Binding DataContext.EditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                        CommandParameter="{Binding}" />
+                                                                <Button Content="{loc:Loc Comments_Delete}" Margin="4,0,0,0" MinHeight="0" Padding="8,1" FontSize="12"
+                                                                        DockPanel.Dock="Right" HorizontalAlignment="Left"
+                                                                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}"
+                                                                        Command="{Binding DataContext.AskDeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}" />
+                                                                </DockPanel>
+                                                                <DockPanel Margin="0,0,0,4"
+                                                                           Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BoolToVisibility}}">
+                                                                    <Button DockPanel.Dock="Right" Margin="4,0,0,0" Content="{loc:Loc Comments_Cancel}" MinHeight="0" Padding="8,1" FontSize="12"
+                                                                            Command="{Binding DataContext.CancelDeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                    <Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{loc:Loc Comments_ConfirmYes}" MinHeight="0" Padding="8,1" FontSize="12"
+                                                                            Command="{Binding DataContext.ConfirmDeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                            CommandParameter="{Binding}" />
+                                                                    <TextBlock Text="{Binding ConfirmText}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                                                </DockPanel>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <TextBlock Text="{loc:Loc Calendar_NotSynced}" TextWrapping="Wrap">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding CanComment}" Value="False">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+
+                                                <DockPanel LastChildFill="True">
+                                                    <DockPanel.Style>
+                                                        <Style TargetType="DockPanel">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding CanComment}" Value="True" />
+                                                                        <Condition Binding="{Binding CanCompose}" Value="True" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </DockPanel.Style>
+                                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6"
+                                                               Visibility="{Binding IsComposing, Converter={StaticResource BoolToVisibility}}">
+                                                        <Button DockPanel.Dock="Right" Content="{loc:Loc Comments_Cancel}" Command="{Binding CancelReplyCommand}" />
+                                                        <TextBlock Text="{Binding ComposingText}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                    </DockPanel>
+                                                    <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,0,0,0" Content="{Binding PostText}"
+                                                            Command="{Binding DataContext.PostCommentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}" />
+                                                    <TextBox Text="{Binding Draft, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                                                             MinHeight="32" MaxHeight="140" VerticalScrollBarVisibility="Auto"
+                                                             AutomationProperties.Name="{Binding Name}" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- ===== The calendar ===== -->
+                <StackPanel Margin="0,16,0,0" Visibility="{Binding HasDetail, Converter={StaticResource InverseBoolToVisibility}}">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                            <Button Command="{Binding PreviousCommand}" ToolTip="{loc:Loc Calendar_Previous}" AutomationProperties.Name="{loc:Loc Calendar_Previous}">
+                                <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE76B;" Margin="0" />
+                            </Button>
+                            <Button Command="{Binding TodayCommand}" Content="{loc:Loc Calendar_Today}" Margin="6,0,0,0" />
+                            <Button Command="{Binding NextCommand}" ToolTip="{loc:Loc Calendar_Next}" AutomationProperties.Name="{loc:Loc Calendar_Next}" Margin="6,0,0,0">
+                                <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE76C;" Margin="0" />
+                            </Button>
+                            <TextBlock Text="{Binding PeriodText}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="16"
+                                       VerticalAlignment="Center" Margin="16,0,0,0" />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Command="{Binding ShowViewCommand}" CommandParameter="day" Content="{loc:Loc Calendar_Day}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ViewToggle}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsDay}" Value="True"><Setter Property="FontWeight" Value="Bold" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Command="{Binding ShowViewCommand}" CommandParameter="week" Content="{loc:Loc Calendar_Week}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ViewToggle}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsWeek}" Value="True"><Setter Property="FontWeight" Value="Bold" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                            <Button Command="{Binding ShowViewCommand}" CommandParameter="month" Content="{loc:Loc Calendar_Month}">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource ViewToggle}">
+                                        <Style.Triggers><DataTrigger Binding="{Binding IsMonth}" Value="True"><Setter Property="FontWeight" Value="Bold" /></DataTrigger></Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <TextBlock Text="{loc:Loc Calendar_NoGroup}" Style="{StaticResource MutedText}" Margin="0,16,0,0"
+                               Visibility="{Binding NoGroup, Converter={StaticResource BoolToVisibility}}" />
+
+                    <!-- Names of the days: only for the grids -->
+                    <ItemsControl ItemsSource="{Binding WeekdayNames}" Margin="0,12,0,0"
+                                  Visibility="{Binding UsesGrid, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource MutedText}" HorizontalAlignment="Center" FontWeight="SemiBold" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- The days. A week and a month are seven columns; a day is one wide column. -->
+                    <ItemsControl ItemsSource="{Binding Days}" Margin="0,4,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Columns="{Binding DataContext.GridColumns, RelativeSource={RelativeSource AncestorType=UserControl}}" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource DayCell}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Number}" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                                   Visibility="{Binding DataContext.UsesGrid, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding FullText}" FontWeight="SemiBold" Margin="0,0,0,6"
+                                                   Visibility="{Binding DataContext.UsesGrid, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        <ItemsControl ItemsSource="{Binding Events}" ItemTemplate="{StaticResource GridEvent}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="{loc:Loc Calendar_NoEvents}" Style="{StaticResource MutedText}" Margin="0,16,0,0"
+                               Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Style="{StaticResource NotAllowedText}" Text="{loc:Loc Page_NotAllowed}"
+                   Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</UserControl>

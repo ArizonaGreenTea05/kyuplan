@@ -115,6 +115,7 @@ public partial class App : Application
 
             // The server carries the installer of its own version; a client that is older offers it in the navigation pane.
             _host.Services.GetRequiredService<ClientUpdateViewModel>().Watch();
+            _host.Services.GetRequiredService<EventBannerViewModel>().Watch(); // the banner of an event in progress
         }
         catch
         {

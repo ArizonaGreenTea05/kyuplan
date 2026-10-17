@@ -79,12 +79,13 @@ public sealed partial class CommentRow : ObservableObject
 
     private readonly CommentDto _comment;
 
-    public CommentRow(CommentDto comment, int depth, int replyCount, bool canDelete)
+    public CommentRow(CommentDto comment, int depth, int replyCount, bool canDelete, bool canEdit = false)
     {
         _comment = comment;
         Depth = depth;
         ReplyCount = replyCount;
         CanDelete = canDelete;
+        CanEdit = canEdit;
         Spans = CommentFormat.Parse(comment.Body);
         Tags = [.. comment.Tags.Select(t => new TagChip(t.Id, t.Name, t.Event))];
         Edits = [.. comment.Edits.OrderByDescending(e => e.Id).Select(e => new CommentEditRow(e))];
@@ -116,6 +117,25 @@ public sealed partial class CommentRow : ObservableObject
     public bool CanDelete { get; }
 
     public string DeleteBlockedText => CanDelete ? "" : Strings.Comments_DeleteBlocked;
+
+    /// <summary>The user may edit comments (a page that offers it says so; the member page has its own composer).</summary>
+    public bool CanEdit { get; }
+
+    /// <summary>The comment is being edited in a box next to it.</summary>
+    [ObservableProperty]
+    private bool _isBeingEdited;
+
+    /// <summary>The comment waits for the answer to "Delete this comment?".</summary>
+    [ObservableProperty]
+    private bool _isConfirmingDelete;
+
+    /// <summary>"Delete this comment and its 2 replies?"</summary>
+    public string ConfirmText => ReplyCount switch
+    {
+        0 => Strings.Comments_ConfirmDelete,
+        1 => Strings.Comments_ConfirmDeleteReply,
+        _ => string.Format(Strings.Comments_ConfirmDeleteReplies, ReplyCount),
+    };
 
     public bool IsEdited => _comment.Edits.Count > 0;
 

@@ -21,7 +21,7 @@ public static class DefaultRoles
         // Everything about the exams, members, belts and tags, and all of the comments but those of others.
         new("Leading Trainer",
         [
-            Permission.DashboardView, Permission.StatisticsView,
+            Permission.DashboardView, Permission.StatisticsView, Permission.CalendarView,
             Permission.ExamsView, Permission.ExamsEdit, Permission.ExamsFilters, Permission.ExamsCandidates, Permission.ExamsResults,
             Permission.MembersView, Permission.MembersEdit, Permission.BeltsView, Permission.BeltsEdit,
             Permission.CommentsView, Permission.CommentsWrite, Permission.CommentsEdit, Permission.CommentsDelete,
@@ -31,7 +31,7 @@ public static class DefaultRoles
         // Looks at everything of the club, writes comments and tags, but changes nothing else.
         new("Trainer",
         [
-            Permission.DashboardView, Permission.StatisticsView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
+            Permission.DashboardView, Permission.StatisticsView, Permission.CalendarView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
             Permission.CommentsView, Permission.CommentsWrite, Permission.CommentsEdit, Permission.CommentsDelete,
             Permission.TagsView, Permission.TagsEdit,
         ]),
@@ -39,7 +39,7 @@ public static class DefaultRoles
         // Only looks.
         new("Passive User",
         [
-            Permission.DashboardView, Permission.StatisticsView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
+            Permission.DashboardView, Permission.StatisticsView, Permission.CalendarView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
             Permission.CommentsView, Permission.TagsView,
         ]),
     ];

@@ -201,6 +201,23 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.PostAsync($"api/members/{memberId}/comments", Json(comment, PlannerJsonContext.Default.CommentInputDto), cancellationToken),
             PlannerJsonContext.Default.CommentDto, cancellationToken);
 
+    public Task<CalendarDto> GetCalendarAsync(string groupId, string view, DateOnly? date = null, CancellationToken cancellationToken = default) =>
+        GetAsync($"api/calendar?groupId={Uri.EscapeDataString(groupId)}&view={view}" + (date is { } d ? $"&date={d:yyyy-MM-dd}" : ""),
+            PlannerJsonContext.Default.CalendarDto, cancellationToken);
+
+    public async Task<IReadOnlyList<CalendarEventDto>> GetCurrentEventsAsync(string groupId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/calendar/current?groupId={Uri.EscapeDataString(groupId)}", PlannerJsonContext.Default.ListCalendarEventDto, cancellationToken);
+
+    public Task<CalendarEventDetailDto> GetCalendarEventAsync(string groupId, string eventId, CancellationToken cancellationToken = default) =>
+        GetAsync($"api/calendar/events/{Uri.EscapeDataString(eventId)}?groupId={Uri.EscapeDataString(groupId)}",
+            PlannerJsonContext.Default.CalendarEventDetailDto, cancellationToken);
+
+    public Task<CommentDto> CreateEventCommentAsync(string groupId, string eventId, int memberId, CalendarCommentInputDto comment, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync(
+                $"api/calendar/events/{Uri.EscapeDataString(eventId)}/members/{memberId}/comments?groupId={Uri.EscapeDataString(groupId)}",
+                Json(comment, PlannerJsonContext.Default.CalendarCommentInputDto), cancellationToken),
+            PlannerJsonContext.Default.CommentDto, cancellationToken);
+
     public Task<CommentDto> UpdateCommentAsync(int commentId, CommentUpdateDto comment, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync($"api/comments/{commentId}", Json(comment, PlannerJsonContext.Default.CommentUpdateDto), cancellationToken),
             PlannerJsonContext.Default.CommentDto, cancellationToken);

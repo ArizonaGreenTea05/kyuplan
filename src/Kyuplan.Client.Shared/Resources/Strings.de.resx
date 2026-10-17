@@ -2266,4 +2266,103 @@
   <data name="Branding_DefaultWindowsTheme" xml:space="preserve">
     <value>Windows-Client</value>
   </data>
+  <data name="Nav_Calendar" xml:space="preserve">
+    <value>Kalender</value>
+  </data>
+  <data name="Calendar_Lede" xml:space="preserve">
+    <value>Trainings, Prüfungen und andere Termine der gewählten Gruppe, nach Tag, Woche oder Monat.</value>
+  </data>
+  <data name="Calendar_Today" xml:space="preserve">
+    <value>Heute</value>
+  </data>
+  <data name="Calendar_Day" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="Calendar_Week" xml:space="preserve">
+    <value>Woche</value>
+  </data>
+  <data name="Calendar_Month" xml:space="preserve">
+    <value>Monat</value>
+  </data>
+  <data name="Calendar_Previous" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="Calendar_Next" xml:space="preserve">
+    <value>Weiter</value>
+  </data>
+  <data name="Calendar_ViewLabel" xml:space="preserve">
+    <value>Ansicht</value>
+  </data>
+  <data name="Calendar_NoEvents" xml:space="preserve">
+    <value>In diesem Zeitraum gibt es keine Termine.</value>
+  </data>
+  <data name="Calendar_NoGroup" xml:space="preserve">
+    <value>Wähle eine Gruppe, um ihre Termine zu sehen.</value>
+  </data>
+  <data name="Calendar_Cancelled" xml:space="preserve">
+    <value>Abgesagt</value>
+  </data>
+  <data name="Calendar_Counts" xml:space="preserve">
+    <value>{0} zugesagt · {1} abgesagt · {2} ohne Antwort</value>
+  </data>
+  <data name="Calendar_Invited" xml:space="preserve">
+    <value>{0} eingeladen</value>
+  </data>
+  <data name="Calendar_Back" xml:space="preserve">
+    <value>Zurück zum Kalender</value>
+  </data>
+  <data name="Calendar_OpenEvent" xml:space="preserve">
+    <value>Termin öffnen</value>
+  </data>
+  <data name="Calendar_Attendees" xml:space="preserve">
+    <value>Eingeladene Mitglieder</value>
+  </data>
+  <data name="Calendar_ColMember" xml:space="preserve">
+    <value>Mitglied</value>
+  </data>
+  <data name="Calendar_ColAnswer" xml:space="preserve">
+    <value>Antwort</value>
+  </data>
+  <data name="Calendar_ColComments" xml:space="preserve">
+    <value>Kommentare zu diesem Termin</value>
+  </data>
+  <data name="Calendar_NoAttendees" xml:space="preserve">
+    <value>Zu diesem Termin wurde niemand eingeladen.</value>
+  </data>
+  <data name="Calendar_CommentHint" xml:space="preserve">
+    <value>Kommentar zu {0} für diesen Termin schreiben</value>
+  </data>
+  <data name="Calendar_Post" xml:space="preserve">
+    <value>Kommentar hinzufügen</value>
+  </data>
+  <data name="Calendar_NotSynced" xml:space="preserve">
+    <value>Dem Planer noch nicht bekannt: Kommentare brauchen den nächsten Abgleich mit Spond.</value>
+  </data>
+  <data name="Calendar_TagNote" xml:space="preserve">
+    <value>Kommentare, die hier geschrieben werden, erhalten automatisch das Tag dieses Termins.</value>
+  </data>
+  <data name="Banner_InProgress" xml:space="preserve">
+    <value>{0} läuft gerade, bis {1}</value>
+  </data>
+  <data name="Banner_Open" xml:space="preserve">
+    <value>Termin anzeigen</value>
+  </data>
+  <data name="Format_MonthLong" xml:space="preserve">
+    <value>MMMM yyyy</value>
+  </data>
+  <data name="PermissionGroup_calendar" xml:space="preserve">
+    <value>Kalender</value>
+  </data>
+  <data name="Permission_calendar_view" xml:space="preserve">
+    <value>Den Kalender und seine Termine sehen</value>
+  </data>
+  <data name="Calendar_FilterAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="Calendar_FilterLabel" xml:space="preserve">
+    <value>Anzeigen</value>
+  </data>
+  <data name="Calendar_NoMatch" xml:space="preserve">
+    <value>Niemand hat diese Antwort gegeben.</value>
+  </data>
 </root>

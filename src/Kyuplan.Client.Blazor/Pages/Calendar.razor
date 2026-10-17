@@ -39,6 +39,10 @@
                 }
                 else
                 {
+                    @if (Vm.ShowNotStarted)
+                    {
+                        <p class="lede">@Strings.Rating_NotStarted</p>
+                    }
                     <div class="segmented" role="group" aria-label="@Strings.Calendar_FilterLabel">
                         @foreach (var option in Vm.FilterOptions)
                         {
@@ -56,6 +60,10 @@
                                 <tr>
                                     <th>@Strings.Calendar_ColMember</th>
                                     <th>@Strings.Calendar_ColAnswer</th>
+                                    @if (Vm.ShowRatings)
+                                    {
+                                        <th>@Strings.Rating_Label</th>
+                                    }
                                     <th>@Strings.Calendar_ColComments</th>
                                 </tr>
                             </thead>
@@ -65,6 +73,48 @@
                                     <tr @key="attendee.MemberId ?? attendee.Name.GetHashCode()">
                                         <td><strong>@attendee.Name</strong></td>
                                         <td><span class="answer @AnswerClass(attendee.Answer)">@attendee.AnswerText</span></td>
+                                        @if (Vm.ShowRatings)
+                                        {
+                                            <td class="rating-cell">
+                                                @if (attendee.HasRatings)
+                                                {
+                                                    <ul class="ratings">
+                                                        @foreach (var rating in attendee.Ratings)
+                                                        {
+                                                            <li class="@(rating.IsZero ? "zero" : "") @(rating.IsMine ? "mine" : "")" title="@rating.Tip">
+                                                                <span class="stars" aria-hidden="true">@rating.Glyphs</span>
+                                                                <strong>@rating.ValueText</strong>
+                                                                <small>@rating.UserText</small>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                    <small class="muted">@attendee.RatingSummary</small>
+                                                }
+                                                else if (attendee.ShowRating || Vm.CanViewRatings)
+                                                {
+                                                    <small class="muted not-rated">@Strings.Rating_None</small>
+                                                }
+                                                @if (attendee.CanRate)
+                                                {
+                                                    <div class="star-pick" role="group" aria-label="@string.Format("{0}: {1}", Strings.Rating_YourChoice, attendee.Name)">
+                                                        @foreach (var choice in attendee.Choices)
+                                                        {
+                                                            <button type="button" class="star-choice @(choice.IsSelected ? "on" : "") @(choice.IsZero ? "zero" : "")"
+                                                                    aria-pressed="@choice.IsSelected" title="@choice.Tip" aria-label="@choice.Tip"
+                                                                    disabled="@(!Vm.RateCommand.CanExecute(choice))"
+                                                                    @onclick="() => Vm.RateCommand.ExecuteAsync(choice)">@choice.Glyph</button>
+                                                        }
+                                                        @if (attendee.HasMyRating)
+                                                        {
+                                                            <button type="button" class="btn ghost" title="@attendee.ClearChoice.Tip" disabled="@(!Vm.RateCommand.CanExecute(attendee.ClearChoice))"
+                                                                    @onclick="() => Vm.RateCommand.ExecuteAsync(attendee.ClearChoice)">
+                                                                <span>@attendee.ClearChoice.Text</span>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                }
+                                            </td>
+                                        }
                                         <td>
                                             @foreach (var comment in attendee.Comments)
                                             {

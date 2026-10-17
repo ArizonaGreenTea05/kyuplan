@@ -55,8 +55,9 @@ public sealed record CalendarDto(
 /// <summary>One member invited to an event, what they answered and what has been written about them for this event.</summary>
 /// <param name="MemberId">The planner's id of the member; <c>null</c> when the member is not known to the planner yet (comments need it).</param>
 /// <param name="Comments">The comments on the member that carry the event's tag; empty for a user who may not read comments.</param>
+/// <param name="Ratings">Every user's evaluation of the member at this event, by user name; <c>null</c> or empty for a user who may not read evaluations.</param>
 public sealed record CalendarAttendeeDto(
-    int? MemberId, string Name, AttendanceMark Answer, IReadOnlyList<CommentDto> Comments);
+    int? MemberId, string Name, AttendanceMark Answer, IReadOnlyList<CommentDto> Comments, IReadOnlyList<RatingDto>? Ratings = null);
 
 /// <summary>An event with everybody invited to it.</summary>
 public sealed record CalendarEventDetailDto(CalendarEventDto Event, IReadOnlyList<CalendarAttendeeDto> Attendees);

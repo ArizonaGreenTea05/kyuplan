@@ -165,6 +165,12 @@ public interface IPlannerApi
     /// <summary>Writes a comment on a member of an event; the API tags it with the event's tag.</summary>
     Task<CommentDto> CreateEventCommentAsync(string groupId, string eventId, int memberId, CalendarCommentInputDto comment, CancellationToken cancellationToken = default);
 
+    /// <summary>Evaluates a member at an event with 0 to 5 stars as the signed-in user; replaces the user's earlier evaluation there.</summary>
+    Task<RatingDto> RateMemberAsync(string groupId, string eventId, int memberId, int stars, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes the signed-in user's evaluation of a member at an event back.</summary>
+    Task UnrateMemberAsync(string groupId, string eventId, int memberId, CancellationToken cancellationToken = default);
+
     /// <summary>All tags by name, with the event each is connected to and how many comments carry it.</summary>
     Task<IReadOnlyList<TagDto>> GetTagsAsync(CancellationToken cancellationToken = default);
 

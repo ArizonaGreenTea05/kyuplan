@@ -43,6 +43,7 @@ public sealed class ExamPlanningApiTests(WebApplicationFactory<Program> factory)
             builder.UseSetting("DefaultData:Enabled", "false"); // the tests fill their own tables; DefaultDataTests starts from the defaults
             builder.UseSetting("Database:ConnectionString", _database.ConnectionString);
             builder.UseSetting("Statistics:DefaultMinAttendancePercent", DefaultMinAttendancePercent.ToString()); // the shipped appsettings.json is the club's own value
+            builder.UseSetting("Statistics:ExamMinAverageStars", "0"); // the fitness tests are about attendance, age and waiting time; stars have their own
             TestAccounts.Configure(builder, _accounts);
             builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(new FakeTimeProvider(PinnedNow)));
         });

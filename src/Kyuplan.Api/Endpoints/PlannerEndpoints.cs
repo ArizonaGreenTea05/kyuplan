@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Configuration;
+using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
@@ -45,7 +46,7 @@ public static class PlannerEndpoints
             .RequirePermission(Permission.ReadsSpond);
 
         api.MapGet("/statistics/attendance", async (
-                [AsParameters] AttendanceQuery query, StatisticsService service, CancellationToken ct) =>
+                [AsParameters] AttendanceQuery query, StatisticsService service, RatingService ratings, CancellationToken ct) =>
             {
                 if (Validate(query) is { } errors) return Results.ValidationProblem(errors);
 
@@ -54,7 +55,7 @@ public static class PlannerEndpoints
                 if (HasEventSpan(query) && ValidateSpan(filter, nameof(AttendanceQuery.FromEventId), "fromEventId must not be after toEventId.") is { } spanErrors)
                     return Results.ValidationProblem(spanErrors);
 
-                return Results.Ok(await service.GetAttendanceAsync(filter, ct));
+                return Results.Ok(await service.GetAttendanceAsync(filter, await ratings.GetBookAsync(filter.GroupId, ct), ct));
             })
             .WithSummary("Per-member and per-event attendance for a time span (two dates or two events), with qualification against a minimum percentage.")
             .RequirePermission(Permission.StatisticsView);

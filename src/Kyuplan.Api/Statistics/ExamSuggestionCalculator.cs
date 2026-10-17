@@ -22,6 +22,7 @@ internal static class ExamSuggestionCalculator
     /// <param name="lastExams">The day of the latest exam before this one that each member (by id) took part in.</param>
     /// <param name="invitations">What each member (by id) answered to the invitation to this exam; members who are not in here are not invited.</param>
     /// <param name="preSaved">The members (by id) saved for this exam.</param>
+    /// <param name="minAverageStars">The average evaluation (0–5) a member needs over the filter's time span; 0 = not asked.</param>
     public static List<ExamSuggestionDto> Calculate(
         DateOnly examDate,
         IReadOnlyList<Belt> beltsInOrder,
@@ -30,7 +31,8 @@ internal static class ExamSuggestionCalculator
         IReadOnlyDictionary<string, string> subGroupNames,
         IReadOnlyDictionary<int, DateOnly> lastExams,
         IReadOnlyDictionary<int, AttendanceMark> invitations,
-        IReadOnlySet<int> preSaved)
+        IReadOnlySet<int> preSaved,
+        double minAverageStars = 0)
     {
         return people
             .Select(p => Judge(p.Member, p.Info))
@@ -45,6 +47,10 @@ internal static class ExamSuggestionCalculator
         {
             attendance.TryGetValue(info.Id, out var stats);
             var status = stats?.Status ?? QualificationStatus.InsufficientData;
+
+            // No event to average over is no evaluation to speak of, like too few events for the attendance.
+            var averageStars = stats?.AverageStars;
+            var ratingCheck = minAverageStars <= 0 || (averageStars is { } average && average >= minAverageStars) ? CheckState.Met : CheckState.NotMet;
             var lastExam = lastExams.TryGetValue(member.Id, out var last) ? last : (DateOnly?)null;
             var age = member.BirthDate is { } birth ? AgeOn(birth, examDate) : (int?)null;
 
@@ -61,7 +67,7 @@ internal static class ExamSuggestionCalculator
                 var candidates = beltsInOrder
                     .Select(b => (Belt: b, Link: b.Prerequisites.FirstOrDefault(p => p.RequiredBeltId == heldId)))
                     .Where(c => c.Link is not null)
-                    .Select(c => Assess(c.Belt, c.Link!, age, waitingSince, status))
+                    .Select(c => Assess(c.Belt, c.Link!, age, waitingSince, status, ratingCheck))
                     .ToList();
                 chosen = candidates.LastOrDefault(c => c.Verdict == SuggestionVerdict.Fit) ?? candidates.FirstOrDefault();
             }
@@ -79,18 +85,19 @@ internal static class ExamSuggestionCalculator
                 stats?.Invited ?? 0, stats?.Attended ?? 0, stats?.AttendanceRate ?? 0, status, stats?.EngagementScore ?? 0,
                 verdict,
                 invitations.TryGetValue(member.Id, out var answer) ? answer : null,
-                preSaved.Contains(member.Id));
+                preSaved.Contains(member.Id),
+                averageStars, minAverageStars, ratingCheck);
         }
 
-        Assessment Assess(Belt belt, BeltPrerequisite link, int? age, DateOnly? waitingSince, QualificationStatus status)
+        Assessment Assess(Belt belt, BeltPrerequisite link, int? age, DateOnly? waitingSince, QualificationStatus status, CheckState ratingCheck)
         {
             var ageCheck = Check(link.MinAgeYears, age);
             var waitCheck = Check(link.MinWaitMonths, waitingSince is { } since ? MonthsBetween(since, examDate) : null);
 
             // What is missed wins over what cannot be told: someone too young is "not yet" whether or not the waiting time is known.
-            // Too few events for a verdict is no attendance to speak of, so it counts as missed too.
+            // Too few events for a verdict is no attendance to speak of, so it counts as missed too; so does an average below the one asked.
             var attendanceMet = status == QualificationStatus.Qualified;
-            var verdict = !attendanceMet || ageCheck == CheckState.NotMet || waitCheck == CheckState.NotMet ? SuggestionVerdict.NotYet
+            var verdict = !attendanceMet || ratingCheck == CheckState.NotMet || ageCheck == CheckState.NotMet || waitCheck == CheckState.NotMet ? SuggestionVerdict.NotYet
                 : ageCheck == CheckState.Unknown || waitCheck == CheckState.Unknown ? SuggestionVerdict.NeedsData
                 : SuggestionVerdict.Fit;
 

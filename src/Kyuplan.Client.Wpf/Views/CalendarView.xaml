@@ -86,6 +86,8 @@
                         </StackPanel>
 
                         <TextBlock Text="{loc:Loc Calendar_TagNote}" Style="{StaticResource LedeText}" Margin="0,12,0,0" />
+                        <TextBlock Text="{loc:Loc Rating_NotStarted}" Style="{StaticResource LedeText}" Margin="0,6,0,0"
+                                   Visibility="{Binding ShowNotStarted, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{loc:Loc Calendar_Attendees}" Style="{StaticResource BodyStrongTextBlockStyle}" Margin="0,16,0,4" />
                         <TextBlock Text="{loc:Loc Calendar_NoAttendees}" Style="{StaticResource MutedText}"
                                    Visibility="{Binding HasAttendees, Converter={StaticResource InverseBoolToVisibility}}" />
@@ -130,6 +132,94 @@
                                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                                 <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding AnswerText}" Style="{StaticResource MutedText}" />
+
+                                                <!-- Evaluation: everybody's stars (a 0 is marked, nothing is "not evaluated"), and the user's own buttons -->
+                                                <StackPanel Margin="0,6,0,0" Visibility="{Binding ShowRating, Converter={StaticResource BoolToVisibility}}">
+                                                    <ItemsControl ItemsSource="{Binding Ratings}" IsTabStop="False">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" ToolTip="{Binding Tip}">
+                                                                    <TextBlock Text="{Binding Glyphs}" FontFamily="Segoe UI Symbol" Foreground="{DynamicResource DataOpenTextBrush}" />
+                                                                    <TextBlock Text="{Binding ValueText}" FontWeight="SemiBold" Margin="6,0,0,0">
+                                                                        <TextBlock.Style>
+                                                                            <Style TargetType="TextBlock">
+                                                                                <Style.Triggers>
+                                                                                    <DataTrigger Binding="{Binding IsZero}" Value="True">
+                                                                                        <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+                                                                                    </DataTrigger>
+                                                                                </Style.Triggers>
+                                                                            </Style>
+                                                                        </TextBlock.Style>
+                                                                    </TextBlock>
+                                                                    <TextBlock Text="{Binding UserText}" Style="{StaticResource MutedText}" Margin="6,0,0,0" TextTrimming="CharacterEllipsis" MaxWidth="90" />
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <TextBlock Text="{Binding RatingSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
+
+                                                    <ItemsControl ItemsSource="{Binding Choices}" Margin="0,4,0,0" IsTabStop="False"
+                                                                  AutomationProperties.Name="{loc:Loc Rating_YourChoice}"
+                                                                  Visibility="{Binding CanRate, Converter={StaticResource BoolToVisibility}}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <Button Content="{Binding Glyph}" ToolTip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}"
+                                                                        Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                        CommandParameter="{Binding}">
+                                                                    <Button.Style>
+                                                                        <!-- No BasedOn: the theme's button style turns a disabled button's text grey through its own triggers,
+                                                                             and a selected star is a disabled button (pressing it again changes nothing) -->
+                                                                        <Style TargetType="Button">
+                                                                            <Setter Property="MinHeight" Value="0" />
+                                                                            <Setter Property="MinWidth" Value="0" />
+                                                                            <Setter Property="Padding" Value="2,0" />
+                                                                            <Setter Property="Margin" Value="0" />
+                                                                            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
+                                                                            <Setter Property="FontSize" Value="22" />
+                                                                            <Setter Property="Background" Value="Transparent" />
+                                                                            <Setter Property="BorderThickness" Value="0" />
+                                                                            <Setter Property="Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+                                                                            <Setter Property="Template">
+                                                                                <Setter.Value>
+                                                                                    <ControlTemplate TargetType="Button">
+                                                                                        <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                                                          TextElement.Foreground="{TemplateBinding Foreground}" />
+                                                                                    </ControlTemplate>
+                                                                                </Setter.Value>
+                                                                            </Setter>
+                                                                            <Style.Triggers>
+                                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                                    <Setter Property="Opacity" Value="0.7" />
+                                                                                </Trigger>
+                                                                                <DataTrigger Binding="{Binding IsZero}" Value="True">
+                                                                                    <Setter Property="FontSize" Value="16" />
+                                                                                    <Setter Property="Margin" Value="0,0,8,0" />
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                                                </DataTrigger>
+                                                                                <MultiDataTrigger>
+                                                                                    <MultiDataTrigger.Conditions>
+                                                                                        <Condition Binding="{Binding IsSelected}" Value="True" />
+                                                                                        <Condition Binding="{Binding IsZero}" Value="True" />
+                                                                                    </MultiDataTrigger.Conditions>
+                                                                                    <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+                                                                                    <Setter Property="FontWeight" Value="Bold" />
+                                                                                </MultiDataTrigger>
+                                                                            </Style.Triggers>
+                                                                        </Style>
+                                                                    </Button.Style>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <Button Content="{Binding ClearChoice.Text}" ToolTip="{Binding ClearChoice.Tip}" HorizontalAlignment="Left"
+                                                            MinHeight="0" Padding="8,1" FontSize="12"
+                                                            Visibility="{Binding HasMyRating, Converter={StaticResource BoolToVisibility}}"
+                                                            Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding ClearChoice}" />
+                                                </StackPanel>
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="1">

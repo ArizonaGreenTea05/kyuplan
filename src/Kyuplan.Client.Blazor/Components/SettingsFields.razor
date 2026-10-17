@@ -160,6 +160,28 @@
             }
         </label>
     </div>
+
+    <div class="grid two">
+        <label class="field">
+            <span>@Strings.Settings_DefaultEventStars</span>
+            <input type="number" min="0" max="5" step="0.1" disabled="@Disabled" @bind="Form.DefaultEventStars" />
+            <small>@Strings.Settings_DefaultEventStarsHint</small>
+            @if (Form.DefaultEventStarsProblem is { } eventStarsProblem)
+            {
+                <p class="field-error" role="alert">@eventStarsProblem</p>
+            }
+        </label>
+
+        <label class="field">
+            <span>@Strings.Settings_ExamMinStars</span>
+            <input type="number" min="0" max="5" step="0.1" disabled="@Disabled" @bind="Form.ExamMinAverageStars" />
+            <small>@Strings.Settings_ExamMinStarsHint</small>
+            @if (Form.ExamMinAverageStarsProblem is { } minStarsProblem)
+            {
+                <p class="field-error" role="alert">@minStarsProblem</p>
+            }
+        </label>
+    </div>
 </section>
 
 <section class="card card-form" aria-labelledby="set-sync">

@@ -59,6 +59,8 @@ public class PlannerDbContext : DbContext
 
     public DbSet<CommentEdit> CommentEdits => Set<CommentEdit>();
 
+    public DbSet<MemberRating> MemberRatings => Set<MemberRating>();
+
     public DbSet<Tag> Tags => Set<Tag>();
 
     public DbSet<CommentTag> CommentTags => Set<CommentTag>();
@@ -199,6 +201,18 @@ public class PlannerDbContext : DbContext
             edit.Property(e => e.PreviousBody).HasMaxLength(CommentRules.MaxBodyLength);
 
             edit.HasOne(e => e.Comment).WithMany(c => c.Edits).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MemberRating>(rating =>
+        {
+            rating.Property(r => r.EventId).HasMaxLength(IdLength);
+            rating.Property(r => r.UserName).HasMaxLength(AccountRules.MaxUserNameLength);
+
+            // One evaluation per user, member and event; a member's evaluations go with the member.
+            rating.HasIndex(r => new { r.MemberId, r.EventId, r.UserId }).IsUnique();
+            rating.HasIndex(r => r.EventId);
+            rating.HasOne(r => r.Member).WithMany(m => m.Ratings).HasForeignKey(r => r.MemberId).OnDelete(DeleteBehavior.Cascade);
+            rating.ToTable(table => table.HasCheckConstraint("CK_MemberRatings_Stars", "\"Stars\" BETWEEN 0 AND 5"));
         });
 
         modelBuilder.Entity<Tag>(tag =>

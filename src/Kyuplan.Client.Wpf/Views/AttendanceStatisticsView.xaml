@@ -435,6 +435,15 @@
                                     <DataGridTextColumn Header="{loc:Loc Col_PerWeek}" SortMemberPath="SessionsPerWeek" Binding="{Binding SessionsPerWeekText, Mode=OneWay}"
                                                         Width="88" ElementStyle="{StaticResource NumberCell}" />
 
+                                    <DataGridTemplateColumn Header="{loc:Loc Rating_StarsHeader}" SortMemberPath="Stars" Width="76">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StarsText}" ToolTip="{Binding StarsTip}" TextAlignment="Right"
+                                                           VerticalAlignment="Center" Margin="8,0" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
                                     <DataGridTemplateColumn Width="160">
                                         <DataGridTemplateColumn.Header>
                                             <TextBlock Text="{loc:Loc Col_Form}" ToolTip="{loc:Loc Col_FormTip}" />
@@ -545,6 +554,7 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="{loc:Loc Col_Declined}" Binding="{Binding DeclinedText, Mode=OneWay}" Width="100" ElementStyle="{StaticResource NumberCell}" />
                                 <DataGridTextColumn Header="{loc:Loc Col_NoAnswer}" Binding="{Binding UnansweredText, Mode=OneWay}" Width="120" ElementStyle="{StaticResource NumberCell}" />
+                                <DataGridTextColumn Header="{loc:Loc Rating_StarsHeader}" Binding="{Binding StarsText, Mode=OneWay}" Width="90" ElementStyle="{StaticResource NumberCell}" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>

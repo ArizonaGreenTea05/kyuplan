@@ -2462,4 +2462,82 @@
   <data name="Calendar_NoMatch" xml:space="preserve">
     <value>Nobody has this answer.</value>
   </data>
+  <data name="Rating_Label" xml:space="preserve">
+    <value>Evaluation</value>
+  </data>
+  <data name="Rating_YourChoice" xml:space="preserve">
+    <value>Your evaluation</value>
+  </data>
+  <data name="Rating_None" xml:space="preserve">
+    <value>Not evaluated</value>
+  </data>
+  <data name="Rating_Choice" xml:space="preserve">
+    <value>{0} of 5 stars</value>
+  </data>
+  <data name="Rating_Clear" xml:space="preserve">
+    <value>Take back</value>
+  </data>
+  <data name="Rating_ClearTip" xml:space="preserve">
+    <value>Take your evaluation back</value>
+  </data>
+  <data name="Rating_You" xml:space="preserve">
+    <value>you</value>
+  </data>
+  <data name="Rating_Average" xml:space="preserve">
+    <value>Average {0} of 5 from {1} evaluations</value>
+  </data>
+  <data name="Rating_AverageOne" xml:space="preserve">
+    <value>Average {0} of 5 from 1 evaluation</value>
+  </data>
+  <data name="Rating_NotStarted" xml:space="preserve">
+    <value>Members can be evaluated once the event has started.</value>
+  </data>
+  <data name="Rating_StarsHeader" xml:space="preserve">
+    <value>Stars</value>
+  </data>
+  <data name="Rating_StarsTip" xml:space="preserve">
+    <value>Average evaluation (0 to 5 stars) over the events the member attended or was evaluated at. An event counts once, whatever the number of users who evaluated; without an evaluation it counts the default.</value>
+  </data>
+  <data name="Rating_StarsEvents" xml:space="preserve">
+    <value>{0} of {1} events evaluated</value>
+  </data>
+  <data name="Kpi_Stars" xml:space="preserve">
+    <value>Average evaluation</value>
+  </data>
+  <data name="Kpi_StarsHint" xml:space="preserve">
+    <value>Stars, 0 to 5, over the events members attended or were evaluated at</value>
+  </data>
+  <data name="Plan_ColStars" xml:space="preserve">
+    <value>Stars</value>
+  </data>
+  <data name="Plan_ReasonStars" xml:space="preserve">
+    <value>Average evaluation {0} of 5, {1} needed.</value>
+  </data>
+  <data name="Plan_ReasonNoStars" xml:space="preserve">
+    <value>No evaluation to average, {0} stars needed.</value>
+  </data>
+  <data name="Settings_DefaultEventStars" xml:space="preserve">
+    <value>Stars an event counts without evaluation</value>
+  </data>
+  <data name="Settings_DefaultEventStarsHint" xml:space="preserve">
+    <value>What an event counts for a member who attended it when no user evaluated them (0 to 5).</value>
+  </data>
+  <data name="Settings_ExamMinStars" xml:space="preserve">
+    <value>Minimum average evaluation for exams</value>
+  </data>
+  <data name="Settings_ExamMinStarsHint" xml:space="preserve">
+    <value>A member needs at least this average (0 to 5 stars) to be suggested for an exam; 0 = not asked.</value>
+  </data>
+  <data name="Settings_StarsInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 5.</value>
+  </data>
+  <data name="PermissionGroup_ratings" xml:space="preserve">
+    <value>Evaluations</value>
+  </data>
+  <data name="Permission_ratings_view" xml:space="preserve">
+    <value>Read the evaluations of members</value>
+  </data>
+  <data name="Permission_ratings_write" xml:space="preserve">
+    <value>Evaluate members and take back one’s own evaluations</value>
+  </data>
 </root>

@@ -956,6 +956,35 @@ internal sealed class FakePlannerApi : IPlannerApi
             return created;
         });
 
+    /// <summary>Every <c>rate:event:member:stars</c> and <c>unrate:event:member</c> asked for, in order.</summary>
+    public List<string> RatingCalls { get; } = [];
+
+    public Task<RatingDto> RateMemberAsync(string groupId, string eventId, int memberId, int stars, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            RatingCalls.Add($"rate:{eventId}:{memberId}:{stars}");
+            if (!RatingRules.IsStars(stars)) throw BadRequest("stars");
+            var attendees = Attendees.GetValueOrDefault(eventId) ?? throw NotFound();
+            var index = attendees.FindIndex(a => a.MemberId == memberId);
+            if (index < 0) throw NotFound();
+
+            var rating = new RatingDto(memberId, eventId, Account.Id, Account.UserName, stars, NextMoment());
+            attendees[index] = attendees[index] with { Ratings = [.. (attendees[index].Ratings ?? []).Where(r => r.UserId != Account.Id), rating] };
+            return rating;
+        });
+
+    public Task UnrateMemberAsync(string groupId, string eventId, int memberId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            RatingCalls.Add($"unrate:{eventId}:{memberId}");
+            var attendees = Attendees.GetValueOrDefault(eventId) ?? throw NotFound();
+            var index = attendees.FindIndex(a => a.MemberId == memberId);
+            if (index < 0) throw NotFound();
+
+            attendees[index] = attendees[index] with { Ratings = [.. (attendees[index].Ratings ?? []).Where(r => r.UserId != Account.Id)] };
+            return 0;
+        });
+
     public Task<CommentDto> UpdateCommentAsync(int commentId, CommentUpdateDto comment, CancellationToken cancellationToken = default) =>
         Run(() =>
         {
@@ -1123,6 +1152,8 @@ internal sealed class FakePlannerApi : IPlannerApi
                 IgnoreAdministrators = settings.IgnoreAdministrators, TimeZone = settings.TimeZone, ExamKeyword = settings.ExamKeyword,
                 DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent, DefaultMinInvitedEvents = settings.DefaultMinInvitedEvents,
                 SyncEnabled = settings.SyncEnabled, SyncIntervalMinutes = settings.SyncIntervalMinutes,
+                DefaultEventStars = settings.DefaultEventStars ?? Settings.DefaultEventStars,
+                ExamMinAverageStars = settings.ExamMinAverageStars ?? Settings.ExamMinAverageStars,
             };
             return new SettingsSavedDto(SaveRestarts);
         });

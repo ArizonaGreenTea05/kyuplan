@@ -90,6 +90,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddScoped<MemberService>();
     builder.Services.AddScoped<CommentService>();
     builder.Services.AddScoped<TagService>();
+    builder.Services.AddScoped<RatingService>();
     builder.Services.AddScoped<CalendarService>();
 
     // A new database starts with the standard belts and roles (DefaultBelts, DefaultRoles); see DefaultDataOptions.
@@ -207,6 +208,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapBeltEndpoints();
     app.MapCommentEndpoints();
     app.MapCalendarEndpoints();
+    app.MapRatingEndpoints();
     app.MapAccountEndpoints();
     app.MapSettingsEndpoints();
 

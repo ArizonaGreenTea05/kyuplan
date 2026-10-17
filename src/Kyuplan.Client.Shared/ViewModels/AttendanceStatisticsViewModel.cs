@@ -28,6 +28,7 @@ public enum MemberSortKey
     CurrentStreak,
     DaysSinceLastAttended,
     SessionsPerWeek,
+    Stars,
     EngagementScore,
 }
 
@@ -768,6 +769,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             new(Strings.Kpi_Attendance, Display.Percent(s.OverallAttendanceRate), Strings.Kpi_AttendanceOverallHint),
             new(Strings.Kpi_ResponseRate, Display.Percent(s.AverageResponseRate), Strings.Kpi_ResponseRateHint),
             new(Strings.Kpi_AverageAttendees, Display.Number(s.AverageAttendeesPerEvent), Strings.Kpi_AverageAttendeesHint),
+            new(Strings.Kpi_Stars, s.AverageStars is { } stars ? Display.Stars(stars) : Display.None, Strings.Kpi_StarsHint),
             new(Strings.Kpi_AtRisk, s.AtRiskCount.ToString(), Strings.Kpi_AtRiskHint, s.AtRiskCount > 0 ? KpiTone.Warning : KpiTone.Neutral),
         ];
 
@@ -829,6 +831,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             MemberSortKey.CurrentStreak => m => m.CurrentStreak,
             MemberSortKey.DaysSinceLastAttended => m => m.DaysSinceLastAttended,
             MemberSortKey.SessionsPerWeek => m => m.SessionsPerWeek,
+            MemberSortKey.Stars => m => m.Stars,
             MemberSortKey.EngagementScore => m => m.EngagementScore,
             _ => m => m.AttendanceRate,
         };

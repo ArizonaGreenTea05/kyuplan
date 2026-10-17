@@ -72,6 +72,12 @@ public sealed class StatisticsOptions
 
     public int DefaultMinInvitedEvents { get; set; } = 3;
 
+    /// <summary>What an event counts for a member who attended it and whom nobody evaluated, 0–5 stars (see docs/attendance-statistics.md).</summary>
+    public double DefaultEventStars { get; set; } = RatingRules.StandardDefaultEventStars;
+
+    /// <summary>The average evaluation, 0–5 stars, a member needs to be suggested for an exam. 0 = not asked (see docs/exam-planning.md).</summary>
+    public double ExamMinAverageStars { get; set; } = RatingRules.StandardExamMinAverageStars;
+
     /// <summary>Look-back window of the dashboard in days.</summary>
     public int DashboardDays { get; set; } = 90;
 

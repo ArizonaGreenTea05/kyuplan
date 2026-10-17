@@ -39,7 +39,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddSingleton<TimeProvider>(Time);
         services.AddSingleton(_clock);
         services.AddSingleton<ISpondDataSource>(Spond);
-        services.AddSingleton<IOptions<StatisticsOptions>>(Options.Create(new StatisticsOptions()));
+        services.AddSingleton<IOptions<StatisticsOptions>>(Options.Create(new StatisticsOptions { ExamMinAverageStars = 0 })); // stars have tests of their own
         services.AddSingleton<StatisticsService>();
         services.AddSingleton<SyncGate>();
         services.AddDbContext<PlannerDbContext>(options => options.UseSqlite(_database.ConnectionString));

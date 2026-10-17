@@ -109,13 +109,14 @@ public sealed class StatisticsService(
         static DateOnly StartDay(EventInfo e) => DateOnly.FromDateTime(e.Start.Date);
     }
 
-    public async Task<AttendanceStatisticsDto> GetAttendanceAsync(AttendanceFilter filter, CancellationToken cancellationToken)
+    /// <param name="ratings">The star evaluations of the group's members (see <c>RatingService.GetBookAsync</c>).</param>
+    public async Task<AttendanceStatisticsDto> GetAttendanceAsync(AttendanceFilter filter, RatingBook ratings, CancellationToken cancellationToken)
     {
         var group = await FindGroupAsync(filter.GroupId, cancellationToken);
         var events = await source.GetEventsAsync(
             group.Id, clock.StartOfDay(filter.From), clock.StartOfDay(filter.To.AddDays(1)), cancellationToken);
 
-        return AttendanceCalculator.Calculate(group, events, filter, clock.Now);
+        return AttendanceCalculator.Calculate(group, events, filter, clock.Now, ratings);
     }
 
     public async Task<DashboardDto> GetDashboardAsync(

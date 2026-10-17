@@ -86,9 +86,12 @@ or **saved** filter holds; the member search, the status buttons and the sorting
 | **Per week** | Accepted events per week, from the member's first invitation in the span to the end of the span (at least one week). Training frequency, independent of how many sessions were offered. |
 | **Form** | Outcome of the last 10 invitations, oldest first. |
 | **Trend** | Attendance over the last 8 invitations compared with attendance before that, in percentage points. Rising / falling at ±15 points; needs at least 12 invitations, otherwise "not enough events". |
+| **Stars** | The average evaluation, 0 to 5 stars (see [Star evaluations](#star-evaluations)). Empty without an event to average over. The tooltip says how many of those events somebody evaluated. |
 | **Engagement** | A 0–100 score: **60 %** attendance + **25 %** recent form (attendance over the last 8 invitations, or overall attendance with fewer than 8) + **15 %** answered. |
 
 Engagement bands: **Excellent** ≥ 80 · **Good** ≥ 60 · **Irregular** ≥ 40 · **At risk** < 40.
+
+The stars are not part of the engagement score.
 
 The weights are a judgement call, not a standard; they are constants at the top of `AttendanceCalculator` if your
 club weighs things differently.
@@ -102,6 +105,44 @@ club weighs things differently.
 - **At risk**: members in the *At risk* band that have a verdict.
 - **How attendance is spread**: members per 10-point attendance band. Members with too few events are not included.
 - **Attendance by month**: accepted ÷ invited over the events of each month. Months without events are omitted rather than shown as 0 %.
+- **Average evaluation**: the stars of every counted member and event (see below) averaged; the events table has the average of the members of each event.
+
+## Star evaluations
+
+Besides comments, users **evaluate a member at an event with 0 to 5 stars**, to follow how members perform. The implementation is
+[`RatingService`](../src/Kyuplan.Api/Persistence/RatingService.cs) (what is stored) and [`RatingBook`](../src/Kyuplan.Api/Statistics/RatingBook.cs)
+(how the statistics read it); the tests in `tests/Kyuplan.Tests/RatingTests.cs` and `RatingApiTests.cs` pin each rule below.
+
+- **Where.** On the **Calendar** page, in the detail of an event: next to each invited member the buttons **0 1 2 3 4 5**. Choosing one gives the
+  evaluation; choosing another replaces it; **Take back** removes it. Members can be evaluated once the event has started.
+- **One per user, member and event.** A user has at most one evaluation of a member at an event (the API replaces it); several users may each
+  have theirs.
+- **0 is not "none".** A member nobody evaluated shows *Not evaluated*. An evaluation of 0 stars shows `☆☆☆☆☆ 0/5` in red, and the button 0 is
+  highlighted in red when it is the user's.
+- **Everybody sees everybody's.** Whoever may read evaluations (`ratings.view`) sees all evaluations of the member at the event, each with the
+  user (their display name) and, in the tooltip, when it was given, and the average of them. Whoever may give them (`ratings.write`) gets the
+  buttons; nobody can change or take back another user's evaluation.
+- **An event counts once.** In every figure an event is **one** instance for a member, however many users evaluated them: it counts the
+  **average of its evaluations**, and, when nobody evaluated the member, the **default of 2.5 stars** (setting *Stars an event counts without
+  evaluation*, `Statistics:DefaultEventStars`).
+- **Which events count.** The events the member **attended** (accepted) and those somebody evaluated them at, even if they did not accept.
+  Events they stayed away from, without an evaluation, count nothing. Without any such event the member has no average.
+- **Average evaluation** = the mean of what those events count, over the time span and filter of the page; rounded to two decimals, shown with
+  one. *Stars*, *the events' average* and the *Average evaluation* figure follow the same filter as everything else on the page.
+- **Exams.** A member needs at least the **minimum average** (setting *Minimum average evaluation for exams*, `Statistics:ExamMinAverageStars`,
+  3 by default; 0 = not asked) over the filter's time span to be suggested for an exam; see [exam-planning.md](exam-planning.md). With the
+  standard values nobody who was never evaluated is suggested (every event counts 2.5, below 3): evaluations are what puts members forward.
+
+### API
+
+| Call | |
+| --- | --- |
+| `PUT /api/calendar/events/{eventId}/members/{memberId}/rating?groupId=` | `ratings.write`. `{ "stars": 0–5 }` as the signed-in user, replacing their earlier evaluation. `400` for stars outside 0–5 or an event that has not started, `404` for an unknown group, event or member. |
+| `DELETE /api/calendar/events/{eventId}/members/{memberId}/rating?groupId=` | `ratings.write`. Takes back the signed-in user's own evaluation (`204`, also when there is none). |
+| `GET /api/calendar/events/{eventId}?groupId=` | With `ratings.view` each attendee carries `ratings` (everybody's evaluations of them at this event). |
+| `GET /api/members/{memberId}/ratings` | `ratings.view`. Everything the member got, at all events, the latest first. |
+
+The statistics endpoint adds `averageStars`, `starEvents` and `evaluatedEvents` per member, `averageStars` per event and in the summary.
 
 ## Dashboard
 

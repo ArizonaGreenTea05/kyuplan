@@ -68,12 +68,49 @@ public sealed class CalendarDayRow(DateOnly date, bool isToday, bool isOutside, 
 /// <summary>A member invited to the event: their answer, what has been written about them for it (threads), and the comment being written.</summary>
 public sealed partial class EventAttendeeRow : ObservableObject
 {
-    public EventAttendeeRow(CalendarAttendeeDto attendee, bool canReply = false, bool canEdit = false, Func<CommentDto, bool>? mayDelete = null)
+    public EventAttendeeRow(
+        CalendarAttendeeDto attendee, bool canReply = false, bool canEdit = false, Func<CommentDto, bool>? mayDelete = null,
+        bool canRate = false, int? currentUserId = null)
     {
         Attendee = attendee;
         CanReply = canReply;
         Comments = Threads(attendee.Comments, canEdit, mayDelete ?? (_ => false));
+
+        CanRate = canRate;
+        Ratings = [.. (attendee.Ratings ?? []).Select(r => new RatingRow(r, currentUserId is { } me && r.UserId == me))];
+        MyStars = Ratings.FirstOrDefault(r => r.IsMine)?.Stars;
+        Choices = [.. Enumerable.Range(RatingRules.MinStars, RatingRules.MaxStars - RatingRules.MinStars + 1).Select(s => new StarChoice(this, s))];
+        ClearChoice = new StarChoice(this, null);
     }
+
+    // --- Evaluation ---------------------------------------------------------------------------------------------
+
+    /// <summary>The user may evaluate this member here: the permission, a member the planner knows, and an event that has started.</summary>
+    public bool CanRate { get; }
+
+    /// <summary>Everybody's evaluations of the member at this event (those the user may read), by user name.</summary>
+    public IReadOnlyList<RatingRow> Ratings { get; }
+
+    public bool HasRatings => Ratings.Count > 0;
+
+    /// <summary>What the signed-in user gave; <c>null</c> = they have not evaluated (which is not the same as 0).</summary>
+    public int? MyStars { get; }
+
+    public bool HasMyRating => MyStars is not null;
+
+    /// <summary>The buttons 0 to 5 to evaluate with.</summary>
+    public IReadOnlyList<StarChoice> Choices { get; }
+
+    /// <summary>The button that takes the user's evaluation back; only offered while there is one.</summary>
+    public StarChoice ClearChoice { get; }
+
+    /// <summary>There is something to show about evaluations: the buttons, or evaluations somebody gave.</summary>
+    public bool ShowRating => CanRate || HasRatings;
+
+    /// <summary>"Average 3.5 of 5 from 2 evaluations", or "Not evaluated" while nobody evaluated.</summary>
+    public string RatingSummary => !HasRatings
+        ? Strings.Rating_None
+        : string.Format(Ratings.Count == 1 ? Strings.Rating_AverageOne : Strings.Rating_Average, Display.Stars(Ratings.Average(r => r.Stars)), Ratings.Count);
 
     public CalendarAttendeeDto Attendee { get; }
 
@@ -168,6 +205,9 @@ public sealed partial class EventAttendeeRow : ObservableObject
     {
         OnPropertyChanged(string.Empty);
         foreach (var comment in Comments) comment.Refresh();
+        foreach (var rating in Ratings) rating.Refresh();
+        foreach (var choice in Choices) choice.Refresh();
+        ClearChoice.Refresh();
     }
 
     private static List<CommentRow> Threads(IReadOnlyList<CommentDto> comments, bool canEdit, Func<CommentDto, bool> mayDelete)

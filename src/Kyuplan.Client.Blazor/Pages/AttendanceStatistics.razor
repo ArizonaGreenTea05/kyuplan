@@ -259,6 +259,7 @@
                                         <SortHeader Vm="Vm" Key="MemberSortKey.CurrentStreak" Label="@Strings.Col_Streak" Class="num" />
                                         <SortHeader Vm="Vm" Key="MemberSortKey.DaysSinceLastAttended" Label="@Strings.Col_LastAttended" />
                                         <SortHeader Vm="Vm" Key="MemberSortKey.SessionsPerWeek" Label="@Strings.Col_PerWeek" Class="num" />
+                                        <SortHeader Vm="Vm" Key="MemberSortKey.Stars" Label="@Strings.Rating_StarsHeader" Class="num" />
                                         <th scope="col" title="@Strings.Col_FormTip">@Strings.Col_Form</th>
                                         <SortHeader Vm="Vm" Key="MemberSortKey.EngagementScore" Label="@Strings.Col_Engagement" />
                                     </tr>
@@ -287,6 +288,7 @@
                                                 }
                                             </td>
                                             <td class="num">@m.SessionsPerWeekText</td>
+                                            <td class="num" title="@m.StarsTip">@m.StarsText</td>
                                             <td class="form-cell"><FormStrip Marks="m.RecentMarks" /><TrendMark Member="m" /></td>
                                             <td><LevelBadge Member="m" /></td>
                                         </tr>
@@ -333,6 +335,7 @@
                                         <th scope="col" class="att">@Strings.Col_Attendance</th>
                                         <th scope="col" class="num">@Strings.Col_Declined</th>
                                         <th scope="col" class="num">@Strings.Col_NoAnswer</th>
+                                        <th scope="col" class="num" title="@Strings.Rating_StarsTip">@Strings.Rating_StarsHeader</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -350,6 +353,7 @@
                                             </td>
                                             <td class="num">@e.DeclinedText</td>
                                             <td class="num">@e.UnansweredText</td>
+                                            <td class="num">@e.StarsText</td>
                                         </tr>
                                     }
                                 </tbody>

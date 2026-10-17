@@ -152,6 +152,8 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | `Statistics:TimeZone` | `Europe/Berlin` | Time zone for days, weekdays and months (Spond delivers UTC). |
 | `Statistics:DefaultMinAttendancePercent` | `75` | Pre-selected threshold. |
 | `Statistics:DefaultMinInvitedEvents` | `3` | Pre-selected minimum number of invitations. |
+| `Statistics:DefaultEventStars` | `2.5` | Stars (0–5) an event counts for a member who attended it and whom no user evaluated. |
+| `Statistics:ExamMinAverageStars` | `3` | The average star evaluation (0–5) a member needs to be suggested for an exam; 0 = not asked. |
 | `Statistics:DashboardDays` / `UpcomingDays` | `90` / `14` | Dashboard look-back and look-ahead. |
 | `Statistics:ExamKeyword` | `Prüfung` | Events whose name contains this word (case-insensitive) are exams. The statistics page opens with the span from the last exam to the next one. Empty, or no exam pair in the window = it opens with the events of the last six months instead. |
 | `Statistics:EventSearchMonthsBack` | `12` | How many months back events are searched for exams and offered as the start or end of the span (1–24). |
@@ -205,6 +207,7 @@ The WPF client can also remember the **login**, encrypted (`login.dat` there, se
 | `GET /api/calendar?groupId=&view=day\|week\|month&date=` | **`calendar.view`**. The events of a group within the day, week (Monday to Sunday) or month of `date` (default: today), with how many accepted, declined or did not answer; cancelled events are marked. Events are those of the search window. |
 | `GET /api/calendar/current?groupId=` | **`calendar.view`**. The events going on right now (the clients' banner asks this every minute). |
 | `GET /api/calendar/events/{eventId}?groupId=` | **`calendar.view`**. One event with everybody invited (name, answer, planner member id when known); with `comments.view` also the comments on them that carry the event's tag. |
+| `PUT` · `DELETE /api/calendar/events/{eventId}/members/{memberId}/rating?groupId=` · `GET /api/members/{memberId}/ratings` | Star evaluations (0–5, one per user, member and event). **`ratings.write`** to give (`{ "stars" }`, replaces the user's own; `400` before the event has started) or take back one's own; **`ratings.view`** to read all of a member (the event detail lists everybody's with `ratings.view`). See [docs/attendance-statistics.md](docs/attendance-statistics.md#star-evaluations). |
 | `POST /api/calendar/events/{eventId}/members/{memberId}/comments?groupId=` | **`comments.write`**. A comment on a member, tagged with the event's tag (the oldest tag connected to the event; one named after the event and its day is created if there is none). |
 | `GET /api/tags` · `GET /api/tags/{tagId}` · `POST /api/tags` · `PUT /api/tags/{tagId}` · `DELETE /api/tags/{tagId}` | **`tags.edit`** to create, replace and delete; reading needs `tags.view`, `comments.write` or `comments.edit` (whoever writes or changes comments chooses among the tags). The tags by name, each with the Spond event it is connected to (none or one; `groupId` + `eventId` on write, the event must be in the group's search window) and how many comments carry it; create, replace and delete one (a deleted tag is taken off the comments, which stay). `409` when the name is taken (in any case). |
 | `GET /api/exams/{examId}/members` | Everybody the exam knows, by name: those invited on Spond (`invitation`: `Attended` = accepted, `Declined`, `Unanswered`, `Other`; `null` = not invited), those saved for it (`isPreSaved`) and those who received a belt at it (`receivedBeltId`). |
@@ -391,6 +394,7 @@ Every page needs its `.view` permission, and every change a permission of its ow
 | members | `members.view`, `members.edit` (belt and days of a member) |
 | belts | `belts.view` (members and exams need to read the belts, too), `belts.edit` |
 | comments | `comments.view`, `comments.write` (comments and replies), `comments.edit` (change comments), `comments.delete` (one's own), `comments.deleteAny` |
+| ratings | `ratings.view` (everybody's star evaluations of members), `ratings.write` (evaluate, take back one's own) |
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | users | `users.view`, `users.edit` (create users, change names and passwords), `users.delete`, `users.grant` (give roles and permissions to users) |

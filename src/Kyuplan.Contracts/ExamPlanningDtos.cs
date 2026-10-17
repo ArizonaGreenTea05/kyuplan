@@ -80,6 +80,9 @@ public enum CheckState
 /// <param name="AttendanceStatus">The verdict the attendance statistics give with the filter; a member who was not invited to any event in the span has <see cref="QualificationStatus.InsufficientData"/>.</param>
 /// <param name="Invitation">What the member answered to the invitation to this exam; <c>null</c> = not invited yet.</param>
 /// <param name="IsPreSaved">The member is saved for this exam.</param>
+/// <param name="AverageStars">The member's average evaluation over the filter's time span (see <see cref="MemberAttendanceDto.AverageStars"/>); <c>null</c> = no event to average over.</param>
+/// <param name="MinAverageStars">The average the exams ask for (setting); 0 = none.</param>
+/// <param name="RatingCheck">Whether <paramref name="AverageStars"/> reaches <paramref name="MinAverageStars"/>.</param>
 public sealed record ExamSuggestionDto(
     int MemberId,
     string Name,
@@ -102,7 +105,10 @@ public sealed record ExamSuggestionDto(
     int EngagementScore,
     SuggestionVerdict Verdict,
     AttendanceMark? Invitation,
-    bool IsPreSaved);
+    bool IsPreSaved,
+    double? AverageStars = null,
+    double MinAverageStars = 0,
+    CheckState RatingCheck = CheckState.Met);
 
 /// <summary>The members of an exam's group, judged for the exam with one filter.</summary>
 /// <param name="FilterId">The saved filter the attendance was measured with; <c>null</c> = the default one (see <see cref="Filter"/>).</param>

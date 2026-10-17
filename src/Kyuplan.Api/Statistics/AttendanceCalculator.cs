@@ -30,9 +30,11 @@ internal static class AttendanceCalculator
     }
 
     /// <param name="now">Current time in the club time zone; decides which events are over and what "today" is.</param>
+    /// <param name="ratings">The star evaluations of the members at the events; none = nobody was evaluated, every attended event counts the default.</param>
     public static AttendanceStatisticsDto Calculate(
-        GroupInfo group, IEnumerable<EventInfo> events, AttendanceFilter filter, DateTimeOffset now)
+        GroupInfo group, IEnumerable<EventInfo> events, AttendanceFilter filter, DateTimeOffset now, RatingBook? ratings = null)
     {
+        ratings ??= RatingBook.None();
         var heldEvents = SelectHeldEvents(events, filter, now);
         var members = group.Members
             .DistinctBy(m => m.Id)
@@ -54,20 +56,24 @@ internal static class AttendanceCalculator
         var windowEnd = filter.To < today ? filter.To : today;
 
         var memberRows = members
-            .Select(m => BuildMember(m, invitations[m.Id].ToArray(), filter, today, windowEnd, subGroupNames))
+            .Select(m => BuildMember(m, invitations[m.Id].ToArray(), filter, today, windowEnd, subGroupNames, ratings))
             .OfType<MemberAttendanceDto>()
             .OrderByDescending(m => m.AttendanceRate)
             .ThenByDescending(m => m.Invited)
             .ThenBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        var eventRows = BuildEventRows(heldEvents, invitations);
+        var eventRows = BuildEventRows(heldEvents, invitations, ratings);
+        var allStars = invitations
+            .SelectMany(kv => kv.Value.Select(i => ratings.StarsOf(kv.Key, i.Event.Id, i.Attended)))
+            .OfType<double>()
+            .ToList();
 
         return new AttendanceStatisticsDto(
             filter,
             group.Name,
             now,
-            BuildSummary(memberRows, eventRows),
+            BuildSummary(memberRows, eventRows, allStars),
             memberRows,
             eventRows.OrderByDescending(e => e.Start).ToList(),
             BuildDistribution(memberRows),
@@ -106,10 +112,15 @@ internal static class AttendanceCalculator
         AttendanceFilter filter,
         DateOnly today,
         DateOnly windowEnd,
-        IReadOnlyDictionary<string, string> subGroupNames)
+        IReadOnlyDictionary<string, string> subGroupNames,
+        RatingBook ratings)
     {
         var invited = invitations.Length;
         if (invited == 0) return null;
+
+        // An event counts once, however many users evaluated the member; only events the member attended or was evaluated at count.
+        var stars = invitations.Select(i => ratings.StarsOf(member.Id, i.Event.Id, i.Attended)).OfType<double>().ToList();
+        var evaluated = invitations.Count(i => ratings.IsEvaluated(member.Id, i.Event.Id));
 
         var attended = invitations.Count(i => i.Attended);
         var declined = invitations.Count(i => i.Rsvp == Rsvp.Declined);
@@ -183,7 +194,8 @@ internal static class AttendanceCalculator
             streak, longestStreak,
             firstInvited, lastAttended, daysSince,
             perWeek, recentRate, trendDelta, trend,
-            score, LevelFor(score), status, marks);
+            score, LevelFor(score), status, marks,
+            stars.Count == 0 ? null : Math.Round(stars.Average(), 2), stars.Count, evaluated);
     }
 
     internal static EngagementLevel LevelFor(int score) => score switch
@@ -195,7 +207,7 @@ internal static class AttendanceCalculator
     };
 
     private static List<EventAttendanceDto> BuildEventRows(
-        List<EventInfo> heldEvents, Dictionary<string, List<Invitation>> invitationsByMember)
+        List<EventInfo> heldEvents, Dictionary<string, List<Invitation>> invitationsByMember, RatingBook ratings)
     {
         // Count each event over the members that are part of the analysis only (respects the subgroup filter).
         var included = invitationsByMember
@@ -207,10 +219,12 @@ internal static class AttendanceCalculator
         foreach (var e in heldEvents)
         {
             int invited = 0, attended = 0, declined = 0, unanswered = 0;
+            List<double> stars = [];
             foreach (var (memberId, rsvp) in e.Responses)
             {
                 if (!included.Contains(memberId)) continue;
                 invited++;
+                if (ratings.StarsOf(memberId, e.Id, rsvp == Rsvp.Accepted) is { } given) stars.Add(given);
                 switch (rsvp)
                 {
                     case Rsvp.Accepted: attended++; break;
@@ -220,14 +234,15 @@ internal static class AttendanceCalculator
             }
 
             if (invited == 0) continue;
-            rows.Add(new EventAttendanceDto(e.Id, e.Name, e.Start, invited, attended, declined, unanswered, Percent(attended, invited)));
+            rows.Add(new EventAttendanceDto(e.Id, e.Name, e.Start, invited, attended, declined, unanswered, Percent(attended, invited),
+                stars.Count == 0 ? null : Math.Round(stars.Average(), 2)));
         }
 
         return rows;
     }
 
     private static AttendanceSummaryDto BuildSummary(
-        IReadOnlyList<MemberAttendanceDto> members, IReadOnlyList<EventAttendanceDto> events)
+        IReadOnlyList<MemberAttendanceDto> members, IReadOnlyList<EventAttendanceDto> events, IReadOnlyList<double> stars)
     {
         var totalInvited = members.Sum(m => m.Invited);
         var totalAttended = members.Sum(m => m.Attended);
@@ -242,7 +257,8 @@ internal static class AttendanceCalculator
             members.Count(m => m.Status != QualificationStatus.InsufficientData && m.Level == EngagementLevel.AtRisk),
             Percent(totalAttended, totalInvited),
             Percent(totalInvited - totalUnanswered, totalInvited),
-            events.Count == 0 ? 0 : Math.Round(events.Average(e => (double)e.Attended), 1));
+            events.Count == 0 ? 0 : Math.Round(events.Average(e => (double)e.Attended), 1),
+            stars.Count == 0 ? null : Math.Round(stars.Average(), 2));
     }
 
     private static List<DistributionBucketDto> BuildDistribution(IReadOnlyList<MemberAttendanceDto> members)

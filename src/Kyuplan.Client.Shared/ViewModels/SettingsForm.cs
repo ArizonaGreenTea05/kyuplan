@@ -29,6 +29,8 @@ public sealed partial class SettingsForm : ObservableObject
     [ObservableProperty] private string _examKeyword = "";
     [ObservableProperty] private int _defaultMinAttendancePercent;
     [ObservableProperty] private int _defaultMinInvitedEvents;
+    [ObservableProperty] private double _defaultEventStars = RatingRules.StandardDefaultEventStars;
+    [ObservableProperty] private double _examMinAverageStars = RatingRules.StandardExamMinAverageStars;
     [ObservableProperty] private bool _syncEnabled;
     [ObservableProperty] private int _syncIntervalMinutes;
     [ObservableProperty] private string _allowedHosts = SettingsRules.AnyHost;
@@ -47,6 +49,8 @@ public sealed partial class SettingsForm : ObservableObject
         ExamKeyword = settings.ExamKeyword;
         DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent;
         DefaultMinInvitedEvents = settings.DefaultMinInvitedEvents;
+        DefaultEventStars = settings.DefaultEventStars;
+        ExamMinAverageStars = settings.ExamMinAverageStars;
         SyncEnabled = settings.SyncEnabled;
         SyncIntervalMinutes = settings.SyncIntervalMinutes;
         AllowedHosts = string.IsNullOrWhiteSpace(settings.AllowedHosts) ? SettingsRules.AnyHost : settings.AllowedHosts;
@@ -59,7 +63,8 @@ public sealed partial class SettingsForm : ObservableObject
         DatabasePath.Trim(), AccountsDatabasePath.Trim(), UseDemoData, SpondEmail.Trim(), SpondPhoneNumber.Trim(),
         SpondPassword.Length == 0 ? null : SpondPassword, IgnoreAdministrators, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
-        [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim());
+        [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
+        DefaultEventStars, ExamMinAverageStars);
 
     [RelayCommand]
     private void AddBackupAccount() => AddBackup(new BackupAccountForm());
@@ -79,6 +84,7 @@ public sealed partial class SettingsForm : ObservableObject
         SpondEmail.Trim() == (s.SpondEmail ?? "") && SpondPhoneNumber.Trim() == (s.SpondPhoneNumber ?? "") && SpondPassword.Length == 0 &&
         IgnoreAdministrators == s.IgnoreAdministrators && TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
+        DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
         SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) && BackupMatches(s.BackupAccounts ?? []);
 
     private bool BackupMatches(IReadOnlyList<SpondAccountDto> saved)
@@ -108,6 +114,10 @@ public sealed partial class SettingsForm : ObservableObject
 
     public string? InvitedEventsProblem => SettingsRules.IsInvitedEvents(DefaultMinInvitedEvents) ? null : Strings.Settings_InvitedInvalid;
 
+    public string? DefaultEventStarsProblem => SettingsRules.IsStars(DefaultEventStars) ? null : Strings.Settings_StarsInvalid;
+
+    public string? ExamMinAverageStarsProblem => SettingsRules.IsStars(ExamMinAverageStars) ? null : Strings.Settings_StarsInvalid;
+
     public string? SyncIntervalProblem =>
         SettingsRules.IsSyncInterval(SyncIntervalMinutes) ? null : string.Format(Strings.Settings_SyncIntervalInvalid, SettingsRules.MaxSyncIntervalMinutes);
 
@@ -115,7 +125,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     public bool IsValid =>
         DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && TimeZoneProblem is null &&
-        PercentProblem is null && InvitedEventsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null;
+        PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null;
 }
 
 /// <summary>One backup Spond login as it is typed: the password is only filled in to set or change it.</summary>

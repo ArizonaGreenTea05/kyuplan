@@ -25,6 +25,7 @@ public static class DefaultRoles
             Permission.ExamsView, Permission.ExamsEdit, Permission.ExamsFilters, Permission.ExamsCandidates, Permission.ExamsResults,
             Permission.MembersView, Permission.MembersEdit, Permission.BeltsView, Permission.BeltsEdit,
             Permission.CommentsView, Permission.CommentsWrite, Permission.CommentsEdit, Permission.CommentsDelete,
+            Permission.RatingsView, Permission.RatingsWrite,
             Permission.TagsView, Permission.TagsEdit,
         ]),
 
@@ -33,6 +34,7 @@ public static class DefaultRoles
         [
             Permission.DashboardView, Permission.StatisticsView, Permission.CalendarView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
             Permission.CommentsView, Permission.CommentsWrite, Permission.CommentsEdit, Permission.CommentsDelete,
+            Permission.RatingsView, Permission.RatingsWrite,
             Permission.TagsView, Permission.TagsEdit,
         ]),
 
@@ -40,7 +42,7 @@ public static class DefaultRoles
         new("Passive User",
         [
             Permission.DashboardView, Permission.StatisticsView, Permission.CalendarView, Permission.ExamsView, Permission.MembersView, Permission.BeltsView,
-            Permission.CommentsView, Permission.TagsView,
+            Permission.CommentsView, Permission.RatingsView, Permission.TagsView,
         ]),
     ];
 

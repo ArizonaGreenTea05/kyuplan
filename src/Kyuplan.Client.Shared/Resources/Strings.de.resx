@@ -2365,4 +2365,82 @@
   <data name="Calendar_NoMatch" xml:space="preserve">
     <value>Niemand hat diese Antwort gegeben.</value>
   </data>
+  <data name="Rating_Label" xml:space="preserve">
+    <value>Bewertung</value>
+  </data>
+  <data name="Rating_YourChoice" xml:space="preserve">
+    <value>Ihre Bewertung</value>
+  </data>
+  <data name="Rating_None" xml:space="preserve">
+    <value>Nicht bewertet</value>
+  </data>
+  <data name="Rating_Choice" xml:space="preserve">
+    <value>{0} von 5 Sternen</value>
+  </data>
+  <data name="Rating_Clear" xml:space="preserve">
+    <value>Zurücknehmen</value>
+  </data>
+  <data name="Rating_ClearTip" xml:space="preserve">
+    <value>Ihre Bewertung zurücknehmen</value>
+  </data>
+  <data name="Rating_You" xml:space="preserve">
+    <value>Sie</value>
+  </data>
+  <data name="Rating_Average" xml:space="preserve">
+    <value>Durchschnitt {0} von 5 aus {1} Bewertungen</value>
+  </data>
+  <data name="Rating_AverageOne" xml:space="preserve">
+    <value>Durchschnitt {0} von 5 aus 1 Bewertung</value>
+  </data>
+  <data name="Rating_NotStarted" xml:space="preserve">
+    <value>Mitglieder können bewertet werden, sobald die Veranstaltung begonnen hat.</value>
+  </data>
+  <data name="Rating_StarsHeader" xml:space="preserve">
+    <value>Sterne</value>
+  </data>
+  <data name="Rating_StarsTip" xml:space="preserve">
+    <value>Durchschnittliche Bewertung (0 bis 5 Sterne) über die Veranstaltungen, bei denen das Mitglied teilgenommen hat oder bewertet wurde. Eine Veranstaltung zählt einmal, egal wie viele Benutzer bewertet haben; ohne Bewertung zählt der Standardwert.</value>
+  </data>
+  <data name="Rating_StarsEvents" xml:space="preserve">
+    <value>{0} von {1} Veranstaltungen bewertet</value>
+  </data>
+  <data name="Kpi_Stars" xml:space="preserve">
+    <value>Durchschnittliche Bewertung</value>
+  </data>
+  <data name="Kpi_StarsHint" xml:space="preserve">
+    <value>Sterne, 0 bis 5, über die Veranstaltungen, bei denen Mitglieder teilgenommen haben oder bewertet wurden</value>
+  </data>
+  <data name="Plan_ColStars" xml:space="preserve">
+    <value>Sterne</value>
+  </data>
+  <data name="Plan_ReasonStars" xml:space="preserve">
+    <value>Durchschnittliche Bewertung {0} von 5, {1} nötig.</value>
+  </data>
+  <data name="Plan_ReasonNoStars" xml:space="preserve">
+    <value>Keine Bewertung für einen Durchschnitt, {0} Sterne nötig.</value>
+  </data>
+  <data name="Settings_DefaultEventStars" xml:space="preserve">
+    <value>Sterne einer Veranstaltung ohne Bewertung</value>
+  </data>
+  <data name="Settings_DefaultEventStarsHint" xml:space="preserve">
+    <value>Was eine Veranstaltung für ein Mitglied zählt, das teilgenommen hat, wenn kein Benutzer es bewertet hat (0 bis 5).</value>
+  </data>
+  <data name="Settings_ExamMinStars" xml:space="preserve">
+    <value>Mindestdurchschnitt der Bewertung für Prüfungen</value>
+  </data>
+  <data name="Settings_ExamMinStarsHint" xml:space="preserve">
+    <value>Ein Mitglied braucht mindestens diesen Durchschnitt (0 bis 5 Sterne), um für eine Prüfung vorgeschlagen zu werden; 0 = nicht verlangt.</value>
+  </data>
+  <data name="Settings_StarsInvalid" xml:space="preserve">
+    <value>Geben Sie eine Zahl von 0 bis 5 ein.</value>
+  </data>
+  <data name="PermissionGroup_ratings" xml:space="preserve">
+    <value>Bewertungen</value>
+  </data>
+  <data name="Permission_ratings_view" xml:space="preserve">
+    <value>Die Bewertungen von Mitgliedern lesen</value>
+  </data>
+  <data name="Permission_ratings_write" xml:space="preserve">
+    <value>Mitglieder bewerten und eigene Bewertungen zurücknehmen</value>
+  </data>
 </root>

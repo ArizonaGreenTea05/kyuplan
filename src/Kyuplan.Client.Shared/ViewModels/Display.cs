@@ -19,6 +19,13 @@ public static class Display
 
     public static string Percent(double value) => value.ToString("0.#", CultureInfo.CurrentCulture) + " %";
 
+    /// <summary>An average of stars with one decimal: "3.4".</summary>
+    public static string Stars(double value) => value.ToString("0.0", CultureInfo.CurrentCulture);
+
+    /// <summary>"★★★☆☆": the stars given, then the empty ones up to five.</summary>
+    public static string StarGlyphs(int stars) =>
+        new string('★', Math.Clamp(stars, 0, RatingRules.MaxStars)) + new string('☆', RatingRules.MaxStars - Math.Clamp(stars, 0, RatingRules.MaxStars));
+
     public static string Number(double value) => value.ToString("0.#", CultureInfo.CurrentCulture);
 
     public static string Date(DateOnly date) => date.ToString(Strings.Format_Date, CultureInfo.CurrentCulture);

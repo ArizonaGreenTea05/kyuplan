@@ -390,6 +390,50 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.ToTable("Members");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.MemberRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Stars")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("MemberId", "EventId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("MemberRatings", t =>
+                        {
+                            t.HasCheckConstraint("CK_MemberRatings_Stars", "\"Stars\" BETWEEN 0 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.SavedFilter", b =>
                 {
                     b.Property<int>("Id")
@@ -639,6 +683,17 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Navigation("Belt");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.MemberRating", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.Member", "Member")
+                        .WithMany("Ratings")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.SavedFilter", b =>
                 {
                     b.HasOne("Kyuplan.Api.Persistence.Exam", "Exam")
@@ -680,6 +735,8 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Navigation("Comments");
 
                     b.Navigation("Participations");
+
+                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Persistence.Tag", b =>

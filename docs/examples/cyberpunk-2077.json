@@ -1,0 +1,13 @@
+{
+  "id": "cyberpunk-2077",
+  "name": "Cyberpunk 2077",
+  "nameDe": "Cyberpunk 2077",
+  "scheme": "dark",
+  "highContrast": false,
+  "accent": "#00f0ff",
+  "colors": {
+    "ground": "#0d0221", "sheet": "#160836", "sheetAlt": "#25104f", "sidebar": "#080117",
+    "text": "#e8fbff", "muted": "#a99bff", "rule": "#3b1a7a", "ruleStrong": "#ff2bd6",
+    "amber": "#fcee09", "amberWash": "#3d3a06", "red": "#ff2a6d", "redWash": "#46082a"
+  }
+}

@@ -150,6 +150,17 @@
                                                    Visibility="{Binding OrganizationNameProblem, Converter={StaticResource StringToVisibility}}" />
                                         <TextBlock Text="{loc:Loc Branding_OrganizationNameHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
                                     </StackPanel>
+
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Branding_Currency}" Style="{StaticResource FieldLabelText}" />
+                                        <TextBox MaxLength="{x:Static contracts:BrandingRules.MaxCurrencyLength}"
+                                                 IsEnabled="{Binding CanEdit}"
+                                                 AutomationProperties.Name="{loc:Loc Branding_Currency}"
+                                                 Text="{Binding FormCurrency, UpdateSourceTrigger=PropertyChanged}" />
+                                        <TextBlock Text="{Binding CurrencyProblem}" Style="{StaticResource ProblemText}"
+                                                   Visibility="{Binding CurrencyProblem, Converter={StaticResource StringToVisibility}}" />
+                                        <TextBlock Text="{loc:Loc Branding_CurrencyHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
+                                    </StackPanel>
                                 </ctl:ResponsiveGrid>
 
                                 <!-- The colour: typed as #RGB or #RRGGBB, or picked from the swatches -->

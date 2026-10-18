@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RolesViewModel>();
         services.AddSingleton<BrandingAdminViewModel>();
         services.AddSingleton<BackupViewModel>();
+        services.AddSingleton<ExamPricesViewModel>();
         services.AddSingleton<ApiRestartWatcher>();
         services.AddSingleton<SetupViewModel>(); // asked before anything else: an API without a user has to be set up first
         services.AddSingleton<SettingsViewModel>();

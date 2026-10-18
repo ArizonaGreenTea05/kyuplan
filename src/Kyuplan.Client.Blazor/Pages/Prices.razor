@@ -1,0 +1,105 @@
+@page "/prices"
+@inherits ViewModelComponent<ExamPricesViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Prices_Intro</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.HasLoaded)
+        {
+            <form class="card card-form" aria-labelledby="prices-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="prices-title">@Strings.Prices_General</h2>
+
+                <label class="field">
+                    <span>@Strings.Prices_General</span>
+                    <input type="text" inputmode="decimal" disabled="@(!Vm.CanEdit)" @bind="Vm.General.Text" @bind:event="oninput" />
+                </label>
+
+                <h2>@Strings.Prices_Belts</h2>
+                <p class="note">@Strings.Prices_BeltsHint</p>
+
+                @if (Vm.HasNoBelts)
+                {
+                    <p class="empty-inline">@Strings.Prices_NoBelts</p>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="data">
+                            <thead>
+                                <tr>
+                                    <th>@Strings.Pay_Belt</th>
+                                    <th>@Strings.Prices_Belts</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Vm.Rows)
+                                {
+                                    <tr @key="row.Belt.Id">
+                                        <td class="name"><BeltBadge Belt="row.Belt" ShowName="true" /></td>
+                                        <td>
+                                            <input type="text" inputmode="decimal" disabled="@(!Vm.CanEdit)" @bind="row.Price.Text" @bind:event="oninput"
+                                                   aria-label="@($"{Strings.Prices_Belts}: {row.Name}")" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (Vm.HasInvalid)
+                {
+                    <p class="field-error" role="alert">@Strings.Prices_Invalid</p>
+                }
+
+                <p class="note">@Strings.Prices_Note</p>
+
+                @if (Vm.CanEdit)
+                {
+                    <div class="form-actions">
+                        <button type="submit" class="btn" disabled="@(!Vm.SaveCommand.CanExecute(null))">
+                            <Icon Name="check" /><span>@Strings.Prices_Save</span>
+                        </button>
+                        <button type="button" class="btn ghost" disabled="@(!Vm.DiscardCommand.CanExecute(null))" @onclick="() => Vm.DiscardCommand.Execute(null)">
+                            <Icon Name="reset" /><span>@Strings.Prices_Discard</span>
+                        </button>
+                    </div>
+                }
+            </form>
+        }
+    </PageGate>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    /// <summary>Only when the prices could not be loaded: a failed save is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

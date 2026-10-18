@@ -78,7 +78,7 @@ public class PlannerApiClientTests
 
         Assert.Equal(HttpMethod.Put, handler.Requests.Single().Method);
         Assert.Equal("/api/branding", handler.Requests.Single().RequestUri!.AbsolutePath);
-        Assert.Equal("""{"productName":"PlanIt","organizationName":"Club","accentColor":"#1a5fb4","defaultWebTheme":null,"defaultWindowsTheme":null}""", body);
+        Assert.Equal("""{"productName":"PlanIt","organizationName":"Club","accentColor":"#1a5fb4","defaultWebTheme":null,"defaultWindowsTheme":null,"currency":null}""", body);
         Assert.True(settings.IsCustomized);
     }
 

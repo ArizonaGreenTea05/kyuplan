@@ -377,6 +377,101 @@
                         }
                     </article>
                 }
+
+                @if (Detail.CanViewPayments)
+                {
+                    @* ---- What each member owes for the exam, and what was paid --------------------------------------- *@
+                    <article class="card results payments" aria-labelledby="payments-title">
+                        <div class="card-intro">
+                            <h2 id="payments-title">@Strings.Pay_Title</h2>
+                            <p class="lede">@Strings.Pay_Intro</p>
+                        </div>
+
+                        @if (Detail.NobodyPays)
+                        {
+                            <p class="empty-inline pad">@Strings.Pay_Empty</p>
+                        }
+                        else if (Detail.HasPayments)
+                        {
+                            <p class="note" role="status"><strong>@Detail.PaymentTotalsText</strong> · @Detail.PaymentCountsText</p>
+
+                            <div class="table-wrap">
+                                <table class="data payments">
+                                    <thead>
+                                        <tr>
+                                            <th>@Strings.Pay_Member</th>
+                                            <th>@Strings.Pay_Belt</th>
+                                            <th>@Strings.Pay_Due</th>
+                                            <th>@Strings.Pay_Paid</th>
+                                            <th>@Strings.Pay_Note</th>
+                                            <th>@Strings.Col_Status</th>
+                                            @if (Detail.CanEditPayments)
+                                            {
+                                                <th></th>
+                                            }
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var row in Detail.PaymentRows)
+                                        {
+                                            <tr @key="row.MemberId">
+                                                <td class="name"><strong>@row.Name</strong></td>
+                                                <td><BeltBadge Belt="row.Belt" ShowName="true" /></td>
+                                                <td>@row.DueText</td>
+                                                <td>
+                                                    @if (Detail.CanEditPayments)
+                                                    {
+                                                        <input type="text" inputmode="decimal" @bind="row.Paid.Text" @bind:event="oninput"
+                                                               aria-label="@($"{Strings.Pay_Paid}: {row.Name}")" />
+                                                        @if (!row.Paid.IsValid)
+                                                        {
+                                                            <p class="field-error" role="alert">@Strings.Pay_Invalid</p>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        @Display.Money(row.Payment.Paid)
+                                                    }
+                                                </td>
+                                                <td>
+                                                    @if (Detail.CanEditPayments)
+                                                    {
+                                                        <input type="text" maxlength="@PaymentRules.MaxNoteLength" @bind="row.Note" @bind:event="oninput"
+                                                               aria-label="@($"{Strings.Pay_Note}: {row.Name}")" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @row.Note
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <span class="status @PaymentClass(row.Status)">@row.StatusText</span>
+                                                    @if (row.PaidOnText.Length > 0)
+                                                    {
+                                                        <small class="note">@row.PaidOnText</small>
+                                                    }
+                                                </td>
+                                                @if (Detail.CanEditPayments)
+                                                {
+                                                    <td class="row-actions">
+                                                        <button type="button" class="btn ghost" disabled="@(!row.MarkPaidCommand.CanExecute(null))"
+                                                                @onclick="() => row.MarkPaidCommand.ExecuteAsync(null)">
+                                                            <Icon Name="check" /><span>@Strings.Pay_MarkPaid</span>
+                                                        </button>
+                                                        <button type="button" class="btn" disabled="@(!row.SaveCommand.CanExecute(null))"
+                                                                @onclick="() => row.SaveCommand.ExecuteAsync(null)">
+                                                            <span>@Strings.Pay_Save</span>
+                                                        </button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </article>
+                }
             </section>
         }
     </PageGate>
@@ -417,6 +512,13 @@
         CheckState.NotMet => "miss",
         CheckState.Unknown => "unknown",
         _ => "met",
+    };
+
+    private static string PaymentClass(PaymentStatus status) => status switch
+    {
+        PaymentStatus.Paid => "ok",
+        PaymentStatus.Partial => "warn",
+        _ => "",
     };
 
     private static string VerdictClass(SuggestionVerdict verdict) => verdict switch

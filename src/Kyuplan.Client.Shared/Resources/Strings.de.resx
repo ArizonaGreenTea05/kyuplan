@@ -1495,6 +1495,15 @@
   <data name="Branding_ProductNameInvalid" xml:space="preserve">
     <value>Ein Produktname ist nötig, höchstens {0} Zeichen lang.</value>
   </data>
+  <data name="Branding_Currency" xml:space="preserve">
+    <value>Währung</value>
+  </data>
+  <data name="Branding_CurrencyHint" xml:space="preserve">
+    <value>Die Einheit für alles Geld: Preise und Zahlungen. Ein Symbol wie € oder $ oder ein Kürzel wie CHF.</value>
+  </data>
+  <data name="Branding_CurrencyInvalid" xml:space="preserve">
+    <value>Pflichtfeld, höchstens {0} Zeichen, keine Steuerzeichen.</value>
+  </data>
   <data name="Branding_OrganizationNameInvalid" xml:space="preserve">
     <value>Höchstens {0} Zeichen, keine Steuerzeichen.</value>
   </data>
@@ -2682,5 +2691,104 @@
   </data>
   <data name="Backup_RunFailed" xml:space="preserve">
     <value>Das Aktualisieren von „{0}“ ist fehlgeschlagen: {1}</value>
+  </data>
+  <data name="Nav_Prices" xml:space="preserve">
+    <value>Prüfungspreise</value>
+  </data>
+  <data name="PermissionGroup_payments" xml:space="preserve">
+    <value>Zahlungen und Preise</value>
+  </data>
+  <data name="Permission_payments_view" xml:space="preserve">
+    <value>Prüfungspreise und Zahlungen ansehen</value>
+  </data>
+  <data name="Permission_payments_edit" xml:space="preserve">
+    <value>Erfassen, was Mitglieder für eine Prüfung bezahlt haben</value>
+  </data>
+  <data name="Permission_prices_edit" xml:space="preserve">
+    <value>Prüfungspreise ändern</value>
+  </data>
+  <data name="Prices_Intro" xml:space="preserve">
+    <value>Jedes Mitglied zahlt für eine Prüfung die allgemeine Gebühr plus den Aufpreis für den Gürtel, den es erhalten wird.</value>
+  </data>
+  <data name="Prices_General" xml:space="preserve">
+    <value>Allgemeine Gebühr pro Mitglied</value>
+  </data>
+  <data name="Prices_Belts" xml:space="preserve">
+    <value>Aufpreis je Gürtel</value>
+  </data>
+  <data name="Prices_BeltsHint" xml:space="preserve">
+    <value>Wird zur allgemeinen Gebühr addiert, wenn das Mitglied diesen Gürtel erhält. 0 = kein Aufpreis.</value>
+  </data>
+  <data name="Prices_NoBelts" xml:space="preserve">
+    <value>Es gibt noch keine Gürtel. Lege Gürtel an, um ihnen einen Aufpreis zu geben.</value>
+  </data>
+  <data name="Prices_Save" xml:space="preserve">
+    <value>Preise speichern</value>
+  </data>
+  <data name="Prices_Discard" xml:space="preserve">
+    <value>Änderungen verwerfen</value>
+  </data>
+  <data name="Prices_Saved" xml:space="preserve">
+    <value>Die Preise sind gespeichert.</value>
+  </data>
+  <data name="Prices_Invalid" xml:space="preserve">
+    <value>Gib für jeden Preis einen Betrag von mindestens 0 mit höchstens zwei Nachkommastellen ein.</value>
+  </data>
+  <data name="Prices_Note" xml:space="preserve">
+    <value>Erfasste Zahlungen behalten den Betrag, mit dem sie gespeichert wurden; erneutes Speichern einer Zahlung nutzt die aktuellen Preise.</value>
+  </data>
+  <data name="Pay_Title" xml:space="preserve">
+    <value>Zahlungen</value>
+  </data>
+  <data name="Pay_Intro" xml:space="preserve">
+    <value>Was jedes Mitglied für diese Prüfung schuldet: die allgemeine Gebühr plus den Aufpreis für den Gürtel, den es erhält.</value>
+  </data>
+  <data name="Pay_Member" xml:space="preserve">
+    <value>Mitglied</value>
+  </data>
+  <data name="Pay_Belt" xml:space="preserve">
+    <value>Gürtel</value>
+  </data>
+  <data name="Pay_Due" xml:space="preserve">
+    <value>Fällig</value>
+  </data>
+  <data name="Pay_Paid" xml:space="preserve">
+    <value>Bezahlt</value>
+  </data>
+  <data name="Pay_Note" xml:space="preserve">
+    <value>Notiz</value>
+  </data>
+  <data name="Pay_StatusOpen" xml:space="preserve">
+    <value>Nicht bezahlt</value>
+  </data>
+  <data name="Pay_StatusPartial" xml:space="preserve">
+    <value>Teilweise bezahlt</value>
+  </data>
+  <data name="Pay_StatusPaid" xml:space="preserve">
+    <value>Bezahlt</value>
+  </data>
+  <data name="Pay_MarkPaid" xml:space="preserve">
+    <value>Als bezahlt markieren</value>
+  </data>
+  <data name="Pay_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Pay_Empty" xml:space="preserve">
+    <value>Für diese Prüfung zahlt noch niemand: Mitglieder, die zusagen, dafür vorgemerkt sind oder dabei einen Gürtel erhalten, erscheinen hier.</value>
+  </data>
+  <data name="Pay_Totals" xml:space="preserve">
+    <value>{0} von {1} bezahlt</value>
+  </data>
+  <data name="Pay_Counts" xml:space="preserve">
+    <value>{0} bezahlt · {1} teilweise bezahlt · {2} nicht bezahlt</value>
+  </data>
+  <data name="Pay_PaidOn" xml:space="preserve">
+    <value>Bezahlt am {0}</value>
+  </data>
+  <data name="Pay_Saved" xml:space="preserve">
+    <value>Zahlung von {0} gespeichert: {1} bezahlt.</value>
+  </data>
+  <data name="Pay_Invalid" xml:space="preserve">
+    <value>Gib einen Betrag von mindestens 0 mit höchstens zwei Nachkommastellen ein.</value>
   </data>
 </root>

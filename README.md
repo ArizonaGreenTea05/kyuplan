@@ -392,6 +392,7 @@ Every page needs its `.view` permission, and every change a permission of its ow
 | dashboard | `dashboard.view` |
 | statistics | `statistics.view` |
 | calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`) |
+| payments | `payments.view` (the Exam prices page, who paid for an exam), `payments.edit` (record what members paid), `prices.edit` (change the exam prices) |
 | exams | `exams.view` (the Exams page, who is fit for an exam, the saved filters), `exams.edit` (make an event an exam, delete exams), `exams.filters` (save, replace and delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record the belts handed out at an exam) |
 | members | `members.view`, `members.edit` (belt and days of a member) |
 | belts | `belts.view` (members and exams need to read the belts, too), `belts.edit` |

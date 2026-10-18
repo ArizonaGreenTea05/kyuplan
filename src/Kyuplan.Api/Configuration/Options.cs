@@ -265,6 +265,9 @@ public sealed class BrandingOptions
     /// <summary>The same for the Windows client, which also has windows10, aero and native.</summary>
     public string DefaultWindowsTheme { get; set; } = ThemeIds.Default;
 
+    /// <summary>Unit of every amount of money (prices, payments), shown after the number: a symbol (€, $) or a code (CHF).</summary>
+    public string Currency { get; set; } = BrandingRules.DefaultCurrency;
+
     /// <summary>
     /// Logo for light surfaces: path of an image file (SVG, or a bitmap: PNG, JPEG, GIF, BMP), the same one for every client. An SVG
     /// stays sharp at any size. A relative path is relative to the folder of the API's program files. Empty = no logo.

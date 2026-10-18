@@ -79,7 +79,7 @@ public sealed class MainViewModelTests : IDisposable
     {
         _session.User = Boss;
 
-        Assert.Equal(7, _main.Items.Count);
+        Assert.Equal(8, _main.Items.Count);
         Assert.Equal(4, _main.AdminItems.Count);
         Assert.IsType<UserAdminViewModel>(_main.AdminItems[0].Page);
         Assert.IsType<RolesViewModel>(_main.AdminItems[1].Page);
@@ -120,7 +120,7 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Empty(_main.AdminItems);
 
         _session.User = Boss;
-        Assert.Equal(7, _main.Items.Count);
+        Assert.Equal(8, _main.Items.Count);
         Assert.Equal(4, _main.AdminItems.Count);
     }
 

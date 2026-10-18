@@ -118,6 +118,10 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     [ObservableProperty]
     private string _formOrganizationName = "";
 
+    /// <summary>The unit of every amount of money.</summary>
+    [ObservableProperty]
+    private string _formCurrency = BrandingRules.DefaultCurrency;
+
     [ObservableProperty]
     private string _formAccentColor = "";
 
@@ -260,6 +264,11 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
             ? string.Format(Strings.Branding_OrganizationNameInvalid, BrandingRules.MaxOrganizationNameLength)
             : null;
 
+    public string? CurrencyProblem =>
+        IsLoaded && BrandingRules.CheckCurrency(FormCurrency) is not null
+            ? string.Format(Strings.Branding_CurrencyInvalid, BrandingRules.MaxCurrencyLength)
+            : null;
+
     public string? AccentColorProblem =>
         IsLoaded && !BrandingRules.IsAccentColor(FormAccentColor) ? Strings.Branding_AccentColorInvalid : null;
 
@@ -286,8 +295,9 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     /// <summary>The form holds something the API accepts and that differs from what is saved.</summary>
     public bool CanSave =>
         CanEdit && !IsBusy && _settings is { } saved
-        && ProductNameProblem is null && OrganizationNameProblem is null && AccentColorProblem is null
+        && ProductNameProblem is null && OrganizationNameProblem is null && AccentColorProblem is null && CurrencyProblem is null
         && (FormProductName.Trim() != saved.ProductName
+            || FormCurrency.Trim() != saved.Currency
             || FormOrganizationName.Trim() != saved.OrganizationName
             || !string.Equals(FormAccentColor.Trim(), saved.AccentColor, StringComparison.OrdinalIgnoreCase)
             || FormDefaultWebTheme != saved.DefaultWebTheme
@@ -298,7 +308,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     {
         if (!CanSave) return; // a command is only guarded by its button; a form can also be submitted with Enter
 
-        var input = new BrandingInputDto(FormProductName.Trim(), FormOrganizationName.Trim(), FormAccentColor.Trim(), FormDefaultWebTheme, FormDefaultWindowsTheme);
+        var input = new BrandingInputDto(FormProductName.Trim(), FormOrganizationName.Trim(), FormAccentColor.Trim(), FormDefaultWebTheme, FormDefaultWindowsTheme, FormCurrency.Trim());
         BrandingSettingsDto? saved = null;
         await LoadAsync(async ct => saved = await _api.SaveBrandingAsync(input, ct));
 
@@ -314,6 +324,8 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     partial void OnFormOrganizationNameChanged(string value) => FormEdited();
 
     partial void OnFormAccentColorChanged(string value) => FormEdited();
+
+    partial void OnFormCurrencyChanged(string value) => FormEdited();
 
     partial void OnFormDefaultWebThemeChanged(string value)
     {
@@ -558,6 +570,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
             FormProductName = settings.ProductName;
             FormOrganizationName = settings.OrganizationName;
             FormAccentColor = settings.AccentColor;
+            FormCurrency = settings.Currency;
             FormDefaultWebTheme = settings.DefaultWebTheme;
             FormDefaultWindowsTheme = settings.DefaultWindowsTheme;
         }
@@ -592,6 +605,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         _staged.Clear();
         Images = [];
         FormProductName = FormOrganizationName = FormAccentColor = "";
+        FormCurrency = BrandingRules.DefaultCurrency;
         FormDefaultWebTheme = FormDefaultWindowsTheme = ThemeIds.Default;
         IsConfirmingReset = false;
         SetNotice(null);
@@ -612,6 +626,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         OnPropertyChanged(nameof(ProductNameProblem));
         OnPropertyChanged(nameof(OrganizationNameProblem));
         OnPropertyChanged(nameof(AccentColorProblem));
+        OnPropertyChanged(nameof(CurrencyProblem));
         OnPropertyChanged(nameof(AccentPickerValue));
         SaveCommand.NotifyCanExecuteChanged();
         SaveImagesCommand.NotifyCanExecuteChanged();

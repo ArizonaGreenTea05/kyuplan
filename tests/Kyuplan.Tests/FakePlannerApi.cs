@@ -139,6 +139,7 @@ internal sealed class FakePlannerApi : IPlannerApi
                 AccentColor = branding.AccentColor.Trim(), IsCustomized = true,
                 DefaultWebTheme = branding.DefaultWebTheme ?? BrandingSettings.DefaultWebTheme,
                 DefaultWindowsTheme = branding.DefaultWindowsTheme ?? BrandingSettings.DefaultWindowsTheme,
+                Currency = branding.Currency?.Trim() ?? BrandingSettings.Currency,
             });
         });
 
@@ -200,7 +201,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             Served(BrandingSlots.Logo, BrandingSlots.Logo),
             Served(BrandingSlots.LogoOnDark, BrandingSlots.LogoOnDark, BrandingSlots.Logo),
             Served(BrandingSlots.Icon, BrandingSlots.Icon),
-            settings.DefaultWebTheme, settings.DefaultWindowsTheme);
+            settings.DefaultWebTheme, settings.DefaultWindowsTheme, Currency: settings.Currency);
         return settings;
     }
 
@@ -302,6 +303,57 @@ internal sealed class FakePlannerApi : IPlannerApi
     public string? BackupRunFails { get; set; }
 
     public BackupRestoredDto BackupRestored { get; set; } = new(DateTimeOffset.Parse("2026-10-18T10:00:00Z"), 42);
+
+    // --- Prices and payments -----------------------------------------------------------------------------------
+
+    /// <summary>What <see cref="GetExamPricesAsync"/> answers; <see cref="SetExamPricesAsync"/> replaces it.</summary>
+    public ExamPricesDto ExamPrices { get; set; } = new(0, []);
+
+    /// <summary>What <see cref="GetExamPaymentsAsync"/> answers per exam id; <see cref="SetExamPaymentAsync"/> changes the rows like the real API would (the amount due stays).</summary>
+    public Dictionary<int, List<ExamPaymentDto>> ExamPayments { get; } = [];
+
+    /// <summary>Every call that changed prices or payments, e.g. <c>set-prices</c>, <c>set-payment:3:7</c>.</summary>
+    public List<string> PaymentCalls { get; } = [];
+
+    public List<ExamPaymentInputDto> PaymentInputs { get; } = [];
+
+    public Task<ExamPricesDto> GetExamPricesAsync(CancellationToken cancellationToken = default) => Run(() => ExamPrices);
+
+    public Task<ExamPricesDto> SetExamPricesAsync(ExamPricesDto prices, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            PaymentCalls.Add("set-prices");
+            if (!PaymentRules.IsAmount(prices.GeneralFee)) throw BadRequest("The fee is no amount.");
+            return ExamPrices = prices with { BeltPrices = [.. prices.BeltPrices.Where(p => p.Surcharge > 0)] };
+        });
+
+    public Task<ExamPaymentsDto> GetExamPaymentsAsync(int examId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            var rows = ExamPayments.GetValueOrDefault(examId)?.ToList() ?? [];
+            return new ExamPaymentsDto(examId, rows, rows.Sum(r => r.Due), rows.Sum(r => r.Paid));
+        });
+
+    public Task<ExamPaymentDto> SetExamPaymentAsync(int examId, int memberId, ExamPaymentInputDto payment, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            PaymentCalls.Add($"set-payment:{examId}:{memberId}");
+            PaymentInputs.Add(payment);
+            if (!PaymentRules.IsAmount(payment.Paid)) throw BadRequest("The amount is no money.");
+
+            var rows = ExamPayments.GetValueOrDefault(examId) ?? throw NotFound();
+            var index = rows.FindIndex(r => r.MemberId == memberId);
+            if (index < 0) throw BadRequest("This member does not pay for the exam.");
+
+            var row = rows[index];
+            return rows[index] = row with
+            {
+                Paid = payment.Paid,
+                PaidOn = payment.Paid > 0 ? payment.PaidOn ?? new DateOnly(2026, 10, 13) : null,
+                Note = string.IsNullOrWhiteSpace(payment.Note) ? null : payment.Note.Trim(),
+                Status = PaymentRules.StatusOf(row.Due, payment.Paid),
+            };
+        });
 
     public Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
         Run<IReadOnlyList<BackupTargetDto>>(() =>

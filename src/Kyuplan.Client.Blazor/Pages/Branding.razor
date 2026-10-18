@@ -80,6 +80,20 @@
                             <small>@Strings.Branding_OrganizationNameHint</small>
                         }
                     </label>
+
+                    <label class="field">
+                        <span>@Strings.Branding_Currency</span>
+                        <input type="text" maxlength="@BrandingRules.MaxCurrencyLength" autocomplete="off" disabled="@(!Vm.CanEdit)"
+                               @bind="Vm.FormCurrency" @bind:event="oninput" />
+                        @if (Vm.CurrencyProblem is { } currencyProblem)
+                        {
+                            <p class="field-error" role="alert">@currencyProblem</p>
+                        }
+                        else
+                        {
+                            <small>@Strings.Branding_CurrencyHint</small>
+                        }
+                    </label>
                 </div>
 
                 <div class="field">

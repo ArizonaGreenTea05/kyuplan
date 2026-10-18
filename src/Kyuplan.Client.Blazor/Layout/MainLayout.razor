@@ -62,6 +62,12 @@
                     <Icon Name="belt" /><span>@Strings.Nav_Belts</span>
                 </NavLink>
             }
+            @if (Shell.Can(Permission.PaymentsView))
+            {
+                <NavLink class="nav-item" href="prices">
+                    <Icon Name="sliders" /><span>@Strings.Nav_Prices</span>
+                </NavLink>
+            }
             @if (Shell.Can(Permission.TagsView))
             {
                 <NavLink class="nav-item" href="tags">

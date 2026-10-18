@@ -44,6 +44,10 @@ public static class BrandingRules
 {
     public const int MaxProductNameLength = 60;
     public const int MaxOrganizationNameLength = 80;
+    public const int MaxCurrencyLength = 8;
+
+    /// <summary>What an instance uses until somebody says otherwise.</summary>
+    public const string DefaultCurrency = "€";
 
     /// <summary>The largest image that is accepted: logos and icons are small, and they are kept in the database.</summary>
     public const int MaxImageBytes = 1024 * 1024;
@@ -65,6 +69,15 @@ public static class BrandingRules
         var name = organizationName?.Trim() ?? "";
         if (name.Length > MaxOrganizationNameLength) return $"organizationName must be at most {MaxOrganizationNameLength} characters long.";
         return name.Any(char.IsControl) ? "organizationName must not contain control characters." : null;
+    }
+
+    /// <summary>The currency is shown after every amount of money: a symbol (€, $) or a code (CHF).</summary>
+    public static string? CheckCurrency(string? currency)
+    {
+        var text = currency?.Trim();
+        if (string.IsNullOrEmpty(text)) return "currency is required.";
+        if (text.Length > MaxCurrencyLength) return $"currency must be at most {MaxCurrencyLength} characters long.";
+        return text.Any(char.IsControl) ? "currency must not contain control characters." : null;
     }
 
     public static string? CheckAccentColor(string? accentColor) =>

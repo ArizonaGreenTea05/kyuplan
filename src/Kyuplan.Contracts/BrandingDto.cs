@@ -16,6 +16,7 @@ namespace Kyuplan.Contracts;
 /// <param name="DefaultWindowsTheme">The same for the Windows client.</param>
 /// <param name="ThemesVersion">Changes whenever a theme pack is installed, replaced or deleted (<see cref="ThemeCatalogDto.Version"/>): a client that
 /// sees it differ asks for the catalog again.</param>
+/// <param name="Currency">Unit of every amount of money (prices, payments): a symbol or a code, shown after the number.</param>
 public sealed record BrandingDto(
     string ProductName,
     string OrganizationName,
@@ -25,7 +26,8 @@ public sealed record BrandingDto(
     string? IconUrl,
     string DefaultWebTheme = ThemeIds.Default,
     string DefaultWindowsTheme = ThemeIds.Default,
-    string ThemesVersion = "");
+    string ThemesVersion = "",
+    string Currency = BrandingRules.DefaultCurrency);
 
 /// <summary>What an administrator saves of the branding's texts and colour. The images are uploaded one by one.</summary>
 /// <param name="ProductName">Required.</param>
@@ -33,9 +35,10 @@ public sealed record BrandingDto(
 /// <param name="AccentColor"><c>#RGB</c> or <c>#RRGGBB</c>.</param>
 /// <param name="DefaultWebTheme">A theme of the web client; <c>null</c> keeps the saved one.</param>
 /// <param name="DefaultWindowsTheme">A theme of the Windows client; <c>null</c> keeps the saved one.</param>
+/// <param name="Currency">The unit of money (<see cref="BrandingRules.CheckCurrency"/>); <c>null</c> keeps the saved one.</param>
 public sealed record BrandingInputDto(
     string ProductName, string OrganizationName, string AccentColor,
-    string? DefaultWebTheme = null, string? DefaultWindowsTheme = null);
+    string? DefaultWebTheme = null, string? DefaultWindowsTheme = null, string? Currency = null);
 
 /// <summary>One image slot as the administrators' page shows it.</summary>
 /// <param name="Slot">The name of the slot, one of <see cref="BrandingSlots"/>.</param>
@@ -57,4 +60,5 @@ public sealed record BrandingSettingsDto(
     bool IsCustomized,
     IReadOnlyList<BrandingImageDto> Images,
     string DefaultWebTheme = ThemeIds.Default,
-    string DefaultWindowsTheme = ThemeIds.Default);
+    string DefaultWindowsTheme = ThemeIds.Default,
+    string Currency = BrandingRules.DefaultCurrency);

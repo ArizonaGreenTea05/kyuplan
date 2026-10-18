@@ -32,6 +32,12 @@ public static class Permission
     public const string BeltsView = "belts.view";
     public const string BeltsEdit = "belts.edit";
 
+    public const string PaymentsView = "payments.view";
+    /// <summary>Record what members paid for an exam.</summary>
+    public const string PaymentsEdit = "payments.edit";
+    /// <summary>Change the price list of the exams: the general fee and the surcharge per belt.</summary>
+    public const string PricesEdit = "prices.edit";
+
     public const string CommentsView = "comments.view";
     /// <summary>Read the comments about the members one is linked to (<see cref="UserDto.MemberIds"/>). Independent of <see cref="CommentsView"/>: that one never shows a user the comments about themselves.</summary>
     public const string CommentsViewOwn = "comments.viewOwn";
@@ -81,6 +87,7 @@ public static class Permission
         new("exams", [ExamsView, ExamsEdit, ExamsFilters, ExamsCandidates, ExamsResults]),
         new("members", [MembersView, MembersEdit]),
         new("belts", [BeltsView, BeltsEdit]),
+        new("payments", [PaymentsView, PaymentsEdit, PricesEdit]),
         new("comments", [CommentsView, CommentsViewOwn, CommentsWrite, CommentsEdit, CommentsDelete, CommentsDeleteAny]),
         new("ratings", [RatingsView, RatingsViewOwn, RatingsWrite]),
         new("tags", [TagsView, TagsEdit]),
@@ -103,7 +110,7 @@ public static class Permission
     public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, ExamsView, MembersView, TagsView];
 
     /// <summary>Whoever holds any of these may read the belts: members and exams show them.</summary>
-    public static IReadOnlyList<string> ReadsBelts { get; } = [BeltsView, MembersView, ExamsView];
+    public static IReadOnlyList<string> ReadsBelts { get; } = [BeltsView, MembersView, ExamsView, PaymentsView, PricesEdit];
 
     /// <summary>Whoever holds any of these may read the tags: comments carry them and choose among them.</summary>
     public static IReadOnlyList<string> ReadsTags { get; } = [TagsView, CommentsWrite, CommentsEdit];

@@ -181,6 +181,12 @@ public sealed class Member
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>
+    /// The user (accounts database id, so no foreign key) who is this member; an administrator links them. A user may be several members (one per
+    /// Spond group), a member is at most one user. What is written about a member is hidden from their user unless they have the "own" permission.
+    /// </summary>
+    public int? UserId { get; set; }
+
     /// <summary>The exams the member was invited to; removed along with the member.</summary>
     public List<ExamParticipant> Participations { get; set; } = [];
 

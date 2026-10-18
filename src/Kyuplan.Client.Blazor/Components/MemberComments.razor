@@ -5,9 +5,12 @@
 @* The comments on one member: the composer (a new comment, a reply or a change) and the threads under it. *@
 <section class="comments" aria-labelledby="comments-title">
     <header class="comments-head">
-        <button type="button" class="btn ghost" @onclick="OnClose">
-            <Icon Name="back" /><span>@Strings.Comments_Back</span>
-        </button>
+        @if (ShowBack)
+        {
+            <button type="button" class="btn ghost" @onclick="OnClose">
+                <Icon Name="back" /><span>@Strings.Comments_Back</span>
+            </button>
+        }
         <div>
             <h2 id="comments-title">@Vm.Title</h2>
             <small role="status">@Vm.CountText</small>
@@ -230,6 +233,9 @@
 
     /// <summary>Back to the list of members.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The "back to the list" button; off where the comments are not opened from a list (the account page).</summary>
+    [Parameter] public bool ShowBack { get; set; } = true;
 
     protected override void OnInitialized()
     {

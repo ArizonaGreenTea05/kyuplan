@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
 using Kyuplan.Client.ViewModels;
 
 namespace Kyuplan.Client.WpfApp.Views;
@@ -53,6 +56,27 @@ public partial class AccountView : UserControl
         {
             if (box.Password != password) box.Password = password;
         }
+    }
+
+    /// <summary>
+    /// The comments bring their own ScrollViewer, which keeps the mouse wheel for itself. Here they are as tall as their content (the
+    /// page is what scrolls), so the wheel is handed on to the page, except over a text box that has text to scroll itself.
+    /// </summary>
+    private void OnCommentsMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (e.Handled || VisualTreeHelper.GetParent((DependencyObject)sender) is not UIElement parent) return;
+
+        for (var source = e.OriginalSource as DependencyObject; source is not null && !ReferenceEquals(source, sender); source = Up(source))
+        {
+            if (source is TextBoxBase box && box.ExtentHeight > box.ViewportHeight) return;
+        }
+
+        e.Handled = true;
+        parent.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta) { RoutedEvent = MouseWheelEvent, Source = sender });
+
+        // A text run is not a visual: its parent is found in the logical tree.
+        static DependencyObject? Up(DependencyObject element) =>
+            element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
     }
 
     /// <summary>PasswordBox.Password is deliberately not a dependency property, so it cannot be bound and is copied over by hand.</summary>

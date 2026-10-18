@@ -380,9 +380,14 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Property<DateOnly?>("StartedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BeltId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("GroupId", "SpondId")
                         .IsUnique();

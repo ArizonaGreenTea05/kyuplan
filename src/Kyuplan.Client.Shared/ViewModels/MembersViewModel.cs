@@ -105,12 +105,22 @@ public sealed partial class MembersViewModel : PageViewModel
     /// <summary>Whether the user may set a member's belt and days; without it the page only shows them.</summary>
     public bool CanEdit => Shell.Can(Permission.MembersEdit);
 
-    /// <summary>Whether the user may read the comments on members. Comments are no part of what the members page shows by itself.</summary>
-    public bool CanViewComments => Shell.Can(Permission.CommentsView);
+    /// <summary>
+    /// Whether the user may read the comments on members at all (the column of buttons is shown). Comments are no part of what the members page
+    /// shows by itself; which members' comments, see <see cref="MayViewComments"/>.
+    /// </summary>
+    public bool CanViewComments => Shell.Can(Permission.CommentsView) || Shell.Can(Permission.CommentsViewOwn);
+
+    /// <summary>
+    /// Whether the user may read the comments on this member: <c>comments.view</c> for everybody they are not, <c>comments.viewOwn</c> for the
+    /// members they are themselves, each without the other.
+    /// </summary>
+    public bool MayViewComments(MemberRow? member) =>
+        member is not null && Shell.CurrentUser?.MayRead(member.Id, Permission.CommentsView, Permission.CommentsViewOwn) == true;
 
     protected override void OnPermissionsChanged()
     {
-        if (!CanViewComments && IsShowingComments) Comments.Close(); // the user may no longer read what is open
+        if (IsShowingComments && !MayViewComments(Comments.Member)) Comments.Close(); // the user may no longer read what is open
 
         base.OnPermissionsChanged();
         NotifyStateChanged();
@@ -359,7 +369,7 @@ public sealed partial class MembersViewModel : PageViewModel
     /// <summary>The page shows the comments on one member, not the list of members.</summary>
     public bool IsShowingComments => Comments.IsOpen;
 
-    private bool CanOpenComments(MemberRow? member) => CanViewComments && member is not null && !IsBusy && !IsShowingComments;
+    private bool CanOpenComments(MemberRow? member) => MayViewComments(member) && !IsBusy && !IsShowingComments;
 
     [RelayCommand(CanExecute = nameof(CanOpenComments))]
     private async Task OpenCommentsAsync(MemberRow member)

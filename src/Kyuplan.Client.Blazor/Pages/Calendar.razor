@@ -108,7 +108,7 @@
                                                     </ul>
                                                     <small class="muted">@attendee.RatingSummary</small>
                                                 }
-                                                else if (attendee.ShowRating || Vm.CanViewRatings)
+                                                else if (attendee.ShowRating || attendee.MayViewRatings)
                                                 {
                                                     <small class="muted not-rated">@Strings.Rating_None</small>
                                                 }

@@ -42,6 +42,10 @@ public sealed class CommentService(PlannerDbContext db, AccountsDbContext accoun
         return await ToDtosAsync(comments, cancellationToken);
     }
 
+    /// <summary>The member a comment is about, or <c>null</c> when there is no such comment.</summary>
+    public async Task<int?> MemberIdOfAsync(int commentId, CancellationToken cancellationToken) =>
+        await db.Comments.AsNoTracking().Where(c => c.Id == commentId).Select(c => (int?)c.MemberId).FirstOrDefaultAsync(cancellationToken);
+
     /// <summary>The comments that carry one of these tags, oldest first; a calendar page lists what was written about the members of one event.</summary>
     public async Task<IReadOnlyList<CommentDto>> ListForTagsAsync(IReadOnlyList<int> tagIds, CancellationToken cancellationToken)
     {

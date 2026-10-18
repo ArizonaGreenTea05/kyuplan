@@ -58,10 +58,15 @@ public static class BeltEndpoints
                 var list = await service.ListAsync(groupId, ct);
 
                 // How many comments a member has is part of the comments: whoever may not read them is not told that there are any.
-                return principal.Has(Permission.CommentsView) ? list : [.. list.Select(m => m with { CommentCount = 0 })];
+                var mayRead = OwnData.MayRead(principal, await service.IdsOfUserAsync(principal.UserId(), ct), Permission.CommentsView, Permission.CommentsViewOwn);
+                return list.Select(m => mayRead(m.Id) ? m : m with { CommentCount = 0 }).ToList();
             })
-            .WithSummary("The members the API holds, by name, optionally only those of one Spond group. They are a copy of Spond's, as of the last sync. The number of comments on a member is only given to whoever may read comments (comments.view), else it is 0.")
+            .WithSummary("The members the API holds, by name, optionally only those of one Spond group. They are a copy of Spond's, as of the last sync. The number of comments on a member is only given to whoever may read them (comments.view; about a member the user is themselves comments.viewOwn), else it is 0.")
             .RequirePermission(Permission.MembersView);
+
+        members.MapGet("/choices", (MemberService service, CancellationToken ct) => service.ChoicesAsync(ct))
+            .WithSummary("Every member by name with the user who already is that member (if any): what the users page offers when an administrator says which members a user is. Nothing else about the members.")
+            .RequirePermission(Permission.MembersView, Permission.UsersEdit);
 
         members.MapPut("/{memberId:int}", async (int memberId, MemberInputDto input, MemberService service, ClubClock clock, CancellationToken ct) =>
             {

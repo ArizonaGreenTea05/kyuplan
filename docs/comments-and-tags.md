@@ -25,7 +25,7 @@ A member has any number of comments. Each is written by a signed-in user and sho
 - **Tags.** A comment can carry any number (up to 20) of tags, to say what topic it is about.
 - **Who may do what** is up to the user's permissions (see *Permissions and roles* in the README), one for each thing: `comments.view` to
   read the comments on a member (and to see how many there are: without it the member list says 0, so whoever may only view members does
-  not learn that there are comments), `comments.write` to write a comment or a reply, `comments.edit` to **change any comment**,
+  not learn that there are comments; **not** the comments about oneself, see below), `comments.write` to write a comment or a reply, `comments.edit` to **change any comment**,
   `comments.delete` to delete **one's own** comments and `comments.deleteAny` to delete everybody's (403 otherwise; the button is hidden
   for everybody else). Deleting a comment deletes the replies to it, with their history; the question says how many replies go along.
   Choosing tags for a comment needs reading them: `tags.view`, `comments.write` or `comments.edit` is enough for that.
@@ -77,7 +77,7 @@ A tag is a topic comments can be about, e.g. *Belt exam September*.
 
 | Call | |
 |---|---|
-| `GET /api/members/{memberId}/comments` | `comments.view`. The member's comments, oldest first (a reply comes after its parent), each with `parentId`, `body`, `authorId`, `authorName`, `createdAt`, `tags` and `edits`. |
+| `GET /api/members/{memberId}/comments` | `comments.view`, or `comments.viewOwn` when the member is the signed-in user (a user is linked to members by an administrator, `PUT /api/users/{id}/members`); each works without the other, 403 for the member the user may not read. The member's comments, oldest first (a reply comes after its parent), each with `parentId`, `body`, `authorId`, `authorName`, `createdAt`, `tags` and `edits`. |
 | `POST /api/members/{memberId}/comments` | `comments.write`. `{ "body", "tagIds", "parentId" }`: write a comment as the signed-in user, or a reply (`parentId` must be a comment of this member). `400` for a body without words, longer than 4000 characters, more than 20 tags, a tag that does not exist or another member's parent; `404` for an unknown member. |
 | `PUT /api/comments/{commentId}` | `comments.edit`. `{ "body", "tagIds" }`: replace the body and the tags; records an edit by the signed-in user when something differs. |
 | `DELETE /api/comments/{commentId}` | Delete the comment and its replies. `403` unless the user wrote it and has `comments.delete`, or has `comments.deleteAny`. |

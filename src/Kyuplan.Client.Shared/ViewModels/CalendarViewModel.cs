@@ -43,7 +43,8 @@ public sealed partial class CalendarViewModel : PageViewModel
     /// <summary>The user may evaluate members (the permission); whether this event allows it yet is <see cref="RatingsOpen"/>.</summary>
     public bool CanRate => Shell.Can(Permission.RatingsWrite);
 
-    public bool CanViewRatings => Shell.Can(Permission.RatingsView);
+    /// <summary>The user may read evaluations of some members (everybody's, or only their own: see <see cref="EventAttendeeRow.MayViewRatings"/>).</summary>
+    public bool CanViewRatings => Shell.Can(Permission.RatingsView) || Shell.Can(Permission.RatingsViewOwn);
 
     /// <summary>The open event has started, so its members can be evaluated.</summary>
     [ObservableProperty]
@@ -306,7 +307,8 @@ public sealed partial class CalendarViewModel : PageViewModel
         Attendees = [.. detail.Attendees.Select(a =>
         {
             var known = a.MemberId is not null;
-            var row = new EventAttendeeRow(a, CanWriteComments && known, CanEditComments && known, MayDelete, CanRate && known && RatingsOpen, user?.Id);
+            var row = new EventAttendeeRow(a, CanWriteComments && known, CanEditComments && known, MayDelete, CanRate && known && RatingsOpen, user?.Id,
+                mayViewRatings: a.MemberId is not { } rated || user?.MayRead(rated, Permission.RatingsView, Permission.RatingsViewOwn) == true);
             if (a.MemberId is { } member)
             {
                 if (replies.TryGetValue(member, out var parent)) row.ReplyCommand.Execute(row.Comments.FirstOrDefault(c => c.Id == parent));

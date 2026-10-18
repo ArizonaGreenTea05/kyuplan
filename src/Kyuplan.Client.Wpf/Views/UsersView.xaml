@@ -120,6 +120,27 @@
                                 <TextBlock Text="{Binding PasswordHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" />
                             </StackPanel>
 
+                            <!-- Which club members the user is (a person in two Spond groups is two members): what is written about them is
+                                 hidden from the user unless they may read it (comments.viewOwn / ratings.viewOwn). -->
+                            <StackPanel Margin="0,20,0,0" HorizontalAlignment="Left" Width="480"
+                                        Visibility="{Binding HasMemberChoices, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{loc:Loc Users_FormMembers}" Style="{StaticResource FieldLabelText}" />
+                                <TextBlock Text="{loc:Loc Users_FormMembersHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBox Text="{Binding MemberFilter, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="{loc:Loc Users_FormMembersFilter}"
+                                         AutomationProperties.Name="{loc:Loc Users_FormMembersFilter}" />
+                                <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0" Focusable="False">
+                                    <ItemsControl ItemsSource="{Binding VisibleMemberChoices}" Focusable="False" KeyboardNavigation.TabNavigation="Continue">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:MemberChoice}">
+                                                <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Margin="0,0,0,4"
+                                                          AutomationProperties.Name="{Binding Label}" Content="{Binding Label}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </StackPanel>
+
                             <!-- Roles and own permissions: only for somebody who may give them. -->
                             <StackPanel Margin="0,20,0,0" Visibility="{Binding CanGrant, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock Text="{loc:Loc Users_FormRoles}" Style="{StaticResource FieldLabelText}" />
@@ -221,6 +242,15 @@
                                         <DataTemplate>
                                             <TextBlock Text="{Binding AliasesText}" VerticalAlignment="Center" Margin="8,0"
                                                        TextTrimming="CharacterEllipsis" ToolTip="{Binding AliasesText}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTemplateColumn Header="{loc:Loc Users_ColMembers}" Width="*" MinWidth="140">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding MembersText}" VerticalAlignment="Center" Margin="8,0"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding MembersText}" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

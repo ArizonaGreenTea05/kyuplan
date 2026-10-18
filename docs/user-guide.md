@@ -295,6 +295,10 @@ The **Account** page changes your own details. Everybody who is signed in has it
 - **Aliases**: up to ten more names that also sign you in, with the same password (one per line). Nobody else sees them.
 - **Password**: needs the current password, then the new one twice. 12 to 128 characters, anything goes (spaces, umlauts, colons).
 
+If an administrator linked you to the club member(s) you are, and gave you the permissions `comments.viewOwn` and/or `ratings.viewOwn`, the page also
+shows **About you**: the comments and star evaluations the others wrote about you. Without these permissions nobody sees what is written about
+themselves, however much else they may read.
+
 Every part has its own button, which only becomes active when you changed something the server will accept. **Your roles and
 permissions cannot be changed here**; only an administrator does that. After changing your user name or password in the browser, the
 browser still holds the old login and asks for the new one at the next click: that is normal. The desktop app keeps you signed in.

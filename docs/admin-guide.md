@@ -163,8 +163,8 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
 | belts | `belts.view`, `belts.edit` |
-| comments | `comments.view`, `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
-| ratings | `ratings.view` (see every user's star evaluations of members), `ratings.write` (evaluate members at an event, change and take back one's own) |
+| comments | `comments.view`, `comments.viewOwn` (read the comments about the members one is oneself), `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
+| ratings | `ratings.view` (see every user's star evaluations of members), `ratings.viewOwn` (read the evaluations of the members one is oneself), `ratings.write` (evaluate members at an event, change and take back one's own) |
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | themes | `themes.edit` (install and delete theme packs) |
@@ -176,7 +176,28 @@ The complete list of keys is in the [README's configuration table](../README.md#
 
 `calendar.view` came with the calendar: the default roles of a **new** installation have it, but a role that already exists in your database does not until you tick it on the Roles page (administrators have every permission).
 
-Ticking a permission in the forms also ticks the `.view` of its domain; unticking `.view` unticks the rest of the domain.
+Ticking a permission in the forms also ticks the `.view` of its domain; unticking `.view` unticks the rest of the domain. The `.viewOwn`
+permissions are the exception: they work without `.view` and are not touched by it.
+
+### Users who are members
+
+A user can also be a member of the club. On the **Users** page, edit the user and tick the **Member** (or members: a person in two Spond groups
+is two members) they are; the Member column of the list shows who is whom. A member can be one user's only (409 otherwise), and a user who is
+deleted stops being the member.
+
+What is written **about a member** is then hidden from the user who is that member, whatever else they may read:
+
+- **Comments** (members page, calendar event): `comments.view` shows the comments about everybody **except oneself**; to read the comments about
+  oneself a user needs `comments.viewOwn`. The number of comments on a member in the member list follows the same rule, and a comment about
+  oneself cannot be changed by somebody without `comments.viewOwn` (the answer would reveal what it said before).
+- **Star evaluations** (calendar event, `GET /api/members/{id}/ratings`): the same with `ratings.view` and `ratings.viewOwn`.
+- The two "own" permissions work **without** the general ones: a user with only `comments.viewOwn` reads the comments about themselves and
+  nobody else's. Where they are shown: on the pages the user may open anyway (Members, Calendar) and on the **Account** page, section *About
+  you*, which needs no page permission (it only shows what the "own" permissions allow, for the members the user is).
+- Not affected: the averages of the statistics and the exam suggestions (they are totals, not what individual users wrote); writing comments
+  and evaluations about oneself (`comments.write`, `ratings.write` are not restricted).
+
+Existing roles do not have the new permissions until you tick them on the Roles page; users who are not linked to a member are not affected.
 
 Comments are deliberately **separate from members**: somebody who may view members does not see comments, nor how many exist, without
 `comments.view`.
@@ -200,6 +221,8 @@ Comments are deliberately **separate from members**: somebody who may view membe
 
 **Create a user** (Users page → **New user**): user name, initial password (12 to 128 characters), display name, aliases, and, with
 `users.grant`, roles and own permissions. Tell the user their password through a safe channel; they can change it on their Account page.
+
+**Say who is a member**: edit the user and tick the member(s) they are, see *Users who are members* above. Needs `users.edit`.
 
 **Reset a password**: edit the user and type a new password (empty = keep).
 

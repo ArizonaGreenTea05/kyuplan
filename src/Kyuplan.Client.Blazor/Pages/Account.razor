@@ -126,10 +126,63 @@
             </div>
         </form>
     </div>
+
+    @* What was written and given about the user as a member of the club: needs only the "own" permissions, no page permission. *@
+    @if (Vm.AboutMe.IsVisible)
+    {
+        var about = Vm.AboutMe;
+        <article class="card about-me" aria-labelledby="about-me-title">
+            <h2 id="about-me-title">@Strings.AboutMe_Title</h2>
+            <p class="lede">@Strings.AboutMe_Lede</p>
+
+            <ErrorBanner Message="@about.ErrorMessage" />
+
+            @if (about.HasSeveralMembers)
+            {
+                <div class="segmented" role="group" aria-label="@Strings.AboutMe_Member">
+                    @foreach (var row in about.Members)
+                    {
+                        <button type="button" class="@(ReferenceEquals(row, about.Selected) ? "on" : "")" @key="row.Id"
+                                aria-pressed="@(ReferenceEquals(row, about.Selected) ? "true" : "false")"
+                                @onclick="() => about.SelectCommand.ExecuteAsync(row)">@row.Label</button>
+                    }
+                </div>
+            }
+            else if (about.Selected is { } only)
+            {
+                <p class="about-member"><strong>@only.Label</strong></p>
+            }
+
+            @if (about.CanViewRatings)
+            {
+                <h3>@Strings.AboutMe_RatingsTitle</h3>
+                <p><small class="muted">@about.RatingSummary</small></p>
+                @if (about.HasRatings)
+                {
+                    <ul class="ratings">
+                        @foreach (var rating in about.Ratings)
+                        {
+                            <li class="@(rating.IsZero ? "zero" : "") @(rating.IsMine ? "mine" : "")" title="@rating.Tip">
+                                <span class="stars" aria-hidden="true">@rating.Glyphs</span>
+                                <strong>@rating.ValueText</strong>
+                                <small>@rating.UserText</small>
+                                <small>@rating.WhenText</small>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+
+            @if (about.CanViewComments)
+            {
+                <MemberComments Vm="about.Comments" ShowBack="false" />
+            }
+        </article>
+    }
 </section>
 
 @code {
-    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell];
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell, Vm.AboutMe];
 
     protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
 

@@ -151,6 +151,7 @@ public class PlannerDbContext : DbContext
             member.Property(m => m.SpondId).HasMaxLength(IdLength);
             member.Property(m => m.Name).HasMaxLength(NameLength);
             member.HasIndex(m => new { m.GroupId, m.SpondId }).IsUnique();
+            member.HasIndex(m => m.UserId); // not unique: a user may be several members (one per Spond group)
 
             // A belt that somebody holds cannot be deleted.
             member.HasOne(m => m.Belt).WithMany().HasForeignKey(m => m.BeltId).OnDelete(DeleteBehavior.Restrict);

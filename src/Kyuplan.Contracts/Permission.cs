@@ -33,12 +33,16 @@ public static class Permission
     public const string BeltsEdit = "belts.edit";
 
     public const string CommentsView = "comments.view";
+    /// <summary>Read the comments about the members one is linked to (<see cref="UserDto.MemberIds"/>). Independent of <see cref="CommentsView"/>: that one never shows a user the comments about themselves.</summary>
+    public const string CommentsViewOwn = "comments.viewOwn";
     public const string CommentsWrite = "comments.write";
     public const string CommentsEdit = "comments.edit";
     public const string CommentsDelete = "comments.delete";
     public const string CommentsDeleteAny = "comments.deleteAny";
 
     public const string RatingsView = "ratings.view";
+    /// <summary>Read the evaluations of the members one is linked to; independent of <see cref="RatingsView"/>, like <see cref="CommentsViewOwn"/>.</summary>
+    public const string RatingsViewOwn = "ratings.viewOwn";
     public const string RatingsWrite = "ratings.write";
 
     public const string TagsView = "tags.view";
@@ -69,8 +73,8 @@ public static class Permission
         new("exams", [ExamsView, ExamsEdit, ExamsFilters, ExamsCandidates, ExamsResults]),
         new("members", [MembersView, MembersEdit]),
         new("belts", [BeltsView, BeltsEdit]),
-        new("comments", [CommentsView, CommentsWrite, CommentsEdit, CommentsDelete, CommentsDeleteAny]),
-        new("ratings", [RatingsView, RatingsWrite]),
+        new("comments", [CommentsView, CommentsViewOwn, CommentsWrite, CommentsEdit, CommentsDelete, CommentsDeleteAny]),
+        new("ratings", [RatingsView, RatingsViewOwn, RatingsWrite]),
         new("tags", [TagsView, TagsEdit]),
         new("branding", [BrandingView, BrandingEdit]),
         new("themes", [ThemesEdit]),

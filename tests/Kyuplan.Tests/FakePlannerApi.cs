@@ -367,6 +367,36 @@ internal sealed class FakePlannerApi : IPlannerApi
             return Rename(userId, user.UserName, user.DisplayName, user.Aliases, roles, user.Permissions ?? existing.Permissions);
         });
 
+    /// <summary>The user each linked member is (member id to user id), like the members' UserId in the API.</summary>
+    public Dictionary<int, int> MemberLinks { get; } = [];
+
+    public Task<UserDto> SetUserMembersAsync(int userId, IReadOnlyList<int> memberIds, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            UserCalls.Add($"set-user-members:{userId}:{string.Join(",", memberIds.Order())}");
+            if (!Account.Can(Permission.UsersEdit)) throw Forbidden();
+
+            var user = Users.FirstOrDefault(u => u.Id == userId) ?? (userId == Account.Id ? Account : null) ?? throw NotFound();
+            foreach (var id in memberIds)
+            {
+                if (Members.All(m => m.Id != id)) throw NotFound();
+                if (MemberLinks.TryGetValue(id, out var other) && other != userId) throw Conflict("That member is already linked to another user.");
+            }
+
+            foreach (var released in MemberLinks.Where(l => l.Value == userId).Select(l => l.Key).ToList()) MemberLinks.Remove(released);
+            foreach (var id in memberIds) MemberLinks[id] = userId;
+
+            return Rename(userId, user.UserName, user.DisplayName, user.Aliases, user.Roles, user.Permissions);
+        });
+
+    public Task<IReadOnlyList<MemberChoiceDto>> GetMemberChoicesAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<MemberChoiceDto>>(() =>
+        {
+            if (!Account.Can(Permission.UsersEdit) && !Account.Can(Permission.MembersView)) throw Forbidden();
+            return [.. Members.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(m => new MemberChoiceDto(m.Id, m.GroupId, m.Name, MemberLinks.TryGetValue(m.Id, out var user) ? user : null))];
+        });
+
     public Task DeleteUserAsync(int userId, CancellationToken cancellationToken = default) =>
         Run(() =>
         {
@@ -375,6 +405,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             if (userId == Account.Id) throw Conflict("You cannot delete your own user.");
 
             Users.Remove(Users.FirstOrDefault(u => u.Id == userId) ?? throw NotFound());
+            foreach (var released in MemberLinks.Where(l => l.Value == userId).Select(l => l.Key).ToList()) MemberLinks.Remove(released);
             return 0;
         });
 
@@ -402,7 +433,8 @@ internal sealed class FakePlannerApi : IPlannerApi
         var effective = roles.Any(r => r.Name == RoleRules.AdministratorName)
             ? Permission.All
             : Permission.InCatalogueOrder(own.Concat(roles.SelectMany(r => Roles.First(role => role.Id == r.Id).Permissions)));
-        return new UserDto(userId, name, shown, [.. (aliases ?? current?.Aliases ?? []).Select(a => a.Trim())], roles, own, effective);
+        return new UserDto(userId, name, shown, [.. (aliases ?? current?.Aliases ?? []).Select(a => a.Trim())], roles, own, effective,
+            MemberIds: [.. MemberLinks.Where(l => l.Value == userId).Select(l => l.Key).Order()]);
     }
 
     /// <summary>Changes a user in the list (if they are in it) and, when it is the signed-in one, the account.</summary>
@@ -919,6 +951,25 @@ internal sealed class FakePlannerApi : IPlannerApi
 
     private TagDto WithCount(TagDto tag) => tag with { CommentCount = Comments.Count(c => c.Tags.Any(t => t.Id == tag.Id)) };
 
+    /// <summary>The evaluations <see cref="GetMemberRatingsAsync"/> answers with.</summary>
+    public List<RatingDto> MemberRatings { get; } = [];
+
+    public Task<IReadOnlyList<RatingDto>> GetMemberRatingsAsync(int memberId, CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<RatingDto>>(() =>
+        {
+            if (!MayRead(memberId, Permission.RatingsView, Permission.RatingsViewOwn)) throw Forbidden();
+            return [.. MemberRatings.Where(r => r.MemberId == memberId)];
+        });
+
+    /// <summary>The permission that applies to what is written about a member: the "own" one when the signed-in user is that member.</summary>
+    private bool MayRead(int memberId, string view, string viewOwn) =>
+        Account.Can(MemberLinks.TryGetValue(memberId, out var user) && user == Account.Id ? viewOwn : view);
+
+    public Task<IReadOnlyList<MemberChoiceDto>> GetOwnMembersAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<MemberChoiceDto>>(() =>
+            [.. Members.Where(m => MemberLinks.TryGetValue(m.Id, out var user) && user == Account.Id).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(m => new MemberChoiceDto(m.Id, m.GroupId, m.Name, Account.Id))]);
+
     public Task<IReadOnlyList<CommentDto>> GetCommentsAsync(int memberId, CancellationToken cancellationToken = default)
     {
         CommentListRequests.Add(memberId);
@@ -927,6 +978,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             : Run<IReadOnlyList<CommentDto>>(() =>
             {
                 if (Members.All(m => m.Id != memberId)) throw NotFound();
+                if (!MayRead(memberId, Permission.CommentsView, Permission.CommentsViewOwn)) throw Forbidden();
                 return Comments.Where(c => c.MemberId == memberId).OrderBy(c => c.Id).ToList();
             });
     }

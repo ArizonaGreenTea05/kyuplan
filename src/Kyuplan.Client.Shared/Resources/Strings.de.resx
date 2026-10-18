@@ -907,6 +907,15 @@
   <data name="Users_ColRole" xml:space="preserve">
     <value>Rollen</value>
   </data>
+  <data name="Users_StatusOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="Users_StatusLastSeen" xml:space="preserve">
+    <value>Zuletzt online {0}</value>
+  </data>
+  <data name="Users_StatusNever" xml:space="preserve">
+    <value>Noch nie online</value>
+  </data>
   <data name="Users_SignedIn" xml:space="preserve">
     <value>angemeldet</value>
   </data>

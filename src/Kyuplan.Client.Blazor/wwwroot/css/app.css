@@ -467,6 +467,7 @@ select:disabled { opacity: .6; }
 .check input:disabled { cursor: default; }
 .check input:disabled + span { opacity: .65; }
 .chip.role { background: var(--sheet-2); color: var(--muted); border: 1px solid var(--rule-strong); white-space: nowrap; }
+.chip.ok { background: var(--ok-wash); color: var(--ok-ink); }
 .chip.role.admin { background: var(--accent-wash); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
 .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 /* The permissions to tick (roles page, user form): one box for each area, a tick for each thing the area allows. */

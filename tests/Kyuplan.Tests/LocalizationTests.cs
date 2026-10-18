@@ -54,7 +54,7 @@ public class ResourceFileTests
         var same = English.Where(e => e.Value == German[e.Key]).Select(e => e.Key).Order().ToArray();
 
         // Names, formats and loan words. A new entry here must be a conscious decision, not a forgotten translation.
-        Assert.Equal(["Col_Engagement", "Col_Form", "Col_Status", "Design_Aero", "Design_Windows10", "Design_Windows11", "Format_Month", "Format_MonthLong", "Settings_SpondTitle", "Setup_AdminTitle", "Shell_ApiVersion", "Shell_BrandAria", "Theme_CatppuccinLatte", "Theme_CatppuccinMocha", "Theme_Dracula", "Theme_LiquidGlass"], same);
+        Assert.Equal(["Col_Engagement", "Col_Form", "Col_Status", "Design_Aero", "Design_Windows10", "Design_Windows11", "Format_Month", "Format_MonthLong", "Settings_SpondTitle", "Setup_AdminTitle", "Shell_ApiVersion", "Shell_BrandAria", "Theme_CatppuccinLatte", "Theme_CatppuccinMocha", "Theme_Dracula", "Theme_LiquidGlass", "Users_StatusOnline"], same);
     }
 }
 

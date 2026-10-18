@@ -10,8 +10,18 @@ namespace Kyuplan.Client.ViewModels;
 /// <summary>One line of the user list.</summary>
 /// <param name="IsCurrent">The user who is looking at the list: they cannot delete themselves.</param>
 /// <param name="MembersText">The names of the members the user is (see <see cref="UserDto.MemberIds"/>), for a table cell; empty when there are none or the names are not known.</param>
-public sealed record UserRow(UserDto User, bool IsCurrent, string MembersText = "")
+/// <param name="Now">When the list was read: what "online" is measured against.</param>
+public sealed record UserRow(UserDto User, bool IsCurrent, string MembersText = "", DateTimeOffset Now = default)
 {
+    /// <summary>The user made a request recently (<see cref="PresenceRules"/>). The signed-in user is online by definition.</summary>
+    public bool IsOnline => IsCurrent || PresenceRules.IsOnline(User.LastSeenAt, Now);
+
+    /// <summary>Online, when the user was last online, or that they never were.</summary>
+    public string StatusText =>
+        IsOnline ? Strings.Users_StatusOnline
+        : User.LastSeenAt is { } seen ? string.Format(Strings.Users_StatusLastSeen, Display.EventStart(seen.ToLocalTime()))
+        : Strings.Users_StatusNever;
+
     public int Id => User.Id;
 
     public string UserName => User.UserName;
@@ -67,15 +77,17 @@ public sealed partial class UserAdminViewModel : PageViewModel
 {
     private readonly IPlannerApi _api;
     private readonly ILoginStore? _store;
+    private readonly TimeProvider _time;
     private IReadOnlyList<RoleDto> _roles = [];
     private IReadOnlyList<MemberChoiceDto> _members = [];
     private Func<string>? _notice;
 
     /// <param name="store">Where the client remembers the login, if it does (WPF). The browser keeps the login itself and has none.</param>
-    public UserAdminViewModel(ShellViewModel shell, IPlannerApi api, ILoginStore? store = null) : base(shell)
+    public UserAdminViewModel(ShellViewModel shell, IPlannerApi api, ILoginStore? store = null, TimeProvider? time = null) : base(shell)
     {
         _api = api;
         _store = store;
+        _time = time ?? TimeProvider.System;
 
         Picker.Changed += (_, _) => FormEdited();
         PropertyChanged += (_, e) =>
@@ -475,7 +487,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
     }
 
     private IReadOnlyList<UserRow> Rows(IReadOnlyList<UserDto> users) =>
-        [.. users.Select(u => new UserRow(u, u.Id == Shell.CurrentUser?.Id, MembersTextOf(u)))];
+        [.. users.Select(u => new UserRow(u, u.Id == Shell.CurrentUser?.Id, MembersTextOf(u), _time.GetUtcNow()))];
 
     private string MembersTextOf(UserDto user) =>
         string.Join(", ", (user.MemberIds ?? []).Select(id => _members.FirstOrDefault(m => m.Id == id)?.Name).OfType<string>());

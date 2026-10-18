@@ -26,6 +26,9 @@ public sealed class UserAccount
 
     public DateTimeOffset CreatedAt { get; set; }
 
+    /// <summary>The last request the user made with a valid login, rounded to <see cref="PresenceRules.WriteInterval"/>; <c>null</c> = never.</summary>
+    public DateTimeOffset? LastSeenAt { get; set; }
+
     /// <summary>The user's own theme for the web client (<see cref="ThemeRules"/>); <c>null</c> = the instance's default.</summary>
     public string? WebTheme { get; set; }
 

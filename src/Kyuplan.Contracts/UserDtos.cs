@@ -11,10 +11,12 @@ namespace Kyuplan.Contracts;
 /// <param name="WindowsTheme">The same for the Windows client.</param>
 /// <param name="Language">The language the user chose for the clients (<see cref="LanguageRules"/>); <c>null</c>: the client follows its system's language.</param>
 /// <param name="MemberIds">The members this user is (an administrator links them, <c>PUT /api/users/{id}/members</c>); usually one, one per Spond group at most. <c>null</c> = none. What is written about them is hidden from the user unless they have the "own" permission of that kind.</param>
+/// <param name="LastSeenAt">When the user last made a request (see <see cref="PresenceRules"/>); <c>null</c> = never.</param>
 public sealed record UserDto(
     int Id, string UserName, string DisplayName, IReadOnlyList<string> Aliases,
     IReadOnlyList<RoleRefDto> Roles, IReadOnlyList<string> Permissions, IReadOnlyList<string> EffectivePermissions,
-    string? WebTheme = null, string? WindowsTheme = null, string? Language = null, IReadOnlyList<int>? MemberIds = null)
+    string? WebTheme = null, string? WindowsTheme = null, string? Language = null, IReadOnlyList<int>? MemberIds = null,
+    DateTimeOffset? LastSeenAt = null)
 {
     /// <summary>Whether the user may do this (one of <see cref="Permission"/>).</summary>
     public bool Can(string permission) => EffectivePermissions.Contains(permission);

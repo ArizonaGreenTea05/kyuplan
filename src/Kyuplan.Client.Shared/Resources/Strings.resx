@@ -959,6 +959,16 @@
   <data name="Users_ColRole" xml:space="preserve">
     <value>Roles</value>
   </data>
+  <data name="Users_StatusOnline" xml:space="preserve">
+    <value>Online</value>
+  </data>
+  <data name="Users_StatusLastSeen" xml:space="preserve">
+    <value>Last online {0}</value>
+    <comment>{0} is a date and time.</comment>
+  </data>
+  <data name="Users_StatusNever" xml:space="preserve">
+    <value>Never online</value>
+  </data>
   <data name="Users_SignedIn" xml:space="preserve">
     <value>signed in</value>
     <comment>Marks the row of the user who is looking at the list.</comment>

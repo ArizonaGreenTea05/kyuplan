@@ -233,6 +233,17 @@
         Shell.Brand.Watch(); // from now on a change made on the Branding page (by anybody) shows up here by itself
         await Shell.InitializeAsync();
         Banner.Watch();
+
+        // On a phone the app is for quick notes: the calendar is the start screen (the dashboard stays in the menu).
+        if (Shell.Can(Permission.CalendarView) && Navigation.Uri == Navigation.BaseUri && await IsPhoneAsync())
+            Navigation.NavigateTo("calendar", replace: true);
+    }
+
+    // A browser that still holds the old js/platform.js has no isPhone: that is "not a phone", never an error page.
+    private async Task<bool> IsPhoneAsync()
+    {
+        try { return await Js.InvokeAsync<bool>("ppPlatform.isPhone"); }
+        catch (JSException) { return false; }
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);

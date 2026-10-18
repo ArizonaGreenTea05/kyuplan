@@ -769,7 +769,7 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 
 /* ---- Narrow screens: the sidebar turns into a top bar -------------------------------------------------- */
 @media (max-width: 920px) {
-    .app { grid-template-columns: minmax(0, 1fr); }
+    .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; } /* else the free height of a short page is shared with the top bar */
     .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--rule); }
     .brand { width: 64px; margin: 0; }
     .product { margin: 0; }
@@ -928,7 +928,9 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
     padding: 0 2px; font: inherit; font-size: 1.25rem; line-height: 1.2; color: var(--accent); background: none;
     border: 0; cursor: pointer;
 }
-.star-choice:hover:not(:disabled) { transform: scale(1.2); }
+/* Only where a pointer can really hover: on a touch screen a hover effect can turn the first tap into a "hover" and swallow the click. */
+@media (hover: hover) { .star-choice:hover:not(:disabled) { transform: scale(1.2); } }
+.star-choice { touch-action: manipulation; }
 .star-choice.zero { color: var(--text); font-size: 1rem; margin-right: 6px; }
 .star-choice.zero.on { color: var(--red); font-weight: 700; opacity: 1; }
 .star-choice:disabled:not(.on) { opacity: .5; cursor: default; }
@@ -943,3 +945,86 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
     .cal-grid.month .cal-day { min-height: 70px; }
     .event-banner a { padding: 9px 16px; }
 }
+
+/* ---- Phones: quick notes. The calendar opens first; an event is its list of members; a member is his/her comments ---------------------- */
+.member-open { display: contents; }
+.member-open strong { font-weight: 700; }
+.member-meta, .member-back { display: none; }
+@media (max-width: 720px) {
+    /* A slim icon strip on top instead of the sidebar; the calendar is the first entry. */
+    .sidebar { position: sticky; top: 0; z-index: 20; flex-wrap: nowrap; gap: 4px; padding: 6px 8px; }
+    .brand, .product, .help-links, .download-cta, .nav-item span { display: none; }
+    .sidebar > nav:first-of-type { flex-wrap: nowrap; overflow-x: auto; flex: 1; scrollbar-width: none; }
+    .sidebar > nav:first-of-type > a[href="calendar"] { order: -1; }
+    .nav-item { padding: 10px 12px; min-width: 44px; justify-content: center; }
+    .nav-groups { margin: 0; padding: 0; flex-direction: row; }
+    .nav-group > button.nav-item::after { display: none; }
+    .flyout { left: auto; right: 0; }
+    .flyout .nav-item { justify-content: flex-start; }
+    .flyout .nav-item span { display: inline; }
+    .sidebar-foot { display: none; }
+    .topbar { padding: 8px 12px; flex-wrap: nowrap; }
+    .group-picker { flex: 1; min-width: 0; }
+    .group-picker span, .topbar .btn span { display: none; }
+    .group-picker select { flex: 1; }
+    input, select, textarea { font-size: 16px; } /* no zoom-in on focus on iOS */
+    .content { padding: 12px 12px 40px; }
+    .event-banner a { padding: 12px 16px; }
+
+    /* Calendar: the week is a list of days, the controls are thumb-sized. */
+    .cal-page .page-head, .event-detail > .lede { display: none; }
+    .cal-bar { margin: 4px 0 10px; }
+    .cal-bar .btn, .segmented button { min-height: 44px; }
+    .cal-period { flex: 1 1 100%; margin: 4px 0 0; }
+    .cal-grid.week { grid-template-columns: minmax(0, 1fr); }
+    .cal-grid.week .cal-head { display: none; }
+    .cal-grid.week .cal-day { min-height: 0; padding: 8px 10px; }
+    .cal-grid.week .cal-day::before { content: attr(data-day); font-size: .8rem; font-weight: 700; color: var(--muted); }
+    .cal-grid.week .cal-num { align-self: flex-start; }
+    .cal-grid.week .cal-day { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); align-items: start; column-gap: 6px; }
+    .cal-grid.week .cal-day > :not(.cal-num) { grid-column: 2; }
+    .cal-grid.week .cal-day::before, .cal-grid.week .cal-num { grid-column: 1; }
+    .cal-grid.week .cal-event, .cal-list .cal-item { min-height: 44px; display: flex; align-items: center; gap: 6px; font-size: .95rem; }
+    .cal-grid.month .cal-event { white-space: normal; font-size: .7rem; padding: 2px 3px; }
+    .cal-grid.month .cal-event small { display: none; }
+
+    /* Event: the members are the focus, one big tap target each. */
+    .event-detail { padding: 14px 12px; }
+    .event-detail .table-wrap { max-height: none; overflow: visible; }
+    table.attendees, table.attendees tbody { display: block; }
+    table.attendees thead { display: none; }
+    table.attendees tr { display: flex; align-items: center; flex-wrap: wrap; gap: 0 12px; border-bottom: 1px solid var(--rule); }
+    table.attendees td { display: block; border: 0; padding: 0; }
+    table.attendees td:first-child { flex: 1; min-width: 0; padding: 0; }
+    .member-open {
+        display: flex; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 8px 4px; text-align: left;
+        background: none; border: 0; font-size: 1.05rem; cursor: pointer;
+    }
+    .member-open strong { flex: 1; min-width: 0; }
+    .member-meta { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: .85rem; }
+    table.attendees tr:not(.open) > td:nth-child(n+3) { display: none; }
+    table.attendees td:nth-child(2) { padding-right: 4px; }
+
+    /* A member is open: only this member, with the rating and the comments; the compose box is as big as it needs to be. */
+    .member-back { display: inline-flex; margin: 6px 0; min-height: 44px; }
+    .event-detail:has(.has-open) .segmented, .event-detail:has(.has-open) > h3, .event-detail:has(.has-open) > .lede { display: none; }
+    table.attendees.has-open tr:not(.open) { display: none; }
+    table.attendees tr.open { display: block; border: 0; }
+    table.attendees tr.open > td { padding: 8px 0; }
+    table.attendees tr.open > td:first-child .member-open { min-height: 48px; font-size: 1.25rem; cursor: default; }
+    table.attendees tr.open > td:first-child .member-meta { display: none; }
+    .star-choice { font-size: 1.9rem; padding: 4px 6px; }
+    .star-choice.zero { font-size: 1.2rem; }
+    .event-compose { flex-direction: column; align-items: stretch; }
+    .event-compose textarea { min-height: 96px; }
+    .event-compose .btn { min-height: 48px; justify-content: center; }
+    .event-comment .btn { min-height: 36px; padding: 0 10px; font-size: .9rem; }
+}
+.member-chevron { display: none; }
+@media (max-width: 720px) {
+    .member-chevron { display: inline-flex; color: var(--muted); }
+    table.attendees tr.open .member-chevron { display: none; }
+    .member-meta { padding: 6px 10px; border-radius: var(--radius); background: var(--accent-wash); color: var(--accent-ink); font-weight: 700; }
+}
+.phone-only { display: none; }
+@media (max-width: 720px) { .phone-only { display: block; } }

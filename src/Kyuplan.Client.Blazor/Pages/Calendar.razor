@@ -1,10 +1,11 @@
 @page "/calendar"
 @page "/calendar/{GroupId}/{EventId}"
 @inherits ViewModelComponent<CalendarViewModel>
+@inject IJSRuntime Js
 
 <BrandedTitle Title="@Vm.Title" />
 
-<section class="page">
+<section class="page cal-page">
     <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
 
     <header class="page-head">
@@ -54,8 +55,15 @@
                     {
                         <p class="empty">@Strings.Calendar_NoMatch</p>
                     }
+                    @* On a phone the list of members is the focus and a tap on a member opens just this member (rating + comments); app.css does the rest. *@
+                    @if (OpenAttendee is not null)
+                    {
+                        <button type="button" class="btn ghost member-back" @onclick="() => _selected = null">
+                            <Icon Name="back" /><span>@Strings.Calendar_BackToMembers</span>
+                        </button>
+                    }
                     <div class="table-wrap">
-                        <table class="data attendees">
+                        <table class="data attendees @(OpenAttendee is not null ? "has-open" : "")">
                             <thead>
                                 <tr>
                                     <th>@Strings.Calendar_ColMember</th>
@@ -70,12 +78,22 @@
                             <tbody>
                                 @foreach (var attendee in Vm.VisibleAttendees)
                                 {
-                                    <tr @key="attendee.MemberId ?? attendee.Name.GetHashCode()">
-                                        <td><strong>@attendee.Name</strong></td>
+                                    <tr @key="KeyOf(attendee)" class="@(KeyOf(attendee) == _selected && OpenAttendee is not null ? "open" : "")">
+                                        <td>
+                                            <button type="button" class="member-open" @onclick="() => _selected = KeyOf(attendee)">
+                                                <strong>@attendee.Name</strong>
+                                                <span class="member-meta" title="@Strings.Calendar_ColComments"><Icon Name="message" Size="14" />@attendee.Comments.Count</span>
+                                                <span class="member-chevron flip" aria-hidden="true"><Icon Name="back" Size="18" /></span>
+                                            </button>
+                                        </td>
                                         <td><span class="answer @AnswerClass(attendee.Answer)">@attendee.AnswerText</span></td>
                                         @if (Vm.ShowRatings)
                                         {
                                             <td class="rating-cell">
+                                                @if (Vm.ShowNotStarted)
+                                                {
+                                                    <small class="muted phone-only">@Strings.Rating_NotStarted</small>
+                                                }
                                                 @if (attendee.HasRatings)
                                                 {
                                                     <ul class="ratings">
@@ -222,7 +240,7 @@
                     }
                     @foreach (var day in Vm.Days)
                     {
-                        <div class="cal-day @(day.IsToday ? "today" : "") @(day.IsOutside ? "outside" : "")">
+                        <div class="cal-day @(day.IsToday ? "today" : "") @(day.IsOutside ? "outside" : "")" data-day="@day.Date.ToString("ddd", System.Globalization.CultureInfo.CurrentCulture)">
                             <span class="cal-num">@day.Number</span>
                             @foreach (var e in day.Events)
                             {
@@ -264,7 +282,30 @@
 
     private string? _opened;
 
-    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+    // The member opened on a phone (see KeyOf); only counts while that member is among the visible ones.
+    private string? _selected;
+
+    private static string KeyOf(EventAttendeeRow attendee) => attendee.MemberId?.ToString() ?? attendee.Name;
+
+    private EventAttendeeRow? OpenAttendee => _selected is null ? null : Vm.VisibleAttendees.FirstOrDefault(a => KeyOf(a) == _selected);
+
+    // On a phone the first look is at today (the day); after that the view stays whatever the user picked.
+    private static bool _phoneDefaultApplied;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_phoneDefaultApplied)
+        {
+            _phoneDefaultApplied = true;
+            try
+            {
+                if (await Js.InvokeAsync<bool>("ppPlatform.isPhone")) Vm.View = CalendarViews.Day;
+            }
+            catch (JSException) { } // an old cached script: keep the default
+        }
+
+        await Vm.ActivateAsync();
+    }
 
     // The banner of an event in progress links here: /calendar/{group}/{event}.
     protected override async Task OnParametersSetAsync()

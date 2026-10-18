@@ -2353,6 +2353,9 @@
   <data name="Calendar_Invited" xml:space="preserve">
     <value>{0} eingeladen</value>
   </data>
+  <data name="Calendar_BackToMembers" xml:space="preserve">
+    <value>Zurück zu den Mitgliedern</value>
+  </data>
   <data name="Calendar_Back" xml:space="preserve">
     <value>Zurück zum Kalender</value>
   </data>

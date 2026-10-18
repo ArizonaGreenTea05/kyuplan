@@ -8,5 +8,7 @@ window.ppPlatform = {
         if (/mac/i.test(platform)) return 'macos';
         if (/linux|x11/i.test(platform) || /linux|x11/i.test(agent)) return 'linux';
         return '';
-    }
+    },
+    // A phone-sized screen (the same breakpoint as the phone rules in app.css).
+    isPhone: function () { return window.matchMedia('(max-width: 720px)').matches; }
 };

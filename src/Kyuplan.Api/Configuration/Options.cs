@@ -41,6 +41,12 @@ public sealed class SpondOptions
     /// </summary>
     public bool IgnoreAdministrators { get; set; }
 
+    /// <summary>
+    /// Name or id of the Spond subgroup that holds the people who are in the group but not registered as members of the club yet
+    /// (case-insensitive). The members in it are marked as not registered. Empty, or a group without such a subgroup = everybody is registered.
+    /// </summary>
+    public string? UnregisteredSubGroup { get; set; }
+
     /// <summary>The usable accounts in the order they are asked: <see cref="Email"/> / <see cref="PhoneNumber"/> first, then <see cref="Accounts"/>.</summary>
     public IReadOnlyList<SpondAccount> GetAccounts() =>
         [.. new[] { new SpondAccount { Email = Email, PhoneNumber = PhoneNumber, Password = Password } }.Concat(Accounts).Where(a => a.HasCredentials)];

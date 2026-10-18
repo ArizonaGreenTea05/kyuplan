@@ -78,6 +78,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     protected override Task ReloadAsync() => LoadAsync(async ct =>
     {
         _loaded = await _api.GetSettingsAsync(ct);
+        Form.AvailableSubGroups = [.. Shell.Groups.SelectMany(g => g.SubGroups).Select(s => s.Name).Distinct(StringComparer.OrdinalIgnoreCase)];
         Form.Load(_loaded);
         OnPropertyChanged(nameof(IsLoaded));
         SaveCommand.NotifyCanExecuteChanged();

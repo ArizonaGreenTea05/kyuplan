@@ -114,6 +114,18 @@
             <input type="checkbox" disabled="@Disabled" @bind="Form.IgnoreAdministrators" />
             <span>@Strings.Settings_IgnoreAdministrators<small>@Strings.Settings_IgnoreAdministratorsHint</small></span>
         </label>
+
+        <label class="field">
+            <span>@Strings.Settings_UnregisteredSubGroup</span>
+            <select value="@Form.UnregisteredSubGroup" disabled="@Disabled" @onchange="e => Form.UnregisteredSubGroup = e.Value?.ToString() ?? string.Empty">
+                <option value="">@Strings.Settings_NoSubGroup</option>
+                @foreach (var name in Form.SubGroupChoices)
+                {
+                    <option value="@name">@name</option>
+                }
+            </select>
+            <small>@Strings.Settings_UnregisteredSubGroupHint</small>
+        </label>
     }
 </section>
 

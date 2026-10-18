@@ -1400,6 +1400,7 @@ internal sealed class FakePlannerApi : IPlannerApi
                 SyncEnabled = settings.SyncEnabled, SyncIntervalMinutes = settings.SyncIntervalMinutes,
                 DefaultEventStars = settings.DefaultEventStars ?? Settings.DefaultEventStars,
                 ExamMinAverageStars = settings.ExamMinAverageStars ?? Settings.ExamMinAverageStars,
+                UnregisteredSubGroup = settings.UnregisteredSubGroup ?? Settings.UnregisteredSubGroup,
             };
             return new SettingsSavedDto(SaveRestarts);
         });

@@ -1156,6 +1156,24 @@
   <data name="MemberPage_NoneMatch" xml:space="preserve">
     <value>No member matches.</value>
   </data>
+  <data name="MemberPage_ColRegistered" xml:space="preserve">
+    <value>Registration</value>
+  </data>
+  <data name="MemberPage_Registered" xml:space="preserve">
+    <value>registered</value>
+  </data>
+  <data name="MemberPage_NotRegistered" xml:space="preserve">
+    <value>not registered yet</value>
+  </data>
+  <data name="Settings_UnregisteredSubGroup" xml:space="preserve">
+    <value>Subgroup of members not registered yet</value>
+  </data>
+  <data name="Settings_NoSubGroup" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="Settings_UnregisteredSubGroupHint" xml:space="preserve">
+    <value>The Spond subgroup that holds the people who are not registered in the club yet. Its members are marked as not registered. Empty = everybody counts as registered.</value>
+  </data>
   <data name="MemberPage_ColStarted" xml:space="preserve">
     <value>Training since</value>
   </data>

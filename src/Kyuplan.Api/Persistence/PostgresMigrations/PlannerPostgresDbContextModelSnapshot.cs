@@ -453,6 +453,9 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("Registered")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("SpondId")
                         .IsRequired()
                         .HasMaxLength(200)

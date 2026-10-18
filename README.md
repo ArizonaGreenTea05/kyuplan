@@ -148,6 +148,7 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | `Spond:Accounts` | `[]` | More Spond logins (each with `Email` or `PhoneNumber`, and `Password`), asked in this order when the one before yields no groups or events. |
 | `Spond:AccountCooldown` | `00:10:00` | How long an account that came back empty while another one delivered is asked after the others. |
 | `Spond:IgnoreAdministrators` | `false` | Leave the administrators of the Spond groups (the members with `Respondent` = false, the login account usually among them) out of the statistics, the members and the exams. Not used with demo data. |
+| `Spond:UnregisteredSubGroup` | empty | Name (or id) of the Spond subgroup of the people not registered in the club yet; its members are marked "not registered yet" on the Members page. Empty = everybody is registered. |
 | `Spond:LoginLifetime` / `CacheDuration` | `06:00:00` / `00:15:00` | Re-login interval, event cache lifetime. |
 | `Statistics:TimeZone` | `Europe/Berlin` | Time zone for days, weekdays and months (Spond delivers UTC). |
 | `Statistics:DefaultMinAttendancePercent` | `75` | Pre-selected threshold. |

@@ -48,6 +48,36 @@ public sealed class SpondSyncTests : IDisposable
     }
 
     [Fact]
+    public async Task Members_of_the_unregistered_subgroup_are_marked_and_follow_their_subgroup()
+    {
+        SubGroupInfo[] subGroups = [new("sg-new", "Not registered")];
+        _club.SpondSettings.UnregisteredSubGroup = "not REGISTERED";
+        Spond.SetGroups(Group(Dojo, subGroups, Person(Anna.Id, Anna.Name, null, "sg-new"), Ben));
+
+        await _club.SyncAsync();
+
+        Assert.Equal([false, true], (await _club.MembersAsync()).Select(m => m.Registered));
+
+        Spond.SetGroups(Group(Dojo, subGroups, Anna, Person(Ben.Id, Ben.Name, null, "sg-new")));
+        await _club.SyncAsync();
+
+        Assert.Equal([true, false], (await _club.MembersAsync()).Select(m => m.Registered));
+    }
+
+    [Fact]
+    public async Task Everybody_is_registered_without_a_setting_or_a_matching_subgroup()
+    {
+        SubGroupInfo[] subGroups = [new("sg-new", "Not registered")];
+        Spond.SetGroups(Group(Dojo, subGroups, Person(Anna.Id, Anna.Name, null, "sg-new")));
+        await _club.SyncAsync();
+        Assert.All(await _club.MembersAsync(), m => Assert.True(m.Registered));
+
+        _club.SpondSettings.UnregisteredSubGroup = "Other";
+        await _club.SyncAsync();
+        Assert.All(await _club.MembersAsync(), m => Assert.True(m.Registered));
+    }
+
+    [Fact]
     public async Task A_member_is_only_added_once_and_a_new_name_is_followed()
     {
         Spond.SetGroups(Group(Dojo, Anna));

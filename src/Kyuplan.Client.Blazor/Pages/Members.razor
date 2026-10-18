@@ -149,6 +149,7 @@
                                     <th>@Strings.MemberPage_ColStarted</th>
                                     <th>@Strings.MemberPage_ColBeltSince</th>
                                     <th>@Strings.MemberPage_ColBirth</th>
+                                    <th>@Strings.MemberPage_ColRegistered</th>
                                     @if (hasActions)
                                     {
                                         <th></th>
@@ -176,6 +177,7 @@
                                         <td class="@(member.Member.StartedAt is null ? "none" : "")">@member.StartedText</td>
                                         <td class="@(!member.HasBelt || member.Member.BeltSince is null ? "none" : "")">@member.BeltSinceText</td>
                                         <td class="@(member.Member.BirthDate is null ? "none" : "")">@member.BirthText</td>
+                                        <td class="@(member.Registered ? "" : "none")">@member.RegisteredText</td>
                                         @if (hasActions)
                                         {
                                             <td class="row-actions">

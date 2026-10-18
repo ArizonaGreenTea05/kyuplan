@@ -223,6 +223,12 @@ public sealed class Member
     /// </summary>
     public DateOnly? BirthDate { get; set; }
 
+    /// <summary>
+    /// Whether the member is registered in the club. False while they are in the Spond subgroup of the not registered yet
+    /// (<c>Spond:UnregisteredSubGroup</c>); <see cref="SpondSync"/> keeps it in line with Spond.
+    /// </summary>
+    public bool Registered { get; set; } = true;
+
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>

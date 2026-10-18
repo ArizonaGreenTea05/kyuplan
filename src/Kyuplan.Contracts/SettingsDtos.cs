@@ -18,6 +18,7 @@ namespace Kyuplan.Contracts;
 /// <param name="AllowedHosts">The host names this API answers to, separated by <c>;</c> (<c>kyuplan.example.com;*.example.org</c>); <c>*</c> = any. Requests with another Host header are refused.</param>
 /// <param name="DefaultEventStars">What an event counts for a member who attended it and whom nobody evaluated (0–5).</param>
 /// <param name="ExamMinAverageStars">The average evaluation a member needs to be suggested for an exam (0–5; 0 = not asked).</param>
+/// <param name="UnregisteredSubGroup">Name (or id) of the Spond subgroup of the people not registered in the club yet; empty = none.</param>
 public sealed record SettingsDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -35,7 +36,8 @@ public sealed record SettingsDto(
     IReadOnlyList<SpondAccountDto>? BackupAccounts = null,
     string? AllowedHosts = null,
     double DefaultEventStars = RatingRules.StandardDefaultEventStars,
-    double ExamMinAverageStars = RatingRules.StandardExamMinAverageStars);
+    double ExamMinAverageStars = RatingRules.StandardExamMinAverageStars,
+    string? UnregisteredSubGroup = null);
 
 /// <summary>A backup Spond login as the settings show it; the password itself is never sent back.</summary>
 public sealed record SpondAccountDto(string? Email, string? PhoneNumber, bool HasPassword);
@@ -63,7 +65,8 @@ public sealed record SettingsInputDto(
     IReadOnlyList<SpondAccountInputDto>? BackupAccounts = null,
     string? AllowedHosts = null,
     double? DefaultEventStars = null,
-    double? ExamMinAverageStars = null);
+    double? ExamMinAverageStars = null,
+    string? UnregisteredSubGroup = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>

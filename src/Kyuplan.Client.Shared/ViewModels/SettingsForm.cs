@@ -31,9 +31,20 @@ public sealed partial class SettingsForm : ObservableObject
     [ObservableProperty] private int _defaultMinInvitedEvents;
     [ObservableProperty] private double _defaultEventStars = RatingRules.StandardDefaultEventStars;
     [ObservableProperty] private double _examMinAverageStars = RatingRules.StandardExamMinAverageStars;
+    [ObservableProperty] private string _unregisteredSubGroup = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SubGroupChoices))]
+    private IReadOnlyList<string> _availableSubGroups = [];
+
     [ObservableProperty] private bool _syncEnabled;
     [ObservableProperty] private int _syncIntervalMinutes;
     [ObservableProperty] private string _allowedHosts = SettingsRules.AnyHost;
+
+    /// <summary>The names of the subgroups the Spond groups have (the combobox's choices), plus the one that is set when Spond does not list it (any more).</summary>
+    public IReadOnlyList<string> SubGroupChoices =>
+        [.. AvailableSubGroups.Append(UnregisteredSubGroup.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase)];
+
+    partial void OnUnregisteredSubGroupChanged(string value) => OnPropertyChanged(nameof(SubGroupChoices));
 
     public void Load(SettingsDto settings)
     {
@@ -51,6 +62,7 @@ public sealed partial class SettingsForm : ObservableObject
         DefaultMinInvitedEvents = settings.DefaultMinInvitedEvents;
         DefaultEventStars = settings.DefaultEventStars;
         ExamMinAverageStars = settings.ExamMinAverageStars;
+        UnregisteredSubGroup = settings.UnregisteredSubGroup ?? "";
         SyncEnabled = settings.SyncEnabled;
         SyncIntervalMinutes = settings.SyncIntervalMinutes;
         AllowedHosts = string.IsNullOrWhiteSpace(settings.AllowedHosts) ? SettingsRules.AnyHost : settings.AllowedHosts;
@@ -64,7 +76,7 @@ public sealed partial class SettingsForm : ObservableObject
         SpondPassword.Length == 0 ? null : SpondPassword, IgnoreAdministrators, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
         [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
-        DefaultEventStars, ExamMinAverageStars);
+        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim());
 
     [RelayCommand]
     private void AddBackupAccount() => AddBackup(new BackupAccountForm());
@@ -85,6 +97,7 @@ public sealed partial class SettingsForm : ObservableObject
         IgnoreAdministrators == s.IgnoreAdministrators && TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
         DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
+        UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&
         SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) && BackupMatches(s.BackupAccounts ?? []);
 
     private bool BackupMatches(IReadOnlyList<SpondAccountDto> saved)

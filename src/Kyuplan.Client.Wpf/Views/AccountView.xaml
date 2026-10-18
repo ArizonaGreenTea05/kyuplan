@@ -3,8 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
              xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:conv="clr-namespace:Kyuplan.Client.WpfApp.Converters"
              xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
              Loaded="OnLoaded" Unloaded="OnUnloaded">
+
+    <UserControl.Resources>
+        <conv:SameInstanceConverter x:Key="SameInstance" />
+    </UserControl.Resources>
 
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -113,6 +118,96 @@
                 </Border>
 
                 </ctl:ResponsiveGrid>
+
+                <!-- What the users wrote and gave about the user themselves (only with comments.viewOwn / ratings.viewOwn, and only for a
+                     user who is a member). Which member, when they are several. -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0"
+                        Visibility="{Binding AboutMe.IsVisible, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc AboutMe_Title}" Style="{StaticResource SectionTitleText}" />
+                        <TextBlock Text="{loc:Loc AboutMe_Lede}" Style="{StaticResource LedeText}" TextWrapping="Wrap" />
+
+                        <Border Style="{StaticResource BannerBorder}" Margin="0,12,0,0"
+                                Visibility="{Binding AboutMe.HasError, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding AboutMe.ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Border>
+
+                        <!-- Several members: one button each, the chosen one in bold and not to be pressed again -->
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding AboutMe.HasSeveralMembers, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{loc:Loc AboutMe_Member}" Style="{StaticResource FieldLabelText}" />
+                            <ItemsControl ItemsSource="{Binding AboutMe.Members}" IsTabStop="False"
+                                          AutomationProperties.Name="{loc:Loc AboutMe_Member}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding Label}" Margin="0,0,6,6"
+                                                Command="{Binding DataContext.AboutMe.SelectCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <Button.Style>
+                                                <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Value="True">
+                                                            <DataTrigger.Binding>
+                                                                <MultiBinding Converter="{StaticResource SameInstance}">
+                                                                    <Binding />
+                                                                    <Binding Path="DataContext.AboutMe.Selected" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                                                </MultiBinding>
+                                                            </DataTrigger.Binding>
+                                                            <Setter Property="FontWeight" Value="Bold" />
+                                                            <Setter Property="BorderThickness" Value="2" />
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- One member: just who it is -->
+                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal"
+                                    Visibility="{Binding AboutMe.HasSeveralMembers, Converter={StaticResource InverseBoolToVisibility}}">
+                            <TextBlock Text="{loc:Loc AboutMe_Member}" Style="{StaticResource FieldLabelText}" Margin="0,0,8,0" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding AboutMe.Selected.Label}" Style="{StaticResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Evaluations -->
+                        <StackPanel Margin="0,16,0,0" Visibility="{Binding AboutMe.CanViewRatings, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{loc:Loc AboutMe_RatingsTitle}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                            <TextBlock Text="{Binding AboutMe.RatingSummary}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,6" />
+                            <ItemsControl ItemsSource="{Binding AboutMe.Ratings}" IsTabStop="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2" ToolTip="{Binding Tip}">
+                                            <TextBlock Text="{Binding Glyphs}" FontFamily="Segoe UI Symbol" Foreground="{DynamicResource DataOpenTextBrush}" />
+                                            <TextBlock Text="{Binding ValueText}" FontWeight="SemiBold" Margin="6,0,0,0">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsZero}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding UserText}" Style="{StaticResource MutedText}" Margin="6,0,0,0" TextTrimming="CharacterEllipsis" MaxWidth="200" />
+                                            <TextBlock Text="{Binding WhenText}" Style="{StaticResource MutedText}" Margin="6,0,0,0" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Comments: the same thread view as on the members page (it brings its own title) -->
+                        <ctl:MemberCommentsView Margin="0,16,0,0" DataContext="{Binding AboutMe.Comments}" PreviewMouseWheel="OnCommentsMouseWheel"
+                                                Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
 

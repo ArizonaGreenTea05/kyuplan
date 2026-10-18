@@ -2588,4 +2588,34 @@
   <data name="Permission_ratings_write" xml:space="preserve">
     <value>Evaluate members and take back one’s own evaluations</value>
   </data>
+  <data name="Permission_comments_viewOwn" xml:space="preserve">
+    <value>Read the comments about themselves (the members they are)</value>
+  </data>
+  <data name="Permission_ratings_viewOwn" xml:space="preserve">
+    <value>Read the evaluations of themselves (the members they are)</value>
+  </data>
+  <data name="Users_ColMembers" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="Users_FormMembers" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="Users_FormMembersHint" xml:space="preserve">
+    <value>Which members of the club this user is. What is written about them (comments, evaluations) is then hidden from the user unless they may read what is written about themselves.</value>
+  </data>
+  <data name="Users_FormMembersFilter" xml:space="preserve">
+    <value>Find a member</value>
+  </data>
+  <data name="AboutMe_Title" xml:space="preserve">
+    <value>About you</value>
+  </data>
+  <data name="AboutMe_Lede" xml:space="preserve">
+    <value>What the users wrote and gave about you as a member of the club.</value>
+  </data>
+  <data name="AboutMe_Member" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="AboutMe_RatingsTitle" xml:space="preserve">
+    <value>Evaluations of you</value>
+  </data>
 </root>

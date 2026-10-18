@@ -37,17 +37,17 @@ public sealed class CalendarService(
         return [.. events.Where(e => !e.Cancelled && e.Start <= now && now < e.End).Select(e => ToDto(e, groupId))];
     }
 
-    /// <summary>One event with everybody invited to it, by name. Comments are only read when <paramref name="withComments"/>, evaluations when <paramref name="withRatings"/>.</summary>
+    /// <summary>One event with everybody invited to it, by name. Comments are only given for the members <paramref name="mayReadComments"/> says yes to, evaluations for those <paramref name="mayReadRatings"/> does (<c>null</c> = for none).</summary>
     /// <exception cref="GroupNotFoundException"/>
     /// <exception cref="EventNotFoundException"/>
-    public async Task<CalendarEventDetailDto> GetEventAsync(string groupId, string eventId, bool withComments, bool withRatings, CancellationToken cancellationToken)
+    public async Task<CalendarEventDetailDto> GetEventAsync(string groupId, string eventId, Func<int, bool>? mayReadComments, Func<int, bool>? mayReadRatings, CancellationToken cancellationToken)
     {
         var group = await statistics.GetGroupInfoAsync(groupId, cancellationToken);
         var info = await statistics.FindEventAsync(groupId, eventId, cancellationToken);
 
         var known = await db.Members.AsNoTracking().Where(m => m.GroupId == groupId).ToDictionaryAsync(m => m.SpondId, m => m.Id, cancellationToken);
-        var written = withComments ? await CommentsOfEventAsync(groupId, eventId, cancellationToken) : [];
-        var given = withRatings
+        var written = mayReadComments is not null ? await CommentsOfEventAsync(groupId, eventId, cancellationToken) : [];
+        var given = mayReadRatings is not null
             ? await ratings.ListForEventAsync(groupId, eventId, cancellationToken)
             : new Dictionary<int, IReadOnlyList<RatingDto>>();
         var names = group.Members.ToDictionary(m => m.Id, m => m.Name);
@@ -58,8 +58,8 @@ public sealed class CalendarService(
                 int? memberId = known.TryGetValue(r.Key, out var id) ? id : null;
                 return new CalendarAttendeeDto(
                     memberId, names.GetValueOrDefault(r.Key, r.Key), Mark(r.Value),
-                    memberId is { } member ? [.. written.Where(c => c.MemberId == member)] : [],
-                    memberId is { } rated && given.TryGetValue(rated, out var list) ? list : []);
+                    memberId is { } member && mayReadComments?.Invoke(member) == true ? [.. written.Where(c => c.MemberId == member)] : [],
+                    memberId is { } rated && mayReadRatings?.Invoke(rated) == true && given.TryGetValue(rated, out var list) ? list : []);
             })
             .OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();

@@ -15,9 +15,13 @@ public static class CommentEndpoints
     {
         var comments = app.MapGroup("/api").WithTags("Comments");
 
-        comments.MapGet("/members/{memberId:int}/comments", (int memberId, CommentService service, CancellationToken ct) => service.ListAsync(memberId, ct))
-            .WithSummary("The comments on a member, oldest first (a reply comes after the comment it replies to), each with its tags and the history of its edits.")
-            .RequirePermission(Permission.CommentsView);
+        comments.MapGet("/members/{memberId:int}/comments", async (int memberId, ClaimsPrincipal principal, CommentService service, MemberService members, CancellationToken ct) =>
+            {
+                await OwnData.EnsureMayReadAsync(principal, memberId, Permission.CommentsView, Permission.CommentsViewOwn, members, "comments", ct);
+                return await service.ListAsync(memberId, ct);
+            })
+            .WithSummary("The comments on a member, oldest first (a reply comes after the comment it replies to), each with its tags and the history of its edits. Needs comments.view, or for a member the user is themselves (see users) comments.viewOwn instead: each works without the other (403 otherwise).")
+            .RequirePermission(Permission.CommentsView, Permission.CommentsViewOwn);
 
         comments.MapPost("/members/{memberId:int}/comments", async (int memberId, CommentInputDto input, ClaimsPrincipal principal, CommentService service, CancellationToken ct) =>
             {
@@ -29,9 +33,13 @@ public static class CommentEndpoints
             .WithSummary("Write a comment on a member as the signed-in user, or a reply to one of the member's comments (parentId). The body is written in the markup of CommentFormat: **bold**, *italic*, __underlined__, ~~crossed out~~.")
             .RequirePermission(Permission.CommentsWrite);
 
-        comments.MapPut("/comments/{commentId:int}", async (int commentId, CommentUpdateDto input, ClaimsPrincipal principal, CommentService service, CancellationToken ct) =>
+        comments.MapPut("/comments/{commentId:int}", async (int commentId, CommentUpdateDto input, ClaimsPrincipal principal, CommentService service, MemberService members, CancellationToken ct) =>
             {
                 if (Validate(input) is { } errors) return Results.ValidationProblem(errors);
+
+                // The answer carries what the comment said before: whoever may not read comments about themselves must not get one that way.
+                if (await service.MemberIdOfAsync(commentId, ct) is { } memberId && await members.IsUserAsync(memberId, principal.UserId(), ct) && !principal.Has(Permission.CommentsViewOwn))
+                    throw new ForbiddenException($"You may not read comments about yourself (that needs {Permission.CommentsViewOwn}), so you cannot change one either.");
 
                 return Results.Ok(await service.UpdateAsync(commentId, input, CommentUser.From(principal), ct));
             })

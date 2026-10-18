@@ -544,6 +544,14 @@ table.data td.reqs { white-space: pre-line; }
 .check.pick > span { flex-direction: row; align-items: center; gap: 8px; }
 .check.inline { align-items: center; }
 .check.inline input { margin-top: 0; }
+/* The members a user is (users form): a filter box over a scrollable list of tick boxes. */
+.member-filter { max-width: 320px; }
+.member-choices { max-height: 12em; overflow-y: auto; padding: 8px 12px; border: 1px solid var(--rule-strong); border-radius: var(--radius); }
+/* "About you" on the account page. */
+.about-me { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+.about-me h2, .about-me h3, .about-me p { margin: 0; }
+.about-me .segmented { align-self: flex-start; flex-wrap: wrap; }
+.about-me .ratings { margin: 0; }
 .card-head .count { white-space: nowrap; }
 .empty-inline.pad { padding: 14px 22px; }
 

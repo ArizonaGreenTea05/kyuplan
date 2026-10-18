@@ -9,7 +9,8 @@ namespace Kyuplan.Client.ViewModels;
 
 /// <summary>One line of the user list.</summary>
 /// <param name="IsCurrent">The user who is looking at the list: they cannot delete themselves.</param>
-public sealed record UserRow(UserDto User, bool IsCurrent)
+/// <param name="MembersText">The names of the members the user is (see <see cref="UserDto.MemberIds"/>), for a table cell; empty when there are none or the names are not known.</param>
+public sealed record UserRow(UserDto User, bool IsCurrent, string MembersText = "")
 {
     public int Id => User.Id;
 
@@ -45,8 +46,20 @@ public sealed partial class RoleChoice(int id, string name, bool isSystem) : Obs
     private bool _isEnabled = true;
 }
 
+/// <summary>One member as a tick box in the user form: the members the user is.</summary>
+public sealed partial class MemberChoice(int id, string name, string? groupName) : ObservableObject
+{
+    public int Id { get; } = id;
+
+    /// <summary>The name, with the group when it is known which one (a person in two groups is two members).</summary>
+    public string Label { get; } = groupName is null ? name : $"{name} ({groupName})";
+
+    [ObservableProperty]
+    private bool _isSelected;
+}
+
 /// <summary>
-/// The users page: all users, with creating, editing (names, password, roles and own permissions) and deleting. Who may do which of it
+/// The users page: all users, with creating, editing (names, password, roles, own permissions and which members they are) and deleting. Who may do which of it
 /// is up to <c>users.*</c> permissions: <c>users.view</c> for the page, <c>users.edit</c> for names and passwords, <c>users.grant</c> for roles and
 /// permissions, <c>users.delete</c> for deleting. Used by both clients.
 /// </summary>
@@ -55,6 +68,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
     private readonly IPlannerApi _api;
     private readonly ILoginStore? _store;
     private IReadOnlyList<RoleDto> _roles = [];
+    private IReadOnlyList<MemberChoiceDto> _members = [];
     private Func<string>? _notice;
 
     /// <param name="store">Where the client remembers the login, if it does (WPF). The browser keeps the login itself and has none.</param>
@@ -152,6 +166,25 @@ public sealed partial class UserAdminViewModel : PageViewModel
     [NotifyPropertyChangedFor(nameof(HasLockedRole))]
     private IReadOnlyList<RoleChoice> _roleChoices = [];
 
+    /// <summary>Every member who is not another user's yet, and the ones the user in the form is, to tick. Only offered to somebody who may edit users.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleMemberChoices), nameof(HasMemberChoices))]
+    private IReadOnlyList<MemberChoice> _memberChoices = [];
+
+    /// <summary>Narrows <see cref="VisibleMemberChoices"/> to the members whose name contains this; ticked members always stay.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleMemberChoices))]
+    private string _memberFilter = "";
+
+    /// <summary>The members to show in the form's list: the ticked ones and those that match <see cref="MemberFilter"/>.</summary>
+    public IReadOnlyList<MemberChoice> VisibleMemberChoices =>
+        MemberFilter.Trim().Length == 0
+            ? MemberChoices
+            : [.. MemberChoices.Where(m => m.IsSelected || m.Label.Contains(MemberFilter.Trim(), StringComparison.CurrentCultureIgnoreCase))];
+
+    /// <summary>The form offers members to tick: there are some, and the user may change who is one.</summary>
+    public bool HasMemberChoices => CanEdit && MemberChoices.Count > 0;
+
     /// <summary>The user's own permissions to tick, besides what their roles allow. Only offered to somebody who may give permissions.</summary>
     public PermissionPickerViewModel Picker { get; } = new();
 
@@ -167,6 +200,8 @@ public sealed partial class UserAdminViewModel : PageViewModel
         IsCreating
             ? string.Format(Strings.Account_PasswordHint, AccountRules.MinPasswordLength, AccountRules.MaxPasswordLength)
             : Strings.Users_FormPasswordKeep;
+
+    private List<int> SelectedMemberIds => [.. MemberChoices.Where(m => m.IsSelected).Select(m => m.Id).Order()];
 
     private List<int> SelectedRoleIds => [.. RoleChoices.Where(r => r.IsSelected).Select(r => r.Id).Order()];
 
@@ -187,6 +222,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
             var changed = FormUserName.Trim() != user.UserName || shownName != user.DisplayName
                           || !AliasLines.Same(AliasLines.Split(FormAliases), user.User.Aliases)
                           || FormPassword.Length > 0
+                          || (HasMemberChoices && !SelectedMemberIds.SequenceEqual((user.User.MemberIds ?? []).Order()))
                           || (CanGrant && (!SelectedRoleIds.SequenceEqual(user.User.Roles.Select(r => r.Id).Order())
                                            || !Picker.Selected.SequenceEqual(user.User.Permissions)));
             return passwordOk && changed;
@@ -222,7 +258,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
     [RelayCommand(CanExecute = nameof(CanBeginCreate))]
     private void BeginCreate()
     {
-        if (CanBeginCreate) OpenForm(null, "", "", "", [], []); // Execute does not ask CanExecute: what the user may not do is not done
+        if (CanBeginCreate) OpenForm(null, "", "", "", [], [], []); // Execute does not ask CanExecute: what the user may not do is not done
     }
 
     private bool CanBeginEdit(UserRow? user) => CanEdit && user is not null;
@@ -232,10 +268,10 @@ public sealed partial class UserAdminViewModel : PageViewModel
     {
         if (!CanBeginEdit(user)) return;
 
-        OpenForm(user, user.UserName, user.DisplayName, AliasLines.Join(user.User.Aliases), [.. user.User.Roles.Select(r => r.Id)], user.User.Permissions);
+        OpenForm(user, user.UserName, user.DisplayName, AliasLines.Join(user.User.Aliases), [.. user.User.Roles.Select(r => r.Id)], user.User.Permissions, user.User.MemberIds ?? []);
     }
 
-    private void OpenForm(UserRow? user, string userName, string displayName, string aliases, IReadOnlyList<int> roleIds, IReadOnlyList<string> permissions)
+    private void OpenForm(UserRow? user, string userName, string displayName, string aliases, IReadOnlyList<int> roleIds, IReadOnlyList<string> permissions, IReadOnlyList<int> memberIds)
     {
         ErrorMessage = null;
         SetNotice(null);
@@ -252,12 +288,27 @@ public sealed partial class UserAdminViewModel : PageViewModel
             };
         }
 
+        // A member is one user's only: the ones somebody else already is are not offered.
+        var taken = Users.Where(u => u.Id != user?.Id).SelectMany(u => u.User.MemberIds ?? []).ToHashSet();
+        var members = CanEdit
+            ? _members.Where(m => !taken.Contains(m.Id)).Select(m => new MemberChoice(m.Id, m.Name, GroupNameOf(m.GroupId)) { IsSelected = memberIds.Contains(m.Id) }).ToList()
+            : [];
+        foreach (var member in members)
+        {
+            member.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MemberChoice.IsSelected)) FormEdited();
+            };
+        }
+
         Editing = user;
         FormUserName = userName;
         FormDisplayName = displayName;
         FormAliases = aliases;
         FormPassword = "";
         RoleChoices = choices;
+        MemberFilter = "";
+        MemberChoices = members;
         Picker.Set(permissions);
         Picker.IsEnabled = CanGrant;
         IsFormOpen = true;
@@ -295,6 +346,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             saved = wasCreated ? await _api.CreateUserAsync(input, ct) : await _api.UpdateUserAsync(editing!.Id, input, ct);
+            saved = await SaveMembersAsync(saved, ct);
 
             // The API knows the new login from now on. A client that sends the login itself must send the new one, or its next call
             // (the list below) is refused.
@@ -324,6 +376,16 @@ public sealed partial class UserAdminViewModel : PageViewModel
         });
         NotifyStateChanged();
     }
+
+    /// <summary>Says which members the user is, when the form's ticks differ from what the user already is; answers with the user as it is now.</summary>
+    private async Task<UserDto> SaveMembersAsync(UserDto saved, CancellationToken cancellationToken)
+    {
+        if (!HasMemberChoices || SelectedMemberIds.SequenceEqual((saved.MemberIds ?? []).Order())) return saved;
+
+        return await _api.SetUserMembersAsync(saved.Id, SelectedMemberIds, cancellationToken);
+    }
+
+    private string? GroupNameOf(string groupId) => Shell.Groups.FirstOrDefault(g => g.Id == groupId)?.Name;
 
     partial void OnFormUserNameChanged(string value) => FormEdited();
 
@@ -397,6 +459,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             _roles = CanGrant ? await _api.GetRolesAsync(ct) : [];
+            _members = CanEdit || Shell.Can(Permission.MembersView) ? await _api.GetMemberChoicesAsync(ct) : [];
             Users = Rows(await _api.GetUsersAsync(ct));
         });
     }
@@ -412,13 +475,17 @@ public sealed partial class UserAdminViewModel : PageViewModel
     }
 
     private IReadOnlyList<UserRow> Rows(IReadOnlyList<UserDto> users) =>
-        [.. users.Select(u => new UserRow(u, u.Id == Shell.CurrentUser?.Id))];
+        [.. users.Select(u => new UserRow(u, u.Id == Shell.CurrentUser?.Id, MembersTextOf(u)))];
+
+    private string MembersTextOf(UserDto user) =>
+        string.Join(", ", (user.MemberIds ?? []).Select(id => _members.FirstOrDefault(m => m.Id == id)?.Name).OfType<string>());
 
     /// <summary>Nothing of a list the signed-in user may no longer see is kept.</summary>
     private void Reset()
     {
         Users = [];
         _roles = [];
+        _members = [];
         IsFormOpen = false;
         Editing = null;
         PendingDelete = null;
@@ -432,6 +499,7 @@ public sealed partial class UserAdminViewModel : PageViewModel
         OnPropertyChanged(nameof(DisplayNameProblem));
         OnPropertyChanged(nameof(AliasesProblem));
         OnPropertyChanged(nameof(PasswordProblem));
+        OnPropertyChanged(nameof(HasMemberChoices));
         SaveCommand.NotifyCanExecuteChanged();
         BeginCreateCommand.NotifyCanExecuteChanged();
         BeginEditCommand.NotifyCanExecuteChanged();

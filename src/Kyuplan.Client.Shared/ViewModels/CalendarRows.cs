@@ -70,9 +70,10 @@ public sealed partial class EventAttendeeRow : ObservableObject
 {
     public EventAttendeeRow(
         CalendarAttendeeDto attendee, bool canReply = false, bool canEdit = false, Func<CommentDto, bool>? mayDelete = null,
-        bool canRate = false, int? currentUserId = null)
+        bool canRate = false, int? currentUserId = null, bool mayViewRatings = true)
     {
         Attendee = attendee;
+        MayViewRatings = mayViewRatings;
         CanReply = canReply;
         Comments = Threads(attendee.Comments, canEdit, mayDelete ?? (_ => false));
 
@@ -92,6 +93,9 @@ public sealed partial class EventAttendeeRow : ObservableObject
     public IReadOnlyList<RatingRow> Ratings { get; }
 
     public bool HasRatings => Ratings.Count > 0;
+
+    /// <summary>The user may read the evaluations of this member (not so for the member they are themselves, without the permission for that): "not evaluated" would be a lie when they are only hidden.</summary>
+    public bool MayViewRatings { get; }
 
     /// <summary>What the signed-in user gave; <c>null</c> = they have not evaluated (which is not the same as 0).</summary>
     public int? MyStars { get; }

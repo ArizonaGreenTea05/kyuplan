@@ -2491,4 +2491,34 @@
   <data name="Permission_ratings_write" xml:space="preserve">
     <value>Mitglieder bewerten und eigene Bewertungen zurücknehmen</value>
   </data>
+  <data name="Permission_comments_viewOwn" xml:space="preserve">
+    <value>Die Kommentare über sich selbst lesen (die Mitglieder, die sie sind)</value>
+  </data>
+  <data name="Permission_ratings_viewOwn" xml:space="preserve">
+    <value>Die Bewertungen über sich selbst lesen (die Mitglieder, die sie sind)</value>
+  </data>
+  <data name="Users_ColMembers" xml:space="preserve">
+    <value>Mitglied</value>
+  </data>
+  <data name="Users_FormMembers" xml:space="preserve">
+    <value>Mitglied</value>
+  </data>
+  <data name="Users_FormMembersHint" xml:space="preserve">
+    <value>Welche Mitglieder des Vereins dieser Benutzer ist. Was über sie geschrieben wurde (Kommentare, Bewertungen), ist dem Benutzer dann verborgen, es sei denn, er darf lesen, was über ihn selbst steht.</value>
+  </data>
+  <data name="Users_FormMembersFilter" xml:space="preserve">
+    <value>Mitglied suchen</value>
+  </data>
+  <data name="AboutMe_Title" xml:space="preserve">
+    <value>Über dich</value>
+  </data>
+  <data name="AboutMe_Lede" xml:space="preserve">
+    <value>Was die Benutzer als Mitglied des Vereins über dich geschrieben und vergeben haben.</value>
+  </data>
+  <data name="AboutMe_Member" xml:space="preserve">
+    <value>Mitglied</value>
+  </data>
+  <data name="AboutMe_RatingsTitle" xml:space="preserve">
+    <value>Bewertungen von dir</value>
+  </data>
 </root>

@@ -73,6 +73,15 @@ public interface IPlannerApi
     /// <summary>Changes a user's name and, when the input has a password, the password; with <c>users.grant</c> also the roles and permissions.</summary>
     Task<UserDto> UpdateUserAsync(int userId, UserInputDto user, CancellationToken cancellationToken = default);
 
+    /// <summary>The members the signed-in user is (an administrator links them); every user may ask.</summary>
+    Task<IReadOnlyList<MemberChoiceDto>> GetOwnMembersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Says which members a user is (all of them; the others are released). Needs <c>users.edit</c>; a member can be one user's only (409). Answers with the user.</summary>
+    Task<UserDto> SetUserMembersAsync(int userId, IReadOnlyList<int> memberIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Every member by name with the user who already is them, for choosing the members of a user. Needs <c>members.view</c> or <c>users.edit</c>.</summary>
+    Task<IReadOnlyList<MemberChoiceDto>> GetMemberChoicesAsync(CancellationToken cancellationToken = default);
+
     /// <summary>Deletes a user other than the one signed in. Needs <c>users.delete</c>.</summary>
     Task DeleteUserAsync(int userId, CancellationToken cancellationToken = default);
 
@@ -151,6 +160,8 @@ public interface IPlannerApi
     Task<MemberDto> UpdateMemberAsync(int memberId, MemberInputDto member, CancellationToken cancellationToken = default);
 
     /// <summary>The comments on a member, oldest first (a reply comes after the comment it replies to), with their tags and the history of their edits.</summary>
+    Task<IReadOnlyList<RatingDto>> GetMemberRatingsAsync(int memberId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<CommentDto>> GetCommentsAsync(int memberId, CancellationToken cancellationToken = default);
 
     /// <summary>Writes a comment on a member as the signed-in user, or a reply to one of the member's comments.</summary>

@@ -106,6 +106,16 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.PutAsync($"api/users/{userId}", Json(user, PlannerJsonContext.Default.UserInputDto), cancellationToken),
             PlannerJsonContext.Default.UserDto, cancellationToken);
 
+    public async Task<IReadOnlyList<MemberChoiceDto>> GetOwnMembersAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/account/members", PlannerJsonContext.Default.ListMemberChoiceDto, cancellationToken);
+
+    public Task<UserDto> SetUserMembersAsync(int userId, IReadOnlyList<int> memberIds, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/users/{userId}/members", Json(new UserMembersDto(memberIds), PlannerJsonContext.Default.UserMembersDto), cancellationToken),
+            PlannerJsonContext.Default.UserDto, cancellationToken);
+
+    public async Task<IReadOnlyList<MemberChoiceDto>> GetMemberChoicesAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/members/choices", PlannerJsonContext.Default.ListMemberChoiceDto, cancellationToken);
+
     public Task DeleteUserAsync(int userId, CancellationToken cancellationToken = default) =>
         SendNoContentAsync(() => http.DeleteAsync($"api/users/{userId}", cancellationToken), cancellationToken);
 
@@ -204,6 +214,9 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task<MemberDto> UpdateMemberAsync(int memberId, MemberInputDto member, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync($"api/members/{memberId}", Json(member, PlannerJsonContext.Default.MemberInputDto), cancellationToken),
             PlannerJsonContext.Default.MemberDto, cancellationToken);
+
+    public async Task<IReadOnlyList<RatingDto>> GetMemberRatingsAsync(int memberId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/members/{memberId}/ratings", PlannerJsonContext.Default.ListRatingDto, cancellationToken);
 
     public async Task<IReadOnlyList<CommentDto>> GetCommentsAsync(int memberId, CancellationToken cancellationToken = default) =>
         await GetAsync($"api/members/{memberId}/comments", PlannerJsonContext.Default.ListCommentDto, cancellationToken);

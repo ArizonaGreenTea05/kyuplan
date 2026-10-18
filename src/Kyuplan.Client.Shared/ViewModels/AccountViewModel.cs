@@ -29,6 +29,7 @@ public sealed partial class AccountViewModel : PageViewModel
     {
         _api = api;
         _store = store;
+        AboutMe = new AboutMeViewModel(shell, api);
 
         PropertyChanged += (_, e) =>
         {
@@ -45,6 +46,9 @@ public sealed partial class AccountViewModel : PageViewModel
 
     /// <summary>The account page has nothing to do with the selected group or the Spond data.</summary>
     protected override bool ReloadsWithContext => false;
+
+    /// <summary>What was written about the user themselves, for the members they are; only with <c>comments.viewOwn</c> / <c>ratings.viewOwn</c>.</summary>
+    public AboutMeViewModel AboutMe { get; }
 
     /// <summary>The signed-in user as the API knows them, or <c>null</c> until it has said so.</summary>
     public UserDto? Account => Shell.CurrentUser;
@@ -199,9 +203,12 @@ public sealed partial class AccountViewModel : PageViewModel
 
     // --- Loading and saving ----------------------------------------------------------------------------------
 
-    protected override Task ReloadAsync() =>
+    protected override async Task ReloadAsync()
+    {
         // Asks again although the shell knows the user: an administrator may have renamed them since.
-        LoadAsync(async ct => Shell.Session.User = await _api.GetAccountAsync(ct));
+        await LoadAsync(async ct => Shell.Session.User = await _api.GetAccountAsync(ct));
+        await AboutMe.ReloadAsync();
+    }
 
     /// <summary>The account changed (it became known, or was changed elsewhere): show it, unless the user is in the middle of editing the name.</summary>
     private void AdoptAccount()
@@ -289,6 +296,7 @@ public sealed partial class AccountViewModel : PageViewModel
         OnPropertyChanged(nameof(PasswordHint));
         OnPropertyChanged(nameof(AliasesHint));
         OnPropertyChanged(nameof(NoticeText));
+        AboutMe.Refresh();
         NotifyStateChanged(); // the problems are worded in the language
     }
 }

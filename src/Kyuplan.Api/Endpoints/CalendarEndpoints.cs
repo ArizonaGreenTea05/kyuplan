@@ -27,9 +27,19 @@ public static class CalendarEndpoints
             .WithSummary("The events of a group that are going on right now.")
             .RequirePermission(Permission.CalendarView);
 
-        calendar.MapGet("/events/{eventId}", (string eventId, string groupId, ClaimsPrincipal principal, CalendarService service, CancellationToken ct) =>
-                service.GetEventAsync(groupId, eventId, principal.Has(Permission.CommentsView), principal.Has(Permission.RatingsView), ct))
-            .WithSummary("One event with everybody invited to it and what they answered; with comments.view also the comments on them that carry the tag of the event, with ratings.view everybody's star evaluations of them.")
+        calendar.MapGet("/events/{eventId}", async (string eventId, string groupId, ClaimsPrincipal principal, CalendarService service, MemberService members, CancellationToken ct) =>
+            {
+                // What is written about a member the user is themselves needs the "own" permission, about everybody else the general one.
+                var own = await members.IdsOfUserAsync(principal.UserId(), ct);
+                var anyComments = principal.Has(Permission.CommentsView) || principal.Has(Permission.CommentsViewOwn);
+                var anyRatings = principal.Has(Permission.RatingsView) || principal.Has(Permission.RatingsViewOwn);
+                return await service.GetEventAsync(
+                    groupId, eventId,
+                    anyComments ? OwnData.MayRead(principal, own, Permission.CommentsView, Permission.CommentsViewOwn) : null,
+                    anyRatings ? OwnData.MayRead(principal, own, Permission.RatingsView, Permission.RatingsViewOwn) : null,
+                    ct);
+            })
+            .WithSummary("One event with everybody invited to it and what they answered; with comments.view also the comments on them that carry the tag of the event, with ratings.view everybody's star evaluations of them. For a member the user is themselves comments.viewOwn / ratings.viewOwn decide instead (each works without the other).")
             .RequirePermission(Permission.CalendarView);
 
         calendar.MapPost("/events/{eventId}/members/{memberId:int}/comments", async (

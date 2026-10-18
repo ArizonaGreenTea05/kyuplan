@@ -395,9 +395,14 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Property<DateOnly?>("StartedAt")
                         .HasColumnType("date");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BeltId");
+
+                    b.HasIndex("UserId");
 
                     b.HasIndex("GroupId", "SpondId")
                         .IsUnique();

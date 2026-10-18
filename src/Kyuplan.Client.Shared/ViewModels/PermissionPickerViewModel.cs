@@ -55,7 +55,8 @@ public sealed partial class PermissionGroupRow : ObservableObject
 /// <summary>
 /// Every permission there is, by domain, to tick. Used by the roles page and by the user form (a user's own permissions). A permission needs
 /// the one that lets the user see the domain, so ticking one ticks the domain's <c>.view</c> as well, and unticking the <c>.view</c> unticks
-/// the rest of the domain: nobody is given something to change in a place they may not look at.
+/// the rest of the domain: nobody is given something to change in a place they may not look at. The <c>.viewOwn</c> permissions (reading what is
+/// written about oneself) are the exception: they work without the <c>.view</c> of their domain and are not touched by it.
 /// </summary>
 public sealed partial class PermissionPickerViewModel : ObservableObject
 {
@@ -100,9 +101,9 @@ public sealed partial class PermissionPickerViewModel : ObservableObject
             var group = Groups.First(g => g.Permissions.Contains(row));
             var view = group.Permissions[0].Key.EndsWith(".view", StringComparison.Ordinal) ? group.Permissions[0] : null;
 
-            if (row.IsSelected && view is not null) view.IsSelected = true;
+            if (row.IsSelected && view is not null && !IsOwn(row)) view.IsSelected = true;
             if (!row.IsSelected && ReferenceEquals(row, view))
-                foreach (var other in group.Permissions) other.IsSelected = false;
+                foreach (var other in group.Permissions.Where(p => !IsOwn(p))) other.IsSelected = false;
         }
         finally
         {
@@ -112,6 +113,8 @@ public sealed partial class PermissionPickerViewModel : ObservableObject
         OnPropertyChanged(nameof(Selected));
         Changed?.Invoke(this, EventArgs.Empty);
     }
+
+    private static bool IsOwn(PermissionRow row) => row.Key.EndsWith(".viewOwn", StringComparison.Ordinal);
 
     /// <summary>The language changed: the texts are read again.</summary>
     public void Refresh()

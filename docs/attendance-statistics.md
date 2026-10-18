@@ -119,7 +119,8 @@ Besides comments, users **evaluate a member at an event with 0 to 5 stars**, to 
   have theirs.
 - **0 is not "none".** A member nobody evaluated shows *Not evaluated*. An evaluation of 0 stars shows `☆☆☆☆☆ 0/5` in red, and the button 0 is
   highlighted in red when it is the user's.
-- **Everybody sees everybody's.** Whoever may read evaluations (`ratings.view`) sees all evaluations of the member at the event, each with the
+- **Everybody sees everybody's, except their own.** Whoever may read evaluations (`ratings.view`) sees all evaluations of the member at the event
+  (not those of the members they are themselves: that needs `ratings.viewOwn`, which works without `ratings.view`), each with the
   user (their display name) and, in the tooltip, when it was given, and the average of them. Whoever may give them (`ratings.write`) gets the
   buttons; nobody can change or take back another user's evaluation.
 - **An event counts once.** In every figure an event is **one** instance for a member, however many users evaluated them: it counts the
@@ -142,7 +143,7 @@ Besides comments, users **evaluate a member at an event with 0 to 5 stars**, to 
 | `PUT /api/calendar/events/{eventId}/members/{memberId}/rating?groupId=` | `ratings.write`. `{ "stars": 0–5 }` as the signed-in user, replacing their earlier evaluation. `400` for stars outside 0–5 or an event that has not started, `404` for an unknown group, event or member. |
 | `DELETE /api/calendar/events/{eventId}/members/{memberId}/rating?groupId=` | `ratings.write`. Takes back the signed-in user's own evaluation (`204`, also when there is none). |
 | `GET /api/calendar/events/{eventId}?groupId=` | With `ratings.view` each attendee carries `ratings` (everybody's evaluations of them at this event). |
-| `GET /api/members/{memberId}/ratings` | `ratings.view`. Everything the member got, at all events, the latest first. |
+| `GET /api/members/{memberId}/ratings` | `ratings.view`, or `ratings.viewOwn` for a member the user is themselves (403 otherwise). Everything the member got, at all events, the latest first. |
 
 The statistics endpoint adds `averageStars`, `starEvents` and `evaluatedEvents` per member, `averageStars` per event and in the summary.
 

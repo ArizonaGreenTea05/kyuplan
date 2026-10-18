@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Endpoints;
@@ -15,46 +16,54 @@ public static class AccountEndpoints
     {
         var account = app.MapGroup("/api/account").WithTags("Own account");
 
-        account.MapGet("/", (ClaimsPrincipal principal, AccountService service, CancellationToken ct) =>
-                service.GetAsync(UserId(principal), ct))
-            .WithSummary("The signed-in user, with their roles and what they may do (effectivePermissions). A client can use it to check a login.");
+        account.MapGet("/", async (ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
+                await WithMembers(await service.GetAsync(UserId(principal), ct), members, ct))
+            .WithSummary("The signed-in user, with their roles, what they may do (effectivePermissions) and the members they are (memberIds). A client can use it to check a login.");
 
-        account.MapPut("/", async (ClaimsPrincipal principal, AccountUpdateDto input, AccountService service, CancellationToken ct) =>
+        account.MapGet("/members", (ClaimsPrincipal principal, MemberService members, CancellationToken ct) => members.OfUserAsync(UserId(principal), ct))
+            .WithSummary("The members the signed-in user is (an administrator links them). What is written about them is read with comments.viewOwn and ratings.viewOwn, whatever else the user may read.");
+
+        account.MapPut("/", async (ClaimsPrincipal principal, AccountUpdateDto input, AccountService service, MemberService members, CancellationToken ct) =>
             {
                 if (Validate(input) is { } errors) return Results.ValidationProblem(errors);
 
-                return Results.Ok(await service.UpdateOwnAsync(UserId(principal), input, ct));
+                return Results.Ok(await WithMembers(await service.UpdateOwnAsync(UserId(principal), input, ct), members, ct));
             })
             .WithSummary("Change your own user name, display name, aliases and/or password. Setting a new password needs the current one. Nothing else can be changed here.");
 
-        account.MapPut("/theme", async (ClaimsPrincipal principal, ThemePreferenceDto input, AccountService service, Kyuplan.Api.Infrastructure.ThemePackStore packs, CancellationToken ct) =>
+        account.MapPut("/theme", async (ClaimsPrincipal principal, ThemePreferenceDto input, AccountService service, MemberService members, Kyuplan.Api.Infrastructure.ThemePackStore packs, CancellationToken ct) =>
             {
                 var errors = new Dictionary<string, string[]>();
                 if (!ThemeClients.IsKnown(input?.Client)) errors["client"] = [$"client must be one of: {ThemeClients.Web}, {ThemeClients.Windows}."];
                 else if (input!.Theme is not null) Check(errors, "theme", ThemeRules.Check(input.Client, input.Theme, "theme") ?? packs.CheckInstalled(input.Theme, "theme"));
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
-                return Results.Ok(await service.SetThemeAsync(UserId(principal), input!, ct));
+                return Results.Ok(await WithMembers(await service.SetThemeAsync(UserId(principal), input!, ct), members, ct));
             })
             .WithSummary("Choose your own theme for the web or the Windows client (client = web | windows); theme = null follows the instance's default again. Answers with the user.");
 
-        account.MapPut("/language", async (ClaimsPrincipal principal, LanguagePreferenceDto input, AccountService service, CancellationToken ct) =>
+        account.MapPut("/language", async (ClaimsPrincipal principal, LanguagePreferenceDto input, AccountService service, MemberService members, CancellationToken ct) =>
             {
                 if (input is null) return Results.ValidationProblem(Fail([], nameof(input), "A request body is required."));
                 if (input.Language is not null && LanguageRules.Check(input.Language) is { } problem)
                     return Results.ValidationProblem(Fail([], "language", problem));
 
-                return Results.Ok(await service.SetLanguageAsync(UserId(principal), input, ct));
+                return Results.Ok(await WithMembers(await service.SetLanguageAsync(UserId(principal), input, ct), members, ct));
             })
             .WithSummary("Choose your own language for the clients (en | de); language = null forgets the choice, so a client follows its system's language again. Answers with the user.");
 
         var users = app.MapGroup("/api/users").WithTags("Users");
 
-        users.MapGet("/", (AccountService service, CancellationToken ct) => service.ListAsync(ct))
+        users.MapGet("/", async (AccountService service, MemberService members, CancellationToken ct) =>
+            {
+                var links = await members.IdsByUserAsync(ct);
+                return (await service.ListAsync(ct)).Select(u => u with { MemberIds = links.GetValueOrDefault(u.Id, []) }).ToList();
+            })
             .WithSummary("All users, by user name.")
             .RequirePermission(Permission.UsersView);
 
-        users.MapGet("/{userId:int}", (int userId, AccountService service, CancellationToken ct) => service.GetAsync(userId, ct))
+        users.MapGet("/{userId:int}", async (int userId, AccountService service, MemberService members, CancellationToken ct) =>
+                await WithMembers(await service.GetAsync(userId, ct), members, ct))
             .WithName("GetUser")
             .WithSummary("One user.")
             .RequirePermission(Permission.UsersView);
@@ -71,22 +80,34 @@ public static class AccountEndpoints
             .WithSummary("Create a user. The password is required; the user name and the aliases must be new (regardless of case: no name belongs to two users). Roles and permissions can only be given with users.grant; without them the user may do nothing but manage their own account.")
             .RequirePermission(Permission.UsersEdit);
 
-        users.MapPut("/{userId:int}", async (int userId, UserInputDto input, ClaimsPrincipal principal, AccountService service, CancellationToken ct) =>
+        users.MapPut("/{userId:int}", async (int userId, UserInputDto input, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
             {
                 EnsureMayGrant(input, principal);
                 if (Validate(input, creating: false) is { } errors) return Results.ValidationProblem(errors);
                 await service.EnsureMayManageAsync(userId, principal, ct);
                 await service.EnsureMayGrantAsync(input, principal, ct);
 
-                return Results.Ok(await service.UpdateAsync(userId, input, ct));
+                return Results.Ok(await WithMembers(await service.UpdateAsync(userId, input, ct), members, ct));
             })
             .WithSummary("Change a user's names and, when a password is given, password; with users.grant also their roles and permissions (leave them out to keep them). The last user with the administrator role cannot lose it.")
             .RequirePermission(Permission.UsersEdit);
 
-        users.MapDelete("/{userId:int}", async (int userId, ClaimsPrincipal principal, AccountService service, CancellationToken ct) =>
+        users.MapPut("/{userId:int}/members", async (int userId, UserMembersDto input, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
+            {
+                if (input?.MemberIds is null) return Results.ValidationProblem(Fail([], nameof(input.MemberIds), "memberIds is required (it may be empty)."));
+                await service.EnsureMayManageAsync(userId, principal, ct);
+
+                await members.SetUserMembersAsync(userId, input.MemberIds, ct);
+                return Results.Ok(await WithMembers(await service.GetAsync(userId, ct), members, ct));
+            })
+            .WithSummary("Say which members a user is (all of them; the others are released): what is written about them is then hidden from the user unless they have comments.viewOwn / ratings.viewOwn. A member can be one user's only (409), and a user may be one member per Spond group.")
+            .RequirePermission(Permission.UsersEdit);
+
+        users.MapDelete("/{userId:int}", async (int userId, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
             {
                 await service.EnsureMayManageAsync(userId, principal, ct);
                 await service.DeleteAsync(userId, UserId(principal), ct);
+                await members.ReleaseUserAsync(userId, ct);
                 return Results.NoContent();
             })
             .WithSummary("Delete a user. You cannot delete yourself, so the last administrator stays.")
@@ -134,6 +155,10 @@ public static class AccountEndpoints
 
         return app;
     }
+
+    /// <summary>The members a user is live in the planner database, the users in the accounts database: they are put together here.</summary>
+    private static async Task<UserDto> WithMembers(UserDto user, MemberService members, CancellationToken cancellationToken) =>
+        user with { MemberIds = [.. (await members.IdsOfUserAsync(user.Id, cancellationToken)).Order()] };
 
     private static int UserId(ClaimsPrincipal principal) => int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
 

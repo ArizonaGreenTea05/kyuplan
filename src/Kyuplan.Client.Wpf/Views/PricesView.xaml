@@ -1,0 +1,85 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.PricesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="BeltPriceItem" DataType="{x:Type vm:BeltPriceRow}">
+            <Grid Margin="0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceBelt" MinWidth="240" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceAmount" MinWidth="140" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <ctl:BeltSwatch Color="{Binding Belt.Color}" Stripe="{Binding Belt.SecondaryColor}" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBox Grid.Column="1" Width="130" HorizontalAlignment="Left" HorizontalContentAlignment="Right"
+                         AutomationProperties.Name="{Binding Name}"
+                         Text="{Binding Price.Text, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Margin="24,6,24,32">
+
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                <TextBlock Text="{loc:Loc Prices_Intro}" Style="{StaticResource LedeText}" />
+
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                Visibility="{Binding HasLoaded, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasLoaded, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Prices_General}" Style="{StaticResource FieldLabelText}" />
+                        <TextBox Width="130" HorizontalAlignment="Left" HorizontalContentAlignment="Right"
+                                 AutomationProperties.Name="{loc:Loc Prices_General}"
+                                 Text="{Binding General.Text, UpdateSourceTrigger=PropertyChanged}"
+                                 IsEnabled="{Binding CanEdit}" />
+
+                        <TextBlock Text="{loc:Loc Prices_Belts}" Style="{StaticResource SectionTitleText}" Margin="0,24,0,2" />
+                        <TextBlock Text="{loc:Loc Prices_BeltsHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                        <TextBlock Text="{loc:Loc Prices_NoBelts}" Style="{StaticResource LedeText}"
+                                   Visibility="{Binding HasNoBelts, Converter={StaticResource BoolToVisibility}}" />
+                        <StackPanel Grid.IsSharedSizeScope="True">
+                            <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource BeltPriceItem}" IsTabStop="False" />
+                        </StackPanel>
+
+                        <TextBlock Text="{loc:Loc Prices_Invalid}" Style="{StaticResource ProblemText}" Margin="0,12,0,0"
+                                   Visibility="{Binding HasInvalid, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{loc:Loc Prices_Note}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,12,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0"
+                                    Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}">
+                            <Button Command="{Binding SaveCommand}" Content="{loc:Loc Prices_Save}" Style="{StaticResource AccentButtonStyle}" />
+                            <Button Command="{Binding DiscardCommand}" Content="{loc:Loc Prices_Discard}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Style="{StaticResource NotAllowedText}" Text="{loc:Loc Page_NotAllowed}"
+                   Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top" Margin="0,-6,0,0"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</UserControl>

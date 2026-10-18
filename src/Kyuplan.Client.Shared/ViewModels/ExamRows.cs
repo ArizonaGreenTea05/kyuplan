@@ -372,3 +372,116 @@ public sealed partial class AttendeeRow : ObservableObject
         OnPropertyChanged(nameof(AnswerText));
     }
 }
+
+/// <summary>
+/// One member's payment for the exam on show: what is due, and the fields an administrator fills in (what was paid, a note). The fields
+/// are only saved when asked to; <see cref="Reset"/> shows what the server holds.
+/// </summary>
+public sealed partial class PaymentRow : ObservableObject
+{
+    private readonly Func<PaymentRow, Task> _save;
+    private readonly Func<bool> _canEdit;
+
+    public PaymentRow(ExamPaymentDto payment, BeltOption belt, Func<bool> canEdit, Func<PaymentRow, Task> save)
+    {
+        Payment = payment;
+        Belt = belt;
+        _canEdit = canEdit;
+        _save = save;
+        Paid = new MoneyField(payment.Paid);
+        _note = payment.Note ?? "";
+        Paid.PropertyChanged += (_, _) => NotifyEdited();
+    }
+
+    /// <summary>What the server holds.</summary>
+    public ExamPaymentDto Payment { get; private set; }
+
+    public int MemberId => Payment.MemberId;
+
+    public string Name => Payment.Name;
+
+    /// <summary>The belt the member receives (recorded, or the next one); the empty entry when it is not known.</summary>
+    public BeltOption Belt { get; }
+
+    public string DueText => Display.Money(Payment.Due);
+
+    /// <summary>What was paid, as typed.</summary>
+    public MoneyField Paid { get; }
+
+    [ObservableProperty]
+    private string _note;
+
+    partial void OnNoteChanged(string value) => NotifyEdited();
+
+    /// <summary>What the server holds: not paid, partly paid or paid. Follows the saved payment, not what is typed.</summary>
+    public PaymentStatus Status => Payment.Status;
+
+    public string StatusText => Status switch
+    {
+        PaymentStatus.Paid => Strings.Pay_StatusPaid,
+        PaymentStatus.Partial => Strings.Pay_StatusPartial,
+        _ => Strings.Pay_StatusOpen,
+    };
+
+    /// <summary>"Paid on 26 Sep 2026", or empty when nothing was paid.</summary>
+    public string PaidOnText => Payment.PaidOn is { } day ? string.Format(Strings.Pay_PaidOn, Display.Date(day)) : "";
+
+    /// <summary>The fields differ from what the server holds.</summary>
+    public bool HasChange => Paid.HasChange || Note.Trim() != (Payment.Note ?? "");
+
+    public bool CanEdit => _canEdit();
+
+    public bool CanSave => CanEdit && HasChange && Paid.IsValid;
+
+    /// <summary>Paying what is due would change something: less than that is paid.</summary>
+    public bool CanMarkPaid => CanEdit && Paid.Amount < Payment.Due;
+
+    /// <summary>Counts how often the row was set to what the server holds; a page that cannot tell it went back keys by this.</summary>
+    public int Revision { get; private set; }
+
+    private void NotifyEdited()
+    {
+        OnPropertyChanged(nameof(HasChange));
+        OnPropertyChanged(nameof(CanSave));
+        OnPropertyChanged(nameof(CanMarkPaid));
+        SaveCommand.NotifyCanExecuteChanged();
+        MarkPaidCommand.NotifyCanExecuteChanged();
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand(CanExecute = nameof(CanSave))]
+    private Task SaveAsync() => _save(this);
+
+    /// <summary>Fills in the amount that is due and saves it.</summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand(CanExecute = nameof(CanMarkPaid))]
+    private Task MarkPaidAsync()
+    {
+        Paid.Text = Display.MoneyInput(Payment.Due);
+        return _save(this);
+    }
+
+    /// <summary>Shows what the server holds.</summary>
+    public void Reset(ExamPaymentDto payment)
+    {
+        Payment = payment;
+        Revision++;
+        Paid.Reset(payment.Paid);
+        Note = payment.Note ?? "";
+        OnPropertyChanged(string.Empty);
+        NotifyEdited();
+    }
+
+    /// <summary>The permissions changed: what depends on them is announced again.</summary>
+    public void PermissionsChanged()
+    {
+        OnPropertyChanged(nameof(CanEdit));
+        NotifyEdited();
+    }
+
+    public void Refresh()
+    {
+        Belt.Refresh();
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(PaidOnText));
+        OnPropertyChanged(nameof(DueText));
+    }
+}

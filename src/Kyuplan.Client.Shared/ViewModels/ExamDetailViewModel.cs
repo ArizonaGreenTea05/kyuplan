@@ -26,6 +26,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
     private SuggestionRow[] _watched = [];
     private bool _quietBasis;
     private bool _resultsLoaded;
+    private bool _paymentsLoaded;
     private Func<string>? _notice;
     private Task _loaded = Task.CompletedTask;
 
@@ -57,11 +58,18 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
     /// <summary>Whether the user may record the belts handed out at an exam; without it who received which is only to look at.</summary>
     public bool CanRecordResults => _shell.Can(Permission.ExamsResults);
 
+    /// <summary>Whether the user may see who paid for an exam; the section is hidden without it.</summary>
+    public bool CanViewPayments => _shell.Can(Permission.PaymentsView);
+
+    /// <summary>Whether the user may record what members paid; without it the payments are only to look at.</summary>
+    public bool CanEditPayments => _shell.Can(Permission.PaymentsEdit);
+
     /// <summary>The permissions of the user changed: what depends on them is announced again.</summary>
     internal void OnPermissionsChanged()
     {
         OnPropertyChanged(string.Empty);
         NotifySelectionChanged();
+        foreach (var row in PaymentRows) row.PermissionsChanged();
     }
 
     /// <summary>The load that <see cref="ShowAsync"/> started last; it completes when the exam is on show (or the load failed).</summary>
@@ -116,6 +124,8 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         var kept = sameExam ? _watched.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => r.IsSelected) : new Dictionary<int, bool>();
         _members = [];
         _resultsLoaded = false;
+        var keptPayments = sameExam ? PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note)) : [];
+        ShowPayments(null, keptPayments);
         ShowSuggestions(null, new Dictionary<int, bool>());
         ShowAttendees();
         BuildBasisOptions();
@@ -126,6 +136,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         {
             if (ShowsPlan) await LoadPlanAsync(exam, kept, ct);
             if (ShowsResults) await LoadResultsAsync(exam, ct);
+            if (CanViewPayments) await LoadPaymentsAsync(exam, keptPayments, ct);
         });
     }
 
@@ -443,6 +454,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         SetNotice(() => string.Format(Strings.Plan_Saved, count, name));
         Changed?.Invoke(this, EventArgs.Empty);
         NotifySelectionChanged();
+        await ReloadPaymentsAsync(exam);
     }
 
     // --- Who attended and which belt they received -----------------------------------------------------------
@@ -531,6 +543,100 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
                 ? () => string.Format(Strings.Res_Cleared, name)
                 : () => string.Format(Strings.Res_Recorded, name, beltName));
             Changed?.Invoke(this, EventArgs.Empty);
+            await ReloadPaymentsAsync(exam);
+        }
+        finally
+        {
+            _results.Release();
+        }
+    }
+
+    // --- Payments ------------------------------------------------------------------------------------------
+
+    /// <summary>Everybody who pays for the exam, by name.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPayments), nameof(NobodyPays))]
+    private IReadOnlyList<PaymentRow> _paymentRows = [];
+
+    public bool HasPayments => PaymentRows.Count > 0;
+
+    /// <summary>The payments were read and nobody owes anything yet.</summary>
+    public bool NobodyPays => _paymentsLoaded && !HasPayments;
+
+    /// <summary>"Paid 120.00 € of 200.00 €".</summary>
+    public string PaymentTotalsText => string.Format(Strings.Pay_Totals,
+        Display.Money(PaymentRows.Sum(r => r.Payment.Paid)), Display.Money(PaymentRows.Sum(r => r.Payment.Due)));
+
+    /// <summary>"3 paid · 1 partly paid · 2 not paid".</summary>
+    public string PaymentCountsText => string.Format(Strings.Pay_Counts,
+        PaymentRows.Count(r => r.Status == PaymentStatus.Paid),
+        PaymentRows.Count(r => r.Status == PaymentStatus.Partial),
+        PaymentRows.Count(r => r.Status == PaymentStatus.Open));
+
+    private async Task LoadPaymentsAsync(ExamRow exam, IReadOnlyDictionary<int, (string Paid, string Note)> kept, CancellationToken cancellationToken)
+    {
+        var payments = await _api.GetExamPaymentsAsync(exam.Id, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _paymentsLoaded = true;
+        ShowPayments(payments, kept);
+    }
+
+    private void ShowPayments(ExamPaymentsDto? payments, IReadOnlyDictionary<int, (string Paid, string Note)> kept)
+    {
+        if (payments is null) _paymentsLoaded = false;
+
+        PaymentRows =
+        [
+            .. (payments?.Members ?? []).Select(m =>
+            {
+                var row = new PaymentRow(m, BeltOf(m.BeltId), () => CanEditPayments, OnPaymentSavedAsync);
+                if (kept.TryGetValue(m.MemberId, out var typed))
+                {
+                    row.Paid.Text = typed.Paid;
+                    row.Note = typed.Note;
+                }
+
+                return row;
+            }),
+        ];
+
+        OnPropertyChanged(nameof(NobodyPays));
+        OnPropertyChanged(nameof(PaymentTotalsText));
+        OnPropertyChanged(nameof(PaymentCountsText));
+    }
+
+    /// <summary>Who owes something changes with who is saved for the exam and who received a belt: read the payments again, keeping what was typed.</summary>
+    private async Task ReloadPaymentsAsync(ExamRow exam)
+    {
+        if (!CanViewPayments) return;
+
+        var kept = PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note));
+        await LoadAsync(ct => LoadPaymentsAsync(exam, kept, ct));
+    }
+
+    /// <summary>The user saved a payment row: record it. If the API refuses, what was typed stays and the reason is shown.</summary>
+    private async Task OnPaymentSavedAsync(PaymentRow row)
+    {
+        if (!CanEditPayments || Exam is not { } exam || !row.CanSave) return;
+
+        await _results.WaitAsync();
+        try
+        {
+            if (!ReferenceEquals(Exam, exam)) return;
+
+            ExamPaymentDto? saved = null;
+            var input = new ExamPaymentInputDto(row.Paid.Amount, null, string.IsNullOrWhiteSpace(row.Note) ? null : row.Note.Trim());
+            await LoadAsync(async ct => saved = await _api.SetExamPaymentAsync(exam.Id, row.MemberId, input, ct));
+            if (saved is null) return;
+
+            row.Reset(saved);
+            OnPropertyChanged(nameof(PaymentTotalsText));
+            OnPropertyChanged(nameof(PaymentCountsText));
+
+            var name = saved.Name;
+            var paid = Display.Money(saved.Paid);
+            SetNotice(() => string.Format(Strings.Pay_Saved, name, paid));
         }
         finally
         {
@@ -548,6 +654,9 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         foreach (var option in FilterOptions) option.Refresh();
         foreach (var row in _watched) row.Refresh();
         foreach (var row in Attendees) row.Refresh();
+        foreach (var row in PaymentRows) row.Refresh();
+        OnPropertyChanged(nameof(PaymentTotalsText));
+        OnPropertyChanged(nameof(PaymentCountsText));
         if (_resultsLoaded) BuildResultKpis();
 
         OnPropertyChanged(nameof(Heading));

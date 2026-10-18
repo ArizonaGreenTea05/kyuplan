@@ -49,6 +49,10 @@ public class PlannerDbContext : DbContext
 
     public DbSet<ExamResult> ExamResults => Set<ExamResult>();
 
+    public DbSet<ExamPrice> ExamPrices => Set<ExamPrice>();
+
+    public DbSet<ExamPayment> ExamPayments => Set<ExamPayment>();
+
     public DbSet<Belt> Belts => Set<Belt>();
 
     public DbSet<BeltPrerequisite> BeltPrerequisites => Set<BeltPrerequisite>();
@@ -81,6 +85,7 @@ public class PlannerDbContext : DbContext
             branding.Property(b => b.AccentColor).HasMaxLength(ColorLength);
             branding.Property(b => b.DefaultWebTheme).HasMaxLength(ThemeRules.MaxLength).HasDefaultValue(ThemeIds.Default);
             branding.Property(b => b.DefaultWindowsTheme).HasMaxLength(ThemeRules.MaxLength).HasDefaultValue(ThemeIds.Default);
+            branding.Property(b => b.Currency).HasMaxLength(BrandingRules.MaxCurrencyLength).HasDefaultValue(BrandingRules.DefaultCurrency);
 
             branding.ToTable(table => table.HasCheckConstraint("CK_CustomBranding_Single", "\"Id\" = 1"));
         });
@@ -184,6 +189,28 @@ public class PlannerDbContext : DbContext
 
             // A belt that was handed out at an exam cannot be deleted.
             result.HasOne(r => r.Belt).WithMany().HasForeignKey(r => r.BeltId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ExamPrice>(price =>
+        {
+            price.Property(p => p.Amount).HasPrecision(10, 2);
+            price.HasIndex(p => p.BeltId).IsUnique(); // the general fee (null) is kept to one row by ExamPaymentService
+
+            // The surcharge goes with its belt.
+            price.HasOne(p => p.Belt).WithMany().HasForeignKey(p => p.BeltId).OnDelete(DeleteBehavior.Cascade);
+            price.ToTable(table => table.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0"));
+        });
+
+        modelBuilder.Entity<ExamPayment>(payment =>
+        {
+            payment.HasKey(p => new { p.ExamId, p.MemberId });
+            payment.Property(p => p.AmountDue).HasPrecision(10, 2);
+            payment.Property(p => p.AmountPaid).HasPrecision(10, 2);
+            payment.Property(p => p.Note).HasMaxLength(PaymentRules.MaxNoteLength);
+
+            payment.HasOne(p => p.Exam).WithMany(e => e.Payments).HasForeignKey(p => p.ExamId).OnDelete(DeleteBehavior.Cascade);
+            payment.HasOne(p => p.Member).WithMany().HasForeignKey(p => p.MemberId).OnDelete(DeleteBehavior.Cascade);
+            payment.ToTable(table => table.HasCheckConstraint("CK_ExamPayments_Amounts", "\"AmountDue\" >= 0 AND \"AmountPaid\" >= 0"));
         });
 
         modelBuilder.Entity<Comment>(comment =>

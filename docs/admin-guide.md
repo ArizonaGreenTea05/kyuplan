@@ -161,6 +161,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | statistics | `statistics.view` |
 | calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
+| payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the additional price per belt) |
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
 | belts | `belts.view`, `belts.edit` |
 | comments | `comments.view`, `comments.viewOwn` (read the comments about the members one is oneself), `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
@@ -283,6 +284,8 @@ to look, `branding.edit` to change). It affects both clients.
 - **Texts and colour**: product name (navigation, window and tab titles), organisation name, accent colour (`#RGB` or `#RRGGBB`: type it
   or pick it; used for links, focus, selection, buttons and for what means *attended / meets the bar*). Choose a mid-tone or dark colour:
   a very light accent leaves white button text with little contrast. **Save** is only active while the form differs and is valid.
+- **Currency**: the unit of all money (exam prices and payments), a symbol such as `€` or a code such as `CHF`, shown after every amount.
+  The amounts themselves are not converted: changing it only changes the label.
 - **Default themes**: the theme the web client and the Windows client show to users who have not picked one themselves (every user can
   pick their own in the navigation; *Server default* there follows this setting). Dracula, Catppuccin Latte/Mocha and Liquid Glass exist in
   both; Windows 10, Vista / 7 and native WPF only in the Windows client. Saved with the texts and the colour. The API's settings

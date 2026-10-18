@@ -209,7 +209,7 @@ public sealed class BrandingAdminViewModelTests : IDisposable
         await vm.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(["save-branding"], _api.BrandingCalls);
-        Assert.Equal(new BrandingInputDto("PlanIt", "Karate Club Beispiel", "#1a5fb4", ThemeIds.Default, ThemeIds.Default), _api.BrandingInputs.Single());
+        Assert.Equal(new BrandingInputDto("PlanIt", "Karate Club Beispiel", "#1a5fb4", ThemeIds.Default, ThemeIds.Default, "€"), _api.BrandingInputs.Single());
         Assert.Equal("Saved.", vm.NoticeText);
         Assert.True(vm.HasNotice);
         Assert.True(vm.IsCustomized);

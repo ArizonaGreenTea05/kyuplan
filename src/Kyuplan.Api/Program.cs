@@ -88,6 +88,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
         sp => sp.GetRequiredService<IOptions<DatabaseOptions>>().Value.Resolve(sp.GetRequiredService<IHostEnvironment>().ContentRootPath));
     builder.Services.AddScoped<ExamService>();
     builder.Services.AddScoped<ExamPlanningService>();
+    builder.Services.AddScoped<ExamPaymentService>();
     builder.Services.AddScoped<BeltService>();
     builder.Services.AddScoped<MemberService>();
     builder.Services.AddScoped<CommentService>();
@@ -228,6 +229,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapClientDownloadEndpoints();
     app.MapDocumentationEndpoints();
     app.MapExamEndpoints();
+    app.MapPaymentEndpoints();
     app.MapBeltEndpoints();
     app.MapCommentEndpoints();
     app.MapCalendarEndpoints();

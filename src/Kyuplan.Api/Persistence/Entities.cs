@@ -37,6 +37,50 @@ public sealed class Exam
 
     /// <summary>The belts handed out at the exam. Kept apart from <see cref="Participants"/>, which follow Spond. Deleted along with the exam.</summary>
     public List<ExamResult> Results { get; set; } = [];
+
+    /// <summary>What members paid for the exam. Deleted along with the exam.</summary>
+    public List<ExamPayment> Payments { get; set; } = [];
+}
+
+/// <summary>
+/// One line of the exam price list: the general fee (<see cref="BeltId"/> null, at most one row) or the surcharge for one belt (at most
+/// one row per belt). What a member owes for an exam is the general fee plus the surcharge of the belt they receive; no row = 0.
+/// </summary>
+public sealed class ExamPrice
+{
+    public int Id { get; set; }
+
+    /// <summary>The belt the surcharge is for; null = the general fee.</summary>
+    public int? BeltId { get; set; }
+
+    public Belt? Belt { get; set; }
+
+    public decimal Amount { get; set; }
+}
+
+/// <summary>
+/// What one member paid for one exam. A row exists once an administrator recorded something; a member without one has paid nothing. It
+/// keeps the amount due as it was worked out when it was last saved, so that a later change of the prices does not turn a settled exam
+/// into an open one.
+/// </summary>
+public sealed class ExamPayment
+{
+    public int ExamId { get; set; }
+
+    public Exam Exam { get; set; } = null!;
+
+    public int MemberId { get; set; }
+
+    public Member Member { get; set; } = null!;
+
+    public decimal AmountDue { get; set; }
+
+    public decimal AmountPaid { get; set; }
+
+    /// <summary>The day of the last payment; null when nothing is paid.</summary>
+    public DateOnly? PaidOn { get; set; }
+
+    public string? Note { get; set; }
 }
 
 /// <summary>
@@ -395,6 +439,9 @@ public sealed class CustomBranding
 
     /// <summary>The same for the Windows client.</summary>
     public string DefaultWindowsTheme { get; set; } = Kyuplan.Contracts.ThemeIds.Default;
+
+    /// <summary>Unit of money, shown after every amount.</summary>
+    public string Currency { get; set; } = Kyuplan.Contracts.BrandingRules.DefaultCurrency;
 
     public DateTimeOffset UpdatedAt { get; set; }
 }

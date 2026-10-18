@@ -115,7 +115,7 @@ the address and give them the [user guide](user-guide.md).
 | `Accounts__InitialAdminPassword` | Create the administrator `admin` without the setup screen |
 | `Statistics__TimeZone` | The club's time zone (default `Europe/Berlin`) |
 | `Database__Provider`, `Database__ConnectionString`, `Accounts__ConnectionString` | PostgreSQL instead of SQLite |
-| `Branding__ProductName`, `Branding__OrganizationName`, `Branding__AccentColor`, `Branding__Logo`, `Branding__DefaultWebTheme`, `Branding__DefaultWindowsTheme` | Branding basis |
+| `Branding__ProductName`, `Branding__OrganizationName`, `Branding__AccentColor`, `Branding__Currency`, `Branding__Logo`, `Branding__DefaultWebTheme`, `Branding__DefaultWindowsTheme` | Branding basis |
 | `Themes__Directory` | Folder of the uploaded theme packs (default: `themes` next to `settings.json`, i.e. `/data/themes`) |
 | `DefaultData__Enabled=false` | Start new databases without default belts and roles |
 

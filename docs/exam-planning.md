@@ -116,6 +116,24 @@ way to add recipients to an event), the sync shows their answer in the *On Spond
 - Buttons are only enabled while they would change something: *Select the fit* while somebody who is fit is not ticked, *Clear selection*
   while somebody is ticked, *Save selection* and *Discard changes* while the ticks differ from what is saved.
 
+## Prices and payments
+
+Members pay for exams. The **Exam prices** page holds the price list of the club: one **general fee** that every member pays for an exam, and
+an **additional price per belt** (0 = none). What a member owes for an exam is `general fee + additional price of the belt they receive`.
+
+- **The belt they receive** is the belt recorded for them at the exam; until one is recorded, the first belt (in the order of the progression)
+  that asks for the belt they hold. Without either (no belt held, or no belt comes next) only the general fee is due.
+- **Who pays** (the *Payments* section of the exam on the Exams page): everybody who accepted the exam on Spond, everybody saved for it who did
+  not decline, everybody who received a belt at it, and everybody an administrator already recorded something for.
+- An administrator records **the total a member paid** and, if wanted, a note (*Mark as paid* fills in the amount due). The day of the payment
+  is today unless given. The **status** follows: *not paid* (nothing paid), *partly paid* (less than is due) or *paid* (the amount due or more;
+  an exam that costs nothing counts as paid). Entering 0 and no note takes the record back.
+- **Prices change.** A member with a record keeps the amount due they were saved with (re-worked from the current prices every time the record
+  is saved), so changing the prices does not turn settled exams into open ones. Members without a record always follow the current prices.
+- Amounts are whole cents between 0 and 100,000. The currency is the one of the user's language settings; the planner does not convert.
+- Permissions: `payments.view` (the price page, the payments of every exam), `payments.edit` (record payments), `prices.edit` (change the price
+  list). The built-in roles do not carry them (money is not the trainers' business); give them through a role.
+
 ## What the Members page adds
 
 Besides the belt and the day they started, a member has **the day they got their belt** and a **birth date**. The birth date is taken over

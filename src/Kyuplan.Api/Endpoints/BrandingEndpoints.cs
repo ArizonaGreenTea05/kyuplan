@@ -99,6 +99,7 @@ public static class BrandingEndpoints
         Check(errors, nameof(input.ProductName), BrandingRules.CheckProductName(input.ProductName));
         Check(errors, nameof(input.OrganizationName), BrandingRules.CheckOrganizationName(input.OrganizationName));
         Check(errors, nameof(input.AccentColor), BrandingRules.CheckAccentColor(input.AccentColor));
+        if (input.Currency is not null) Check(errors, nameof(input.Currency), BrandingRules.CheckCurrency(input.Currency));
         if (input.DefaultWebTheme is not null) Check(errors, nameof(input.DefaultWebTheme), ThemeRules.Check(ThemeClients.Web, input.DefaultWebTheme, "defaultWebTheme") ?? packs?.CheckInstalled(input.DefaultWebTheme, "defaultWebTheme"));
         if (input.DefaultWindowsTheme is not null) Check(errors, nameof(input.DefaultWindowsTheme), ThemeRules.Check(ThemeClients.Windows, input.DefaultWindowsTheme, "defaultWindowsTheme") ?? packs?.CheckInstalled(input.DefaultWindowsTheme, "defaultWindowsTheme"));
 

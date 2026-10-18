@@ -199,6 +199,13 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                         .HasMaxLength(7)
                         .HasColumnType("character varying(7)");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasDefaultValue("€");
+
                     b.Property<string>("DefaultWebTheme")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -335,6 +342,65 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.HasIndex("MemberId");
 
                     b.ToTable("ExamParticipants");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ExamPayment", b =>
+                {
+                    b.Property<int>("ExamId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AmountDue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("AmountPaid")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateOnly?>("PaidOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("ExamId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("ExamPayments", t =>
+                        {
+                            t.HasCheckConstraint("CK_ExamPayments_Amounts", "\"AmountDue\" >= 0 AND \"AmountPaid\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ExamPrice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int?>("BeltId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeltId")
+                        .IsUnique();
+
+                    b.ToTable("ExamPrices", t =>
+                        {
+                            t.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Persistence.ExamResult", b =>
@@ -673,6 +739,35 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ExamPayment", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.Exam", "Exam")
+                        .WithMany("Payments")
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kyuplan.Api.Persistence.Member", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exam");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ExamPrice", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.Belt", "Belt")
+                        .WithMany()
+                        .HasForeignKey("BeltId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Belt");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.ExamResult", b =>
                 {
                     b.HasOne("Kyuplan.Api.Persistence.Belt", "Belt")
@@ -753,6 +848,8 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Navigation("Filters");
 
                     b.Navigation("Participants");
+
+                    b.Navigation("Payments");
 
                     b.Navigation("Results");
                 });

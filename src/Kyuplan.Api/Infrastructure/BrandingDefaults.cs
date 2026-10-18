@@ -36,6 +36,8 @@ public sealed class BrandingDefaults
         DefaultWebTheme = Theme(log, ThemeClients.Web, settings.DefaultWebTheme);
         DefaultWindowsTheme = Theme(log, ThemeClients.Windows, settings.DefaultWindowsTheme);
 
+        Currency = BrandingRules.CheckCurrency(settings.Currency) is null ? settings.Currency.Trim() : BrandingRules.DefaultCurrency;
+
         AccentColor = settings.AccentColor.Trim();
         if (!BrandingRules.IsAccentColor(AccentColor))
         {
@@ -53,6 +55,8 @@ public sealed class BrandingDefaults
     public string OrganizationName { get; }
 
     public string AccentColor { get; }
+
+    public string Currency { get; }
 
     /// <summary>The file the settings name for this slot (one of <see cref="BrandingSlots"/>), if it is a usable one.</summary>
     public BrandingFile? FileOf(string slot) => _files.GetValueOrDefault(slot);

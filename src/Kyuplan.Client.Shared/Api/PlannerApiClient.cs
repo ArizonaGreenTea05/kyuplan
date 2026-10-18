@@ -223,6 +223,20 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.PutAsync($"api/exams/{examId}/results/{memberId}", Json(result, PlannerJsonContext.Default.ExamResultInputDto), cancellationToken),
             PlannerJsonContext.Default.ExamMemberDto, cancellationToken);
 
+    public async Task<ExamPricesDto> GetExamPricesAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/exam-prices", PlannerJsonContext.Default.ExamPricesDto, cancellationToken);
+
+    public Task<ExamPricesDto> SetExamPricesAsync(ExamPricesDto prices, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync("api/exam-prices", Json(prices, PlannerJsonContext.Default.ExamPricesDto), cancellationToken),
+            PlannerJsonContext.Default.ExamPricesDto, cancellationToken);
+
+    public async Task<ExamPaymentsDto> GetExamPaymentsAsync(int examId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/exams/{examId}/payments", PlannerJsonContext.Default.ExamPaymentsDto, cancellationToken);
+
+    public Task<ExamPaymentDto> SetExamPaymentAsync(int examId, int memberId, ExamPaymentInputDto payment, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/exams/{examId}/payments/{memberId}", Json(payment, PlannerJsonContext.Default.ExamPaymentInputDto), cancellationToken),
+            PlannerJsonContext.Default.ExamPaymentDto, cancellationToken);
+
     public async Task<IReadOnlyList<BeltDto>> GetBeltsAsync(CancellationToken cancellationToken = default) =>
         await GetAsync("api/belts", PlannerJsonContext.Default.ListBeltDto, cancellationToken);
 

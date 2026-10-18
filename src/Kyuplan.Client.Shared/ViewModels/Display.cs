@@ -17,6 +17,27 @@ public static class Display
     /// <summary>What a cell shows for a value that is asked for but not known.</summary>
     public const string Unknown = "?";
 
+    /// <summary>
+    /// The unit of money the administrators set (<see cref="BrandingDto.Currency"/>); <c>BrandingViewModel</c> keeps it current.
+    /// There is one instance per client process, so a static is enough.
+    /// </summary>
+    public static string Currency { get; set; } = BrandingRules.DefaultCurrency;
+
+    /// <summary>An amount of money with the instance's currency, number in the user's culture: "12.50 $", "12,50 €".</summary>
+    public static string Money(decimal amount) => $"{amount.ToString("N2", CultureInfo.CurrentCulture)} {Currency}";
+
+    /// <summary>An amount as it is typed into a field: "12.50", with the decimal separator of the user's culture.</summary>
+    public static string MoneyInput(decimal amount) => amount.ToString("0.00", CultureInfo.CurrentCulture);
+
+    /// <summary>Reads what a user typed as an amount of money (see <see cref="PaymentRules.IsAmount"/>); an empty text is 0.</summary>
+    public static bool TryParseMoney(string? text, out decimal amount)
+    {
+        amount = 0;
+        if (string.IsNullOrWhiteSpace(text)) return true;
+
+        return decimal.TryParse(text.Trim(), NumberStyles.Number, CultureInfo.CurrentCulture, out amount) && PaymentRules.IsAmount(amount);
+    }
+
     public static string Percent(double value) => value.ToString("0.#", CultureInfo.CurrentCulture) + " %";
 
     /// <summary>An average of stars with one decimal: "3.4".</summary>

@@ -49,7 +49,7 @@ public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaul
         return new BrandingDto(
             ProductName(state), OrganizationName(state), AccentColor(state),
             Url(BrandingSlots.Logo), Url(BrandingSlots.LogoOnDark), Url(BrandingSlots.Icon),
-            DefaultWebTheme(state), DefaultWindowsTheme(state), themes.Catalog().Version);
+            DefaultWebTheme(state), DefaultWindowsTheme(state), themes.Catalog().Version, Currency(state));
     }
 
     /// <summary>What administrators edit: the same, with each slot's own image only.</summary>
@@ -82,6 +82,7 @@ public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaul
         row.AccentColor = input.AccentColor.Trim();
         if (input.DefaultWebTheme is not null) row.DefaultWebTheme = input.DefaultWebTheme;
         if (input.DefaultWindowsTheme is not null) row.DefaultWindowsTheme = input.DefaultWindowsTheme;
+        if (input.Currency is not null) row.Currency = input.Currency.Trim();
         row.UpdatedAt = time.GetUtcNow();
         await db.SaveChangesAsync(cancellationToken);
 
@@ -188,6 +189,9 @@ public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaul
     private string DefaultWindowsTheme(State state) =>
         state.Texts is { } texts && ThemeRules.IsValid(ThemeClients.Windows, texts.DefaultWindowsTheme) ? texts.DefaultWindowsTheme : defaults.DefaultWindowsTheme;
 
+    private string Currency(State state) =>
+        state.Texts is { } texts && BrandingRules.CheckCurrency(texts.Currency) is null ? texts.Currency.Trim() : defaults.Currency;
+
     private string AccentColor(State state) =>
         state.Texts is { } texts && BrandingRules.IsAccentColor(texts.AccentColor) ? texts.AccentColor.Trim() : defaults.AccentColor;
 
@@ -208,7 +212,7 @@ public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaul
     private BrandingSettingsDto ToSettings(State state) => new(
         ProductName(state), OrganizationName(state), AccentColor(state), state.IsCustomized,
         [.. BrandingSlots.All.Select(slot => new BrandingImageDto(slot, state.Slots[slot] is null ? null : ImageUrl(slot)))],
-        DefaultWebTheme(state), DefaultWindowsTheme(state));
+        DefaultWebTheme(state), DefaultWindowsTheme(state), Currency(state));
 
     /// <summary>Relative to the API's address, like every other request a client makes.</summary>
     private static string ImageUrl(string name) => $"{Route.TrimStart('/')}/{name}";

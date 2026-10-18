@@ -65,6 +65,10 @@ public sealed partial class BrandingViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _defaultWindowsTheme = ThemeIds.Default;
 
+    /// <summary>Unit of every amount of money; <see cref="Display.Money"/> shows it.</summary>
+    [ObservableProperty]
+    private string _currency = BrandingRules.DefaultCurrency;
+
     /// <summary>Changes whenever a theme pack is installed, replaced or deleted (<see cref="ThemeViewModel"/> then asks for the catalog again).</summary>
     [ObservableProperty]
     private string _themesVersion = "";
@@ -126,6 +130,8 @@ public sealed partial class BrandingViewModel : ObservableObject, IDisposable
             DefaultWebTheme = branding.DefaultWebTheme;
             DefaultWindowsTheme = branding.DefaultWindowsTheme;
             ThemesVersion = branding.ThemesVersion;
+            Currency = branding.Currency;
+            Display.Currency = branding.Currency;
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally

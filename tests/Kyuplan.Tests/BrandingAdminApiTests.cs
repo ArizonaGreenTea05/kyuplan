@@ -742,6 +742,32 @@ public sealed class BrandingRulesTests
     public void An_accent_colour_is_a_hash_and_three_or_six_hex_digits(string? color, bool valid) =>
         Assert.Equal(valid, BrandingRules.IsAccentColor(color));
 
+    [Theory]
+    [InlineData("€", true)]
+    [InlineData(" CHF ", true)]
+    [InlineData("", false)]
+    [InlineData("  ", false)]
+    [InlineData(null, false)]
+    [InlineData("123456789", false)]
+    [InlineData("a\tb", false)]
+    public void A_currency_is_a_short_text_without_control_characters(string? currency, bool valid) =>
+        Assert.Equal(valid, BrandingRules.CheckCurrency(currency) is null);
+
+    [Fact]
+    public void Money_is_shown_with_the_set_currency()
+    {
+        var before = Kyuplan.Client.ViewModels.Display.Currency;
+        try
+        {
+            Kyuplan.Client.ViewModels.Display.Currency = "CHF";
+            Assert.EndsWith(" CHF", Kyuplan.Client.ViewModels.Display.Money(12.5m));
+        }
+        finally
+        {
+            Kyuplan.Client.ViewModels.Display.Currency = before;
+        }
+    }
+
     [Fact]
     public void An_unknown_slot_takes_no_format()
     {

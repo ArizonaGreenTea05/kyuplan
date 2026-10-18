@@ -151,6 +151,8 @@ The complete list of keys is in the [README's configuration table](../README.md#
 - Every page needs its `.view` permission, and every change a permission of its own. Buttons for things a user may not do are hidden;
   the server enforces it with `403` on every request, so a change applies from the user's **next request** on.
 - Everybody who is signed in can use their own **Account** page, read the server info and press *Refresh*.
+- The **Users** page shows each user's **status**: *Online* (a request with their login in the last five minutes; an open but idle client
+  may therefore show as offline), *Last online* with the date and time, or *Never online*. The time is noted at most once a minute.
 - A **new user has no role and no permission** (just their own account) until somebody with `users.grant` gives them some.
 
 ### The permissions

@@ -179,6 +179,7 @@
                                 <th>@Strings.Users_ColAliases</th>
                                 <th>@Strings.Users_ColMembers</th>
                                 <th>@Strings.Users_ColRole</th>
+                                <th>@Strings.Col_Status</th>
                                 @if (hasActions)
                                 {
                                     <th></th>
@@ -213,6 +214,9 @@
                                                 }
                                             }
                                         </span>
+                                    </td>
+                                    <td>
+                                        <span class="chip @(user.IsOnline ? "ok" : "")">@user.StatusText</span>
                                     </td>
                                     @if (hasActions)
                                     {

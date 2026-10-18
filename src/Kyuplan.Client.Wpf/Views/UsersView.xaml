@@ -265,6 +265,15 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
+                                <DataGridTemplateColumn Header="{loc:Loc Col_Status}" Width="*" MinWidth="150">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Margin="8,0" TextWrapping="Wrap"
+                                                       ToolTip="{Binding StatusText}" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
                                 <!-- Wide enough for both buttons in both languages: an automatic width is not worked out again when the language changes.
                                      Somebody who may neither change nor delete users has no use for the column. -->
                                 <DataGridTemplateColumn Width="200" MinWidth="190">

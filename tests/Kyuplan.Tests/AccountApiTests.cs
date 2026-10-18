@@ -148,6 +148,31 @@ public sealed class AccountApiTests(WebApplicationFactory<Program> factory) : IC
     }
 
     [Fact]
+    public async Task The_user_list_says_when_a_user_was_last_seen_and_never_for_one_who_has_not_signed_in()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        await CreateUserAsync(admin, "Anna");
+        await CreateUserAsync(admin, "Berta");
+
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(host.CreateClient(), "Anna", GoodPassword));
+
+        var users = (await admin.GetFromJsonAsync<List<UserDto>>("/api/users"))!;
+        var anna = users.Single(u => u.UserName == "Anna");
+        Assert.True(PresenceRules.IsOnline(anna.LastSeenAt, DateTimeOffset.UtcNow));
+        Assert.Null(users.Single(u => u.UserName == "Berta").LastSeenAt);
+    }
+
+    [Fact]
+    public void A_user_is_online_for_a_few_minutes_after_the_last_request()
+    {
+        var now = DateTimeOffset.UtcNow;
+        Assert.True(PresenceRules.IsOnline(now - PresenceRules.OnlineWindow + TimeSpan.FromSeconds(1), now));
+        Assert.False(PresenceRules.IsOnline(now - PresenceRules.OnlineWindow, now));
+        Assert.False(PresenceRules.IsOnline(null, now));
+    }
+
+    [Fact]
     public async Task A_browser_origin_gets_its_login_answered_with_credentials_allowed_and_needs_none_for_the_preflight()
     {
         using var host = CreateHost();

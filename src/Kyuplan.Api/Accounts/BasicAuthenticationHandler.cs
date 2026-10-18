@@ -54,6 +54,7 @@ public sealed class BasicAuthenticationHandler(
         }
 
         throttle.Succeeded(address, userName);
+        await accounts.TouchAsync(user, Context.RequestAborted);
 
         var identity = new ClaimsIdentity(SchemeName);
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));

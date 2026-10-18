@@ -55,6 +55,22 @@ public sealed class AccountService(
         }
     }
 
+    /// <summary>Notes that the user is making a request now, unless the last note is recent enough (<see cref="PresenceRules.WriteInterval"/>). Never fails a request.</summary>
+    public async Task TouchAsync(UserAccount user, CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+        if (user.LastSeenAt is { } seen && now - seen < PresenceRules.WriteInterval) return;
+
+        try
+        {
+            await db.Users.Where(u => u.Id == user.Id).ExecuteUpdateAsync(s => s.SetProperty(u => u.LastSeenAt, now), cancellationToken);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogDebug(e, "Could not note when user {UserId} was last seen.", user.Id);
+        }
+    }
+
     /// <summary>
     /// Nobody changes or deletes a user who can do more than they can themselves: otherwise whoever may edit users could set the password of an
     /// administrator and sign in as one.
@@ -242,7 +258,8 @@ public sealed class AccountService(
     private static UserDto ToDto(UserAccount user) =>
         new(user.Id, user.UserName, user.DisplayName, [.. user.Aliases.Select(a => a.Alias).Order(StringComparer.OrdinalIgnoreCase)],
             [.. user.Roles.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).Select(r => new RoleRefDto(r.Id, r.Name))],
-            Permission.InCatalogueOrder(user.Permissions), user.EffectivePermissions(), user.WebTheme, user.WindowsTheme, user.Language);
+            Permission.InCatalogueOrder(user.Permissions), user.EffectivePermissions(), user.WebTheme, user.WindowsTheme, user.Language,
+            LastSeenAt: user.LastSeenAt);
 
     /// <summary>Empty means the user name; <c>null</c> keeps what the user has (a new user has nothing, so gets the user name).</summary>
     private static string DisplayNameFor(string? input, string userName, string? current) =>

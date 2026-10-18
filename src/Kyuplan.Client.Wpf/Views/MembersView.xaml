@@ -226,6 +226,9 @@
                             <DataGridTextColumn Header="{loc:Loc MemberPage_ColBirth}" SortMemberPath="BirthSort"
                                                 Binding="{Binding BirthText, Mode=OneWay}" Width="140" MinWidth="120" ElementStyle="{StaticResource TextCell}" />
 
+                            <DataGridTextColumn Header="{loc:Loc MemberPage_ColRegistered}" SortMemberPath="RegisteredSort"
+                                                Binding="{Binding RegisteredText, Mode=OneWay}" Width="160" MinWidth="120" ElementStyle="{StaticResource TextCell}" />
+
                             <!-- Wide enough for the count in both languages: an automatic width is not worked out again when the language changes.
                                  Somebody who may not read comments has no use for the column (and is not told how many there are). -->
                             <DataGridTemplateColumn Width="170" MinWidth="150"

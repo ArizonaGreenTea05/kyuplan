@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Spond;
@@ -32,6 +34,7 @@ public sealed class SpondSync(
     ClubClock clock,
     TimeProvider time,
     SyncGate gate,
+    IOptions<SpondOptions> spondOptions,
     ILogger<SpondSync> logger)
 {
     /// <summary>Syncs every group and every exam.</summary>
@@ -116,6 +119,7 @@ public sealed class SpondSync(
         var added = 0;
 
         var today = clock.Today;
+        var unregistered = UnregisteredSubGroupIds(group, spondOptions.Value.UnregisteredSubGroup);
 
         foreach (var info in group.Members.DistinctBy(m => m.Id))
         {
@@ -129,6 +133,8 @@ public sealed class SpondSync(
                 db.Members.Add(member);
                 added++;
             }
+
+            member.Registered = !info.SubGroupIds.Any(unregistered.Contains);
 
             // Spond's birth date fills a gap and nothing else: a day that is there, set by hand or taken earlier, is kept. A date that makes no sense is not taken.
             if (member.BirthDate is null && info.BirthDate is { } birth && MemberRules.CheckBirthDate(birth, today) is null)
@@ -145,6 +151,18 @@ public sealed class SpondSync(
             logger.LogInformation("Members of group {GroupId} synced with Spond: {Added} added, {Removed} removed.", group.Id, added, stored.Count);
 
         return members;
+    }
+
+    /// <summary>The ids of the subgroups of the group that <paramref name="setting"/> (a name or an id) names; none when it is empty or the group has no such subgroup.</summary>
+    internal static HashSet<string> UnregisteredSubGroupIds(GroupInfo group, string? setting)
+    {
+        var wanted = setting?.Trim();
+        if (string.IsNullOrEmpty(wanted)) return [];
+
+        return group.SubGroups
+            .Where(s => string.Equals(s.Id, wanted, StringComparison.OrdinalIgnoreCase) || string.Equals(s.Name, wanted, StringComparison.OrdinalIgnoreCase))
+            .Select(s => s.Id)
+            .ToHashSet();
     }
 
     /// <summary>

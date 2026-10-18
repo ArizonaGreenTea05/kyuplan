@@ -1087,6 +1087,24 @@
   <data name="MemberPage_NoneMatch" xml:space="preserve">
     <value>Kein Mitglied passt.</value>
   </data>
+  <data name="MemberPage_ColRegistered" xml:space="preserve">
+    <value>Anmeldung</value>
+  </data>
+  <data name="MemberPage_Registered" xml:space="preserve">
+    <value>angemeldet</value>
+  </data>
+  <data name="MemberPage_NotRegistered" xml:space="preserve">
+    <value>noch nicht angemeldet</value>
+  </data>
+  <data name="Settings_UnregisteredSubGroup" xml:space="preserve">
+    <value>Untergruppe der noch nicht angemeldeten Mitglieder</value>
+  </data>
+  <data name="Settings_NoSubGroup" xml:space="preserve">
+    <value>keine</value>
+  </data>
+  <data name="Settings_UnregisteredSubGroupHint" xml:space="preserve">
+    <value>Die Spond-Untergruppe mit den Personen, die noch nicht im Verein angemeldet sind. Ihre Mitglieder werden als nicht angemeldet markiert. Leer = alle gelten als angemeldet.</value>
+  </data>
   <data name="MemberPage_ColStarted" xml:space="preserve">
     <value>Trainiert seit</value>
   </data>

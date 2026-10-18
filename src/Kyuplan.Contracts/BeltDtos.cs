@@ -41,6 +41,7 @@ public sealed record BeltInputDto(
 /// <param name="BirthDate">The day the member was born; <c>null</c> until it is known (the API takes it over from Spond when Spond has it, and a day set by hand is kept). The age a belt requires is worked out from it.</param>
 /// <param name="BeltSince">The day the member got the belt they hold now; the waiting time for the next belt counts from it. <c>null</c> when there is no belt or the day is not known (recording a belt at an exam sets it).</param>
 /// <param name="CommentCount">How many comments the users wrote about the member, replies included.</param>
+/// <param name="Registered"><c>false</c> while the member is in the Spond subgroup of the people not registered in the club yet.</param>
 public sealed record MemberDto(
     int Id,
     string GroupId,
@@ -49,7 +50,8 @@ public sealed record MemberDto(
     DateOnly? StartedAt,
     DateOnly? BirthDate = null,
     DateOnly? BeltSince = null,
-    int CommentCount = 0);
+    int CommentCount = 0,
+    bool Registered = true);
 
 /// <summary>What a client sends to change a member: what Spond does not know. Everything is replaced; <c>null</c> clears it. Without a belt there is no <paramref name="BeltSince"/>.</summary>
 public sealed record MemberInputDto(int? BeltId, DateOnly? StartedAt, DateOnly? BirthDate = null, DateOnly? BeltSince = null);

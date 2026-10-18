@@ -436,6 +436,9 @@ namespace Kyuplan.Api.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Registered")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SpondId")
                         .IsRequired()
                         .HasMaxLength(200)

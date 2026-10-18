@@ -92,5 +92,5 @@ public sealed class MemberService(PlannerDbContext db)
         db.Members.Where(m => m.UserId == userId).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, (int?)null), cancellationToken);
 
     private static MemberDto ToDto(Member m, int commentCount) =>
-        new(m.Id, m.GroupId, m.Name, m.BeltId, m.StartedAt, m.BirthDate, m.BeltSince, commentCount);
+        new(m.Id, m.GroupId, m.Name, m.BeltId, m.StartedAt, m.BirthDate, m.BeltSince, commentCount, m.Registered);
 }

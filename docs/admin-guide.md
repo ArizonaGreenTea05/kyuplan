@@ -42,7 +42,7 @@ The setup screen asks for:
 | --- | --- |
 | **Settings file** | Where the settings are kept (`data/settings.json`; fixed, and shown read-only, when the deployment pins it). |
 | **Planner / Accounts database** | The two SQLite files (only with SQLite; with PostgreSQL the connection strings are environment settings). Keep them as two different files. |
-| **Spond** | Email (or phone number) and password of the Spond account, or **Use demo data** to try kyuplan out. |
+| **Spond** | Email (or phone number) and password of the Spond account, or **Use demo data** to try kyuplan out. **Subgroup of members not registered yet** (`Spond:UnregisteredSubGroup`): name (or id, case-insensitive) of the Spond subgroup that holds the people who are in the group but not registered in the club yet; the Members page shows them as "not registered yet", and each sync keeps this in line with Spond. Empty, or no such subgroup in a group = everybody is registered. |
 | **Time zone**, **Exam keyword**, **default minimum attendance**, **default minimum invited events** | See [Statistics settings](#statistics-and-exams). |
 | **Synchronisation** | Whether to sync with Spond automatically and how often. |
 | **Allowed host names** | The proposal is the address you opened. Requests to other host names are refused. |

@@ -40,6 +40,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddSingleton(_clock);
         services.AddSingleton<ISpondDataSource>(Spond);
         services.AddSingleton<IOptions<StatisticsOptions>>(Options.Create(new StatisticsOptions { ExamMinAverageStars = 0 })); // stars have tests of their own
+        services.AddSingleton<IOptions<SpondOptions>>(Options.Create(SpondSettings));
         services.AddSingleton<StatisticsService>();
         services.AddSingleton<SyncGate>();
         services.AddDbContext<PlannerDbContext>(options => options.UseSqlite(_database.ConnectionString));
@@ -54,6 +55,9 @@ internal sealed class SyncTestClub : IDisposable
     }
 
     public FakeTimeProvider Time { get; }
+
+    /// <summary>The Spond options the sync reads; change them before syncing.</summary>
+    public SpondOptions SpondSettings { get; } = new();
 
     public FakeSpondDataSource Spond { get; } = new();
 

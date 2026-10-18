@@ -46,6 +46,13 @@ public sealed class MemberRow(MemberDto member, BeltOption belt) : ObservableObj
     /// <summary>"Comments", or "Comments (3)" once there are some: what the button that opens the comments says.</summary>
     public string CommentsText => member.CommentCount > 0 ? string.Format(Strings.MemberPage_CommentsCount, member.CommentCount) : Strings.MemberPage_Comments;
 
+    public bool Registered => member.Registered;
+
+    public string RegisteredText => member.Registered ? Strings.MemberPage_Registered : Strings.MemberPage_NotRegistered;
+
+    /// <summary>Sort key: members who are not registered yet come first.</summary>
+    public int RegisteredSort => member.Registered ? 1 : 0;
+
     public string StartedText => member.StartedAt is { } day ? Display.Date(day) : Strings.MemberPage_NotKnown;
 
     /// <summary>Sort key: members whose start day is not known come first.</summary>

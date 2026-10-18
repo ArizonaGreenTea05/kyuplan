@@ -488,6 +488,9 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Property<int>("MinAttendancePercent")
                         .HasColumnType("integer");
 
+                    b.Property<double?>("MinAverageStars")
+                        .HasColumnType("double precision");
+
                     b.Property<int>("MinInvitedEvents")
                         .HasColumnType("integer");
 

@@ -40,7 +40,7 @@ public sealed class PostgresMigrationTests
         using var accounts = new AccountsDbContext(new DbContextOptionsBuilder<AccountsDbContext>().UseSqlite("Data Source=:memory:").Options);
 
         Assert.DoesNotContain(planner.Database.GetMigrations(), m => m.Contains("Postgres", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal(11, planner.Database.GetMigrations().Count());
+        Assert.Equal(12, planner.Database.GetMigrations().Count());
         Assert.Equal(5, accounts.Database.GetMigrations().Count());
         Assert.False(planner.Database.HasPendingModelChanges());
         Assert.False(accounts.Database.HasPendingModelChanges());

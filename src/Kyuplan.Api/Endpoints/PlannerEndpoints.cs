@@ -27,7 +27,8 @@ public static class PlannerEndpoints
                 options.Value.TimeZone,
                 installer.FindAll().ToDictionary(i => i.Key, i => i.Value.Version),
                 documentation.Exists,
-                configuration["Repository:Url"]))
+                configuration["Repository:Url"],
+                options.Value.ExamMinAverageStars))
             .WithSummary("Server metadata and defaults for the filter controls.");
 
         api.MapGet("/groups", (StatisticsService service, CancellationToken ct) => service.GetGroupsAsync(ct))

@@ -469,6 +469,9 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Property<int>("MinAttendancePercent")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("MinAverageStars")
+                        .HasColumnType("REAL");
+
                     b.Property<int>("MinInvitedEvents")
                         .HasColumnType("INTEGER");
 

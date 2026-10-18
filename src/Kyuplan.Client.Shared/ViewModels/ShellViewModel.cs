@@ -146,6 +146,8 @@ public sealed partial class ShellViewModel : ViewModelBase
 
     public int DefaultMinInvitedEvents => Info?.DefaultMinInvitedEvents ?? 3;
 
+    public double DefaultExamMinAverageStars => Info?.DefaultExamMinAverageStars ?? RatingRules.StandardExamMinAverageStars;
+
     /// <summary>
     /// Loads server info and groups once. Concurrent callers share one load (the layout and the first page both
     /// ask on start-up); after a failed attempt the next call tries again.
@@ -179,6 +181,7 @@ public sealed partial class ShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(ApiVersionText));
         OnPropertyChanged(nameof(DefaultMinAttendancePercent));
         OnPropertyChanged(nameof(DefaultMinInvitedEvents));
+        OnPropertyChanged(nameof(DefaultExamMinAverageStars));
 
         if (_initialized && SelectedGroup is null) SelectedGroupId = Groups.FirstOrDefault()?.Id ?? "";
     }

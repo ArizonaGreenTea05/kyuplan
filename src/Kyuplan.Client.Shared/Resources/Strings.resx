@@ -372,6 +372,12 @@
   <data name="Stats_MinAttendance" xml:space="preserve">
     <value>Minimum attendance</value>
   </data>
+  <data name="Stats_MinStars" xml:space="preserve">
+    <value>Minimum evaluation</value>
+  </data>
+  <data name="Stats_MinStarsHint" xml:space="preserve">
+    <value>Average star evaluation an exam asks for with this filter (0 = not asked). Saved with the filter; the statistics do not change.</value>
+  </data>
   <data name="Stats_MinAttendanceHint" xml:space="preserve">
     <value>Share of the events a member was invited to that they accepted.</value>
   </data>

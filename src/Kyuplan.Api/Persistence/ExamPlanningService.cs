@@ -192,7 +192,7 @@ public sealed class ExamPlanningService(
             attendance.Members.ToDictionary(m => m.MemberId),
             group.SubGroups.ToDictionary(s => s.Id, s => s.Name),
             await LastExamsAsync(exam, cancellationToken),
-            invitations, preSaved, options.Value.ExamMinAverageStars);
+            invitations, preSaved, saved?.MinAverageStars ?? options.Value.ExamMinAverageStars);
 
         return new ExamSuggestionsDto(exam.Id, exam.Name, exam.Date, saved?.Id, saved?.Name, attendance.Filter, rows);
     }

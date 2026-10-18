@@ -130,7 +130,7 @@
             <div class="nav-group">
                 <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="user" /><span>@Strings.Nav_Account</span></button>
                 <div class="flyout" role="menu">
-                    <NavLink class="nav-item" href="account" title="@(Shell.CurrentUser is { } me ? string.Format(Strings.Shell_SignedInAs, me.DisplayName) : null)">
+                    <NavLink class="nav-item" href="account" Match="NavLinkMatch.All" title="@(Shell.CurrentUser is { } me ? string.Format(Strings.Shell_SignedInAs, me.DisplayName) : null)">
                         <Icon Name="user" /><span>@Strings.Nav_Account</span>
                     </NavLink>
                     <NavLink class="nav-item" href="account/preferences">

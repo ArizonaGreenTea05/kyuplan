@@ -352,6 +352,12 @@
   <data name="Stats_MinAttendance" xml:space="preserve">
     <value>Mindestanwesenheit</value>
   </data>
+  <data name="Stats_MinStars" xml:space="preserve">
+    <value>Mindestbewertung</value>
+  </data>
+  <data name="Stats_MinStarsHint" xml:space="preserve">
+    <value>Durchschnittliche Sternebewertung, die eine Prüfung mit diesem Filter verlangt (0 = nicht verlangt). Wird mit dem Filter gespeichert; die Statistik ändert sich nicht.</value>
+  </data>
   <data name="Stats_MinAttendanceHint" xml:space="preserve">
     <value>Anteil der Termine, zu denen ein Mitglied eingeladen war und zugesagt hat.</value>
   </data>

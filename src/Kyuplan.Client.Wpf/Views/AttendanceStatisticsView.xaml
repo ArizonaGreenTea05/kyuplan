@@ -110,6 +110,16 @@
                                     IsSnapToTickEnabled="True" Value="{Binding MinAttendancePercent}"
                                     AutomationProperties.Name="{loc:Loc Stats_MinAttendance}" />
                         </StackPanel>
+                        <StackPanel ToolTip="{loc:Loc Stats_MinStarsHint}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Foreground="{DynamicResource DataYesTextBrush}" FontWeight="Bold"
+                                           Text="{Binding MinAverageStarsText}" />
+                                <TextBlock Text="{loc:Loc Stats_MinStars}" Style="{StaticResource FieldLabelText}" />
+                            </DockPanel>
+                            <Slider Minimum="0" Maximum="5" TickFrequency="0.1" SmallChange="0.1" LargeChange="0.5"
+                                    IsSnapToTickEnabled="True" Value="{Binding MinAverageStars}"
+                                    AutomationProperties.Name="{loc:Loc Stats_MinStars}" />
+                        </StackPanel>
                         <StackPanel ToolTip="{loc:Loc Stats_MinInvitedHint}">
                             <TextBlock Text="{loc:Loc Stats_MinInvited}" Style="{StaticResource FieldLabelText}" />
                             <ctl:NumberBox Minimum="1" Maximum="200" Value="{Binding MinInvitedEvents}"

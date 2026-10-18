@@ -130,7 +130,9 @@ Besides comments, users **evaluate a member at an event with 0 to 5 stars**, to 
 - **Average evaluation** = the mean of what those events count, over the time span and filter of the page; rounded to two decimals, shown with
   one. *Stars*, *the events' average* and the *Average evaluation* figure follow the same filter as everything else on the page.
 - **Exams.** A member needs at least the **minimum average** (setting *Minimum average evaluation for exams*, `Statistics:ExamMinAverageStars`,
-  3 by default; 0 = not asked) over the filter's time span to be suggested for an exam; see [exam-planning.md](exam-planning.md). With the
+  3 by default; 0 = not asked) over the filter's time span to be suggested for an exam; see [exam-planning.md](exam-planning.md). The filter card
+  has a *Minimum evaluation* slider that starts at the setting; it is saved with a saved filter and then replaces the setting for suggestions made
+  with that filter (it does not change the statistics shown). With the
   standard values nobody who was never evaluated is suggested (every event counts 2.5, below 3): evaluations are what puts members forward.
 
 ### API

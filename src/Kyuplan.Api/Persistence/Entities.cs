@@ -360,6 +360,9 @@ public sealed class SavedFilter
 
     public string? EventNameExcludes { get; set; }
 
+    /// <summary>Average evaluation an exam asks for with this filter; null = the administrators' setting.</summary>
+    public double? MinAverageStars { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

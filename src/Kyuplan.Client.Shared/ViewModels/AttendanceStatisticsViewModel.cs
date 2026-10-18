@@ -138,6 +138,10 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
     [ObservableProperty]
     private int _minInvitedEvents = 3;
 
+    /// <summary>Average evaluation (0–5) an exam asks for with this filter; 0 = not asked. It does not change the statistics, only the exam suggestions made with a saved filter.</summary>
+    [ObservableProperty]
+    private double _minAverageStars = RatingRules.StandardExamMinAverageStars;
+
     /// <summary>The subgroups of the group to choose from. Tick as many as you like; none ticked = everyone in the group.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedSubGroupIds), nameof(IsEveryoneSelected), nameof(SubGroupSummary))]
@@ -221,6 +225,9 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
     /// <summary>The required attendance as text, e.g. "75 %".</summary>
     public string ThresholdText => Display.Percent(Math.Round(MinAttendancePercent));
 
+    /// <summary>The required average evaluation as text, e.g. "3.0".</summary>
+    public string MinAverageStarsText => Display.Stars(MinAverageStars);
+
     /// <summary>Names the required-attendance line in the table header, e.g. "75 % required".</summary>
     public string RequiredText => string.Format(Strings.Rate_RequiredShort, ThresholdText);
 
@@ -296,6 +303,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         {
             MinAttendancePercent = Shell.DefaultMinAttendancePercent;
             MinInvitedEvents = Shell.DefaultMinInvitedEvents;
+            MinAverageStars = Shell.DefaultExamMinAverageStars;
             ClearSubGroups();
             EventNameContains = "";
             EventNameExcludes = "";
@@ -356,6 +364,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         SavedFilters.HasSelection
         || MinAttendancePercent != Shell.DefaultMinAttendancePercent
         || MinInvitedEvents != Shell.DefaultMinInvitedEvents
+        || MinAverageStars != Shell.DefaultExamMinAverageStars
         || !IsEveryoneSelected
         || EventNameContains.Length > 0
         || EventNameExcludes.Length > 0
@@ -420,6 +429,9 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
                 }
                 if (!_suppressReload) ScheduleReload();
                 break;
+            case nameof(MinAverageStars):
+                OnPropertyChanged(nameof(MinAverageStarsText));
+                break;
             case nameof(SearchText) or nameof(StatusFilter) or nameof(SortKey) or nameof(SortDescending):
                 RebuildVisibleMembers();
                 break;
@@ -429,7 +441,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         }
 
         if (e.PropertyName is nameof(FromEventId) or nameof(ToEventId) or nameof(SpanByEvents) or nameof(From) or nameof(To)
-            or nameof(MinAttendancePercent) or nameof(MinInvitedEvents) or nameof(EventNameContains) or nameof(EventNameExcludes)
+            or nameof(MinAttendancePercent) or nameof(MinInvitedEvents) or nameof(MinAverageStars) or nameof(EventNameContains) or nameof(EventNameExcludes)
             or nameof(SubGroupOptions) or nameof(EventOptions) or nameof(SearchText) or nameof(StatusFilter))
         {
             OnFilterCardChanged();
@@ -545,6 +557,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         {
             MinAttendancePercent = Math.Clamp(filter.MinAttendancePercent, 0, 100);
             MinInvitedEvents = Math.Max(1, filter.MinInvitedEvents);
+            MinAverageStars = ClampStars(filter.MinAverageStars ?? Shell.DefaultExamMinAverageStars);
             EventNameContains = filter.EventNameContains ?? "";
             EventNameExcludes = filter.EventNameExcludes ?? "";
 
@@ -588,8 +601,12 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             (int)Math.Round(Math.Clamp(MinAttendancePercent, 0, 100)),
             Math.Max(1, MinInvitedEvents),
             Normalize(EventNameContains),
-            Normalize(EventNameExcludes));
+            Normalize(EventNameExcludes),
+            // The setting's value is saved as "the setting", so that the filter follows it when the administrators change it.
+            ClampStars(MinAverageStars) is var stars && stars == ClampStars(Shell.DefaultExamMinAverageStars) ? null : stars);
     }
+
+    private static double ClampStars(double stars) => Math.Round(Math.Clamp(stars, 0, RatingRules.MaxStars), 1);
 
     // --- What the saved filters see ------------------------------------------------------------------
 
@@ -614,6 +631,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             && current.SubGroupIds.ToHashSet().SetEquals(filter.SubGroupIds)
             && current.MinAttendancePercent == Math.Clamp(filter.MinAttendancePercent, 0, 100)
             && current.MinInvitedEvents == Math.Max(1, filter.MinInvitedEvents)
+            && ClampStars(current.MinAverageStars ?? Shell.DefaultExamMinAverageStars) == ClampStars(filter.MinAverageStars ?? Shell.DefaultExamMinAverageStars)
             && current.EventNameContains == Normalize(filter.EventNameContains ?? "")
             && current.EventNameExcludes == Normalize(filter.EventNameExcludes ?? "");
     }
@@ -640,6 +658,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         _suppressReload = true;
         MinAttendancePercent = Shell.DefaultMinAttendancePercent;
         MinInvitedEvents = Shell.DefaultMinInvitedEvents;
+        MinAverageStars = Shell.DefaultExamMinAverageStars;
         _suppressReload = false;
     }
 

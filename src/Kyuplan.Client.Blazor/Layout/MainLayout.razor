@@ -246,7 +246,14 @@
     });
 
     // The skin lives on the page (js/theme.js): put it on whenever the theme in effect changes (a choice, the server's default, a login).
-    private void OnThemeApplied(object? sender, EventArgs e) => _ = InvokeAsync(() => Js.InvokeVoidAsync("ppTheme.setSkin", Themes.Effective).AsTask());
+    // A theme pack is handed over as its parts (plain values, and the colours as a dictionary), which the script checks again before they reach a stylesheet.
+    private void OnThemeApplied(object? sender, EventArgs e) => _ = InvokeAsync(() =>
+    {
+        var pack = Themes.EffectivePack;
+        return pack is null
+            ? Js.InvokeVoidAsync("ppTheme.setSkin", Themes.Effective).AsTask()
+            : Js.InvokeVoidAsync("ppTheme.setSkin", pack.Id, pack.Scheme, pack.HighContrast, pack.Accent, new Dictionary<string, string>(pack.Colors)).AsTask();
+    });
 
     private void OnGroupChanged(ChangeEventArgs e) => Shell.SelectedGroupId = e.Value?.ToString() ?? "";
 

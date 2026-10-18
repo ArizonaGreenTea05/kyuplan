@@ -58,11 +58,14 @@ public static class ThemeRules
         _ => null,
     };
 
-    public static bool IsValid(string? client, string? theme) => theme is not null && ThemeClients.IsKnown(client) && For(client).Contains(theme);
+    /// <summary>One of the themes the client draws itself, or the id of a theme pack (<see cref="ThemePackRules.IsPackId"/>). Whether that pack is
+    /// installed is not checked here: a client that does not find it shows <see cref="ThemeIds.Default"/>, so deleting a pack needs no clean-up.</summary>
+    public static bool IsValid(string? client, string? theme) =>
+        theme is not null && ThemeClients.IsKnown(client) && (For(client).Contains(theme) || ThemePackRules.IsPackId(theme));
 
     /// <summary>A problem with a theme that is to be saved (the account's choice, or an instance's default), or <c>null</c>.</summary>
     public static string? Check(string? client, string? theme, string field) =>
-        IsValid(client, theme) ? null : $"{field} must be one of: {string.Join(", ", For(client))}.";
+        IsValid(client, theme) ? null : $"{field} must be one of: {string.Join(", ", For(client))}, or the id of a theme pack.";
 
     /// <summary>The theme in effect: the user's own, else the instance's default; <see cref="ThemeIds.Default"/> when neither is a theme this kind of client has.</summary>
     public static string Resolve(string? client, string? userTheme, string? instanceDefault) =>

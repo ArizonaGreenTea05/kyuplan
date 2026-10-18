@@ -116,6 +116,7 @@ the address and give them the [user guide](user-guide.md).
 | `Statistics__TimeZone` | The club's time zone (default `Europe/Berlin`) |
 | `Database__Provider`, `Database__ConnectionString`, `Accounts__ConnectionString` | PostgreSQL instead of SQLite |
 | `Branding__ProductName`, `Branding__OrganizationName`, `Branding__AccentColor`, `Branding__Logo`, `Branding__DefaultWebTheme`, `Branding__DefaultWindowsTheme` | Branding basis |
+| `Themes__Directory` | Folder of the uploaded theme packs (default: `themes` next to `settings.json`, i.e. `/data/themes`) |
 | `DefaultData__Enabled=false` | Start new databases without default belts and roles |
 
 The full list is the configuration table of the [README](../README.md#configuration); a value set as an environment variable wins over the Settings page.
@@ -266,7 +267,7 @@ because every user is only meant to see the guides that apply to them:
   silicon, AWS Graviton, Azure Cobalt, ...). Not available: Windows containers, 32-bit ARM.
 - **Port**: **8080**, plain HTTP. Change the *published* port (`-p 30100:8080`), not the one in the container.
 - **Volume**: `/data` is the only place that has to survive: the SQLite databases (with SQLite), the settings file `settings.json`, the key for the
-  passwords in it (`keys/`) and the logs (`logs/`, one file per day, the 31 newest kept; also on the console, i.e. `docker logs`).
+  passwords in it (`keys/`), the uploaded theme packs (`themes/`, small JSON files) and the logs (`logs/`, one file per day, the 31 newest kept; also on the console, i.e. `docker logs`).
 - **User**: not root (UID 1654, name `app`). A Docker-managed volume is writable for it. For a folder you mount yourself, give that UID the rights or run the container as the folder's owner (`--user 568:568`).
 - **Health check**: `GET /healthz` answers `200 ok` without a login while the database can be reached (`503` otherwise), also over plain HTTP from other machines, so load balancers and platform probes can use it. The image has a Docker `HEALTHCHECK` that uses it (see `docker ps`).
 - **Settings**: everything in `appsettings.json` (see [Configuration](../README.md#configuration)) can be overridden by an environment

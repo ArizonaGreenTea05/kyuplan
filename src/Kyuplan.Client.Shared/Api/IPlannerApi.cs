@@ -49,6 +49,15 @@ public interface IPlannerApi
     /// <summary>Changes the signed-in user's own user name and/or password. A new password needs the current one (else 400).</summary>
     Task<UserDto> UpdateAccountAsync(AccountUpdateDto account, CancellationToken cancellationToken = default);
 
+    /// <summary>The installed theme packs (built-in and uploaded). Needs no login.</summary>
+    Task<ThemeCatalogDto> GetThemesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Installs a theme pack (its JSON text) or replaces the one with the same id. Answers with the catalog; the API says what is wrong with a pack it refuses.</summary>
+    Task<ThemeCatalogDto> InstallThemeAsync(string json, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes an uploaded theme pack. Answers with the catalog.</summary>
+    Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary>Chooses the signed-in user's own theme for a kind of client (<c>null</c>: follow the instance's default). Answers with the user.</summary>
     Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default);
 

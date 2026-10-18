@@ -179,6 +179,8 @@ public sealed class PermissionApiTests(WebApplicationFactory<Program> factory) :
             { "PUT", "/api/branding/logo", null, Permission.BrandingEdit },
             { "DELETE", "/api/branding/logo", null, Permission.BrandingEdit },
             { "DELETE", "/api/branding", null, Permission.BrandingEdit },
+            { "PUT", "/api/themes", "{}", Permission.ThemesEdit },
+            { "DELETE", "/api/themes/ocean", null, Permission.ThemesEdit },
             { "GET", "/api/settings", null, Permission.SettingsView },
             { "PUT", "/api/settings", "{}", Permission.SettingsEdit },
             { "GET", "/api/users", null, Permission.UsersView },

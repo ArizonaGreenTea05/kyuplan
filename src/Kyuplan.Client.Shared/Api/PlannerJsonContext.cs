@@ -20,6 +20,7 @@ namespace Kyuplan.Client.Api;
 [JsonSerializable(typeof(UserInputDto))]
 [JsonSerializable(typeof(AccountUpdateDto))]
 [JsonSerializable(typeof(ThemePreferenceDto))]
+[JsonSerializable(typeof(ThemeCatalogDto))]
 [JsonSerializable(typeof(LanguagePreferenceDto))]
 [JsonSerializable(typeof(List<RoleDto>))]
 [JsonSerializable(typeof(RoleDto))]

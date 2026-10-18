@@ -59,6 +59,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.Configure<BrandingOptions>(builder.Configuration.GetSection(BrandingOptions.Section));
     builder.Services.AddSingleton<BrandingDefaults>();
     builder.Services.AddScoped<BrandingService>();
+    builder.Services.AddSingleton<ThemePackStore>(); // the theme packs: built-in and uploaded (see ThemeEndpoints)
 
     // The installer of the Windows client lies next to the program in the container image (see ClientDownloadEndpoints).
     builder.Services.Configure<ClientDownloadOptions>(builder.Configuration.GetSection(ClientDownloadOptions.Section));
@@ -201,6 +202,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
         .AllowAnonymous().ExcludeFromDescription();
 
     app.MapBrandingEndpoints();
+    app.MapThemeEndpoints();
     app.MapPlannerEndpoints();
     app.MapClientDownloadEndpoints();
     app.MapDocumentationEndpoints();

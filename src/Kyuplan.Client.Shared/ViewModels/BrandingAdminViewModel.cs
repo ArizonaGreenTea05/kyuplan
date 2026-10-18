@@ -20,6 +20,10 @@ public sealed record BrandingImageRow(string Slot, string Title, string Hint, st
     public bool HasImage => PreviewUrl is not null;
 }
 
+/// <summary>One theme pack as the branding page lists it.</summary>
+/// <param name="Details">"dark · high contrast · built in".</param>
+public sealed record ThemePackRow(string Id, string Name, string Details, bool BuiltIn);
+
 /// <summary>
 /// The administrators' page for the branding: the name, the organisation, the accent colour and the five images that both clients show.
 /// The texts and the colour are saved together; the images are picked or taken away first (the page shows how they will look) and
@@ -125,11 +129,113 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     [ObservableProperty]
     private string _formDefaultWindowsTheme = ThemeIds.Default;
 
-    /// <summary>The themes an administrator can make the default of the web client.</summary>
-    public IReadOnlyList<ThemeChoice> WebThemes => [.. ThemeRules.For(ThemeClients.Web).Select(id => new ThemeChoice(id, ThemeViewModel.NameOf(ThemeClients.Web, id)))];
+    /// <summary>The themes an administrator can make the default of the web client (the installed theme packs included).</summary>
+    public IReadOnlyList<ThemeChoice> WebThemes => ThemeViewModel.ChoicesFor(ThemeClients.Web, _packs);
 
     /// <summary>The themes an administrator can make the default of the Windows client.</summary>
-    public IReadOnlyList<ThemeChoice> WindowsThemes => [.. ThemeRules.For(ThemeClients.Windows).Select(id => new ThemeChoice(id, ThemeViewModel.NameOf(ThemeClients.Windows, id)))];
+    public IReadOnlyList<ThemeChoice> WindowsThemes => ThemeViewModel.ChoicesFor(ThemeClients.Windows, _packs);
+
+    // --- Theme packs ---------------------------------------------------------------------------------------
+
+    /// <summary>The installed theme packs as the API last said (the built-in ones until it has).</summary>
+    private IReadOnlyList<ThemePackDto> _packs = BuiltInThemePacks.All;
+
+    /// <summary>The installed packs, for the list: built-in first (as the API sends them), then the uploaded ones.</summary>
+    public IReadOnlyList<ThemePackRow> ThemePacks => [.. _packs.Select(p => new ThemePackRow(p.Id, ThemeViewModel.PackName(p), Describe(p), p.BuiltIn))];
+
+    /// <summary>Whether the signed-in user may install and delete theme packs.</summary>
+    public bool CanManageThemes => Shell.Can(Permission.ThemesEdit);
+
+    /// <summary>Packs can be installed once the page is loaded, and while nothing else is being saved.</summary>
+    public bool CanInstallTheme => CanManageThemes && !IsBusy && IsLoaded;
+
+    /// <summary>An uploaded pack can be deleted; a built-in one cannot, so there the button would change nothing.</summary>
+    public bool CanDeleteTheme(ThemePackRow? row) => CanManageThemes && !IsBusy && row is { BuiltIn: false };
+
+    private static string Describe(ThemePackDto pack)
+    {
+        var parts = new List<string> { pack.Scheme == "dark" ? Strings.Themes_Dark : Strings.Themes_Light };
+        if (pack.HighContrast) parts.Add(Strings.Themes_HighContrast);
+        if (pack.BuiltIn) parts.Add(Strings.Themes_BuiltIn);
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>
+    /// Installs the theme pack in a file the user picked (its text). A file that is too large is refused here without being parsed; for the rest the
+    /// API is the judge and says what is wrong (a missing colour, too little contrast, ...).
+    /// </summary>
+    /// <param name="read">Reads the file's text; called only when the file is not too large.</param>
+    public async Task InstallThemeAsync(long size, Func<Task<string>> read)
+    {
+        if (!CanInstallTheme) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        if (size > ThemePackRules.MaxBytes)
+        {
+            ErrorMessage = string.Format(Strings.Themes_TooLarge, ThemePackRules.MaxBytes / 1024);
+            return;
+        }
+
+        string json;
+        try
+        {
+            json = await read();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ErrorMessage = string.Format(Strings.Error_Unexpected, ex.Message);
+            return;
+        }
+
+        if (json.Length > ThemePackRules.MaxBytes) // the size a file announced is not believed
+        {
+            ErrorMessage = string.Format(Strings.Themes_TooLarge, ThemePackRules.MaxBytes / 1024);
+            return;
+        }
+
+        var before = _packs.Select(p => p.Id).ToHashSet();
+        ThemeCatalogDto? catalog = null;
+        await LoadAsync(async ct => catalog = await _api.InstallThemeAsync(json, ct));
+        if (catalog is null) return; // the reason is in ErrorMessage
+
+        var installed = catalog.Packs.FirstOrDefault(p => !before.Contains(p.Id)) ?? catalog.Packs.LastOrDefault(p => !p.BuiltIn);
+        AdoptPacks(catalog);
+        SetNotice(() => string.Format(Strings.Themes_Installed, installed is null ? "" : ThemeViewModel.PackName(installed)));
+        await ShowChangeAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteTheme))]
+    private async Task DeleteThemeAsync(ThemePackRow row)
+    {
+        if (!CanDeleteTheme(row)) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        ThemeCatalogDto? catalog = null;
+        await LoadAsync(async ct => catalog = await _api.DeleteThemeAsync(row.Id, ct));
+        if (catalog is null) return;
+
+        AdoptPacks(catalog);
+        SetNotice(() => string.Format(Strings.Themes_Deleted, row.Name));
+        await ShowChangeAsync();
+    }
+
+    private void AdoptPacks(ThemeCatalogDto catalog)
+    {
+        _packs = catalog.Packs;
+
+        // A default that was an uploaded pack and is gone must not stay selected in the form: the list no longer has it.
+        if (!WebThemes.Any(c => c.Id == FormDefaultWebTheme)) FormDefaultWebTheme = ThemeIds.Default;
+        if (!WindowsThemes.Any(c => c.Id == FormDefaultWindowsTheme)) FormDefaultWindowsTheme = ThemeIds.Default;
+
+        OnPropertyChanged(nameof(ThemePacks));
+        OnPropertyChanged(nameof(WebThemes));
+        OnPropertyChanged(nameof(WindowsThemes));
+        OnPropertyChanged(nameof(SelectedWebTheme));
+        OnPropertyChanged(nameof(SelectedWindowsTheme));
+        NotifyStateChanged();
+    }
 
     /// <summary>The list entries as bound by a control that picks an object (the desktop client).</summary>
     public ThemeChoice? SelectedWebTheme
@@ -426,8 +532,14 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             var settings = await _api.GetBrandingSettingsAsync(ct);
+            _packs = (await _api.GetThemesAsync(ct)).Packs; // before the form is refilled: the defaults it holds may be packs
             _staged.Clear(); // like the form, the pictures picked meanwhile give way to what the API says
             Adopt(settings, refillForm: true);
+            OnPropertyChanged(nameof(ThemePacks));
+            OnPropertyChanged(nameof(WebThemes));
+            OnPropertyChanged(nameof(WindowsThemes));
+            OnPropertyChanged(nameof(SelectedWebTheme));
+            OnPropertyChanged(nameof(SelectedWindowsTheme));
         });
     }
 
@@ -494,6 +606,9 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         OnPropertyChanged(nameof(CanReset));
         OnPropertyChanged(nameof(CanUpload));
         OnPropertyChanged(nameof(CanSaveImages));
+        OnPropertyChanged(nameof(CanManageThemes));
+        OnPropertyChanged(nameof(CanInstallTheme));
+        DeleteThemeCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ProductNameProblem));
         OnPropertyChanged(nameof(OrganizationNameProblem));
         OnPropertyChanged(nameof(AccentColorProblem));

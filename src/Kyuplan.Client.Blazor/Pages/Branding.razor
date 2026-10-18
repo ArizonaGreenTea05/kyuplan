@@ -194,6 +194,45 @@
                     </div>
                 }
             </form>
+
+            <section class="card card-form" aria-labelledby="branding-packs">
+                <div>
+                    <h2 id="branding-packs">@Strings.Themes_Title</h2>
+                    <p class="note">@Strings.Themes_Lede</p>
+                </div>
+
+                <ul class="slots" style="list-style: none; margin: 0; padding: 0;" aria-labelledby="branding-packs">
+                    @foreach (var pack in Vm.ThemePacks)
+                    {
+                        <li class="slot">
+                            <div class="slot-head">
+                                <strong>@pack.Name</strong>
+                                <small>@pack.Details</small>
+                            </div>
+                            @if (Vm.CanManageThemes && !pack.BuiltIn)
+                            {
+                                <div class="slot-actions">
+                                    <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Themes_Delete}: {pack.Name}")"
+                                            disabled="@(!Vm.CanDeleteTheme(pack))" @onclick="() => Vm.DeleteThemeCommand.ExecuteAsync(pack)">
+                                        <Icon Name="trash" /><span>@Strings.Themes_Delete</span>
+                                    </button>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+
+                @if (Vm.CanManageThemes)
+                {
+                    <div class="form-actions">
+                        <span class="btn file-btn @(Vm.IsBusy ? "disabled" : "")">
+                            <Icon Name="upload" /><span>@Strings.Themes_Install</span>
+                            <InputFile @key="_themeInputKey" accept=".json,application/json" disabled="@(!Vm.CanInstallTheme)"
+                                       aria-label="@Strings.Themes_Install" OnChange="InstallThemeAsync" />
+                        </span>
+                    </div>
+                }
+            </section>
         }
     </PageGate>
 </section>
@@ -203,6 +242,25 @@
     private readonly Dictionary<string, int> _inputKeys = [];
 
     protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    private int _themeInputKey;
+
+    private async Task InstallThemeAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        try
+        {
+            await Vm.InstallThemeAsync(file.Size, async () =>
+            {
+                using var reader = new StreamReader(file.OpenReadStream(ThemePackRules.MaxBytes));
+                return await reader.ReadToEndAsync();
+            });
+        }
+        finally
+        {
+            _themeInputKey++; // the same file can be chosen again (after a correction)
+        }
+    }
 
     private int KeyOf(string slot) => _inputKeys.GetValueOrDefault(slot);
 

@@ -65,6 +65,10 @@ public sealed partial class BrandingViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private string _defaultWindowsTheme = ThemeIds.Default;
 
+    /// <summary>Changes whenever a theme pack is installed, replaced or deleted (<see cref="ThemeViewModel"/> then asks for the catalog again).</summary>
+    [ObservableProperty]
+    private string _themesVersion = "";
+
     /// <summary>"kyuplan · Club name", or just the product name when the instance has no organisation.</summary>
     public string WindowTitle => OrganizationName.Length == 0 ? ProductName : $"{ProductName} · {OrganizationName}";
 
@@ -121,6 +125,7 @@ public sealed partial class BrandingViewModel : ObservableObject, IDisposable
             IconUrl = branding.IconUrl;
             DefaultWebTheme = branding.DefaultWebTheme;
             DefaultWindowsTheme = branding.DefaultWindowsTheme;
+            ThemesVersion = branding.ThemesVersion;
             Changed?.Invoke(this, EventArgs.Empty);
         }
         finally

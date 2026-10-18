@@ -15,7 +15,7 @@ public sealed record BrandingContent(string ContentType, string? Path, byte[]? B
 /// image slot on its own (an uploaded image, or "none" even where the settings name a file). Nothing is cached, so a change is in
 /// every answer from the next request on. A client that has the old branding keeps it until it asks again.
 /// </summary>
-public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaults, TimeProvider time)
+public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaults, TimeProvider time, ThemePackStore themes)
 {
     /// <summary>
     /// Where the branding is served. Reading it (<c>GET</c> of the route itself and of the images) is open to everybody, see
@@ -49,7 +49,7 @@ public sealed class BrandingService(PlannerDbContext db, BrandingDefaults defaul
         return new BrandingDto(
             ProductName(state), OrganizationName(state), AccentColor(state),
             Url(BrandingSlots.Logo), Url(BrandingSlots.LogoOnDark), Url(BrandingSlots.Icon),
-            DefaultWebTheme(state), DefaultWindowsTheme(state));
+            DefaultWebTheme(state), DefaultWindowsTheme(state), themes.Catalog().Version);
     }
 
     /// <summary>What administrators edit: the same, with each slot's own image only.</summary>

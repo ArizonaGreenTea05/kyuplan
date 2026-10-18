@@ -72,6 +72,17 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task<UserDto> GetAccountAsync(CancellationToken cancellationToken = default) =>
         GetAsync("api/account", PlannerJsonContext.Default.UserDto, cancellationToken);
 
+    public Task<ThemeCatalogDto> GetThemesAsync(CancellationToken cancellationToken = default) =>
+        GetAsync("api/themes", PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
+
+    public Task<ThemeCatalogDto> InstallThemeAsync(string json, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync("api/themes", new StringContent(json, System.Text.Encoding.UTF8, "application/json"), cancellationToken),
+            PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
+
+    public Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.DeleteAsync($"api/themes/{Uri.EscapeDataString(id)}", cancellationToken),
+            PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
+
     public Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync("api/account/theme", Json(preference, PlannerJsonContext.Default.ThemePreferenceDto), cancellationToken),
             PlannerJsonContext.Default.UserDto, cancellationToken);

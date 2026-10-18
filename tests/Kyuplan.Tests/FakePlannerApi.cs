@@ -241,6 +241,56 @@ internal sealed class FakePlannerApi : IPlannerApi
 
     private int _nextUserId = 100;
 
+    // --- Theme packs: a server that keeps the uploaded ones next to the built-in ones, for those with themes.edit ---
+
+    /// <summary>The uploaded packs the server holds.</summary>
+    public List<ThemePackDto> UploadedPacks { get; } = [];
+
+    /// <summary>Every call that changed the packs: <c>install-theme:id</c>, <c>delete-theme:id</c>.</summary>
+    public List<string> ThemeCalls { get; } = [];
+
+    public int ThemeCatalogRequests { get; private set; }
+
+    private int _themeRevision;
+
+    private ThemeCatalogDto ThemeCatalog => new($"t{_themeRevision}", [.. BuiltInThemePacks.All, .. UploadedPacks]);
+
+    private ThemeCatalogDto PublishThemes()
+    {
+        _themeRevision++;
+        Branding = Branding with { ThemesVersion = ThemeCatalog.Version };
+        return ThemeCatalog;
+    }
+
+    public Task<ThemeCatalogDto> GetThemesAsync(CancellationToken cancellationToken = default)
+    {
+        ThemeCatalogRequests++;
+        return Run(() => ThemeCatalog);
+    }
+
+    public Task<ThemeCatalogDto> InstallThemeAsync(string json, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            var pack = System.Text.Json.JsonSerializer.Deserialize<ThemePackDto>(json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            if (ThemePackRules.Check(pack) is { } problem) throw BadRequest(problem);
+            if (BuiltInThemePacks.Contains(pack!.Id)) throw BadRequest("built in");
+
+            ThemeCalls.Add("install-theme:" + pack.Id);
+            UploadedPacks.RemoveAll(p => p.Id == pack.Id);
+            UploadedPacks.Add(pack with { BuiltIn = false });
+            return PublishThemes();
+        });
+
+    public Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            ThemeCalls.Add("delete-theme:" + id);
+            if (UploadedPacks.RemoveAll(p => p.Id == id) == 0) throw BadRequest("no such pack");
+            return PublishThemes();
+        });
+
     public List<ThemePreferenceDto> ThemeChoices { get; } = [];
 
     public Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default) =>

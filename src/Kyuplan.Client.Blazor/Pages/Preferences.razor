@@ -36,7 +36,7 @@
             @* Light and dark, per browser; a theme that has only one (Dracula, ...) leaves nothing to switch. *@
             <div class="form-actions">
                 <button type="button" class="btn" @onclick="ToggleThemeAsync" title="@Strings.Shell_ThemeHint"
-                        disabled="@(ThemeRules.FixedScheme(Vm.Themes.Effective) is not null)">
+                        disabled="@(Vm.Themes.FixedScheme is not null)">
                     <span class="only-light"><Icon Name="moon" /></span>
                     <span class="only-dark"><Icon Name="sun" /></span>
                     <span>@Strings.Shell_Theme</span>

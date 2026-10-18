@@ -167,6 +167,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | ratings | `ratings.view` (see every user's star evaluations of members), `ratings.write` (evaluate members at an event, change and take back one's own) |
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
+| themes | `themes.edit` (install and delete theme packs) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | settings | `settings.view`, `settings.edit` |
@@ -262,6 +263,8 @@ to look, `branding.edit` to change). It affects both clients.
   pick their own in the navigation; *Server default* there follows this setting). Dracula, Catppuccin Latte/Mocha and Liquid Glass exist in
   both; Windows 10, Vista / 7 and native WPF only in the Windows client. Saved with the texts and the colour. The API's settings
   `Branding__DefaultWebTheme` / `Branding__DefaultWindowsTheme` are the basis until this is saved.
+- **Theme packs** (below the images; anybody who may see the page sees the list, `themes.edit` installs and deletes): see
+  [Theme packs](#theme-packs). The installed packs are also offered as default themes in the lists above.
 - **Images**: *Logo* (on light surfaces), *Logo on dark* (optional; the light one is used if missing) and *Icon* (browser tab and, in the
   desktop app, the window icon). Prefer **SVG**; PNG, JPEG, GIF and BMP work for logos, PNG/SVG/ICO for the icon; at most **1 MB** each.
   The server looks at the file's bytes, not its name. The desktop app does not draw SVGs that refer to outside files or web addresses;
@@ -274,6 +277,53 @@ to look, `branding.edit` to change). It affects both clients.
 - Open clients pick up a change within **30 seconds**, without reload or restart.
 - **Not changeable at runtime**: the icon of the program file and the installer, and the publisher name. They are built in; see the
   [developer guide](developer-guide.md#branding-your-own-desktop-build).
+
+### Theme packs
+
+More themes come as **theme packs**: a small JSON file of colours that adds a theme to **both** clients. Every installed pack is offered to
+all users (in their personal settings) and can be made the default theme above. Users who had chosen a pack that is deleted later see the
+default theme again; nothing else has to be cleaned up.
+
+The program ships with packs of its own (they show the format and cannot be deleted or replaced): three **high contrast** themes for people
+who see less (*High contrast (dark)*, *High contrast (light)*, *High contrast (yellow on black)*: text with at least 7:1 contrast, strong
+borders, thick focus rings, underlined links) and some popular palettes (Nord, Solarized dark/light, Gruvbox dark/light, Tokyo Night).
+
+To add one, use **Install theme pack ...** on the Branding page (permission `themes.edit`) and pick the file; a pack with the id of an
+installed one replaces it. Or put `<id>.json` into the `themes` folder next to `settings.json` (in the container: `/data/themes`; the
+folder can be moved with `Themes__Directory`): it is picked up at once, without a restart, and a file that is no valid pack is skipped
+(and named in the log). The file:
+
+```json
+{
+  "id": "ocean",
+  "name": "Ocean",
+  "nameDe": "Ozean",
+  "scheme": "dark",
+  "highContrast": false,
+  "accent": null,
+  "colors": {
+    "ground": "#0b1d2a", "sheet": "#10293b", "sheetAlt": "#17364d", "sidebar": "#08151f",
+    "text": "#e6f1f8", "muted": "#9db8ca", "rule": "#1f4560", "ruleStrong": "#3d6a8a",
+    "amber": "#f2c14e", "amberWash": "#3a3015", "red": "#ff8f85", "redWash": "#3b1c1c"
+  }
+}
+```
+
+- `id`: lower-case letters, digits and single hyphens, at most 32 characters; not the id of a built-in theme (`default`, `dracula`, `nord`, ...).
+  It is also the file name.
+- `name`, `nameDe` (optional): what the lists show, at most 40 characters; users of the German interface see `nameDe` if there is one.
+- `scheme`: `light` or `dark`. A pack has one scheme, so the light/dark button is off while it is in use.
+- `highContrast`: `true` adds strong borders, thick focus rings and underlined links, and demands text contrast of 7:1 instead of 4.5:1.
+- `accent` (optional, `#RRGGBB`): the colour of links, focus, selection and buttons. Without it the accent of your instance is used. High
+  contrast themes carry their own, since the colour has to suit their surfaces.
+- `colors` (all twelve, `#RRGGBB`): `ground` (behind everything), `sheet` (pages, cards, boxes), `sheetAlt` (alternate rows, hovered
+  things), `sidebar`, `text`, `muted` (secondary text), `rule` (thin lines), `ruleStrong` (borders of boxes and buttons), `amber` /
+  `amberWash` (*below the bar / open*: text and background tint), `red` / `redWash` (trouble).
+
+The server refuses a pack whose text is hard to read, and says why: `text` needs a contrast of at least 4.5:1 on `ground`, `sheet` and
+`sidebar` (7:1 for a high contrast pack), `muted` at least 3:1 on `sheet` (4.5:1), an `accent` at least 3:1 on `sheet`. A file is at most 16 KB, and
+at most 50 packs can be installed. The desktop app draws a pack with its flat controls (the same colours, the rounded look of Dracula), so
+installing one never needs a new version of either client.
 
 ## Desktop clients and updates
 

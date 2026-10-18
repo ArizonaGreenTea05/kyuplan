@@ -127,7 +127,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 .download-cta {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     margin: 16px 2px 0; padding: 12px 14px; border-radius: var(--radius);
-    background: var(--accent); color: #fff; font-weight: 700; text-decoration: none; text-align: center;
+    background: var(--accent); color: var(--on-accent, #fff); font-weight: 700; text-decoration: none; text-align: center;
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
     animation: download-pulse 2.6s ease-out infinite;
 }
@@ -420,7 +420,7 @@ select:disabled { opacity: .6; }
 .picker-list:focus-visible { outline: none; } /* the highlighted entry shows where the focus is */
 .picker-list .tick {
     display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px;
-    background: var(--sheet); border: 1.5px solid var(--rule-strong); border-radius: 4px; color: #fff;
+    background: var(--sheet); border: 1.5px solid var(--rule-strong); border-radius: 4px; color: var(--on-accent, #fff);
 }
 .picker-list li.selected .tick { background: var(--accent); border-color: var(--accent); }
 
@@ -853,11 +853,27 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 :root[data-skin="liquid-glass"] .sidebar { border-right-color: var(--rule); }
 :root[data-skin="liquid-glass"] .btn { border-radius: 999px; }
 
+/* Theme packs (js/theme.js writes their colours as variables into data-skin="pack"). A high contrast pack also sets data-contrast="high":
+   the colours alone do not make a page easy to see, so borders get strong, focus is a thick ring, links are underlined and nothing is faint. */
+:root[data-contrast="high"] { --radius: 3px; }
+:root[data-contrast="high"] body { font-size: 16px; }
+:root[data-contrast="high"] :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+:root[data-contrast="high"] a { text-decoration: underline; text-decoration-thickness: 2px; }
+:root[data-contrast="high"] :is(.card, .btn, .flyout, .search, .picker-trigger, input, select, textarea) { border: 2px solid var(--rule-strong); }
+:root[data-contrast="high"] .sidebar { border-right: 2px solid var(--rule-strong); }
+:root[data-contrast="high"] :is(.card, .sidebar, .flyout) { box-shadow: none; }
+:root[data-contrast="high"] small, :root[data-contrast="high"] .muted { color: var(--text); }
+@media (forced-colors: active) {
+    /* The operating system's own high contrast mode: keep its colours, and keep the shapes that carry meaning visible. */
+    .btn, .card, input, select, textarea { border: 1px solid CanvasText; }
+    :focus-visible { outline: 3px solid Highlight; }
+}
+
 /* Calendar and the banner of an event in progress */
 .event-banner { display: flex; flex-direction: column; }
 .event-banner a {
     display: flex; align-items: center; gap: 10px; padding: 9px 32px; text-decoration: none; font-weight: 600;
-    background: var(--accent); color: #fff;
+    background: var(--accent); color: var(--on-accent, #fff);
 }
 .event-banner a span { flex: 1; }
 .event-banner a:hover { filter: brightness(1.08); }
@@ -874,7 +890,7 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 .cal-grid.week .cal-day { min-height: 280px; }
 .cal-day.outside { background: var(--sheet-2); color: var(--muted); }
 .cal-num { font-size: .85rem; font-weight: 700; align-self: flex-end; min-width: 24px; height: 24px; display: grid; place-items: center; border-radius: 12px; }
-.cal-day.today .cal-num { background: var(--accent); color: #fff; }
+.cal-day.today .cal-num { background: var(--accent); color: var(--on-accent, #fff); }
 .cal-event {
     display: block; width: 100%; text-align: left; padding: 3px 6px; border: 0; border-left: 3px solid var(--accent); border-radius: 3px;
     background: var(--accent-wash); color: var(--text); font: inherit; font-size: .8rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

@@ -77,6 +77,8 @@ public sealed class AccountApiTests(WebApplicationFactory<Program> factory) : IC
             // Reading the branding is public on purpose: the clients show the name and logo before anybody has signed in
             // (BrandingApiTests). Changing it is not (BrandingAdminApiTests).
             .Where(e => !(e.Method == "GET" && e.Pattern.TrimEnd('/') is "/api/branding" or "/api/branding/{name}"))
+            // The theme catalog is public for the same reason (the default theme is painted on the login screen); installing is not (ThemePackApiTests).
+            .Where(e => !(e.Method == "GET" && e.Pattern.TrimEnd('/') == "/api/themes"))
             // So is asking whether the API has to be set up, and the setup itself while there is no user (SetupApiTests).
             .Where(e => e.Pattern.TrimEnd('/') != "/api/setup")
             .Select(e => (e.Method, Path: Regex.Replace(e.Pattern, @"\{[^}]+\}", "1")))

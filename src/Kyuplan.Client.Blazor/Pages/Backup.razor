@@ -1,0 +1,242 @@
+@page "/backup"
+@inherits ViewModelComponent<BackupViewModel>
+@using Kyuplan.Client.Api
+@inject IJSRuntime Js
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy || Vm.IsRestarting ? "on" : "")" role="progressbar" aria-hidden="@(!(Vm.IsBusy || Vm.IsRestarting))"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Backup_Lede</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        <section class="card card-form" aria-labelledby="backup-file">
+            <div>
+                <h2 id="backup-file">@Strings.Backup_FileTitle</h2>
+                <p class="note">@Strings.Backup_FileHint</p>
+            </div>
+
+            <div class="form-actions">
+                @if (Vm.CanDownload)
+                {
+                    <button type="button" class="btn" disabled="@(!Vm.DownloadCommand.CanExecute(null))" @onclick="() => Vm.DownloadCommand.ExecuteAsync(null)">
+                        <Icon Name="download" /><span>@Strings.Backup_Download</span>
+                    </button>
+                }
+                @if (Vm.CanRestore)
+                {
+                    <span class="btn ghost file-btn @(Vm.IsBusy || Vm.IsRestarting ? "disabled" : "")">
+                        <Icon Name="upload" /><span>@Strings.Backup_ChooseFile</span>
+                        <InputFile @key="_inputKey" accept=".kyubackup,.zip,application/zip" disabled="@(Vm.IsBusy || Vm.IsRestarting)"
+                                   aria-label="@Strings.Backup_ChooseFile" OnChange="PickFile" />
+                    </span>
+                }
+            </div>
+            @if (Vm.CanRestore)
+            {
+                <p class="note">@Strings.Backup_RestoreHint</p>
+            }
+
+            @if (Vm.CanRestore && Vm.IsConfirmingRestore)
+            {
+                <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmRestoreText">
+                    <span>@Vm.ConfirmRestoreText</span>
+                    <button type="button" class="btn danger" @onclick="() => Vm.ConfirmRestoreCommand.ExecuteAsync(null)">
+                        <span>@Strings.Backup_RestoreYes</span>
+                    </button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelRestoreCommand.Execute(null)">
+                        <span>@Strings.Backup_Cancel</span>
+                    </button>
+                </div>
+            }
+        </section>
+
+        <section class="card card-form" aria-labelledby="backup-targets">
+            <div>
+                <h2 id="backup-targets">@Strings.Backup_TargetsTitle</h2>
+                <p class="note">@Strings.Backup_TargetsHint</p>
+            </div>
+
+            @if (Vm.CanEdit && Vm.IsConfirmingDelete)
+            {
+                <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmDeleteText">
+                    <span>@Vm.ConfirmDeleteText</span>
+                    <button type="button" class="btn danger" @onclick="() => Vm.ConfirmDeleteCommand.ExecuteAsync(null)">
+                        <span>@Strings.Backup_ConfirmYes</span>
+                    </button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelDeleteCommand.Execute(null)">
+                        <span>@Strings.Backup_Cancel</span>
+                    </button>
+                </div>
+            }
+
+            @if (Vm.IsEmpty)
+            {
+                <p class="note">@Vm.EmptyText</p>
+            }
+
+            <ul class="slots" style="list-style: none; margin: 0; padding: 0;" aria-labelledby="backup-targets">
+                @foreach (var target in Vm.Targets)
+                {
+                    <li class="slot" @key="target.Id">
+                        <div class="slot-head">
+                            <strong>@target.Name</strong>
+                            <small>@target.KindText · @target.IntervalText@(target.Enabled ? "" : " · " + Strings.Backup_Off)</small>
+                            <small>@target.Location</small>
+                            <small class="@(target.HasFailed ? "field-error" : "")">@target.StatusText</small>
+                            @if (target.Enabled)
+                            {
+                                <small>@target.NextText</small>
+                            }
+                        </div>
+                        @if (Vm.CanEdit)
+                        {
+                            <div class="slot-actions">
+                                <button type="button" class="btn ghost" aria-label="@($"{Strings.Backup_RunNow}: {target.Name}")"
+                                        disabled="@(!Vm.RunNowCommand.CanExecute(target))" @onclick="() => Vm.RunNowCommand.ExecuteAsync(target)">
+                                    <Icon Name="refresh" /><span>@Strings.Backup_RunNow</span>
+                                </button>
+                                <button type="button" class="btn ghost" aria-label="@($"{Strings.Backup_Edit}: {target.Name}")"
+                                        disabled="@(!Vm.BeginEditCommand.CanExecute(target))" @onclick="() => Vm.BeginEditCommand.Execute(target)">
+                                    <Icon Name="edit" /><span>@Strings.Backup_Edit</span>
+                                </button>
+                                <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Backup_Delete}: {target.Name}")"
+                                        disabled="@(!Vm.AskDeleteCommand.CanExecute(target))" @onclick="() => Vm.AskDeleteCommand.Execute(target)">
+                                    <Icon Name="trash" /><span>@Strings.Backup_Delete</span>
+                                </button>
+                            </div>
+                        }
+                    </li>
+                }
+            </ul>
+
+            @if (Vm.CanEdit && !Vm.IsFormOpen)
+            {
+                <div class="form-actions">
+                    <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="() => Vm.BeginCreateCommand.Execute(null)">
+                        <Icon Name="plus" /><span>@Strings.Backup_New</span>
+                    </button>
+                </div>
+            }
+        </section>
+
+        @if (Vm.CanEdit && Vm.IsFormOpen)
+        {
+            <form class="card card-form" aria-labelledby="backup-form-title" @onsubmit="() => Vm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                <h2 id="backup-form-title">@Vm.FormTitle</h2>
+
+                <label class="field">
+                    <span>@Strings.Backup_FormName</span>
+                    <input type="text" maxlength="@BackupRules.MaxNameLength" autocomplete="off" @bind="Vm.FormName" @bind:event="oninput" />
+                </label>
+
+                <label class="field">
+                    <span>@Strings.Backup_FormKind</span>
+                    <select value="@Vm.FormKind.ToString()" @onchange="e => Vm.FormKind = Enum.Parse<BackupTargetKind>(e.Value?.ToString() ?? nameof(BackupTargetKind.Sqlite))">
+                        @foreach (var kind in Vm.Kinds)
+                        {
+                            <option value="@kind.Value.ToString()">@kind.Label</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span>@Vm.LocationLabel</span>
+                    <input type="text" maxlength="@BackupRules.MaxLocationLength" autocomplete="off" spellcheck="false" @bind="Vm.FormLocation" @bind:event="oninput" />
+                    <small>@Vm.LocationHint</small>
+                </label>
+
+                <label class="field">
+                    <span>@Strings.Backup_FormInterval</span>
+                    <select value="@Vm.FormIntervalMinutes.ToString()" @onchange="e => Vm.FormIntervalMinutes = int.TryParse(e.Value?.ToString(), out var minutes) ? minutes : Vm.FormIntervalMinutes">
+                        @foreach (var interval in Vm.Intervals)
+                        {
+                            <option value="@interval.Value.ToString()">@interval.Label</option>
+                        }
+                    </select>
+                </label>
+
+                <label class="check">
+                    <input type="checkbox" checked="@Vm.FormEnabled" @onchange="e => Vm.FormEnabled = e.Value is true" />
+                    <span>@Strings.Backup_FormEnabled</span>
+                </label>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn" disabled="@(!Vm.CanSave)">@Strings.Backup_Save</button>
+                    <button type="button" class="btn ghost" @onclick="() => Vm.CancelFormCommand.Execute(null)">@Strings.Backup_Cancel</button>
+                </div>
+            </form>
+        }
+    </PageGate>
+</section>
+
+@code {
+    // Choosing the file that was chosen before does not raise a change: the input is made anew after each pick.
+    private int _inputKey;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Vm.DownloadReady += OnDownloadReady;
+        await Vm.ActivateAsync();
+    }
+
+    private async void OnDownloadReady(object? sender, BackupFile file)
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("ppFiles.save", file.FileName, file.Content);
+        }
+        catch (JSException)
+        {
+            // The browser refused the download; there is nothing more to do here.
+        }
+    }
+
+    private bool _picked;
+
+    private void PickFile(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        // Opened again for the upload, after the user confirmed: the browser's file belongs to the input, which stays until then.
+        Vm.StageRestore(file.Name, () => file.OpenReadStream(long.MaxValue));
+        _picked = Vm.IsConfirmingRestore;
+    }
+
+    // Once the picked file was uploaded or dropped, the input is made anew so that the same file can be chosen again.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!_picked || Vm.IsConfirmingRestore || Vm.IsBusy || Vm.IsRestarting) return;
+
+        _picked = false;
+        _inputKey++;
+        StateHasChanged();
+    }
+
+    /// <summary>Only when there is nothing to show: a failed save or run is not helped by loading again.</summary>
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.DownloadReady -= OnDownloadReady;
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

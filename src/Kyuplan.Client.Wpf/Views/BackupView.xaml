@@ -1,0 +1,171 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.BackupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
+
+    <UserControl.Resources>
+        <!-- The reason the last update of a backup database failed stands out. -->
+        <Style x:Key="StatusText" TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasFailed}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource DataRiskTextBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24,6,24,32">
+
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                <TextBlock Text="{loc:Loc Backup_Lede}" Style="{StaticResource LedeText}" />
+            </StackPanel>
+
+            <TextBlock Margin="0,40,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center" MaxWidth="560"
+                       Text="{loc:Loc Page_NotAllowed}"
+                       Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+            <StackPanel Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+
+                <!-- What went wrong / what was achieved. Trying again only makes sense while nothing was loaded. -->
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                Visibility="{Binding HasLoaded, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Border>
+
+                <!-- The backup file -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Backup_FileTitle}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,4" />
+                        <TextBlock Text="{loc:Loc Backup_FileHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding DownloadCommand}" Content="{loc:Loc Backup_Download}" Style="{StaticResource AccentButtonStyle}"
+                                    Visibility="{Binding CanDownload, Converter={StaticResource BoolToVisibility}}" />
+                            <Button Click="OnChooseFile" Content="{loc:Loc Backup_ChooseFile}" Margin="8,0,0,0"
+                                    Visibility="{Binding CanRestore, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <TextBlock Text="{loc:Loc Backup_RestoreHint}" Style="{StaticResource MutedText}" Margin="0,8,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding CanRestore, Converter={StaticResource BoolToVisibility}}" />
+
+                        <!-- Nothing is replaced before this question is answered -->
+                        <Border Style="{StaticResource BannerBorder}" Margin="0,12,0,0"
+                                Visibility="{Binding IsConfirmingRestore, Converter={StaticResource BoolToVisibility}}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                    <Button Command="{Binding ConfirmRestoreCommand}" Content="{loc:Loc Backup_RestoreYes}" />
+                                    <Button Command="{Binding CancelRestoreCommand}" Content="{loc:Loc Backup_Cancel}" Margin="8,0,0,0" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ConfirmRestoreText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- The backup databases -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Backup_TargetsTitle}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,4" />
+                        <TextBlock Text="{loc:Loc Backup_TargetsHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                        <!-- Nothing is deleted before this question is answered -->
+                        <Border Style="{StaticResource BannerBorder}" Margin="0,0,0,12"
+                                Visibility="{Binding IsConfirmingDelete, Converter={StaticResource BoolToVisibility}}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                                    <Button Command="{Binding ConfirmDeleteCommand}" Content="{loc:Loc Backup_ConfirmYes}" />
+                                    <Button Command="{Binding CancelDeleteCommand}" Content="{loc:Loc Backup_Cancel}" Margin="8,0,0,0" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ConfirmDeleteText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="{Binding EmptyText}" Style="{StaticResource MutedText}" Margin="0,0,0,12"
+                                   Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+
+                        <ItemsControl ItemsSource="{Binding Targets}" KeyboardNavigation.TabNavigation="Continue">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,0,0,12" LastChildFill="True">
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0"
+                                                    Visibility="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibility}}">
+                                            <Button Content="{loc:Loc Backup_RunNow}"
+                                                    Command="{Binding DataContext.RunNowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{loc:Loc Backup_Edit}" Margin="8,0,0,0"
+                                                    Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{loc:Loc Backup_Delete}" Margin="8,0,0,0"
+                                                    Command="{Binding DataContext.AskDeleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" FontSize="13"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                            <TextBlock Style="{StaticResource MutedText}" TextWrapping="Wrap">
+                                                <Run Text="{Binding KindText, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding IntervalText, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Location}" Style="{StaticResource MutedText}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Location}" />
+                                            <TextBlock Text="{Binding StatusText}" Style="{StaticResource StatusText}" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding NextText}" Style="{StaticResource MutedText}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Command="{Binding BeginCreateCommand}" Content="{loc:Loc Backup_New}" HorizontalAlignment="Left"
+                                Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- The form: a new backup database, or the one being edited -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding IsFormOpen, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding FormTitle}" Style="{StaticResource SectionTitleText}" />
+
+                        <StackPanel HorizontalAlignment="Left" Width="480">
+                            <TextBlock Text="{loc:Loc Backup_FormName}" Style="{StaticResource FieldLabelText}" />
+                            <TextBox x:Name="NameBox" MaxLength="{x:Static contracts:BackupRules.MaxNameLength}"
+                                     AutomationProperties.Name="{loc:Loc Backup_FormName}"
+                                     Text="{Binding FormName, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <TextBlock Text="{loc:Loc Backup_FormKind}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                            <ComboBox ItemsSource="{Binding Kinds}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding FormKind}"
+                                      AutomationProperties.Name="{loc:Loc Backup_FormKind}" />
+
+                            <TextBlock Text="{Binding LocationLabel}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                            <TextBox MaxLength="{x:Static contracts:BackupRules.MaxLocationLength}"
+                                     AutomationProperties.Name="{loc:Loc Backup_LocationSqlite}"
+                                     Text="{Binding FormLocation, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="{Binding LocationHint}" Style="{StaticResource MutedText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+
+                            <TextBlock Text="{loc:Loc Backup_FormInterval}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                            <ComboBox ItemsSource="{Binding Intervals}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding FormIntervalMinutes}"
+                                      AutomationProperties.Name="{loc:Loc Backup_FormInterval}" />
+
+                            <CheckBox IsChecked="{Binding FormEnabled}" Content="{loc:Loc Backup_FormEnabled}" Margin="0,12,0,0" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button Command="{Binding SaveCommand}" Content="{loc:Loc Backup_Save}" Style="{StaticResource AccentButtonStyle}" IsDefault="True" />
+                            <Button Command="{Binding CancelFormCommand}" Content="{loc:Loc Backup_Cancel}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -58,6 +58,27 @@ public interface IPlannerApi
     /// <summary>Deletes an uploaded theme pack. Answers with the catalog.</summary>
     Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>The backup databases and how their last run went. Needs <c>backups.view</c>.</summary>
+    Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Defines a backup database. Needs <c>backups.edit</c>; the API says what is wrong with one it refuses.</summary>
+    Task<BackupTargetDto> CreateBackupTargetAsync(BackupTargetInputDto target, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the definition of a backup database. Needs <c>backups.edit</c>.</summary>
+    Task<BackupTargetDto> UpdateBackupTargetAsync(int id, BackupTargetInputDto target, CancellationToken cancellationToken = default);
+
+    /// <summary>Forgets a backup database. Needs <c>backups.edit</c>.</summary>
+    Task DeleteBackupTargetAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Updates a backup database now. A run that failed is answered like one that worked: its reason is the target's <see cref="BackupTargetDto.LastMessage"/>. Needs <c>backups.edit</c>.</summary>
+    Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default);
+
+    /// <summary>Downloads a backup file with all data. Needs <c>backups.download</c>.</summary>
+    Task<BackupFile> DownloadBackupAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces ALL data with a backup file; the API restarts afterwards. Needs <c>backups.restore</c>; the API says what is wrong with a file it refuses.</summary>
+    Task<BackupRestoredDto> RestoreBackupAsync(Stream file, CancellationToken cancellationToken = default);
+
     /// <summary>Chooses the signed-in user's own theme for a kind of client (<c>null</c>: follow the instance's default). Answers with the user.</summary>
     Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default);
 

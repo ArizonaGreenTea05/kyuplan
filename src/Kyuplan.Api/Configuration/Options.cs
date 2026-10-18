@@ -134,6 +134,29 @@ public sealed class DatabaseOptions
     public string Resolve(string contentRoot) => DatabaseConnections.Resolve(Provider, ConnectionString, contentRoot);
 }
 
+public sealed class BackupOptions
+{
+    public const string Section = "Backup";
+
+    /// <summary>Whether the backup databases (see <c>BackupWorker</c>) are updated by themselves. Switching it off keeps the definitions; downloads and uploads still work.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// A backup file (downloaded from the backup page) that a <b>new</b> instance starts with: when both databases are created by this start
+    /// and the file exists, its data is loaded instead of the default belts and roles. Ignored once the databases exist. Empty = none.
+    /// </summary>
+    public string? InitialDataFile { get; set; }
+
+    /// <summary>The largest backup file that can be uploaded.</summary>
+    public int MaxUploadMegabytes { get; set; } = 256;
+
+    /// <summary>The most a backup file may hold once unpacked, so that a small file cannot fill the memory.</summary>
+    public int MaxUnpackedMegabytes { get; set; } = 1024;
+
+    /// <summary>The file that holds the backup databases an administrator defined; default: <c>backup-targets.json</c> next to the settings file.</summary>
+    public string? TargetsFile { get; set; }
+}
+
 public sealed class SyncOptions
 {
     public const string Section = "Sync";

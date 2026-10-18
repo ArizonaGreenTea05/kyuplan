@@ -2618,4 +2618,166 @@
   <data name="AboutMe_RatingsTitle" xml:space="preserve">
     <value>Evaluations of you</value>
   </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="PermissionGroup_backups" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Permission_backups_view" xml:space="preserve">
+    <value>See the backup databases</value>
+  </data>
+  <data name="Permission_backups_edit" xml:space="preserve">
+    <value>Define and run backup databases</value>
+  </data>
+  <data name="Permission_backups_download" xml:space="preserve">
+    <value>Download a backup file (holds every password hash)</value>
+  </data>
+  <data name="Permission_backups_restore" xml:space="preserve">
+    <value>Replace all data with a backup file</value>
+  </data>
+  <data name="Backup_Lede" xml:space="preserve">
+    <value>Keep a copy of all data safe: in backup databases that are updated by themselves, and as a file that you download or restore.</value>
+  </data>
+  <data name="Backup_FileTitle" xml:space="preserve">
+    <value>Backup file</value>
+  </data>
+  <data name="Backup_FileHint" xml:space="preserve">
+    <value>A file with all data of this server: members, exams, comments, evaluations, the saved branding and all users with their password hashes, so keep it safe. A new server can start from it (setting Backup:InitialDataFile, see the deployment guide). Settings and theme packs are files of their own and are not part of it.</value>
+  </data>
+  <data name="Backup_Download" xml:space="preserve">
+    <value>Download backup</value>
+  </data>
+  <data name="Backup_Downloaded" xml:space="preserve">
+    <value>The backup file was downloaded.</value>
+  </data>
+  <data name="Backup_ChooseFile" xml:space="preserve">
+    <value>Restore from file…</value>
+  </data>
+  <data name="Backup_RestoreHint" xml:space="preserve">
+    <value>Restoring replaces ALL data on this server (also the users and their passwords) with the content of the file. This cannot be undone: download a backup first.</value>
+  </data>
+  <data name="Backup_ConfirmRestore" xml:space="preserve">
+    <value>Replace ALL data on the server with “{0}”? Everything that is not in the file is lost, and the server restarts.</value>
+  </data>
+  <data name="Backup_RestoreYes" xml:space="preserve">
+    <value>Replace all data</value>
+  </data>
+  <data name="Backup_RestoredRestarting" xml:space="preserve">
+    <value>The data was replaced ({0} rows). The server restarts…</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>The server is back with the restored data. If your login no longer works, use one from the backup.</value>
+  </data>
+  <data name="Backup_TargetsTitle" xml:space="preserve">
+    <value>Backup databases</value>
+  </data>
+  <data name="Backup_TargetsHint" xml:space="preserve">
+    <value>A backup database is a second database that gets a complete copy of all data at the interval you choose; every update replaces what it held. Never choose the database this server runs on.</value>
+  </data>
+  <data name="Backup_Empty" xml:space="preserve">
+    <value>No backup database yet. Add one to have the data copied regularly.</value>
+  </data>
+  <data name="Backup_EmptyView" xml:space="preserve">
+    <value>There is no backup database.</value>
+  </data>
+  <data name="Backup_New" xml:space="preserve">
+    <value>Add backup database</value>
+  </data>
+  <data name="Backup_FormNew" xml:space="preserve">
+    <value>New backup database</value>
+  </data>
+  <data name="Backup_FormEdit" xml:space="preserve">
+    <value>Edit backup database</value>
+  </data>
+  <data name="Backup_FormName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Backup_FormKind" xml:space="preserve">
+    <value>Kind</value>
+  </data>
+  <data name="Backup_FormInterval" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Backup_FormEnabled" xml:space="preserve">
+    <value>Switched on (updated by itself)</value>
+  </data>
+  <data name="Backup_KindSqlite" xml:space="preserve">
+    <value>SQLite files in a folder</value>
+  </data>
+  <data name="Backup_KindPostgres" xml:space="preserve">
+    <value>PostgreSQL database</value>
+  </data>
+  <data name="Backup_LocationSqlite" xml:space="preserve">
+    <value>Folder on the server</value>
+  </data>
+  <data name="Backup_LocationPostgres" xml:space="preserve">
+    <value>Connection string</value>
+  </data>
+  <data name="Backup_LocationHintSqlite" xml:space="preserve">
+    <value>The folder gets the files planner.db and accounts.db; it is created when missing.</value>
+  </data>
+  <data name="Backup_LocationHintPostgres" xml:space="preserve">
+    <value>For example Host=db;Database=kyuplan_backup;Username=kyuplan;Password=…; the tables of both databases go into it.</value>
+  </data>
+  <data name="Backup_EveryMinutes" xml:space="preserve">
+    <value>every {0} min</value>
+  </data>
+  <data name="Backup_EveryHours" xml:space="preserve">
+    <value>every {0} h</value>
+  </data>
+  <data name="Backup_EveryDays" xml:space="preserve">
+    <value>every {0} d</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>switched off</value>
+  </data>
+  <data name="Backup_NeverRan" xml:space="preserve">
+    <value>Has not been updated yet</value>
+  </data>
+  <data name="Backup_LastOk" xml:space="preserve">
+    <value>Last update {0}</value>
+  </data>
+  <data name="Backup_LastFailed" xml:space="preserve">
+    <value>Update failed {0}: {1}</value>
+  </data>
+  <data name="Backup_Next" xml:space="preserve">
+    <value>Next update {0}</value>
+  </data>
+  <data name="Backup_RunNow" xml:space="preserve">
+    <value>Update now</value>
+  </data>
+  <data name="Backup_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Backup_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Backup_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Backup_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Backup_ConfirmYes" xml:space="preserve">
+    <value>Yes, delete</value>
+  </data>
+  <data name="Backup_ConfirmDelete" xml:space="preserve">
+    <value>Delete the backup database “{0}”? The data in it stays where it is; it is only no longer updated.</value>
+  </data>
+  <data name="Backup_Created" xml:space="preserve">
+    <value>Backup database “{0}” added.</value>
+  </data>
+  <data name="Backup_Saved" xml:space="preserve">
+    <value>Backup database “{0}” saved.</value>
+  </data>
+  <data name="Backup_Deleted" xml:space="preserve">
+    <value>Backup database “{0}” deleted.</value>
+  </data>
+  <data name="Backup_RunOk" xml:space="preserve">
+    <value>“{0}” is up to date.</value>
+  </data>
+  <data name="Backup_RunFailed" xml:space="preserve">
+    <value>Updating “{0}” failed: {1}</value>
+  </data>
 </root>

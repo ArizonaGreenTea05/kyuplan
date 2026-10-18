@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Backup;
 using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Endpoints;
 using Kyuplan.Api.Infrastructure;
@@ -103,6 +104,14 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddScoped<SpondSync>();
     builder.Services.AddHostedService<SpondSyncWorker>();
 
+    // Backups: a file to download and upload, and backup databases that are kept up to date on a schedule (see BackupService).
+    builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection(BackupOptions.Section));
+    builder.Services.AddSingleton<BackupGate>();
+    builder.Services.AddSingleton<BackupTargetStore>();
+    builder.Services.AddSingleton<BackupRunner>();
+    builder.Services.AddScoped<BackupService>();
+    builder.Services.AddHostedService<BackupWorker>();
+
     // The user accounts live in a database of their own. Everything except the development docs requires a login (HTTP Basic,
     // see BasicAuthenticationHandler); the fallback policy makes that the default, so a new endpoint cannot be left open by accident.
     // What a user may do is checked per endpoint with RequirePermission, from the permissions the sign-in puts into the user's claims.
@@ -149,17 +158,28 @@ static async Task<WebApplication> BuildAsync(string[] args)
         var seedDefaults = scope.ServiceProvider.GetRequiredService<IOptions<DefaultDataOptions>>().Value.Enabled;
 
         var planner = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
-        if (await planner.EnsureUpToDateAsync(CancellationToken.None) && seedDefaults)
-        {
-            await DefaultBelts.SeedAsync(planner, CancellationToken.None);
-            app.Logger.LogInformation("The planner database is new: it starts with {Count} standard belts.", DefaultBelts.All.Count);
-        }
-
+        var plannerIsNew = await planner.EnsureUpToDateAsync(CancellationToken.None);
         var accounts = scope.ServiceProvider.GetRequiredService<AccountsDbContext>();
-        if (await accounts.EnsureUpToDateAsync(CancellationToken.None) && seedDefaults)
+        var accountsIsNew = await accounts.EnsureUpToDateAsync(CancellationToken.None);
+
+        // An instance that starts from nothing may start from a backup file instead (Backup:InitialDataFile); it then has what the club made of the belts and roles.
+        if (plannerIsNew && accountsIsNew && await scope.ServiceProvider.GetRequiredService<BackupService>().LoadInitialDataAsync(CancellationToken.None))
         {
-            await DefaultRoles.SeedAsync(accounts, CancellationToken.None);
-            app.Logger.LogInformation("The accounts database is new: it starts with the roles {Roles}.", string.Join(", ", DefaultRoles.All.Select(r => r.Name)));
+            app.Logger.LogInformation("Both databases are new: they start with the data of the backup file.");
+        }
+        else
+        {
+            if (plannerIsNew && seedDefaults)
+            {
+                await DefaultBelts.SeedAsync(planner, CancellationToken.None);
+                app.Logger.LogInformation("The planner database is new: it starts with {Count} standard belts.", DefaultBelts.All.Count);
+            }
+
+            if (accountsIsNew && seedDefaults)
+            {
+                await DefaultRoles.SeedAsync(accounts, CancellationToken.None);
+                app.Logger.LogInformation("The accounts database is new: it starts with the roles {Roles}.", string.Join(", ", DefaultRoles.All.Select(r => r.Name)));
+            }
         }
 
         // Without a user nobody can sign in: the web client then asks for the settings and the first administrator (see SettingsEndpoints).
@@ -203,6 +223,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
 
     app.MapBrandingEndpoints();
     app.MapThemeEndpoints();
+    app.MapBackupEndpoints();
     app.MapPlannerEndpoints();
     app.MapClientDownloadEndpoints();
     app.MapDocumentationEndpoints();

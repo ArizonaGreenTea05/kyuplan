@@ -80,10 +80,11 @@ public sealed class MainViewModelTests : IDisposable
         _session.User = Boss;
 
         Assert.Equal(7, _main.Items.Count);
-        Assert.Equal(3, _main.AdminItems.Count);
+        Assert.Equal(4, _main.AdminItems.Count);
         Assert.IsType<UserAdminViewModel>(_main.AdminItems[0].Page);
         Assert.IsType<RolesViewModel>(_main.AdminItems[1].Page);
         Assert.IsType<BrandingAdminViewModel>(_main.AdminItems[2].Page);
+        Assert.IsType<BackupViewModel>(_main.AdminItems[3].Page);
         Assert.All(_main.Items.Concat(_main.AdminItems).Concat(_main.AccountItems), item => Assert.NotEmpty(item.Glyph));
     }
 
@@ -112,7 +113,7 @@ public sealed class MainViewModelTests : IDisposable
     {
         _session.User = Boss;
         _session.User = Boss with { UserName = "chief" }; // renamed: still an administrator
-        Assert.Equal(3, _main.AdminItems.Count);
+        Assert.Equal(4, _main.AdminItems.Count);
 
         _session.User = Anna;
         Assert.Equal(6, _main.Items.Count);
@@ -120,7 +121,7 @@ public sealed class MainViewModelTests : IDisposable
 
         _session.User = Boss;
         Assert.Equal(7, _main.Items.Count);
-        Assert.Equal(3, _main.AdminItems.Count);
+        Assert.Equal(4, _main.AdminItems.Count);
     }
 
     [Fact]

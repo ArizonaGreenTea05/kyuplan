@@ -56,6 +56,7 @@ other belt asks for holds the highest belt and has nothing to take.
 | Check | Met when | Not known when |
 | --- | --- | --- |
 | **Attendance** | the attendance statistics (with the filter chosen, see below) call the member *Qualified*: at least the required share of the events they were invited to, and invited to at least the minimum number | – (a member who was not invited to any event of the period, or to too few, is *not met*: there is no attendance to speak of) |
+| **Evaluation** | the member's **average evaluation** (0 to 5 stars, see [attendance-statistics.md](attendance-statistics.md#star-evaluations)) over the same time span is at least `Statistics:ExamMinAverageStars` (3 by default; 0 = not asked) | – (a member with no event to average over has *not met* it) |
 | **Age** | the age in full years **on the exam day** is at least the minimum age of the next belt (or there is none) | there is no birth date, and a minimum age is asked |
 | **Waiting time** | the full months from the day the belt was received to the exam day are at least the minimum waiting time (or there is none) | neither the day the belt was received nor an earlier exam is known, and a waiting time is asked |
 
@@ -72,9 +73,12 @@ other belt asks for holds the highest belt and has nothing to take.
 | Verdict | Meaning |
 | --- | --- |
 | **Fit** | every check is met. |
-| **Not yet** | at least one check is *not met* (what is missed wins over what is not known). The row says which: "Waited 1 months by the exam day, 3 needed." |
+| **Not yet** | at least one check is *not met* (what is missed wins over what is not known). The row says which: "Waited 1 months by the exam day, 3 needed." or "Average evaluation 2.5 of 5, 3.0 needed." |
 | **Needs data** | nothing is missed, but a check cannot be made: no belt, no birth date, or no idea when the belt was received. The row says what is missing. |
 | **Top belt** | the member holds the highest belt: there is nothing to take an exam for. |
+
+An event nobody evaluated counts 2.5 stars (`Statistics:DefaultEventStars`) for a member who attended it, so with the standard values a member who was
+never evaluated is *not yet*; the table shows the average in its own column (*Stars*), amber when it falls short.
 
 The list is ordered fit first (the best attendance first), then those who need data, those who are not fit yet and those with nothing to take.
 The page shows the fit ones first and counts every kind; the other kinds are one click away. The search finds members by the words of their name.

@@ -45,6 +45,15 @@
             </Style.Triggers>
         </Style>
 
+        <Style x:Key="StarsCell" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StarsState}" Value="NotMet">
+                    <Setter Property="Foreground" Value="{DynamicResource DataOpenTextBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <Style x:Key="WhenCell" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsUpcoming}" Value="True">
@@ -119,6 +128,7 @@
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Belts" MinWidth="150" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Age" MinWidth="100" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Wait" MinWidth="120" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="Stars" MinWidth="100" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Attendance" MinWidth="150" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Last" MinWidth="100" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="Verdict" MinWidth="230" />
@@ -163,8 +173,9 @@
 
                     <TextBlock Grid.Column="3" Text="{Binding AgeText}" Style="{StaticResource AgeCell}" />
                     <TextBlock Grid.Column="4" Text="{Binding WaitText}" Style="{StaticResource WaitCell}" ToolTip="{Binding WaitTip}" />
+                    <TextBlock Grid.Column="5" Text="{Binding StarsText}" Style="{StaticResource StarsCell}" ToolTip="{loc:Loc Rating_StarsTip}" />
 
-                    <StackPanel Grid.Column="5" VerticalAlignment="Center" Margin="8,0">
+                    <StackPanel Grid.Column="6" VerticalAlignment="Center" Margin="8,0">
                         <Grid Height="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="90" />
@@ -178,9 +189,9 @@
                         <TextBlock Text="{Binding AttendedOfInvitedText}" Style="{StaticResource MutedText}" />
                     </StackPanel>
 
-                    <TextBlock Grid.Column="6" Text="{Binding LastExamText}" Style="{StaticResource CellText}" />
+                    <TextBlock Grid.Column="7" Text="{Binding LastExamText}" Style="{StaticResource CellText}" />
 
-                    <StackPanel Grid.Column="7" VerticalAlignment="Center" Margin="0,2">
+                    <StackPanel Grid.Column="8" VerticalAlignment="Center" Margin="0,2">
                         <Border Style="{StaticResource VerdictPill}" ToolTip="{Binding VerdictTip}">
                             <TextBlock Text="{Binding VerdictText}" />
                         </Border>
@@ -188,7 +199,7 @@
                                    Visibility="{Binding ReasonText, Converter={StaticResource StringToVisibility}}" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="8" VerticalAlignment="Center" Margin="8,0">
+                    <StackPanel Grid.Column="9" VerticalAlignment="Center" Margin="8,0">
                         <TextBlock Text="{Binding InvitationText}" />
                         <TextBlock Text="{loc:Loc Plan_SavedMark}" Foreground="{DynamicResource DataYesTextBrush}" FontWeight="SemiBold"
                                    Style="{StaticResource MutedText}"
@@ -426,6 +437,7 @@
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Belts" MinWidth="150" />
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Age" MinWidth="100" />
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Wait" MinWidth="120" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="Stars" MinWidth="100" />
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Attendance" MinWidth="150" />
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Last" MinWidth="100" />
                                                     <ColumnDefinition Width="Auto" SharedSizeGroup="Verdict" MinWidth="230" />
@@ -442,10 +454,11 @@
                                                 </StackPanel>
                                                 <TextBlock Grid.Column="3" Text="{loc:Loc Plan_ColAge}" Style="{StaticResource HeaderText}" />
                                                 <TextBlock Grid.Column="4" Text="{loc:Loc Plan_ColWait}" Style="{StaticResource HeaderText}" />
-                                                <TextBlock Grid.Column="5" Text="{loc:Loc Plan_ColAttendance}" Style="{StaticResource HeaderText}" />
-                                                <TextBlock Grid.Column="6" Text="{loc:Loc Plan_ColLastExam}" Style="{StaticResource HeaderText}" />
-                                                <TextBlock Grid.Column="7" Text="{loc:Loc Plan_ColVerdict}" Style="{StaticResource HeaderText}" />
-                                                <TextBlock Grid.Column="8" Text="{loc:Loc Plan_ColSpond}" Style="{StaticResource HeaderText}" />
+                                                <TextBlock Grid.Column="5" Text="{loc:Loc Plan_ColStars}" Style="{StaticResource HeaderText}" ToolTip="{loc:Loc Rating_StarsTip}" />
+                                                <TextBlock Grid.Column="6" Text="{loc:Loc Plan_ColAttendance}" Style="{StaticResource HeaderText}" />
+                                                <TextBlock Grid.Column="7" Text="{loc:Loc Plan_ColLastExam}" Style="{StaticResource HeaderText}" />
+                                                <TextBlock Grid.Column="8" Text="{loc:Loc Plan_ColVerdict}" Style="{StaticResource HeaderText}" />
+                                                <TextBlock Grid.Column="9" Text="{loc:Loc Plan_ColSpond}" Style="{StaticResource HeaderText}" />
                                             </Grid>
                                         </Border>
                                         <ItemsControl ItemsSource="{Binding VisibleSuggestions}" ItemTemplate="{StaticResource SuggestionItem}"

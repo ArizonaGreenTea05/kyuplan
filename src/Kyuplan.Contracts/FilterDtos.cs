@@ -18,6 +18,7 @@ namespace Kyuplan.Contracts;
 /// <param name="MinInvitedEvents">Members invited to fewer events than this get no verdict.</param>
 /// <param name="EventNameContains">Only count events whose name contains any of these terms.</param>
 /// <param name="EventNameExcludes">Ignore events whose name contains any of these terms.</param>
+/// <param name="MinAverageStars">Average evaluation (0–5) an exam asks for with this filter; 0 = not asked, <c>null</c> = the administrators' setting (<c>Statistics:ExamMinAverageStars</c>).</param>
 public sealed record FilterSettingsDto(
     string GroupId,
     DateOnly From,
@@ -28,7 +29,8 @@ public sealed record FilterSettingsDto(
     int MinAttendancePercent,
     int MinInvitedEvents,
     string? EventNameContains,
-    string? EventNameExcludes)
+    string? EventNameExcludes,
+    double? MinAverageStars = null)
 {
     /// <summary>True when two events, not the two days, define the time span.</summary>
     [JsonIgnore]

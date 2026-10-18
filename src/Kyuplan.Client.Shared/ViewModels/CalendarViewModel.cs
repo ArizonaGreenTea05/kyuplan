@@ -16,18 +16,21 @@ namespace Kyuplan.Client.ViewModels;
 public sealed partial class CalendarViewModel : PageViewModel
 {
     private readonly IPlannerApi _api;
+    private readonly TimeProvider _time;
     private CalendarDto? _calendar;
     private DateOnly? _date;
 
-    public CalendarViewModel(ShellViewModel shell, IPlannerApi api) : base(shell)
+    public CalendarViewModel(ShellViewModel shell, IPlannerApi api, TimeProvider? time = null) : base(shell)
     {
         _api = api;
+        _time = time ?? TimeProvider.System;
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(IsBusy)) return;
 
             NotifyNavigation();
             PostCommentCommand.NotifyCanExecuteChanged();
+            RateCommand.NotifyCanExecuteChanged();
         };
     }
 
@@ -37,10 +40,31 @@ public sealed partial class CalendarViewModel : PageViewModel
 
     public bool CanWriteComments => Shell.Can(Permission.CommentsWrite);
 
+    /// <summary>The user may evaluate members (the permission); whether this event allows it yet is <see cref="RatingsOpen"/>.</summary>
+    public bool CanRate => Shell.Can(Permission.RatingsWrite);
+
+    public bool CanViewRatings => Shell.Can(Permission.RatingsView);
+
+    /// <summary>The open event has started, so its members can be evaluated.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowNotStarted))]
+    private bool _ratingsOpen;
+
+    /// <summary>The user may evaluate, but the event has not started yet: a line says so instead of the buttons.</summary>
+    public bool ShowNotStarted => CanRate && HasDetail && !RatingsOpen;
+
+    /// <summary>The user sees evaluations (or may give them): the column is shown.</summary>
+    public bool ShowRatings => CanRate || CanViewRatings;
+
     protected override void OnPermissionsChanged()
     {
         base.OnPermissionsChanged();
         PostCommentCommand.NotifyCanExecuteChanged();
+        RateCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanRate));
+        OnPropertyChanged(nameof(CanViewRatings));
+        OnPropertyChanged(nameof(ShowRatings));
+        OnPropertyChanged(nameof(ShowNotStarted));
     }
 
     /// <summary>Events change on Spond: read again whenever the calendar is shown (not while an event is open: its drafts stay).</summary>
@@ -278,10 +302,11 @@ public sealed partial class CalendarViewModel : PageViewModel
         var user = Shell.CurrentUser;
         bool MayDelete(CommentDto c) => user is not null && (Shell.Can(Permission.CommentsDeleteAny) || (user.Id == c.AuthorId && Shell.Can(Permission.CommentsDelete)));
         Detail = new CalendarEventRow(detail.Event);
+        RatingsOpen = detail.Event.Start <= _time.GetUtcNow();
         Attendees = [.. detail.Attendees.Select(a =>
         {
             var known = a.MemberId is not null;
-            var row = new EventAttendeeRow(a, CanWriteComments && known, CanEditComments && known, MayDelete);
+            var row = new EventAttendeeRow(a, CanWriteComments && known, CanEditComments && known, MayDelete, CanRate && known && RatingsOpen, user?.Id);
             if (a.MemberId is { } member)
             {
                 if (replies.TryGetValue(member, out var parent)) row.ReplyCommand.Execute(row.Comments.FirstOrDefault(c => c.Id == parent));
@@ -308,6 +333,7 @@ public sealed partial class CalendarViewModel : PageViewModel
     private void CloseEvent()
     {
         Detail = null;
+        RatingsOpen = false;
         Attendees = [];
         _answerFilter = null;
         BuildFilter();
@@ -344,6 +370,30 @@ public sealed partial class CalendarViewModel : PageViewModel
 
             attendee.Draft = "";
             attendee.CancelReplyCommand.Execute(null); // written: a failed read below must not leave the text to be sent a second time
+            await ReadDetailAsync(open.GroupId, open.Id, ct);
+        });
+    }
+
+    // --- Evaluating --------------------------------------------------------------------------------------------
+
+    /// <summary>Only a change is worth a request: the stars the user has already given, or taking back what is not there, is not.</summary>
+    private bool CanChoose(StarChoice? choice) =>
+        choice is { Row.CanRate: true, Row.MemberId: not null } && Detail is not null && !IsBusy
+        && (choice.Stars is { } stars ? choice.Row.MyStars != stars : choice.Row.HasMyRating);
+
+    /// <summary>Gives the member the stars of the button, or takes the user's evaluation back (the "Take back" button).</summary>
+    [RelayCommand(CanExecute = nameof(CanChoose))]
+    private async Task RateAsync(StarChoice choice)
+    {
+        if (!CanChoose(choice) || Detail is not { } open || choice.Row.MemberId is not { } memberId) return; // Execute ignores CanExecute
+
+        await LoadAsync(async ct =>
+        {
+            if (choice.Stars is { } stars)
+                await _api.RateMemberAsync(open.GroupId, open.Id, memberId, stars, ct);
+            else
+                await _api.UnrateMemberAsync(open.GroupId, open.Id, memberId, ct);
+
             await ReadDetailAsync(open.GroupId, open.Id, ct);
         });
     }

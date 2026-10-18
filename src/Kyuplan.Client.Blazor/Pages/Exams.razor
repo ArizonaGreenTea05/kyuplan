@@ -210,6 +210,7 @@
                                                 <th>@Strings.Belts_ColBelt → @Strings.Plan_ColNext</th>
                                                 <th>@Strings.Plan_ColAge</th>
                                                 <th>@Strings.Plan_ColWait</th>
+                                                <th title="@Strings.Rating_StarsTip">@Strings.Plan_ColStars</th>
                                                 <th>@Strings.Plan_ColAttendance</th>
                                                 <th>@Strings.Plan_ColLastExam</th>
                                                 <th>@Strings.Plan_ColVerdict</th>
@@ -240,6 +241,7 @@
                                                     </td>
                                                     <td class="req-cell @StateClass(row.AgeState)">@row.AgeText</td>
                                                     <td class="req-cell @StateClass(row.WaitState)" title="@row.WaitTip">@row.WaitText</td>
+                                                    <td class="req-cell @StateClass(row.StarsState)">@row.StarsText</td>
                                                     <td class="att">
                                                         <div class="rate">
                                                             <RateBar Fraction="row.AttendanceFraction" Status="row.AttendanceStatus" Label="@row.AttendanceAriaText" />

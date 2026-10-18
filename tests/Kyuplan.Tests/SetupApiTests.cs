@@ -448,6 +448,23 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
+    public async Task The_stars_of_the_evaluations_are_settings_with_standard_values_and_are_saved_like_the_others()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = await SettingsOfAsync(admin);
+
+        Assert.Equal((2.5, 3.0), (settings.DefaultEventStars, settings.ExamMinAverageStars));
+
+        var response = await admin.PutAsJsonAsync("/api/settings", Unchanged(settings) with { DefaultEventStars = 3.5, ExamMinAverageStars = 4 });
+
+        Assert.True((await response.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
+        var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!["Statistics"]!;
+        Assert.Equal("3.5", (string?)written["DefaultEventStars"]);
+        Assert.Equal("4", (string?)written["ExamMinAverageStars"]);
+    }
+
+    [Fact]
     public async Task The_settings_refuse_values_that_would_keep_the_api_from_starting()
     {
         using var host = CreateHost(withAdmin: true);
@@ -458,6 +475,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         {
             good with { DatabasePath = " " }, good with { TimeZone = "Nowhere/Land" }, good with { DefaultMinAttendancePercent = 101 },
             good with { SyncIntervalMinutes = -1 }, good with { AccountsDatabasePath = good.DatabasePath },
+            good with { DefaultEventStars = 5.5 }, good with { ExamMinAverageStars = -1 },
         };
 
         foreach (var input in badInput)

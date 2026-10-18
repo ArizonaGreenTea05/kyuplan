@@ -54,7 +54,9 @@ public sealed class SettingsService(
             sync.Value.Enabled,
             Math.Max(0, (int)Math.Round(sync.Value.Interval.TotalMinutes)),
             [.. first.Accounts.Select(a => new SpondAccountDto(a.Email, a.PhoneNumber, !string.IsNullOrEmpty(a.Password)))],
-            configuration[AllowedHostsKey] is { Length: > 0 } hosts ? hosts : SettingsRules.AnyHost);
+            configuration[AllowedHostsKey] is { Length: > 0 } hosts ? hosts : SettingsRules.AnyHost,
+            statistics.Value.DefaultEventStars,
+            statistics.Value.ExamMinAverageStars);
     }
 
     /// <summary>
@@ -111,6 +113,8 @@ public sealed class SettingsService(
         if (!SettingsRules.IsKeywordValid(input.ExamKeyword)) Fail("examKeyword", "examKeyword is too long.");
         if (!SettingsRules.IsPercent(input.DefaultMinAttendancePercent)) Fail("defaultMinAttendancePercent", "defaultMinAttendancePercent must be between 0 and 100.");
         if (!SettingsRules.IsInvitedEvents(input.DefaultMinInvitedEvents)) Fail("defaultMinInvitedEvents", "defaultMinInvitedEvents must be between 0 and 1000.");
+        if (input.DefaultEventStars is { } eventStars && !SettingsRules.IsStars(eventStars)) Fail("defaultEventStars", "defaultEventStars must be between 0 and 5.");
+        if (input.ExamMinAverageStars is { } minStars && !SettingsRules.IsStars(minStars)) Fail("examMinAverageStars", "examMinAverageStars must be between 0 and 5.");
         if (!SettingsRules.IsSyncInterval(input.SyncIntervalMinutes)) Fail("syncIntervalMinutes", $"syncIntervalMinutes must be between 0 and {SettingsRules.MaxSyncIntervalMinutes}.");
 
         return errors.Count == 0 ? null : errors;
@@ -202,6 +206,7 @@ public sealed class SettingsService(
 
         static string Flag(bool value) => value ? "true" : "false";
         static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
+        static string Stars(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
         static string Interval(int minutes) => TimeSpan.FromMinutes(minutes).ToString("c", CultureInfo.InvariantCulture);
 
         if (ManagesDatabaseFiles && input.DatabasePath.Trim() != now.DatabasePath)
@@ -218,6 +223,9 @@ public sealed class SettingsService(
         Set("Statistics:ExamKeyword", now.ExamKeyword, input.ExamKeyword?.Trim() ?? "");
         Set("Statistics:DefaultMinAttendancePercent", Number(now.DefaultMinAttendancePercent), Number(input.DefaultMinAttendancePercent));
         Set("Statistics:DefaultMinInvitedEvents", Number(now.DefaultMinInvitedEvents), Number(input.DefaultMinInvitedEvents));
+        // An older client that does not know the fields sends none: that keeps what is set.
+        if (input.DefaultEventStars is { } defaultStars) Set("Statistics:DefaultEventStars", Stars(now.DefaultEventStars), Stars(defaultStars));
+        if (input.ExamMinAverageStars is { } minAverage) Set("Statistics:ExamMinAverageStars", Stars(now.ExamMinAverageStars), Stars(minAverage));
         Set("Sync:Enabled", Flag(now.SyncEnabled), Flag(input.SyncEnabled));
         Set("Sync:Interval", Interval(now.SyncIntervalMinutes), Interval(input.SyncIntervalMinutes));
         // An older client that does not know the field sends none: that keeps what is set.

@@ -186,6 +186,37 @@ public sealed class Member
 
     /// <summary>What the users wrote about the member (replies included); removed along with the member, like everything the planner keeps about one.</summary>
     public List<Comment> Comments { get; set; } = [];
+
+    /// <summary>The evaluations users gave the member at events; removed along with the member.</summary>
+    public List<MemberRating> Ratings { get; set; } = [];
+}
+
+/// <summary>
+/// One user's evaluation of a member at one event, 0 to 5 stars (<see cref="Kyuplan.Contracts.RatingRules"/>). A user has at most one per
+/// member and event; 0 stars is an evaluation, no row is none.
+/// </summary>
+public sealed class MemberRating
+{
+    public int Id { get; set; }
+
+    public int MemberId { get; set; }
+
+    public Member Member { get; set; } = null!;
+
+    /// <summary>The Spond event, as events are not kept in the database.</summary>
+    public string EventId { get; set; } = "";
+
+    /// <summary>The user who evaluated: an id of the accounts database, which is a database of its own, so no foreign key.</summary>
+    public int UserId { get; set; }
+
+    /// <summary>The user's name when they evaluated; shown only when the user is gone.</summary>
+    public string UserName { get; set; } = "";
+
+    public int Stars { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 /// <summary>
@@ -328,6 +359,9 @@ public sealed class SavedFilter
     public string? EventNameContains { get; set; }
 
     public string? EventNameExcludes { get; set; }
+
+    /// <summary>Average evaluation an exam asks for with this filter; null = the administrators' setting.</summary>
+    public double? MinAverageStars { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 

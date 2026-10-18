@@ -179,6 +179,8 @@ public static class ExamEndpoints
             errors[nameof(s.MinAttendancePercent)] = ["minAttendancePercent must be between 0 and 100."];
         if (s.MinInvitedEvents is < 1 or > 1000)
             errors[nameof(s.MinInvitedEvents)] = ["minInvitedEvents must be between 1 and 1000."];
+        if (s.MinAverageStars is { } minStars && !SettingsRules.IsStars(minStars))
+            errors[nameof(s.MinAverageStars)] = ["minAverageStars must be between 0 and 5."];
 
         if (s.EventNameContains?.Length > PlannerDbContext.TermsLength || s.EventNameExcludes?.Length > PlannerDbContext.TermsLength)
             errors[nameof(s.EventNameContains)] = [$"The event name terms must be at most {PlannerDbContext.TermsLength} characters long."];

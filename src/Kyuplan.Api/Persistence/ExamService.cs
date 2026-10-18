@@ -222,6 +222,7 @@ public sealed class ExamService(
         filter.MinInvitedEvents = s.MinInvitedEvents;
         filter.EventNameContains = Terms(s.EventNameContains);
         filter.EventNameExcludes = Terms(s.EventNameExcludes);
+        filter.MinAverageStars = s.MinAverageStars;
         filter.UpdatedAt = now;
 
         static string? Terms(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
@@ -271,6 +272,6 @@ public sealed class ExamService(
         f.Id, f.ExamId, f.Name,
         new FilterSettingsDto(
             f.GroupId, f.From, f.To, f.FromEventId, f.ToEventId, f.SubGroupIds.ToList(),
-            f.MinAttendancePercent, f.MinInvitedEvents, f.EventNameContains, f.EventNameExcludes),
+            f.MinAttendancePercent, f.MinInvitedEvents, f.EventNameContains, f.EventNameExcludes, f.MinAverageStars),
         f.UpdatedAt);
 }

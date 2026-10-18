@@ -167,7 +167,7 @@ public sealed class ExamPlanningService(
 
         var group = await statistics.GetGroupInfoAsync(exam.GroupId, cancellationToken);
         var filter = saved is null ? await DefaultFilterAsync(exam, cancellationToken) : await ResolveAsync(saved, cancellationToken);
-        var attendance = await statistics.GetAttendanceAsync(filter, cancellationToken);
+        var attendance = await statistics.GetAttendanceAsync(filter, await RatingBooks.LoadAsync(db, exam.GroupId, options.Value.DefaultEventStars, cancellationToken), cancellationToken);
 
         var members = await db.Members.AsNoTracking().Where(m => m.GroupId == exam.GroupId).ToListAsync(cancellationToken);
         var bySpondId = members.ToDictionary(m => m.SpondId);
@@ -192,7 +192,7 @@ public sealed class ExamPlanningService(
             attendance.Members.ToDictionary(m => m.MemberId),
             group.SubGroups.ToDictionary(s => s.Id, s => s.Name),
             await LastExamsAsync(exam, cancellationToken),
-            invitations, preSaved);
+            invitations, preSaved, saved?.MinAverageStars ?? options.Value.ExamMinAverageStars);
 
         return new ExamSuggestionsDto(exam.Id, exam.Name, exam.Date, saved?.Id, saved?.Name, attendance.Filter, rows);
     }

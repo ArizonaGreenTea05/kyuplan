@@ -218,6 +218,16 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
                 Json(comment, PlannerJsonContext.Default.CalendarCommentInputDto), cancellationToken),
             PlannerJsonContext.Default.CommentDto, cancellationToken);
 
+    public Task<RatingDto> RateMemberAsync(string groupId, string eventId, int memberId, int stars, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync(
+                $"api/calendar/events/{Uri.EscapeDataString(eventId)}/members/{memberId}/rating?groupId={Uri.EscapeDataString(groupId)}",
+                Json(new RatingInputDto(stars), PlannerJsonContext.Default.RatingInputDto), cancellationToken),
+            PlannerJsonContext.Default.RatingDto, cancellationToken);
+
+    public Task UnrateMemberAsync(string groupId, string eventId, int memberId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync(
+            $"api/calendar/events/{Uri.EscapeDataString(eventId)}/members/{memberId}/rating?groupId={Uri.EscapeDataString(groupId)}", cancellationToken), cancellationToken);
+
     public Task<CommentDto> UpdateCommentAsync(int commentId, CommentUpdateDto comment, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync($"api/comments/{commentId}", Json(comment, PlannerJsonContext.Default.CommentUpdateDto), cancellationToken),
             PlannerJsonContext.Default.CommentDto, cancellationToken);

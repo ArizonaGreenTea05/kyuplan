@@ -82,8 +82,8 @@ public sealed class ExamPlanningTests : IDisposable
 
     private static FilterSettingsDto Settings(
         string group = Dojo, int percent = 75, int invited = 3, string[]? subGroups = null,
-        string? fromEvent = null, string? toEvent = null, DateOnly? from = null, DateOnly? to = null) =>
-        new(group, from ?? Day(-30), to ?? Day(20), fromEvent, toEvent, subGroups ?? [], percent, invited, null, null);
+        string? fromEvent = null, string? toEvent = null, DateOnly? from = null, DateOnly? to = null, double? minStars = null) =>
+        new(group, from ?? Day(-30), to ?? Day(20), fromEvent, toEvent, subGroups ?? [], percent, invited, null, null, minStars);
 
     // --- Who is fit ---------------------------------------------------------------------------------------
 
@@ -206,6 +206,25 @@ public sealed class ExamPlanningTests : IDisposable
         Assert.Equal(25, result.Filter.MinAttendancePercent);
         // Ben came to 2 of 5 events: 40 % is enough now.
         Assert.Equal(SuggestionVerdict.Fit, result.Members.Single(m => m.Name == "Ben").Verdict);
+    }
+
+    [Fact]
+    public async Task A_saved_filter_decides_which_average_evaluation_is_enough_and_the_setting_applies_without_one()
+    {
+        var w = await BuildAsync();
+        var lenient = await SaveFilterAsync(w.Next.Id, "Lenient", Settings(percent: 25));
+        var picky = await SaveFilterAsync(w.Next.Id, "Picky", Settings(percent: 25, minStars: 4));
+
+        Assert.Null(lenient.Settings.MinAverageStars);
+        Assert.Equal(4, picky.Settings.MinAverageStars);
+
+        // Nobody is evaluated: every event counts 2.5, so the setting of the test club (0 = not asked) lets Ben through, 4 stars does not.
+        var withSetting = await Planning(s => s.SuggestAsync(w.Next.Id, lenient.Id, CancellationToken.None));
+        var withFilter = await Planning(s => s.SuggestAsync(w.Next.Id, picky.Id, CancellationToken.None));
+
+        Assert.Equal(SuggestionVerdict.Fit, withSetting.Members.Single(m => m.Name == "Ben").Verdict);
+        Assert.NotEqual(SuggestionVerdict.Fit, withFilter.Members.Single(m => m.Name == "Ben").Verdict);
+        Assert.Equal(4, withFilter.Members.Single(m => m.Name == "Ben").MinAverageStars);
     }
 
     [Fact]

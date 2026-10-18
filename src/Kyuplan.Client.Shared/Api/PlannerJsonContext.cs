@@ -53,6 +53,8 @@ namespace Kyuplan.Client.Api;
 [JsonSerializable(typeof(List<CalendarEventDto>))]
 [JsonSerializable(typeof(CalendarEventDetailDto))]
 [JsonSerializable(typeof(CalendarCommentInputDto))]
+[JsonSerializable(typeof(RatingDto))]
+[JsonSerializable(typeof(RatingInputDto))]
 [JsonSerializable(typeof(List<TagDto>))]
 [JsonSerializable(typeof(TagDto))]
 [JsonSerializable(typeof(TagInputDto))]

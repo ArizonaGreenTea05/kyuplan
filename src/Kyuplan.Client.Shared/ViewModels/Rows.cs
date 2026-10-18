@@ -170,6 +170,15 @@ public sealed class MemberRowViewModel(MemberAttendanceDto dto)
     public double SessionsPerWeek => Dto.SessionsPerWeek;
     public string SessionsPerWeekText => string.Format(Strings.Row_PerWeek, Display.Number(Dto.SessionsPerWeek));
 
+    /// <summary>Sort key: members without an evaluated or attended event come last.</summary>
+    public double Stars => Dto.AverageStars ?? -1;
+
+    /// <summary>"3.4", or "–" without an event to average over.</summary>
+    public string StarsText => Dto.AverageStars is { } stars ? Display.Stars(stars) : Display.None;
+
+    /// <summary>"5 of 8 events evaluated": how many of the events behind the average somebody evaluated; the rest count the default.</summary>
+    public string StarsTip => string.Format(Strings.Rating_StarsEvents, Dto.EvaluatedEvents, Dto.StarEvents);
+
     public AttendanceTrend Trend => Dto.Trend;
     public string TrendGlyph => Display.TrendGlyph(Dto.Trend);
     public string TrendText => Display.TrendText(Dto.Trend, Dto.TrendDelta);
@@ -200,6 +209,9 @@ public sealed class EventRowViewModel(EventAttendanceDto dto)
     public double AttendanceRate => dto.AttendanceRate;
     public double AttendanceFraction => dto.AttendanceRate / 100.0;
     public string AttendanceText => Display.Percent(dto.AttendanceRate);
+
+    /// <summary>"3.4", or "–" when nobody attended and nobody was evaluated.</summary>
+    public string StarsText => dto.AverageStars is { } stars ? Display.Stars(stars) : Display.None;
 }
 
 public sealed class UpcomingEventRowViewModel(UpcomingEventDto dto)

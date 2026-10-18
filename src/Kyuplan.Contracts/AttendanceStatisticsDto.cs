@@ -16,6 +16,9 @@ namespace Kyuplan.Contracts;
 /// <param name="TrendDelta">Recent minus earlier attendance rate in percentage points; <c>null</c> without enough events.</param>
 /// <param name="EngagementScore">Composite 0–100 score, see docs/attendance-statistics.md.</param>
 /// <param name="RecentMarks">Outcome of the last invitations, oldest first.</param>
+/// <param name="AverageStars">Average evaluation (0–5) over the events the member attended or was evaluated at; an event counts once, as the average of its evaluations, or as the default when nobody evaluated it. <c>null</c> without such an event.</param>
+/// <param name="StarEvents">How many events <paramref name="AverageStars"/> is over.</param>
+/// <param name="EvaluatedEvents">Of them, those somebody evaluated.</param>
 public sealed record MemberAttendanceDto(
     string MemberId,
     string Name,
@@ -38,9 +41,13 @@ public sealed record MemberAttendanceDto(
     int EngagementScore,
     EngagementLevel Level,
     QualificationStatus Status,
-    IReadOnlyList<AttendanceMark> RecentMarks);
+    IReadOnlyList<AttendanceMark> RecentMarks,
+    double? AverageStars = null,
+    int StarEvents = 0,
+    int EvaluatedEvents = 0);
 
 /// <summary>Attendance of a single held event, counted over the members that are part of the analysis.</summary>
+/// <param name="AverageStars">Average evaluation of the members who attended or were evaluated at the event (see <see cref="MemberAttendanceDto.AverageStars"/>); <c>null</c> when there are none.</param>
 public sealed record EventAttendanceDto(
     string Id,
     string Name,
@@ -49,7 +56,8 @@ public sealed record EventAttendanceDto(
     int Attended,
     int Declined,
     int Unanswered,
-    double AttendanceRate);
+    double AttendanceRate,
+    double? AverageStars = null);
 
 /// <summary>One month of the attendance trend.</summary>
 /// <param name="Month">First day of the month.</param>
@@ -71,7 +79,8 @@ public sealed record AttendanceSummaryDto(
     int AtRiskCount,
     double OverallAttendanceRate,
     double AverageResponseRate,
-    double AverageAttendeesPerEvent);
+    double AverageAttendeesPerEvent,
+    double? AverageStars = null);
 
 /// <param name="Filter">What the analysis ran with: the query with its time span resolved to days.</param>
 public sealed record AttendanceStatisticsDto(

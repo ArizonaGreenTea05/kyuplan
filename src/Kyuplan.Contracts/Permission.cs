@@ -38,6 +38,9 @@ public static class Permission
     public const string CommentsDelete = "comments.delete";
     public const string CommentsDeleteAny = "comments.deleteAny";
 
+    public const string RatingsView = "ratings.view";
+    public const string RatingsWrite = "ratings.write";
+
     public const string TagsView = "tags.view";
     public const string TagsEdit = "tags.edit";
 
@@ -65,6 +68,7 @@ public static class Permission
         new("members", [MembersView, MembersEdit]),
         new("belts", [BeltsView, BeltsEdit]),
         new("comments", [CommentsView, CommentsWrite, CommentsEdit, CommentsDelete, CommentsDeleteAny]),
+        new("ratings", [RatingsView, RatingsWrite]),
         new("tags", [TagsView, TagsEdit]),
         new("branding", [BrandingView, BrandingEdit]),
         new("settings", [SettingsView, SettingsEdit]),

@@ -191,6 +191,21 @@ public sealed partial class SuggestionRow : ObservableObject
         _ => string.Format(Strings.Plan_CellMin, value, minimum),
     };
 
+    // --- Evaluation -----------------------------------------------------------------------------------------
+
+    /// <summary>"3.4 (min. 3)", "? (min. 3)" without an event to average over, "3.4" when nothing is asked, "–" when there is no next belt.</summary>
+    public string StarsText => !HasNextBelt ? Display.None : Cell(_dto.AverageStars is { } stars ? Display.Stars(stars) : null, _dto.MinAverageStars);
+
+    public CheckState StarsState => HasNextBelt ? _dto.RatingCheck : CheckState.Met;
+
+    private static string Cell(string? value, double minimum) => (value, minimum) switch
+    {
+        (null, <= 0) => Display.None,
+        (null, _) => string.Format(Strings.Plan_CellMin, Display.Unknown, Display.Stars(minimum)),
+        (_, <= 0) => value,
+        _ => string.Format(Strings.Plan_CellMin, value, Display.Stars(minimum)),
+    };
+
     // --- Attendance -----------------------------------------------------------------------------------------
 
     public string AttendanceText => _dto.Invited == 0 ? Display.None : Display.Percent(_dto.AttendanceRate);
@@ -251,6 +266,10 @@ public sealed partial class SuggestionRow : ObservableObject
                     break;
             }
 
+            if (_dto.RatingCheck == CheckState.NotMet)
+                reasons.Add(_dto.AverageStars is { } average
+                    ? string.Format(Strings.Plan_ReasonStars, Display.Stars(average), Display.Stars(_dto.MinAverageStars))
+                    : string.Format(Strings.Plan_ReasonNoStars, Display.Stars(_dto.MinAverageStars)));
             if (_dto.AgeCheck == CheckState.NotMet) reasons.Add(string.Format(Strings.Plan_ReasonAge, _dto.AgeYears, _dto.MinAgeYears));
             if (_dto.AgeCheck == CheckState.Unknown) reasons.Add(string.Format(Strings.Plan_ReasonAgeUnknown, _dto.MinAgeYears));
             if (_dto.WaitCheck == CheckState.NotMet) reasons.Add(string.Format(Strings.Plan_ReasonWait, _dto.WaitedMonths, _dto.MinWaitMonths));

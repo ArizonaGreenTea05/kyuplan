@@ -110,6 +110,16 @@
                                     IsSnapToTickEnabled="True" Value="{Binding MinAttendancePercent}"
                                     AutomationProperties.Name="{loc:Loc Stats_MinAttendance}" />
                         </StackPanel>
+                        <StackPanel ToolTip="{loc:Loc Stats_MinStarsHint}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Right" Foreground="{DynamicResource DataYesTextBrush}" FontWeight="Bold"
+                                           Text="{Binding MinAverageStarsText}" />
+                                <TextBlock Text="{loc:Loc Stats_MinStars}" Style="{StaticResource FieldLabelText}" />
+                            </DockPanel>
+                            <Slider Minimum="0" Maximum="5" TickFrequency="0.1" SmallChange="0.1" LargeChange="0.5"
+                                    IsSnapToTickEnabled="True" Value="{Binding MinAverageStars}"
+                                    AutomationProperties.Name="{loc:Loc Stats_MinStars}" />
+                        </StackPanel>
                         <StackPanel ToolTip="{loc:Loc Stats_MinInvitedHint}">
                             <TextBlock Text="{loc:Loc Stats_MinInvited}" Style="{StaticResource FieldLabelText}" />
                             <ctl:NumberBox Minimum="1" Maximum="200" Value="{Binding MinInvitedEvents}"
@@ -435,6 +445,15 @@
                                     <DataGridTextColumn Header="{loc:Loc Col_PerWeek}" SortMemberPath="SessionsPerWeek" Binding="{Binding SessionsPerWeekText, Mode=OneWay}"
                                                         Width="88" ElementStyle="{StaticResource NumberCell}" />
 
+                                    <DataGridTemplateColumn Header="{loc:Loc Rating_StarsHeader}" SortMemberPath="Stars" Width="76">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StarsText}" ToolTip="{Binding StarsTip}" TextAlignment="Right"
+                                                           VerticalAlignment="Center" Margin="8,0" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+
                                     <DataGridTemplateColumn Width="160">
                                         <DataGridTemplateColumn.Header>
                                             <TextBlock Text="{loc:Loc Col_Form}" ToolTip="{loc:Loc Col_FormTip}" />
@@ -545,6 +564,7 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="{loc:Loc Col_Declined}" Binding="{Binding DeclinedText, Mode=OneWay}" Width="100" ElementStyle="{StaticResource NumberCell}" />
                                 <DataGridTextColumn Header="{loc:Loc Col_NoAnswer}" Binding="{Binding UnansweredText, Mode=OneWay}" Width="120" ElementStyle="{StaticResource NumberCell}" />
+                                <DataGridTextColumn Header="{loc:Loc Rating_StarsHeader}" Binding="{Binding StarsText, Mode=OneWay}" Width="90" ElementStyle="{StaticResource NumberCell}" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </TabItem>

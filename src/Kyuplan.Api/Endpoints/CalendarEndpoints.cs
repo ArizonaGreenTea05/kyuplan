@@ -28,8 +28,8 @@ public static class CalendarEndpoints
             .RequirePermission(Permission.CalendarView);
 
         calendar.MapGet("/events/{eventId}", (string eventId, string groupId, ClaimsPrincipal principal, CalendarService service, CancellationToken ct) =>
-                service.GetEventAsync(groupId, eventId, principal.Has(Permission.CommentsView), ct))
-            .WithSummary("One event with everybody invited to it and what they answered; with comments.view also the comments on them that carry the event's tag.")
+                service.GetEventAsync(groupId, eventId, principal.Has(Permission.CommentsView), principal.Has(Permission.RatingsView), ct))
+            .WithSummary("One event with everybody invited to it and what they answered; with comments.view also the comments on them that carry the tag of the event, with ratings.view everybody's star evaluations of them.")
             .RequirePermission(Permission.CalendarView);
 
         calendar.MapPost("/events/{eventId}/members/{memberId:int}/comments", async (
@@ -43,6 +43,27 @@ public static class CalendarEndpoints
             })
             .WithSummary("Write a comment on a member of an event as the signed-in user. It is tagged with the tag of the event, which is made when the event has none.")
             .RequirePermission(Permission.CommentsWrite);
+
+        calendar.MapPut("/events/{eventId}/members/{memberId:int}/rating", async (
+                string eventId, int memberId, string groupId, RatingInputDto input, ClaimsPrincipal principal, CalendarService service, CancellationToken ct) =>
+            {
+                if (input is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["input"] = ["A request body is required."] });
+                if (!RatingRules.IsStars(input.Stars))
+                    return Results.ValidationProblem(new Dictionary<string, string[]> { [nameof(input.Stars)] = [$"stars must be between {RatingRules.MinStars} and {RatingRules.MaxStars}."] });
+
+                return Results.Ok(await service.RateAsync(groupId, eventId, memberId, input.Stars, CommentUser.From(principal), ct));
+            })
+            .WithSummary("Evaluate a member at an event with 0 to 5 stars as the signed-in user; replaces the earlier evaluation of that member at that event by the same user (a user has one). The event must have started.")
+            .RequirePermission(Permission.RatingsWrite);
+
+        calendar.MapDelete("/events/{eventId}/members/{memberId:int}/rating", async (
+                string eventId, int memberId, string groupId, ClaimsPrincipal principal, CalendarService service, CancellationToken ct) =>
+            {
+                await service.UnrateAsync(groupId, eventId, memberId, CommentUser.From(principal), ct);
+                return Results.NoContent();
+            })
+            .WithSummary("Take back the signed-in user's evaluation of a member at an event (only one's own can be taken back).")
+            .RequirePermission(Permission.RatingsWrite);
 
         return app;
     }

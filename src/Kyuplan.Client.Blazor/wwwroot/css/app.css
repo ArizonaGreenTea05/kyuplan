@@ -898,6 +898,25 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 .event-comment > small:first-child, .event-comment > .confirm { flex: 0 0 100%; }
 .event-comment > :not(small):not(.btn):not(.confirm) { flex: 1 1 0; min-width: 0; margin: 0; }
 .event-comment .btn { padding: 0 6px; min-height: 0; font-size: .8rem; line-height: 1.4; }
+.rating-cell { min-width: 190px; }
+.ratings { list-style: none; margin: 0 0 4px; padding: 0; display: grid; gap: 1px; }
+.ratings li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: .85rem; }
+.ratings .stars { color: var(--amber); letter-spacing: 1px; }
+.ratings li.zero .stars, .ratings li.zero strong { color: var(--red); }
+.ratings li.zero strong::before { content: "\2716\00a0"; }
+.ratings li.mine small { font-weight: 650; }
+.ratings small { color: var(--muted); }
+.star-pick { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; align-items: center; }
+.star-pick { gap: 0; }
+.star-choice {
+    padding: 0 2px; font: inherit; font-size: 1.25rem; line-height: 1.2; color: var(--accent); background: none;
+    border: 0; cursor: pointer;
+}
+.star-choice:hover:not(:disabled) { transform: scale(1.2); }
+.star-choice.zero { color: var(--text); font-size: 1rem; margin-right: 6px; }
+.star-choice.zero.on { color: var(--red); font-weight: 700; opacity: 1; }
+.star-choice:disabled:not(.on) { opacity: .5; cursor: default; }
+.star-choice:disabled.on { cursor: default; }
 .event-compose { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
 .event-compose textarea {
     flex: 1; min-width: 0; padding: 7px 10px; font: inherit; color: var(--text); background: var(--sheet);

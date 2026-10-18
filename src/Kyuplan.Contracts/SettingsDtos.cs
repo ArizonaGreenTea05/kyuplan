@@ -16,6 +16,8 @@ namespace Kyuplan.Contracts;
 /// <param name="SyncIntervalMinutes">Minutes between two syncs with Spond; 0 = only when the API starts.</param>
 /// <param name="BackupAccounts">More Spond logins, asked in this order when the one above yields nothing (Spond sometimes answers an account that sent too many requests with nothing at all).</param>
 /// <param name="AllowedHosts">The host names this API answers to, separated by <c>;</c> (<c>kyuplan.example.com;*.example.org</c>); <c>*</c> = any. Requests with another Host header are refused.</param>
+/// <param name="DefaultEventStars">What an event counts for a member who attended it and whom nobody evaluated (0–5).</param>
+/// <param name="ExamMinAverageStars">The average evaluation a member needs to be suggested for an exam (0–5; 0 = not asked).</param>
 public sealed record SettingsDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -31,7 +33,9 @@ public sealed record SettingsDto(
     bool SyncEnabled,
     int SyncIntervalMinutes,
     IReadOnlyList<SpondAccountDto>? BackupAccounts = null,
-    string? AllowedHosts = null);
+    string? AllowedHosts = null,
+    double DefaultEventStars = RatingRules.StandardDefaultEventStars,
+    double ExamMinAverageStars = RatingRules.StandardExamMinAverageStars);
 
 /// <summary>A backup Spond login as the settings show it; the password itself is never sent back.</summary>
 public sealed record SpondAccountDto(string? Email, string? PhoneNumber, bool HasPassword);
@@ -57,7 +61,9 @@ public sealed record SettingsInputDto(
     bool SyncEnabled,
     int SyncIntervalMinutes,
     IReadOnlyList<SpondAccountInputDto>? BackupAccounts = null,
-    string? AllowedHosts = null);
+    string? AllowedHosts = null,
+    double? DefaultEventStars = null,
+    double? ExamMinAverageStars = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>
@@ -104,6 +110,8 @@ public static class SettingsRules
     }
 
     public static bool IsPercent(int value) => value is >= 0 and <= 100;
+
+    public static bool IsStars(double value) => RatingRules.IsAverage(value);
 
     public static bool IsInvitedEvents(int value) => value is >= 0 and <= 1000;
 

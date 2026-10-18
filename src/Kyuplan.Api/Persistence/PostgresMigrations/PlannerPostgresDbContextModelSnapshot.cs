@@ -405,6 +405,52 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.ToTable("Members");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.MemberRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Stars")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("MemberId", "EventId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("MemberRatings", t =>
+                        {
+                            t.HasCheckConstraint("CK_MemberRatings_Stars", "\"Stars\" BETWEEN 0 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.SavedFilter", b =>
                 {
                     b.Property<int>("Id")
@@ -441,6 +487,9 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
 
                     b.Property<int>("MinAttendancePercent")
                         .HasColumnType("integer");
+
+                    b.Property<double?>("MinAverageStars")
+                        .HasColumnType("double precision");
 
                     b.Property<int>("MinInvitedEvents")
                         .HasColumnType("integer");
@@ -656,6 +705,17 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Navigation("Belt");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.MemberRating", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.Member", "Member")
+                        .WithMany("Ratings")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.SavedFilter", b =>
                 {
                     b.HasOne("Kyuplan.Api.Persistence.Exam", "Exam")
@@ -697,6 +757,8 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Navigation("Comments");
 
                     b.Navigation("Participations");
+
+                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Persistence.Tag", b =>

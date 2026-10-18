@@ -98,6 +98,17 @@ comment written there is **tagged automatically** with the event: kyuplan uses t
 the tag on the Tags page. A member who kyuplan does not know yet (they were invited since the last synchronisation with Spond) cannot be
 commented on until the next synchronisation.
 
+### Evaluating members
+
+If you may evaluate members, each member in the detail of an event that has started has the buttons **0 1 2 3 4 5**: the stars you give that member
+for **this event**. You have one evaluation per member and event: choose other stars to change it, **Take back** to remove it. **0 stars is an
+evaluation** (a poor one, shown in red); a member nobody has evaluated says *Not evaluated*. Everybody who may read evaluations sees the
+evaluations of all users for the member, each with the user's name, and their average.
+
+The stars count in the statistics (a *Stars* column) and for exams: a member needs an average of at least 3 stars (the club can change this) to be
+suggested. An event counts **once** for a member, however many users evaluated them, and an attended event nobody evaluated counts 2.5 stars (the
+club can change this, too). See [Star evaluations](attendance-statistics.md#star-evaluations).
+
 ## Dashboard
 
 A quick picture of how the group is doing over the last **30 / 90 / 180 / 365 days** (90 by default; you choose at the top):

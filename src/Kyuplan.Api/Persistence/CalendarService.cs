@@ -12,7 +12,7 @@ namespace Kyuplan.Api.Persistence;
 /// tags connected to it. Comments are written here with the event's tag already on them.
 /// </summary>
 public sealed class CalendarService(
-    PlannerDbContext db, StatisticsService statistics, TagService tags, CommentService comments, ClubClock clock)
+    PlannerDbContext db, StatisticsService statistics, TagService tags, CommentService comments, RatingService ratings, ClubClock clock)
 {
     /// <summary>The events that start within the day, week or month of <paramref name="date"/> (today when it is <c>null</c>).</summary>
     /// <exception cref="GroupNotFoundException"/>
@@ -37,16 +37,19 @@ public sealed class CalendarService(
         return [.. events.Where(e => !e.Cancelled && e.Start <= now && now < e.End).Select(e => ToDto(e, groupId))];
     }
 
-    /// <summary>One event with everybody invited to it, by name. Comments are only read when <paramref name="withComments"/>.</summary>
+    /// <summary>One event with everybody invited to it, by name. Comments are only read when <paramref name="withComments"/>, evaluations when <paramref name="withRatings"/>.</summary>
     /// <exception cref="GroupNotFoundException"/>
     /// <exception cref="EventNotFoundException"/>
-    public async Task<CalendarEventDetailDto> GetEventAsync(string groupId, string eventId, bool withComments, CancellationToken cancellationToken)
+    public async Task<CalendarEventDetailDto> GetEventAsync(string groupId, string eventId, bool withComments, bool withRatings, CancellationToken cancellationToken)
     {
         var group = await statistics.GetGroupInfoAsync(groupId, cancellationToken);
         var info = await statistics.FindEventAsync(groupId, eventId, cancellationToken);
 
         var known = await db.Members.AsNoTracking().Where(m => m.GroupId == groupId).ToDictionaryAsync(m => m.SpondId, m => m.Id, cancellationToken);
         var written = withComments ? await CommentsOfEventAsync(groupId, eventId, cancellationToken) : [];
+        var given = withRatings
+            ? await ratings.ListForEventAsync(groupId, eventId, cancellationToken)
+            : new Dictionary<int, IReadOnlyList<RatingDto>>();
         var names = group.Members.ToDictionary(m => m.Id, m => m.Name);
 
         var attendees = info.Responses
@@ -55,7 +58,8 @@ public sealed class CalendarService(
                 int? memberId = known.TryGetValue(r.Key, out var id) ? id : null;
                 return new CalendarAttendeeDto(
                     memberId, names.GetValueOrDefault(r.Key, r.Key), Mark(r.Value),
-                    memberId is { } member ? [.. written.Where(c => c.MemberId == member)] : []);
+                    memberId is { } member ? [.. written.Where(c => c.MemberId == member)] : [],
+                    memberId is { } rated && given.TryGetValue(rated, out var list) ? list : []);
             })
             .OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -76,6 +80,14 @@ public sealed class CalendarService(
         var tagId = await tags.EnsureEventTagAsync(info, groupId, cancellationToken);
         return await comments.CreateAsync(memberId, new CommentInputDto(input.Body, [tagId], input.ParentId), user, cancellationToken);
     }
+
+    /// <summary>Gives or changes the user's evaluation of a member of the event.</summary>
+    public Task<RatingDto> RateAsync(string groupId, string eventId, int memberId, int stars, CommentUser user, CancellationToken cancellationToken) =>
+        ratings.SetAsync(groupId, eventId, memberId, stars, user.Id, user.Name, cancellationToken);
+
+    /// <summary>Takes the user's evaluation of a member of the event back.</summary>
+    public Task UnrateAsync(string groupId, string eventId, int memberId, CommentUser user, CancellationToken cancellationToken) =>
+        ratings.DeleteAsync(groupId, eventId, memberId, user.Id, cancellationToken);
 
     private async Task<IReadOnlyList<CommentDto>> CommentsOfEventAsync(string groupId, string eventId, CancellationToken cancellationToken)
     {

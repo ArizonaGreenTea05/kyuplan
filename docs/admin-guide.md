@@ -123,6 +123,8 @@ running); a save that changes nothing does not. A file that is not valid JSON is
 | Exam keyword (`Statistics:ExamKeyword`) | `Prüfung` | Events whose name contains this word (case-insensitive) count as exams in the statistics' preselection. Empty = the statistics open with the last six months. |
 | Minimum attendance (`Statistics:DefaultMinAttendancePercent`) | 75 | Preselected threshold and default for exam suggestions. |
 | Minimum invited events (`Statistics:DefaultMinInvitedEvents`) | 3 | Preselected minimum number of invitations. |
+| Stars an event counts without evaluation (`Statistics:DefaultEventStars`) | 2.5 | What an event counts, in the statistics and for exams, for a member who attended it and whom no user evaluated (0 to 5). |
+| Minimum average evaluation for exams (`Statistics:ExamMinAverageStars`) | 3 | The average star evaluation a member needs to be suggested for an exam (0 to 5; 0 = not asked). With the defaults, members nobody has evaluated are not suggested. |
 | `Statistics:DashboardDays` / `UpcomingDays` | 90 / 14 | Dashboard look-back and look-ahead. |
 | `Statistics:EventSearchMonthsBack` / `…Ahead` | 12 / 6 | The window (1 to 24 months) in which events are searched and offered, for exams, tags and the sync. Widen it if members started earlier or exams are far out. |
 
@@ -162,11 +164,14 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
 | belts | `belts.view`, `belts.edit` |
 | comments | `comments.view`, `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
+| ratings | `ratings.view` (see every user's star evaluations of members), `ratings.write` (evaluate members at an event, change and take back one's own) |
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | settings | `settings.view`, `settings.edit` |
+
+`ratings.view` and `ratings.write` came with the star evaluations: the Leading Trainer and Trainer roles of a **new** installation have both, the Passive User only `ratings.view`; a role that already exists in your database has neither until you tick them on the Roles page. Until somebody may evaluate, no member has an evaluation and, with the standard minimum of 3 stars for exams, nobody is suggested for an exam: lower *Minimum average evaluation for exams* (0 switches it off) if that is not what you want yet.
 
 `calendar.view` came with the calendar: the default roles of a **new** installation have it, but a role that already exists in your database does not until you tick it on the Roles page (administrators have every permission).
 

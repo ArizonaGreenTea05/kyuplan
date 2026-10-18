@@ -32,7 +32,7 @@ public partial class PreferencesView : UserControl
             return;
         }
 
-        if (!main.Theme.Adopt(themes.Effective)) return;
+        if (!main.Theme.Adopt(themes.Effective, themes.EffectivePack)) return;
 
         if (MessageBox.Show(main, Strings.Shell_DesignRestart, Strings.Shell_Design, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             ((App)Application.Current).RestartNow();

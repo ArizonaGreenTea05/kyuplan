@@ -14,6 +14,8 @@ namespace Kyuplan.Contracts;
 /// <param name="IconUrl">Icon of the browser tab.</param>
 /// <param name="DefaultWebTheme">The theme (<see cref="ThemeRules"/>) the web client shows to users who picked none themselves.</param>
 /// <param name="DefaultWindowsTheme">The same for the Windows client.</param>
+/// <param name="ThemesVersion">Changes whenever a theme pack is installed, replaced or deleted (<see cref="ThemeCatalogDto.Version"/>): a client that
+/// sees it differ asks for the catalog again.</param>
 public sealed record BrandingDto(
     string ProductName,
     string OrganizationName,
@@ -22,7 +24,8 @@ public sealed record BrandingDto(
     string? LogoOnDarkUrl,
     string? IconUrl,
     string DefaultWebTheme = ThemeIds.Default,
-    string DefaultWindowsTheme = ThemeIds.Default);
+    string DefaultWindowsTheme = ThemeIds.Default,
+    string ThemesVersion = "");
 
 /// <summary>What an administrator saves of the branding's texts and colour. The images are uploaded one by one.</summary>
 /// <param name="ProductName">Required.</param>

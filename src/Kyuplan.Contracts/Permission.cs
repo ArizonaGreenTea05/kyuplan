@@ -47,6 +47,8 @@ public static class Permission
     public const string BrandingView = "branding.view";
     public const string BrandingEdit = "branding.edit";
 
+    public const string ThemesEdit = "themes.edit";
+
     public const string SettingsView = "settings.view";
     public const string SettingsEdit = "settings.edit";
 
@@ -71,6 +73,7 @@ public static class Permission
         new("ratings", [RatingsView, RatingsWrite]),
         new("tags", [TagsView, TagsEdit]),
         new("branding", [BrandingView, BrandingEdit]),
+        new("themes", [ThemesEdit]),
         new("settings", [SettingsView, SettingsEdit]),
         new("users", [UsersView, UsersEdit, UsersDelete, UsersGrant]),
         new("roles", [RolesView, RolesEdit]),

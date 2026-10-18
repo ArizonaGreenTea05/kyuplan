@@ -9,7 +9,7 @@ namespace Kyuplan.Api.Infrastructure;
 /// Guards <c>/api</c> with a shared secret in the <c>X-Api-Key</c> header when <see cref="ApiSecurityOptions.ApiKey"/> is set.
 /// An extra layer in front of the login every user needs anyway (see <c>BasicAuthenticationHandler</c>). Note that a key
 /// shipped to a browser (Blazor WebAssembly) is visible to every user of that site, so it keeps nobody out who can open the site.
-/// Reading the branding (<see cref="BrandingService.Route"/>) is exempt: it is public, and an <c>&lt;img&gt;</c> cannot send a header.
+/// Reading the branding (<see cref="BrandingService.Route"/>) and the theme catalog (<c>GET /api/themes</c>) is exempt: it is public, and an <c>&lt;img&gt;</c> cannot send a header.
 /// Changing it, and the view of it as it is edited, is not.
 /// </summary>
 public sealed class ApiKeyMiddleware(RequestDelegate next, IOptions<ApiSecurityOptions> options)
@@ -42,7 +42,8 @@ public sealed class ApiKeyMiddleware(RequestDelegate next, IOptions<ApiSecurityO
 
     /// <summary>The branding and its images may be read by anybody; everything else below the route needs permissions (branding.view, branding.edit).</summary>
     private static bool IsPublicBranding(HttpRequest request) =>
-        request.Path.StartsWithSegments(BrandingService.Route) &&
-        !request.Path.StartsWithSegments(BrandingService.SettingsRoute) &&
+        (request.Path.StartsWithSegments(BrandingService.Route) && !request.Path.StartsWithSegments(BrandingService.SettingsRoute) ||
+         request.Path.Equals(Endpoints.ThemeEndpoints.Route, StringComparison.OrdinalIgnoreCase) ||
+         request.Path.Equals(Endpoints.ThemeEndpoints.Route + "/", StringComparison.OrdinalIgnoreCase)) &&
         (HttpMethods.IsGet(request.Method) || HttpMethods.IsHead(request.Method));
 }

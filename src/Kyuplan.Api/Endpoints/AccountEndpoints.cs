@@ -27,11 +27,11 @@ public static class AccountEndpoints
             })
             .WithSummary("Change your own user name, display name, aliases and/or password. Setting a new password needs the current one. Nothing else can be changed here.");
 
-        account.MapPut("/theme", async (ClaimsPrincipal principal, ThemePreferenceDto input, AccountService service, CancellationToken ct) =>
+        account.MapPut("/theme", async (ClaimsPrincipal principal, ThemePreferenceDto input, AccountService service, Kyuplan.Api.Infrastructure.ThemePackStore packs, CancellationToken ct) =>
             {
                 var errors = new Dictionary<string, string[]>();
                 if (!ThemeClients.IsKnown(input?.Client)) errors["client"] = [$"client must be one of: {ThemeClients.Web}, {ThemeClients.Windows}."];
-                else if (input!.Theme is not null) Check(errors, "theme", ThemeRules.Check(input.Client, input.Theme, "theme"));
+                else if (input!.Theme is not null) Check(errors, "theme", ThemeRules.Check(input.Client, input.Theme, "theme") ?? packs.CheckInstalled(input.Theme, "theme"));
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
                 return Results.Ok(await service.SetThemeAsync(UserId(principal), input!, ct));

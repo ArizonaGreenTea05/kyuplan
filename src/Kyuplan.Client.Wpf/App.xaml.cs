@@ -170,13 +170,16 @@ public partial class App : Application
         // The branding is public: asked for first, so that the login window already shows the name and logo of the instance.
         // It does not fail; an API that cannot be reached is reported by the login itself.
         var branding = brand.LoadAsync();
+        var themes = _host.Services.GetRequiredService<ThemeViewModel>();
         if (await login.TrySignInWithSavedLoginAsync())
         {
             await branding; // the main window opens in the instance's accent colour, not first in the one of Windows
+            await themes.LoadCatalogAsync(); // a theme pack is only known once the catalog is: else its user would be shown the default
             return true;
         }
 
         await branding;
+        await themes.LoadCatalogAsync();
         var apiAddress = _host.Services.GetRequiredService<IOptions<PlannerClientOptions>>().Value.BaseAddress;
         var window = new LoginWindow(login, _host.Services.GetRequiredService<ThemeService>(), brand, apiAddress);
         var signedIn = window.ShowDialog() == true;
@@ -207,11 +210,11 @@ public partial class App : Application
             // the next start: nobody is asked to restart for something they did not do. (A user's own choice is handled by the main window.)
             themes.Changed += (_, _) =>
             {
-                if (services.GetRequiredService<LoginSession>().User is not null) theme.Adopt(themes.Effective);
+                if (services.GetRequiredService<LoginSession>().User is not null) theme.Adopt(themes.Effective, themes.EffectivePack);
             };
         }
 
-        return theme.Adopt(themes.Effective);
+        return theme.Adopt(themes.Effective, themes.EffectivePack);
     }
 
     private bool _followingTheme;

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -54,6 +55,9 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
     /// <summary>The theme of the last run (a copy of what the API said), so the program starts in it before it can ask. The file is called "design".</summary>
     private const string ThemePreference = "design";
 
+    /// <summary>The colours of the last theme when it was a theme pack (JSON), so that the program starts in it before it can ask.</summary>
+    private const string PackPreference = "design-pack";
+
     private ResourceDictionary? _palette;
     private ResourceDictionary? _colors;
     private Rgb? _accent;
@@ -67,6 +71,27 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
     /// <summary>A theme this client has; anything else (a theme of a newer version, nothing saved yet) is <see cref="ThemeIds.Default"/>.</summary>
     private static string Normalize(string? theme) => ThemeRules.IsValid(ThemeClients.Windows, theme) ? theme! : ThemeIds.Default;
 
+    /// <summary>The theme the last run ended with: a theme pack only together with its colours (<see cref="PackPreference"/>), which are all that is known of it now.</summary>
+    private static string StartTheme(UserPreferences preferences)
+    {
+        var theme = Normalize(preferences.Get(ThemePreference));
+        return ThemePackRules.IsPackId(theme) && ReadPack(preferences)?.Id != theme ? ThemeIds.Default : theme;
+    }
+
+    private static ThemePackDto? ReadPack(UserPreferences preferences)
+    {
+        try
+        {
+            return preferences.Get(PackPreference) is { } json && JsonSerializer.Deserialize<ThemePackDto>(json, PackJson) is { } pack && ThemePackRules.Check(pack) is null ? pack : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static readonly JsonSerializerOptions PackJson = new(JsonSerializerDefaults.Web);
+
     private static string FamilyOf(string theme) => theme switch
     {
         ThemeIds.Windows10 => Windows10,
@@ -74,20 +99,27 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
         ThemeIds.Native => Native,
         ThemeIds.Dracula or ThemeIds.CatppuccinLatte or ThemeIds.CatppuccinMocha => Modern,
         ThemeIds.LiquidGlass => Glass,
+        _ when ThemePackRules.IsPackId(theme) => Modern, // a pack is colours only: the flat controls with rounded corners
         _ => DefaultFamily,
     };
 
+    /// <summary>"light" or "dark" when the theme has only that colour scheme (a pack has one), else <c>null</c>.</summary>
+    private string? FixedScheme => _pack?.Scheme ?? ThemeRules.FixedScheme(_theme);
+
     /// <summary>Whether the theme has a dark mode to switch to: Windows 11, Windows 10 and Liquid Glass do; Aero and the native controls do
-    /// not, and Dracula, Catppuccin Latte and Mocha are one colour scheme only (so the toggle is of no use there).</summary>
-    public bool SupportsDark => ThemeRules.FixedScheme(_theme) is null && _design is Windows11 or Windows10 or Glass;
+    /// not, and Dracula, Catppuccin Latte and Mocha and the theme packs are one colour scheme only (so the toggle is of no use there).</summary>
+    public bool SupportsDark => FixedScheme is null && _design is Windows11 or Windows10 or Glass;
 
     [ObservableProperty]
     private bool _isDark;
 
-    private string _theme = Normalize(preferences.Get(ThemePreference));
+    private string _theme = StartTheme(preferences);
+
+    /// <summary>The colours of <see cref="Theme"/> when it is a theme pack.</summary>
+    private ThemePackDto? _pack = ThemePackRules.IsPackId(StartTheme(preferences)) ? ReadPack(preferences) : null;
 
     /// <summary>The design family this run was started with; it cannot change without a restart.</summary>
-    private readonly string _design = FamilyOf(Normalize(preferences.Get(ThemePreference)));
+    private readonly string _design = FamilyOf(StartTheme(preferences));
 
     public void Initialize()
     {
@@ -132,14 +164,21 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
     /// now. <c>true</c> when it is of another family: that is loaded once, at start, so the program has to start again (the caller does that,
     /// after asking where there is something to lose); the theme is remembered, so the new run starts in it.
     /// </summary>
-    public bool Adopt(string theme)
+    public bool Adopt(string theme, ThemePackDto? pack = null)
     {
         theme = Normalize(theme);
+        if (ThemePackRules.IsPackId(theme) && (pack is null || pack.Id != theme)) theme = ThemeIds.Default; // a pack that is not installed any more
+        if (!ThemePackRules.IsPackId(theme)) pack = null;
+
         preferences.Set(ThemePreference, theme);
-        if (theme == _theme) return false;
+        preferences.Set(PackPreference, pack is null ? "" : JsonSerializer.Serialize(pack, PackJson));
+
+        var samePack = _pack is null && pack is null || _pack is not null && pack is not null && JsonSerializer.Serialize(_pack, PackJson) == JsonSerializer.Serialize(pack, PackJson);
+        if (theme == _theme && samePack) return false;
         if (FamilyOf(theme) != _design) return true;
 
         _theme = theme;
+        _pack = pack;
         OnPropertyChanged(nameof(Theme));
         OnPropertyChanged(nameof(SupportsDark));
         Apply(preferences.Get(Preference));
@@ -188,7 +227,7 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
         var app = Application.Current;
         if (_design == Windows11) app.ThemeMode = ThemeModeOf(mode);
 
-        IsDark = ThemeRules.FixedScheme(_theme) is "dark" || (SupportsDark && (mode is "dark" || (mode is null && WindowsUsesDarkTheme())));
+        IsDark = FixedScheme is "dark" || (SupportsDark && (mode is "dark" || (mode is null && WindowsUsesDarkTheme())));
 
         var merged = app.Resources.MergedDictionaries;
         if (_palette is not null) merged.Remove(_palette);
@@ -196,7 +235,7 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
         merged.Add(_palette);
 
         if (_colors is not null) merged.Remove(_colors);
-        _colors = ColorsFile is { } colors ? Load($"Themes/{colors}") : null;
+        _colors = _pack is not null ? ThemePackColors.Build(_pack) : ColorsFile is { } colors ? Load($"Themes/{colors}") : null;
         if (_colors is not null) merged.Add(_colors);
 
         ApplyAccent();
@@ -254,7 +293,8 @@ public sealed partial class ThemeService(UserPreferences preferences) : Observab
     /// </summary>
     private void MakeAccentBrushes(Application app)
     {
-        var accent = _accent ?? DefaultAccent();
+        // A theme pack may carry its own accent (high contrast themes need one that fits their surfaces); it wins over the instance's.
+        var accent = _pack?.Accent is { } packAccent && Rgb.TryParse(packAccent, out var fromPack) ? fromPack : _accent ?? DefaultAccent();
         var shades = AccentShades.Of(accent, IsDark);
         var onAccent = Luminance(shades.Fill) > 0.62 ? new Rgb(0, 0, 0) : new Rgb(255, 255, 255);
 

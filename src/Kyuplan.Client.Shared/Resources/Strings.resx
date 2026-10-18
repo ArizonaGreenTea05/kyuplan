@@ -2369,6 +2369,45 @@
   <data name="Branding_DefaultWindowsTheme" xml:space="preserve">
     <value>Windows client</value>
   </data>
+  <data name="PermissionGroup_themes" xml:space="preserve">
+    <value>Themes</value>
+  </data>
+  <data name="Permission_themes_edit" xml:space="preserve">
+    <value>Install and delete theme packs</value>
+  </data>
+  <data name="Themes_Title" xml:space="preserve">
+    <value>Theme packs</value>
+  </data>
+  <data name="Themes_Lede" xml:space="preserve">
+    <value>A theme pack is a small JSON file of colours that adds a theme to both clients (it is offered to every user once installed). The built-in packs, among them three high contrast themes, show the format; a pack with the id of an installed one replaces it. Users who chose a deleted pack see the default theme.</value>
+  </data>
+  <data name="Themes_Install" xml:space="preserve">
+    <value>Install theme pack…</value>
+  </data>
+  <data name="Themes_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Themes_BuiltIn" xml:space="preserve">
+    <value>built in</value>
+  </data>
+  <data name="Themes_Light" xml:space="preserve">
+    <value>light</value>
+  </data>
+  <data name="Themes_Dark" xml:space="preserve">
+    <value>dark</value>
+  </data>
+  <data name="Themes_HighContrast" xml:space="preserve">
+    <value>high contrast</value>
+  </data>
+  <data name="Themes_Installed" xml:space="preserve">
+    <value>Theme pack "{0}" installed.</value>
+  </data>
+  <data name="Themes_Deleted" xml:space="preserve">
+    <value>Theme pack "{0}" deleted.</value>
+  </data>
+  <data name="Themes_TooLarge" xml:space="preserve">
+    <value>The file is larger than {0} KB, so it is no theme pack.</value>
+  </data>
   <data name="Nav_Calendar" xml:space="preserve">
     <value>Calendar</value>
   </data>

@@ -30,7 +30,7 @@ public class ThemeRulesTests
         }
 
         Assert.True(ThemeRules.IsValid(ThemeClients.Web, ThemeIds.Default));
-        Assert.False(ThemeRules.IsValid(ThemeClients.Web, "neon"));
+        Assert.False(ThemeRules.IsValid(ThemeClients.Web, "Neon!"));
         Assert.False(ThemeRules.IsValid("toaster", ThemeIds.Default));
         Assert.False(ThemeRules.IsValid(ThemeClients.Web, null));
     }

@@ -257,6 +257,59 @@
                                         Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
                         </Border>
+
+                        <!-- Theme packs: the installed ones, and (with themes.edit) installing and deleting them -->
+                        <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc Themes_Title}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,4" />
+                                <TextBlock Text="{loc:Loc Themes_Lede}" Style="{StaticResource MutedText}" Margin="0,0,0,14" TextWrapping="Wrap" />
+
+                                <ItemsControl ItemsSource="{Binding ThemePacks}" KeyboardNavigation.TabNavigation="Continue">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ThemePackRow}">
+                                            <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Details}" Style="{StaticResource MutedText}" />
+                                                </StackPanel>
+                                                <!-- Only an uploaded pack can be deleted; a built-in one has no button at all -->
+                                                <Button Grid.Column="1" VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.DeleteThemeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <Button.Style>
+                                                        <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding BuiltIn}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE74D;" />
+                                                        <TextBlock Text="{loc:Loc Themes_Delete}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Button Click="OnInstallThemeClick" HorizontalAlignment="Left" Margin="0,12,0,0"
+                                        IsEnabled="{Binding CanInstallTheme}"
+                                        Visibility="{Binding CanManageThemes, Converter={StaticResource BoolToVisibility}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE898;" />
+                                        <TextBlock Text="{loc:Loc Themes_Install}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </StackPanel>
             </StackPanel>

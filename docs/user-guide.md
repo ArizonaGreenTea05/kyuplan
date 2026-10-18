@@ -306,14 +306,18 @@ Your own settings are on the page **Account > Personal settings**. They are kept
 - **Language**: English or German. Until you pick one, the apps follow the language of your browser or Windows. The choice also decides
   how numbers and dates are written. The web client reloads when you switch. Names and events come from Spond and are shown as they are.
 - **Theme**: light or dark; the app starts in your system's theme. The button is off in the themes that have only one (Dracula,
-  Catppuccin, Windows Vista / 7 and native WPF).
+  Catppuccin, Windows Vista / 7, native WPF and the theme packs).
 - **Appearance**: the look of the program. Both apps offer **Dracula**, **Catppuccin Latte** (light),
   **Catppuccin Mocha** (dark) and **Liquid Glass** (frosted, translucent panels). The desktop app also has the Windows looks:
   **Windows (automatic)** (Windows 11, or Windows 10 on older Windows), **Windows 10** (flat and square), **Vista / 7 (Aero)** (glossy
   buttons, a pale blue navigation pane) and **Native WPF** (the plain controls in your Windows colours). The first entry, *Server
   default*, follows what your administrators chose. The choice is kept with **your account** (separately for the web and the desktop app),
   so it is the same on every computer. In the desktop app a theme of another family than the one in use restarts the program (after
-  asking). The accent colour of your instance is used in every theme.
+  asking). The accent colour of your instance is used in every theme (the high contrast themes bring their own).
+- **High contrast and more themes**: if text is hard to read for you, choose one of the three **High contrast** themes (white on black,
+  black on white, or yellow on black): the strongest text contrast, clearly drawn borders, thick focus rings and underlined links. Your
+  administrators can add more themes (the list also holds Nord, Solarized, Gruvbox and Tokyo Night). Windows' own high contrast mode is
+  respected by the web client as well.
 - The apps remember your last filter on your own computer (browser storage, or `%LocalAppData%\Kyuplan`).
 
 ## Frequently asked questions

@@ -23,6 +23,34 @@ public partial class BrandingView : UserControl
         [BrandingSlots.Ico] = ["*.ico"],
     };
 
+    /// <summary>Lets the user pick the JSON file of a theme pack; the view model refuses one that is too large without reading it, and the API says what is wrong with the others.</summary>
+    private async void OnInstallThemeClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not BrandingAdminViewModel viewModel) return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = Strings.Themes_Install,
+            Filter = $"{Strings.Themes_Title}|*.json",
+            CheckFileExists = true,
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+
+        var path = dialog.FileName;
+        long size;
+        try
+        {
+            size = new FileInfo(path).Length;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            viewModel.ErrorMessage = string.Format(Strings.Error_Unexpected, ex.Message);
+            return;
+        }
+
+        await viewModel.InstallThemeAsync(size, () => File.ReadAllTextAsync(path));
+    }
+
     /// <summary>Lets the user pick a file for the slot of the clicked row, and hands it to the view model (which refuses one that is too large without reading it, and keeps the others until they are saved).</summary>
     private async void OnUploadClick(object sender, RoutedEventArgs e)
     {

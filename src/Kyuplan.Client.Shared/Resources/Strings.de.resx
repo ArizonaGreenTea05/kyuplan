@@ -2521,4 +2521,166 @@
   <data name="AboutMe_RatingsTitle" xml:space="preserve">
     <value>Bewertungen von dir</value>
   </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>Datensicherung</value>
+  </data>
+  <data name="PermissionGroup_backups" xml:space="preserve">
+    <value>Datensicherung</value>
+  </data>
+  <data name="Permission_backups_view" xml:space="preserve">
+    <value>Sicherungsdatenbanken sehen</value>
+  </data>
+  <data name="Permission_backups_edit" xml:space="preserve">
+    <value>Sicherungsdatenbanken festlegen und ausführen</value>
+  </data>
+  <data name="Permission_backups_download" xml:space="preserve">
+    <value>Sicherungsdatei herunterladen (enthält alle Passwort-Hashes)</value>
+  </data>
+  <data name="Permission_backups_restore" xml:space="preserve">
+    <value>Alle Daten durch eine Sicherungsdatei ersetzen</value>
+  </data>
+  <data name="Backup_Lede" xml:space="preserve">
+    <value>Alle Daten sichern: in Sicherungsdatenbanken, die sich selbst aktualisieren, und als Datei zum Herunterladen und Wiederherstellen.</value>
+  </data>
+  <data name="Backup_FileTitle" xml:space="preserve">
+    <value>Sicherungsdatei</value>
+  </data>
+  <data name="Backup_FileHint" xml:space="preserve">
+    <value>Eine Datei mit allen Daten dieses Servers: Mitglieder, Prüfungen, Kommentare, Bewertungen, das gespeicherte Erscheinungsbild und alle Benutzer mit ihren Passwort-Hashes – also gut aufbewahren. Ein neuer Server kann damit starten (Einstellung Backup:InitialDataFile, siehe Bereitstellungs-Handbuch). Einstellungen und Theme-Pakete sind eigene Dateien und nicht enthalten.</value>
+  </data>
+  <data name="Backup_Download" xml:space="preserve">
+    <value>Sicherung herunterladen</value>
+  </data>
+  <data name="Backup_Downloaded" xml:space="preserve">
+    <value>Die Sicherungsdatei wurde heruntergeladen.</value>
+  </data>
+  <data name="Backup_ChooseFile" xml:space="preserve">
+    <value>Aus Datei wiederherstellen …</value>
+  </data>
+  <data name="Backup_RestoreHint" xml:space="preserve">
+    <value>Beim Wiederherstellen werden ALLE Daten dieses Servers (auch Benutzer und Passwörter) durch den Inhalt der Datei ersetzt. Das lässt sich nicht rückgängig machen: Lade vorher eine Sicherung herunter.</value>
+  </data>
+  <data name="Backup_ConfirmRestore" xml:space="preserve">
+    <value>ALLE Daten auf dem Server durch „{0}“ ersetzen? Alles, was nicht in der Datei steht, geht verloren, und der Server startet neu.</value>
+  </data>
+  <data name="Backup_RestoreYes" xml:space="preserve">
+    <value>Alle Daten ersetzen</value>
+  </data>
+  <data name="Backup_RestoredRestarting" xml:space="preserve">
+    <value>Die Daten wurden ersetzt ({0} Zeilen). Der Server startet neu …</value>
+  </data>
+  <data name="Backup_Restored" xml:space="preserve">
+    <value>Der Server ist mit den wiederhergestellten Daten zurück. Funktioniert dein Login nicht mehr, nimm einen aus der Sicherung.</value>
+  </data>
+  <data name="Backup_TargetsTitle" xml:space="preserve">
+    <value>Sicherungsdatenbanken</value>
+  </data>
+  <data name="Backup_TargetsHint" xml:space="preserve">
+    <value>Eine Sicherungsdatenbank ist eine zweite Datenbank, die im gewählten Abstand eine vollständige Kopie aller Daten erhält; jede Aktualisierung ersetzt ihren bisherigen Inhalt. Wähle nie die Datenbank, auf der dieser Server läuft.</value>
+  </data>
+  <data name="Backup_Empty" xml:space="preserve">
+    <value>Noch keine Sicherungsdatenbank. Lege eine an, damit die Daten regelmäßig kopiert werden.</value>
+  </data>
+  <data name="Backup_EmptyView" xml:space="preserve">
+    <value>Es gibt keine Sicherungsdatenbank.</value>
+  </data>
+  <data name="Backup_New" xml:space="preserve">
+    <value>Sicherungsdatenbank hinzufügen</value>
+  </data>
+  <data name="Backup_FormNew" xml:space="preserve">
+    <value>Neue Sicherungsdatenbank</value>
+  </data>
+  <data name="Backup_FormEdit" xml:space="preserve">
+    <value>Sicherungsdatenbank bearbeiten</value>
+  </data>
+  <data name="Backup_FormName" xml:space="preserve">
+    <value>Bezeichnung</value>
+  </data>
+  <data name="Backup_FormKind" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="Backup_FormInterval" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="Backup_FormEnabled" xml:space="preserve">
+    <value>Eingeschaltet (aktualisiert sich selbst)</value>
+  </data>
+  <data name="Backup_KindSqlite" xml:space="preserve">
+    <value>SQLite-Dateien in einem Ordner</value>
+  </data>
+  <data name="Backup_KindPostgres" xml:space="preserve">
+    <value>PostgreSQL-Datenbank</value>
+  </data>
+  <data name="Backup_LocationSqlite" xml:space="preserve">
+    <value>Ordner auf dem Server</value>
+  </data>
+  <data name="Backup_LocationPostgres" xml:space="preserve">
+    <value>Verbindungszeichenfolge</value>
+  </data>
+  <data name="Backup_LocationHintSqlite" xml:space="preserve">
+    <value>Der Ordner erhält die Dateien planner.db und accounts.db; er wird angelegt, falls er fehlt.</value>
+  </data>
+  <data name="Backup_LocationHintPostgres" xml:space="preserve">
+    <value>Zum Beispiel Host=db;Database=kyuplan_backup;Username=kyuplan;Password=…; die Tabellen beider Datenbanken landen darin.</value>
+  </data>
+  <data name="Backup_EveryMinutes" xml:space="preserve">
+    <value>alle {0} Min.</value>
+  </data>
+  <data name="Backup_EveryHours" xml:space="preserve">
+    <value>alle {0} Std.</value>
+  </data>
+  <data name="Backup_EveryDays" xml:space="preserve">
+    <value>alle {0} Tage</value>
+  </data>
+  <data name="Backup_Off" xml:space="preserve">
+    <value>ausgeschaltet</value>
+  </data>
+  <data name="Backup_NeverRan" xml:space="preserve">
+    <value>Noch nicht aktualisiert</value>
+  </data>
+  <data name="Backup_LastOk" xml:space="preserve">
+    <value>Zuletzt aktualisiert {0}</value>
+  </data>
+  <data name="Backup_LastFailed" xml:space="preserve">
+    <value>Aktualisierung fehlgeschlagen {0}: {1}</value>
+  </data>
+  <data name="Backup_Next" xml:space="preserve">
+    <value>Nächste Aktualisierung {0}</value>
+  </data>
+  <data name="Backup_RunNow" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="Backup_Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="Backup_Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="Backup_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Backup_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Backup_ConfirmYes" xml:space="preserve">
+    <value>Ja, löschen</value>
+  </data>
+  <data name="Backup_ConfirmDelete" xml:space="preserve">
+    <value>Die Sicherungsdatenbank „{0}“ löschen? Die Daten darin bleiben, wo sie sind; sie wird nur nicht mehr aktualisiert.</value>
+  </data>
+  <data name="Backup_Created" xml:space="preserve">
+    <value>Sicherungsdatenbank „{0}“ hinzugefügt.</value>
+  </data>
+  <data name="Backup_Saved" xml:space="preserve">
+    <value>Sicherungsdatenbank „{0}“ gespeichert.</value>
+  </data>
+  <data name="Backup_Deleted" xml:space="preserve">
+    <value>Sicherungsdatenbank „{0}“ gelöscht.</value>
+  </data>
+  <data name="Backup_RunOk" xml:space="preserve">
+    <value>„{0}“ ist aktuell.</value>
+  </data>
+  <data name="Backup_RunFailed" xml:space="preserve">
+    <value>Das Aktualisieren von „{0}“ ist fehlgeschlagen: {1}</value>
+  </data>
 </root>

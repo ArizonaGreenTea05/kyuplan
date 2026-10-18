@@ -83,6 +83,35 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.DeleteAsync($"api/themes/{Uri.EscapeDataString(id)}", cancellationToken),
             PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
 
+    public async Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/backup/targets", PlannerJsonContext.Default.ListBackupTargetDto, cancellationToken);
+
+    public Task<BackupTargetDto> CreateBackupTargetAsync(BackupTargetInputDto target, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/backup/targets", Json(target, PlannerJsonContext.Default.BackupTargetInputDto), cancellationToken),
+            PlannerJsonContext.Default.BackupTargetDto, cancellationToken);
+
+    public Task<BackupTargetDto> UpdateBackupTargetAsync(int id, BackupTargetInputDto target, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/backup/targets/{id}", Json(target, PlannerJsonContext.Default.BackupTargetInputDto), cancellationToken),
+            PlannerJsonContext.Default.BackupTargetDto, cancellationToken);
+
+    public Task DeleteBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/backup/targets/{id}", cancellationToken), cancellationToken);
+
+    public Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/backup/targets/{id}/run", null, cancellationToken), PlannerJsonContext.Default.BackupTargetDto, cancellationToken);
+
+    public async Task<BackupFile> DownloadBackupAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await SendAsync(() => http.GetAsync("api/backup/download", cancellationToken));
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        var name = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') is { Length: > 0 } given ? given : $"kyuplan-backup{BackupRules.Extension}";
+        return new BackupFile(name, await response.Content.ReadAsByteArrayAsync(cancellationToken));
+    }
+
+    public Task<BackupRestoredDto> RestoreBackupAsync(Stream file, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/backup/restore", new StreamContent(file), cancellationToken), PlannerJsonContext.Default.BackupRestoredDto, cancellationToken);
+
     public Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync("api/account/theme", Json(preference, PlannerJsonContext.Default.ThemePreferenceDto), cancellationToken),
             PlannerJsonContext.Default.UserDto, cancellationToken);

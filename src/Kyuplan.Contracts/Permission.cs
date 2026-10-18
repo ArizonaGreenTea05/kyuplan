@@ -53,6 +53,14 @@ public static class Permission
 
     public const string ThemesEdit = "themes.edit";
 
+    public const string BackupsView = "backups.view";
+    /// <summary>Define the backup databases and run them.</summary>
+    public const string BackupsEdit = "backups.edit";
+    /// <summary>Download a backup file: it holds every user's password hash, so it is a permission of its own.</summary>
+    public const string BackupsDownload = "backups.download";
+    /// <summary>Replace all data with an uploaded backup file.</summary>
+    public const string BackupsRestore = "backups.restore";
+
     public const string SettingsView = "settings.view";
     public const string SettingsEdit = "settings.edit";
 
@@ -78,6 +86,7 @@ public static class Permission
         new("tags", [TagsView, TagsEdit]),
         new("branding", [BrandingView, BrandingEdit]),
         new("themes", [ThemesEdit]),
+        new("backups", [BackupsView, BackupsEdit, BackupsDownload, BackupsRestore]),
         new("settings", [SettingsView, SettingsEdit]),
         new("users", [UsersView, UsersEdit, UsersDelete, UsersGrant]),
         new("roles", [RolesView, RolesEdit]),

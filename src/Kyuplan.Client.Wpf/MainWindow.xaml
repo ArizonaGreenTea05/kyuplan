@@ -48,6 +48,9 @@
         <DataTemplate DataType="{x:Type vm:BrandingAdminViewModel}">
             <views:BrandingView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BackupViewModel}">
+            <views:BackupView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid>

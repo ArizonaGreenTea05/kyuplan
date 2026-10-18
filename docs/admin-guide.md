@@ -168,6 +168,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | themes | `themes.edit` (install and delete theme packs) |
+| backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | settings | `settings.view`, `settings.edit` |
@@ -348,6 +349,44 @@ The server refuses a pack whose text is hard to read, and says why: `text` needs
 at most 50 packs can be installed. The desktop app draws a pack with its flat controls (the same colours, the rounded look of Dracula), so
 installing one never needs a new version of either client.
 
+## Backups
+
+Open **Administration → Backup**. It has two parts; each has its own permission (see the table above), because a backup file holds **every user's password hash** and the personal data of the members.
+
+### Backup file: download and restore
+
+*Download backup* (`backups.download`) gives you one file (`kyuplan-backup-<date>.kyubackup`, a zip) with everything in **both databases**: members, exams, comments, evaluations, tags, belts, the branding as saved on the Branding page, and all users with their roles, aliases and password hashes. It does **not** contain the settings file (`settings.json`, which says where the databases are and holds the Spond logins), the `keys` folder or uploaded theme packs: those are files, not data; copy them as described in the [deployment guide](deployment.md#backup-restore-and-updates).
+
+The file is independent of the database system: a backup of a SQLite server restores into a PostgreSQL one and back.
+
+*Restore from file…* (`backups.restore`) **replaces all data on the running server** with the content of a backup file. The page asks you to confirm first; nothing happens before that. Then:
+
+- the file is checked completely before anything is changed: a file that is no backup, is damaged, or was made by a **newer** version of the program than this server is refused and nothing changes;
+- both databases are replaced, each in one transaction (if writing fails, that database keeps its old data);
+- the server restarts by itself (a few seconds) so that it starts from the new data; the page waits for it to come back.
+
+Everything that is not in the file is **lost**, including users created since: after a restore you can only sign in with the users the backup had. **Download a backup before you restore one.**
+
+**A new server from a backup.** A new server has no data to replace, so it cannot be restored through the page (nobody can sign in yet). Put the file on the server and set `Backup:InitialDataFile` (in a container: `Backup__InitialDataFile=/data/start.kyubackup`). When both databases are **created** by that start, their data is loaded from the file instead of the default belts and roles, and the setup screen does not appear because the users come with the file. Once the databases exist the setting is ignored, so it can stay.
+
+### Backup databases
+
+A *backup database* is a **second database** that the server keeps a complete copy of all data in, by itself, once every 15 minutes, hour, 6 hours, 12 hours, day or week (your choice per backup database; you can define up to 20). Every update **replaces** what the backup database held; it is a mirror, not a history. Use the *Download* button (and your own file backups) if you need older states.
+
+| Kind | Location | What it holds |
+| --- | --- | --- |
+| SQLite files in a folder | a folder on the server (relative to the program folder, or absolute; created if missing) | `planner.db` and `accounts.db` |
+| PostgreSQL database | a connection string, e.g. `Host=backup-db;Database=kyuplan_backup;Username=kyuplan;Password=...` | the tables of both databases (they do not clash) |
+
+- **Never choose the live database.** The server refuses a folder that holds its own SQLite files or its own PostgreSQL database. Pick a different disk, share or server so that a failure of the first does not take the copy with it.
+- The kinds are independent of the live database's system: a SQLite server can mirror into PostgreSQL and the other way round.
+- **Update now** runs one at once. The list shows when each one was last updated and, for a failed run, the reason (database unreachable, wrong password, folder not writable). A failed run is tried again at the next interval; a switched-off backup database is not updated.
+- A backup database is a normal database of this program: to switch to it, point `Database:ConnectionString` / `Accounts:ConnectionString` at it (it carries the current schema, and the server brings it up to date when it starts).
+- The definitions are kept in the file `backup-targets.json` next to the settings file (`Backup:TargetsFile` moves it); the locations are stored encrypted, because a connection string holds a password. They are not part of a backup file.
+- `Backup:Enabled=false` stops the automatic updates (downloads, uploads and *Update now* keep working).
+
+The backup databases and files protect against losing the server's disk or a wrong change. They are **not** a replacement for testing your restore: restore a backup file on a spare instance once.
+
 ## Desktop clients and updates
 
 The server image carries the Windows installer. The web client shows a **Download for Windows** button for the visitor's system, and
@@ -373,6 +412,8 @@ sees what; there is nothing to configure. Details and the archive attached to ev
 - PostgreSQL: `pg_dump` of the database(s), plus `settings.json` and `keys`.
 - The planner database holds **personal data of members including children, and the comments**; the accounts database holds the password
   hashes. Treat the backups accordingly (encrypted, access controlled) and keep them within the club's data-protection rules.
+
+The Backup page (see [Backups](#backups)) adds a downloadable backup file of both databases and mirror databases that are updated by themselves; the file does not replace copying `settings.json` and `keys`.
 
 Details and commands are in the [deployment guide](deployment.md#backup-restore-and-updates). **Test a restore** at least once.
 

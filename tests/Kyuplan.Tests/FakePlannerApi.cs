@@ -291,6 +291,98 @@ internal sealed class FakePlannerApi : IPlannerApi
             return PublishThemes();
         });
 
+    // --- Backups ---------------------------------------------------------------------------------------------
+
+    public List<BackupTargetDto> BackupTargets { get; } = [];
+
+    /// <summary>What the fake did, in order: <c>create:Name</c>, <c>update:1</c>, <c>delete:1</c>, <c>run:1</c>, <c>download</c>, <c>restore:bytes</c>.</summary>
+    public List<string> BackupCalls { get; } = [];
+
+    /// <summary>What a run of a backup database reports; <c>null</c> = it worked.</summary>
+    public string? BackupRunFails { get; set; }
+
+    public BackupRestoredDto BackupRestored { get; set; } = new(DateTimeOffset.Parse("2026-10-18T10:00:00Z"), 42);
+
+    public Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<BackupTargetDto>>(() =>
+        {
+            if (!Account.Can(Permission.BackupsView)) throw Forbidden();
+            return [.. BackupTargets];
+        });
+
+    public Task<BackupTargetDto> CreateBackupTargetAsync(BackupTargetInputDto target, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsEdit)) throw Forbidden();
+            if (BackupRules.Check(target) is { } problem) throw BadRequest(problem);
+
+            BackupCalls.Add("create:" + target.Name);
+            var created = new BackupTargetDto(BackupTargets.Select(t => t.Id).DefaultIfEmpty(0).Max() + 1, target.Name, target.Kind, target.Location,
+                target.IntervalMinutes, target.Enabled, null, null, null, null);
+            BackupTargets.Add(created);
+            return created;
+        });
+
+    public Task<BackupTargetDto> UpdateBackupTargetAsync(int id, BackupTargetInputDto target, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsEdit)) throw Forbidden();
+            if (BackupRules.Check(target) is { } problem) throw BadRequest(problem);
+
+            BackupCalls.Add("update:" + id);
+            var index = BackupTargets.FindIndex(t => t.Id == id);
+            if (index < 0) throw BadRequest("no such backup database");
+            return BackupTargets[index] = BackupTargets[index] with
+            {
+                Name = target.Name, Kind = target.Kind, Location = target.Location, IntervalMinutes = target.IntervalMinutes, Enabled = target.Enabled,
+            };
+        });
+
+    public Task DeleteBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsEdit)) throw Forbidden();
+            BackupCalls.Add("delete:" + id);
+            if (BackupTargets.RemoveAll(t => t.Id == id) == 0) throw BadRequest("no such backup database");
+            return 0;
+        });
+
+    public Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsEdit)) throw Forbidden();
+            BackupCalls.Add("run:" + id);
+            var index = BackupTargets.FindIndex(t => t.Id == id);
+            if (index < 0) throw BadRequest("no such backup database");
+            var now = DateTimeOffset.Parse("2026-10-18T12:00:00Z");
+            return BackupTargets[index] = BackupTargets[index] with
+            {
+                LastRunUtc = now, LastSucceeded = BackupRunFails is null, LastMessage = BackupRunFails, NextRunUtc = now.AddMinutes(BackupTargets[index].IntervalMinutes),
+            };
+        });
+
+    public Task<BackupFile> DownloadBackupAsync(CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsDownload)) throw Forbidden();
+            BackupCalls.Add("download");
+            return new BackupFile("kyuplan-backup-test.kyubackup", [1, 2, 3]);
+        });
+
+    public async Task<BackupRestoredDto> RestoreBackupAsync(Stream file, CancellationToken cancellationToken = default)
+    {
+        using var copy = new MemoryStream();
+        await file.CopyToAsync(copy, cancellationToken);
+        return await Run(() =>
+        {
+            if (!Account.Can(Permission.BackupsRestore)) throw Forbidden();
+            if (copy.Length == 0) throw BadRequest("This is not a backup file.");
+
+            BackupCalls.Add("restore:" + copy.Length);
+            return BackupRestored;
+        });
+    }
+
     public List<ThemePreferenceDto> ThemeChoices { get; } = [];
 
     public Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default) =>

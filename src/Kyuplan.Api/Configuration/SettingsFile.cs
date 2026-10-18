@@ -24,6 +24,24 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
 
     private const string Prefix = "enc:v1:";
 
+    /// <summary>Encrypts a secret that is kept in another file (a connection string with a password); without a key ring (tests) it stays as it is.</summary>
+    public string Protect(string value) => protector is null ? value : Prefix + protector.Protect(value);
+
+    /// <summary>The secret as <see cref="Protect"/> made it; <c>null</c> when the key is not there any more. Text that was never protected is returned as it is.</summary>
+    public string? Unprotect(string value)
+    {
+        if (!value.StartsWith(Prefix, StringComparison.Ordinal)) return value;
+
+        try
+        {
+            return protector?.Unprotect(value[Prefix.Length..]);
+        }
+        catch (System.Security.Cryptography.CryptographicException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>The same settings file kind at another place, with the same key.</summary>
     public SettingsFile At(string otherPath) => new(otherPath, protector);
 

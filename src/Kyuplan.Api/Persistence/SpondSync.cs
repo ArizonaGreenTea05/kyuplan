@@ -120,6 +120,8 @@ public sealed class SpondSync(
 
         var today = clock.Today;
         var unregistered = UnregisteredSubGroupIds(group, spondOptions.Value.UnregisteredSubGroup);
+        if (unregistered.Count == 0 && !string.IsNullOrWhiteSpace(spondOptions.Value.UnregisteredSubGroup))
+            logger.LogWarning("The subgroup '{SubGroup}' (Spond:UnregisteredSubGroup) does not exist in group {GroupId}: every member counts as registered.", spondOptions.Value.UnregisteredSubGroup, group.Id);
 
         foreach (var info in group.Members.DistinctBy(m => m.Id))
         {

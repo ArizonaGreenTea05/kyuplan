@@ -20,18 +20,18 @@ public static class BackupEndpoints
     {
         var group = app.MapGroup(Route).WithTags("Backup");
 
-        group.MapGet("/targets", (BackupTargetStore store) => store.List())
+        group.MapGet("/targets", (BackupTargetStore store) => store.List().Select(BackupTargetStore.Mask).ToList())
             .Produces<IReadOnlyList<BackupTargetDto>>()
             .WithSummary("The backup databases and how their last run went.")
             .RequirePermission(Permission.BackupsView);
 
-        group.MapPost("/targets", (BackupTargetInputDto input, BackupTargetStore store) => Results.Ok(store.Add(input)))
+        group.MapPost("/targets", (BackupTargetInputDto input, BackupTargetStore store) => Results.Ok(BackupTargetStore.Mask(store.Add(input))))
             .Produces<BackupTargetDto>()
             .WithSummary("Define a backup database: a folder for two SQLite files or a PostgreSQL connection string, and how often (minutes) it is updated. 400 with the reason when it cannot be used.")
             .RequirePermission(Permission.BackupsEdit);
 
         group.MapPut("/targets/{id:int}", (int id, BackupTargetInputDto input, BackupTargetStore store) =>
-                store.Update(id, input) is { } target ? Results.Ok(target) : Results.NotFound())
+                store.Update(id, input) is { } target ? Results.Ok(BackupTargetStore.Mask(target)) : Results.NotFound())
             .Produces<BackupTargetDto>()
             .WithSummary("Replace the definition of a backup database.")
             .RequirePermission(Permission.BackupsEdit);
@@ -41,7 +41,7 @@ public static class BackupEndpoints
             .RequirePermission(Permission.BackupsEdit);
 
         group.MapPost("/targets/{id:int}/run", async (int id, BackupRunner runner, CancellationToken ct) =>
-                await runner.RunAsync(id, ct) is { } target ? Results.Ok(target) : Results.NotFound())
+                await runner.RunAsync(id, ct) is { } target ? Results.Ok(BackupTargetStore.Mask(target)) : Results.NotFound())
             .Produces<BackupTargetDto>()
             .WithSummary("Update the backup database now. A failed run is still answered with 200; its reason is the target's lastMessage.")
             .RequirePermission(Permission.BackupsEdit);

@@ -92,10 +92,29 @@ public sealed class BackupService(
         await sync.WaitAsync(cancellationToken);
         try
         {
-            // The accounts first: the planner's rows do not depend on them, so a failed second step leaves users that do not match the planner data at worst;
-            // each part is undone on its own failure.
+            // Two databases cannot share a transaction: each part is undone on its own failure, and when the planner data fails after the accounts
+            // were replaced, the accounts are put back (users and Member.UserId links must stay a pair).
+            var previousAccounts = await ReadTablesAsync(accounts, cancellationToken);
             await DatabaseCopier.ReplaceAsync(accounts, content.Accounts, cancellationToken);
-            await DatabaseCopier.ReplaceAsync(planner, content.Planner, cancellationToken);
+            try
+            {
+                await DatabaseCopier.ReplaceAsync(planner, content.Planner, cancellationToken);
+            }
+            catch
+            {
+                try
+                {
+                    await DatabaseCopier.ReplaceAsync(accounts, previousAccounts, CancellationToken.None);
+                }
+                catch (Exception undo)
+                {
+                    logger.LogCritical(undo, "The restore failed and the accounts could not be put back: users and planner data do not match.");
+                    throw new InvalidOperationException(
+                        "The restore failed and the user accounts could not be put back: they now come from the backup while the planner data is the old one. Restore the backup again or an older one.", undo);
+                }
+
+                throw;
+            }
         }
         finally
         {
@@ -137,12 +156,15 @@ public sealed class BackupService(
             var limit = options.Value.MaxUnpackedMegabytes * 1024L * 1024L;
             if (zip.Entries.Sum(e => e.Length) > limit) throw new InvalidInputException($"The backup holds more than {options.Value.MaxUnpackedMegabytes} MB of data.");
 
-            var manifest = ReadJson<BackupManifest>(manifestEntry) ?? throw new InvalidInputException("The backup's manifest is empty.");
+            // The sizes in the zip's directory can be understated: what is really unpacked is counted too.
+            var budget = new UnpackBudget(limit, options.Value.MaxUnpackedMegabytes);
+
+            var manifest = ReadJson<BackupManifest>(manifestEntry, budget) ?? throw new InvalidInputException("The backup's manifest is empty.");
             if (manifest.Format is < 1 or > FormatVersion) throw new InvalidInputException($"The backup has format {manifest.Format}; this program reads up to {FormatVersion}. Update the program first.");
             if (!Knows(planner, manifest.PlannerSchema) || !Knows(accounts, manifest.AccountsSchema))
                 throw new InvalidInputException("The backup was made by a newer version of the program than this one. Update the program first.");
 
-            var content = new Content(ReadTables(zip, PlannerFolder, planner), ReadTables(zip, AccountsFolder, accounts));
+            var content = new Content(ReadTables(zip, PlannerFolder, planner, budget), ReadTables(zip, AccountsFolder, accounts, budget));
             return (manifest, content);
         }
         catch (InvalidDataException ex)
@@ -155,7 +177,7 @@ public sealed class BackupService(
         }
     }
 
-    private static Dictionary<string, List<JsonObject>> ReadTables(ZipArchive zip, string folder, DbContext db)
+    private static Dictionary<string, List<JsonObject>> ReadTables(ZipArchive zip, string folder, DbContext db, UnpackBudget budget)
     {
         var tables = new Dictionary<string, List<JsonObject>>();
         foreach (var type in DatabaseCopier.Tables(db))
@@ -163,16 +185,54 @@ public sealed class BackupService(
             var name = DatabaseCopier.NameOf(type);
             if (zip.GetEntry($"{folder}{name}.json") is not { } entry) continue; // a table that did not exist when the backup was made
 
-            tables[name] = ReadJson<List<JsonObject>>(entry) ?? throw new InvalidInputException($"The backup's table {name} is empty.");
+            tables[name] = ReadJson<List<JsonObject>>(entry, budget) ?? throw new InvalidInputException($"The backup's table {name} is empty.");
         }
 
         return tables;
     }
 
-    private static T? ReadJson<T>(ZipArchiveEntry entry)
+    private static T? ReadJson<T>(ZipArchiveEntry entry, UnpackBudget budget)
     {
-        using var stream = entry.Open();
+        using var stream = new CountingStream(entry.Open(), budget);
         return JsonSerializer.Deserialize<T>(stream);
+    }
+
+    private sealed class UnpackBudget(long remaining, int megabytes)
+    {
+        public void Take(int bytes)
+        {
+            if ((remaining -= bytes) < 0) throw new InvalidInputException($"The backup holds more than {megabytes} MB of data.");
+        }
+    }
+
+    /// <summary>Reads through to the entry and refuses once all entries together unpacked more than the budget.</summary>
+    private sealed class CountingStream(Stream inner, UnpackBudget budget) : Stream
+    {
+        public override int Read(byte[] buffer, int offset, int count) => Counted(inner.Read(buffer, offset, count));
+
+        public override int Read(Span<byte> buffer) => Counted(inner.Read(buffer));
+
+        private int Counted(int read)
+        {
+            budget.Take(read);
+            return read;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) inner.Dispose();
+            base.Dispose(disposing);
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private static async Task WriteEntryAsync<T>(ZipArchive zip, string name, T value, CancellationToken cancellationToken)

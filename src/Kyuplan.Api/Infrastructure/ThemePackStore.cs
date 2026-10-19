@@ -81,13 +81,23 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
             var directory = Directory;
             System.IO.Directory.CreateDirectory(directory);
             var path = FileOf(directory, pack.Id);
-            if (!File.Exists(path) && System.IO.Directory.EnumerateFiles(directory, "*.json").Count() >= MaxPacks)
+            // Only packs that are installed count (files that are skipped as invalid do not).
+            if (!File.Exists(path) && Catalog().Packs.Count(p => !p.BuiltIn) >= MaxPacks)
                 throw new InvalidInputException($"At most {MaxPacks} theme packs can be installed; delete one first.");
 
             // Written beside and moved over, so a request that reads at the same time never sees half a file.
             var temporary = path + ".tmp";
-            File.WriteAllText(temporary, JsonSerializer.Serialize(pack with { BuiltIn = false }, Write), Encoding.UTF8);
-            File.Move(temporary, path, overwrite: true);
+            try
+            {
+                File.WriteAllText(temporary, JsonSerializer.Serialize(pack with { BuiltIn = false }, Write), Encoding.UTF8);
+                File.Move(temporary, path, overwrite: true);
+            }
+            catch
+            {
+                File.Delete(temporary);
+                throw;
+            }
+
             _seen = "\0";
         }
 

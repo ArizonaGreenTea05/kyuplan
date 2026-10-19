@@ -159,14 +159,21 @@ public sealed class AccountService(
     /// <exception cref="LastAdminException">The user is the only administrator (reachable only when two administrators delete each other at once).</exception>
     public async Task DeleteAsync(int userId, int actingUserId, CancellationToken cancellationToken)
     {
+        var user = await EnsureMayDeleteAsync(userId, actingUserId, cancellationToken);
+        db.Users.Remove(user);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Throws when the user cannot be deleted (yourself, the last administrator): checked before anything else is changed.</summary>
+    public async Task<UserAccount> EnsureMayDeleteAsync(int userId, int actingUserId, CancellationToken cancellationToken)
+    {
         if (userId == actingUserId) throw new DeleteOwnUserException();
 
         var user = await FindAsync(userId, cancellationToken);
         if (user.IsAdministrator() && !await HasOtherAdministratorAsync(userId, cancellationToken))
             throw new LastAdminException();
 
-        db.Users.Remove(user);
-        await db.SaveChangesAsync(cancellationToken);
+        return user;
     }
 
     /// <summary>A user chooses the theme of one kind of client (<see cref="ThemeClients"/>); <c>null</c> goes back to the instance's default. Input is validated by the endpoint.</summary>

@@ -209,6 +209,23 @@ static async Task<WebApplication> BuildAsync(string[] args)
     // The web client (Blazor WebAssembly) is part of this application: its files are open to everybody (the login is asked for when the
     // page calls /api), and every address that is not the API's is a page of the client. The static files come before the
     // authorization, so the fallback policy does not apply to them.
+    // Files that carry no fingerprint (index.html, _framework/blazor.webassembly.js, js/, css/) would otherwise be cached heuristically by
+    // the browser, and after an update it keeps running the old client against the new API. no-cache = revalidate with the ETag (a 304).
+    app.Use(async (context, next) =>
+    {
+        if (!context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.OnStarting(() =>
+            {
+                if (!context.Response.Headers.ContainsKey("Cache-Control"))
+                {
+                    context.Response.Headers.CacheControl = "no-cache";
+                }
+                return Task.CompletedTask;
+            });
+        }
+        await next();
+    });
     app.UseBlazorFrameworkFiles();
     app.UseStaticFiles();
 

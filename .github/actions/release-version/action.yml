@@ -13,6 +13,9 @@ outputs:
   previous-tag:
     description: The previous version tag, empty for the first one.
     value: ${{ steps.read.outputs.previous-tag }}
+  codename:
+    description: The name of the major version, e.g. "Swift Crane". Every release of a major carries the same name; each new major gets another one.
+    value: ${{ steps.read.outputs.codename }}
 
 runs:
   using: composite
@@ -38,9 +41,31 @@ runs:
           | sed 's#^refs/tags/##' | sort -V | grep -x -F -B1 -- "$TAG" | head -n1 || true)
         [[ "$previous" == "$TAG" ]] && previous=
 
+        # The name comes from codenames.json and depends on the major number alone: stable within a major, different for every other major.
+        # That holds while no word appears twice in a list, the two lists have no common divisor, and the major is below adjectives * nouns;
+        # all three are checked, so a name can never be used twice (a release fails instead).
+        names="$GITHUB_ACTION_PATH/codenames.json"
+        major="${version%%.*}"
+        read -r a n unique < <(jq -r '"\(.adjectives | length) \(.nouns | length) \((.adjectives | unique | length) == (.adjectives | length) and (.nouns | unique | length) == (.nouns | length))"' "$names")
+        gcd() { local x=$1 y=$2; while ((y)); do set -- "$y" $((x % y)); x=$1 y=$2; done; echo "$x"; }
+        if [[ "$unique" != true ]]; then
+          echo "::error::codenames.json: a word appears twice in a list, so two majors could get the same name."
+          exit 1
+        fi
+        if [[ "$(gcd "$a" "$n")" != 1 ]]; then
+          echo "::error::codenames.json: the number of adjectives ($a) and nouns ($n) must have no common divisor, or majors would share names."
+          exit 1
+        fi
+        if ((major >= a * n)); then
+          echo "::error::Major $major has no name left: codenames.json offers $((a * n)) (adjectives x nouns). Add words so that the counts stay without a common divisor."
+          exit 1
+        fi
+        codename=$(jq -r --argjson m "$major" '"\(.adjectives[$m % (.adjectives | length)]) \(.nouns[$m % (.nouns | length)])"' "$names")
+
         {
+          echo "codename=$codename"
           echo "version=$version"
           echo "prerelease=$prerelease"
           echo "previous-tag=$previous"
         } >> "$GITHUB_OUTPUT"
-        echo "Releasing $version (prerelease: $prerelease, previous tag: ${previous:-none})"
+        echo "Releasing $version \"$codename\" (prerelease: $prerelease, previous tag: ${previous:-none})"

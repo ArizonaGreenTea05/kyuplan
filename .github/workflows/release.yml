@@ -206,7 +206,7 @@ jobs:
 
       - uses: ./.github/actions/publish-release
         with:
-          title: Kyuplan ${{ steps.v.outputs.version }}
+          title: Kyuplan ${{ steps.v.outputs.version }} "${{ steps.v.outputs.codename }}"
           notes: |-
             Docker image (server, web client and the installers of the desktop apps in one): `${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}`
 

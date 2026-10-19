@@ -217,6 +217,62 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
     // --- Backup databases --------------------------------------------------------------------------------------------
 
     [Fact]
+    public async Task A_PostgreSQL_password_is_never_returned_and_survives_an_update_that_sends_the_mask_back()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        const string location = "Host=db;Database=backup;Username=kyu;Password=s3cret!";
+
+        var created = await ReadAsync<BackupTargetDto>(await admin.PostAsJsonAsync("/api/backup/targets",
+            new BackupTargetInputDto("Pg", BackupTargetKind.PostgreSql, location, 60, false)));
+        Assert.DoesNotContain("s3cret", created.Location);
+        Assert.Contains(BackupTargetStore.PasswordMask, created.Location);
+
+        var listed = Assert.Single((await admin.GetFromJsonAsync<List<BackupTargetDto>>("/api/backup/targets"))!);
+        Assert.DoesNotContain("s3cret", listed.Location);
+
+        var updated = await ReadAsync<BackupTargetDto>(await admin.PutAsJsonAsync($"/api/backup/targets/{created.Id}",
+            new BackupTargetInputDto("Pg", BackupTargetKind.PostgreSql, listed.Location, 90, false)));
+        Assert.Equal(90, updated.IntervalMinutes);
+
+        // The stored password is still the old one.
+        using var again = CreateHost();
+        var stored = again.Services.GetRequiredService<BackupTargetStore>().Find(created.Id)!;
+        Assert.Contains("s3cret!", stored.Location);
+    }
+
+    [Fact]
+    public async Task A_backup_that_unpacks_to_more_than_it_declares_is_refused()
+    {
+        using var host = CreateHost(configure: b => b.UseSetting("Backup:MaxUnpackedMegabytes", "1"));
+        var admin = host.CreateSignedInClient();
+        var file = await (await admin.GetAsync("/api/backup/download")).Content.ReadAsByteArrayAsync();
+
+        // Same entries, but the manifest is padded with 2 MB of whitespace, then the directory sizes are understated.
+        using var tampered = new MemoryStream();
+        using (var source = new System.IO.Compression.ZipArchive(new MemoryStream(file)))
+        using (var zip = new System.IO.Compression.ZipArchive(tampered, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                await using var writer = new StreamWriter(zip.CreateEntry(entry.FullName).Open());
+                using var reader = new StreamReader(entry.Open());
+                await writer.WriteAsync(await reader.ReadToEndAsync());
+                if (entry.FullName == "manifest.json") await writer.WriteAsync(new string(' ', 2 * 1024 * 1024));
+            }
+        }
+
+        var bytes = tampered.ToArray();
+        // Central directory records hold the uncompressed size at offset 24: set it to 1 for every record.
+        for (var i = 0; i + 46 < bytes.Length; i++)
+            if (bytes[i] == 0x50 && bytes[i + 1] == 0x4B && bytes[i + 2] == 0x01 && bytes[i + 3] == 0x02)
+                BitConverter.GetBytes(1u).CopyTo(bytes, i + 24);
+
+        var response = await admin.PostAsync("/api/backup/restore", new ByteArrayContent(bytes));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Backup_databases_are_defined_changed_and_deleted_and_survive_a_restart()
     {
         using var host = CreateHost();

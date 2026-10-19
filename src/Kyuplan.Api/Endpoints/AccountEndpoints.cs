@@ -106,8 +106,10 @@ public static class AccountEndpoints
         users.MapDelete("/{userId:int}", async (int userId, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
             {
                 await service.EnsureMayManageAsync(userId, principal, ct);
-                await service.DeleteAsync(userId, UserId(principal), ct);
+                // The links go first: a failure in between leaves a user without links, never members that point at a deleted (and later reused) id.
+                await service.EnsureMayDeleteAsync(userId, UserId(principal), ct);
                 await members.ReleaseUserAsync(userId, ct);
+                await service.DeleteAsync(userId, UserId(principal), ct);
                 return Results.NoContent();
             })
             .WithSummary("Delete a user. You cannot delete yourself, so the last administrator stays.")

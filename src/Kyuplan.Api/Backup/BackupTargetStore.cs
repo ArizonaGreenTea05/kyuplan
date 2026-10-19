@@ -35,6 +35,42 @@ public sealed class BackupTargetStore(SettingsFile settings, IOptions<BackupOpti
         lock (_lock) return Load().FirstOrDefault(t => t.Id == id) is { } found ? ToDto(found) : null;
     }
 
+    /// <summary>What a PostgreSQL target's password is shown as: the API never hands it out, an update that sends it back keeps the stored one.</summary>
+    public const string PasswordMask = "********";
+
+    /// <summary>The target as the API shows it: a PostgreSQL connection string without its password.</summary>
+    public static BackupTargetDto Mask(BackupTargetDto target)
+    {
+        if (target.Kind != BackupTargetKind.PostgreSql || !TryParse(target.Location, out var connection) || connection.Password is not { Length: > 0 }) return target;
+
+        connection.Password = PasswordMask;
+        return target with { Location = connection.ConnectionString };
+    }
+
+    private static bool TryParse(string location, out Npgsql.NpgsqlConnectionStringBuilder connection)
+    {
+        try
+        {
+            connection = new Npgsql.NpgsqlConnectionStringBuilder(location);
+            return true;
+        }
+        catch (ArgumentException)
+        {
+            connection = null!;
+            return false;
+        }
+    }
+
+    /// <summary>The location to store: a password that is still <see cref="PasswordMask"/> is the one the target already has.</summary>
+    private static string Unmask(string location, BackupTargetInputDto input, Stored existing)
+    {
+        if (input.Kind != BackupTargetKind.PostgreSql || existing.Kind != BackupTargetKind.PostgreSql
+            || !TryParse(location, out var sent) || sent.Password != PasswordMask || !TryParse(existing.Location, out var old)) return location;
+
+        sent.Password = old.Password;
+        return sent.ConnectionString;
+    }
+
     public BackupTargetDto Add(BackupTargetInputDto input)
     {
         Check(input);
@@ -63,7 +99,7 @@ public sealed class BackupTargetStore(SettingsFile settings, IOptions<BackupOpti
 
             var changed = existing with
             {
-                Name = input.Name.Trim(), Kind = input.Kind, Location = input.Location.Trim(), IntervalMinutes = input.IntervalMinutes, Enabled = input.Enabled,
+                Name = input.Name.Trim(), Kind = input.Kind, Location = Unmask(input.Location.Trim(), input, existing), IntervalMinutes = input.IntervalMinutes, Enabled = input.Enabled,
             };
             Save([.. all.Select(t => t.Id == id ? changed : t)]);
             return ToDto(changed);

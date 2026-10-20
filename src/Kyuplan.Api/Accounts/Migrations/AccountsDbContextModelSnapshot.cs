@@ -17,6 +17,31 @@ namespace Kyuplan.Api.Accounts.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("Kyuplan.Api.Accounts.AccountName", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AccountNames");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Accounts.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -133,6 +158,15 @@ namespace Kyuplan.Api.Accounts.Migrations
                     b.HasIndex("UsersId");
 
                     b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Accounts.AccountName", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Accounts.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Accounts.UserAlias", b =>

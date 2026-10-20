@@ -41,7 +41,7 @@ public sealed class PostgresMigrationTests
 
         Assert.DoesNotContain(planner.Database.GetMigrations(), m => m.Contains("Postgres", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(20, planner.Database.GetMigrations().Count());
-        Assert.Equal(6, accounts.Database.GetMigrations().Count());
+        Assert.Equal(7, accounts.Database.GetMigrations().Count());
         Assert.False(planner.Database.HasPendingModelChanges());
         Assert.False(accounts.Database.HasPendingModelChanges());
     }

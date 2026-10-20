@@ -378,9 +378,7 @@ A user has three kinds of names:
 A user name and an alias are both **login names**: unique regardless of case across all users *and* aliases (no name signs in as two
 users), at most 64 characters, no colon or control characters (HTTP Basic sends `user:password`). The user name and aliases of a user
 differ from each other. For `PUT`, `displayName` and `aliases` left out (`null`) keep what the user has; an empty display name sets it
-back to the user name and an empty list takes all aliases away. *Known limit:* the uniqueness between the user names and the aliases is
-checked by the service, not by an index (an index cannot span two tables): two requests that race for the same name at the same instant
-could both succeed, and the name then signs in as whichever of the two the database finds first (the password still has to fit).
+back to the user name and an empty list takes all aliases away. The uniqueness across both is a real constraint: every user name and alias also has a row in `AccountNames`, whose case-insensitive unique index no race can get around.
 
 ### Permissions and roles
 

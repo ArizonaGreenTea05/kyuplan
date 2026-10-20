@@ -6,11 +6,18 @@
              xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
 
     <UserControl.Resources>
+        <Style x:Key="HeaderText" TargetType="TextBlock" BasedOn="{StaticResource FieldLabelText}">
+            <Setter Property="Margin" Value="8,0" />
+            <Setter Property="TextWrapping" Value="NoWrap" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
         <DataTemplate x:Key="BeltPriceItem" DataType="{x:Type vm:BeltPriceRow}">
             <Grid Margin="0,4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" SharedSizeGroup="PriceBelt" MinWidth="240" />
-                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceAmount" MinWidth="140" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceStamp" MinWidth="140" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceBeltCost" MinWidth="140" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <ctl:BeltSwatch Color="{Binding Belt.Color}" Stripe="{Binding Belt.SecondaryColor}" Margin="0,0,10,0" />
@@ -18,7 +25,11 @@
                 </StackPanel>
                 <TextBox Grid.Column="1" Width="130" HorizontalAlignment="Left" HorizontalContentAlignment="Right"
                          AutomationProperties.Name="{Binding Name}"
-                         Text="{Binding Price.Text, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding StampFee.Text, UpdateSourceTrigger=PropertyChanged}"
+                         IsEnabled="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                <TextBox Grid.Column="2" Width="130" HorizontalAlignment="Left" HorizontalContentAlignment="Right"
+                         AutomationProperties.Name="{Binding Name}"
+                         Text="{Binding BeltPrice.Text, UpdateSourceTrigger=PropertyChanged}"
                          IsEnabled="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=UserControl}}" />
             </Grid>
         </DataTemplate>
@@ -59,6 +70,15 @@
                         <TextBlock Text="{loc:Loc Prices_NoBelts}" Style="{StaticResource LedeText}"
                                    Visibility="{Binding HasNoBelts, Converter={StaticResource BoolToVisibility}}" />
                         <StackPanel Grid.IsSharedSizeScope="True">
+                            <Grid Margin="0,0,0,4" Visibility="{Binding HasNoBelts, Converter={StaticResource InverseBoolToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceBelt" MinWidth="240" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceStamp" MinWidth="140" />
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PriceBeltCost" MinWidth="140" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="1" Text="{loc:Loc Prices_StampFee}" Style="{StaticResource HeaderText}" />
+                                <TextBlock Grid.Column="2" Text="{loc:Loc Prices_BeltPrice}" Style="{StaticResource HeaderText}" />
+                            </Grid>
                             <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource BeltPriceItem}" IsTabStop="False" />
                         </StackPanel>
 

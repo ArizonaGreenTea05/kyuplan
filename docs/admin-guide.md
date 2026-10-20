@@ -163,7 +163,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | statistics | `statistics.view` |
 | calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
-| payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the additional price per belt) |
+| payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the stamp fee and belt price per belt) |
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
 | belts | `belts.view`, `belts.edit` |
 | comments | `comments.view`, `comments.viewOwn` (read the comments about the members one is oneself), `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |

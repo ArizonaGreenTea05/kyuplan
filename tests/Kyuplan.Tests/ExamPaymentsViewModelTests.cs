@@ -43,8 +43,9 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
         CultureInfo.DefaultThreadCurrentUICulture = null;
     }
 
-    private static ExamPaymentDto Row(MemberDto member, int? belt, decimal due, decimal paid = 0, string? note = null) =>
-        new(member.Id, member.Name, belt, due, paid, paid > 0 ? new DateOnly(2026, 4, 1) : null, note, PaymentRules.StatusOf(due, paid));
+    /// <summary>A row that owes <paramref name="due"/> in total, of which <paramref name="stamp"/> is the stamp fee and <paramref name="beltPrice"/> the belt price.</summary>
+    private static ExamPaymentDto Row(MemberDto member, int? belt, decimal due, decimal paid = 0, string? note = null, decimal stamp = 0, decimal beltPrice = 0, bool ownBelt = false) =>
+        new(member.Id, member.Name, belt, due - stamp - beltPrice, stamp, beltPrice, ownBelt, paid, paid > 0 ? new DateOnly(2026, 4, 1) : null, note, PaymentRules.StatusOf(due, paid));
 
     private async Task<ExamDetailViewModel> PaymentsShownAsync(params ExamPaymentDto[] rows)
     {
@@ -60,14 +61,15 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
     [Fact]
     public async Task The_price_page_shows_the_general_fee_and_a_line_for_every_belt()
     {
-        _api.ExamPrices = new ExamPricesDto(20m, [new BeltPriceDto(_yellow.Id, 5.5m)]);
+        _api.ExamPrices = new ExamPricesDto(20m, [new BeltPriceDto(_yellow.Id, 5.5m, 0)]);
 
         await _prices.ActivateAsync();
 
         Assert.Equal("Exam prices", _prices.Title);
         Assert.Equal(Display.MoneyInput(20m), _prices.General.Text);
         Assert.Equal(["White", "Yellow"], _prices.Rows.Select(r => r.Name));
-        Assert.Equal([Display.MoneyInput(0), Display.MoneyInput(5.5m)], _prices.Rows.Select(r => r.Price.Text));
+        Assert.Equal([Display.MoneyInput(0), Display.MoneyInput(5.5m)], _prices.Rows.Select(r => r.StampFee.Text));
+        Assert.Equal([Display.MoneyInput(0), Display.MoneyInput(0)], _prices.Rows.Select(r => r.BeltPrice.Text));
         Assert.False(_prices.HasChanges);
         Assert.False(_prices.CanSave);
         Assert.False(_prices.CanDiscard);
@@ -79,14 +81,15 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
         await _prices.ActivateAsync();
 
         _prices.General.Text = "18" + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + "50";
-        _prices.Rows[1].Price.Text = "4";
+        _prices.Rows[1].StampFee.Text = "4";
+        _prices.Rows[1].BeltPrice.Text = "7";
         Assert.True(_prices.CanSave);
         Assert.True(_prices.CanDiscard);
 
         await _prices.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(18.5m, _api.ExamPrices.GeneralFee);
-        Assert.Equal([(_yellow.Id, 4m)], _api.ExamPrices.BeltPrices.Select(p => (p.BeltId, p.Surcharge)));
+        Assert.Equal([(_yellow.Id, 4m, 7m)], _api.ExamPrices.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
         Assert.Equal(["set-prices"], _api.PaymentCalls);
         Assert.False(_prices.HasChanges);
         Assert.False(_prices.CanSave);
@@ -102,7 +105,7 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
     {
         await _prices.ActivateAsync();
 
-        _prices.Rows[0].Price.Text = text;
+        _prices.Rows[0].BeltPrice.Text = text;
 
         Assert.True(_prices.HasInvalid);
         Assert.True(_prices.HasChanges);
@@ -117,11 +120,11 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
         _api.ExamPrices = new ExamPricesDto(20m, []);
         await _prices.ActivateAsync();
         _prices.General.Text = "99";
-        _prices.Rows[0].Price.Text = "x";
+        _prices.Rows[0].StampFee.Text = "x";
 
         _prices.DiscardCommand.Execute(null);
 
-        Assert.Equal((Display.MoneyInput(20m), Display.MoneyInput(0)), (_prices.General.Text, _prices.Rows[0].Price.Text));
+        Assert.Equal((Display.MoneyInput(20m), Display.MoneyInput(0)), (_prices.General.Text, _prices.Rows[0].StampFee.Text));
         Assert.False(_prices.HasChanges);
         Assert.False(_prices.HasInvalid);
     }
@@ -271,5 +274,27 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
 
         Assert.False(detail.CanViewPayments);
         Assert.Empty(detail.PaymentRows);
+    }
+
+    [Fact]
+    public async Task A_row_shows_the_three_parts_of_what_is_due_and_the_own_belt_is_saved_with_it()
+    {
+        var detail = await PaymentsShownAsync(Row(_anna, _yellow.Id, 33m, stamp: 5m, beltPrice: 8m));
+        var row = detail.PaymentRows.Single();
+
+        Assert.Equal((Display.Money(20m), Display.Money(5m), Display.Money(8m), Display.Money(33m)), (row.GeneralFeeText, row.StampFeeText, row.BeltPriceText, row.DueText));
+        Assert.False(row.CanSave);
+        Assert.True(row.CanMarkPaid);
+
+        row.OwnBelt = true;
+        Assert.True(row.HasChange);
+        Assert.True(row.CanSave);
+        Assert.False(row.CanMarkPaid); // what is due changes with the belt: save that first
+        await row.SaveCommand.ExecuteAsync(null);
+
+        Assert.True(_api.PaymentInputs.Single().OwnBelt);
+        Assert.Equal((Display.Money(0m), Display.Money(25m), true), (row.BeltPriceText, row.DueText, row.OwnBelt));
+        Assert.False(row.CanSave);
+        Assert.True(row.CanMarkPaid);
     }
 }

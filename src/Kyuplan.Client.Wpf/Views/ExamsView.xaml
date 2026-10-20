@@ -251,6 +251,9 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PayName" MinWidth="180" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PayBelt" MinWidth="150" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PayGeneral" MinWidth="80" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PayStamp" MinWidth="80" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PayBeltPrice" MinWidth="130" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PayDue" MinWidth="90" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PayPaid" MinWidth="110" />
                         <ColumnDefinition Width="Auto" SharedSizeGroup="PayNote" MinWidth="200" />
@@ -260,21 +263,28 @@
                     <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource CellText}" FontWeight="SemiBold" />
                     <ContentControl Grid.Column="1" Margin="8,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsTabStop="False"
                                     Content="{Binding Belt}" ContentTemplate="{StaticResource BeltItem}" />
-                    <TextBlock Grid.Column="2" Text="{Binding DueText}" Style="{StaticResource CellText}" />
-                    <TextBox Grid.Column="3" Margin="8,0" Width="96" HorizontalContentAlignment="Right" VerticalAlignment="Center"
+                    <TextBlock Grid.Column="2" Text="{Binding GeneralFeeText}" Style="{StaticResource CellText}" />
+                    <TextBlock Grid.Column="3" Text="{Binding StampFeeText}" Style="{StaticResource CellText}" />
+                    <StackPanel Grid.Column="4" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding BeltPriceText}" Style="{StaticResource CellText}" />
+                        <CheckBox Content="{loc:Loc Pay_OwnBelt}" IsChecked="{Binding OwnBelt}" IsEnabled="{Binding CanEdit}"
+                                  ToolTip="{loc:Loc Pay_OwnBeltHint}" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="5" Text="{Binding DueText}" Style="{StaticResource CellText}" FontWeight="SemiBold" />
+                    <TextBox Grid.Column="6" Margin="8,0" Width="96" HorizontalContentAlignment="Right" VerticalAlignment="Center"
                              AutomationProperties.Name="{Binding Name}"
                              Text="{Binding Paid.Text, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding CanEdit}" />
-                    <TextBox Grid.Column="4" Margin="8,0" Width="184" VerticalAlignment="Center" MaxLength="{x:Static contracts:PaymentRules.MaxNoteLength}"
+                    <TextBox Grid.Column="7" Margin="8,0" Width="184" VerticalAlignment="Center" MaxLength="{x:Static contracts:PaymentRules.MaxNoteLength}"
                              AutomationProperties.Name="{Binding Name}"
                              Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding CanEdit}" />
-                    <StackPanel Grid.Column="5" Margin="8,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="8" Margin="8,0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding StatusText}" Style="{StaticResource PaymentStatusText}" />
                         <TextBlock Text="{Binding PaidOnText}" Style="{StaticResource MutedText}"
                                    Visibility="{Binding PaidOnText, Converter={StaticResource StringToVisibility}}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center"
+                    <StackPanel Grid.Column="9" Orientation="Horizontal" VerticalAlignment="Center"
                                 Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}">
                         <Button Command="{Binding MarkPaidCommand}" Content="{loc:Loc Pay_MarkPaid}" />
                         <Button Command="{Binding SaveCommand}" Content="{loc:Loc Pay_Save}" Margin="8,0,0,0" />
@@ -594,12 +604,16 @@
                                     <TextBlock Text=" · " Style="{StaticResource MutedText}" />
                                     <TextBlock Text="{Binding PaymentCountsText}" Style="{StaticResource MutedText}" />
                                 </StackPanel>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" PreviewMouseWheel="OnInnerWheel">
                                 <StackPanel Grid.IsSharedSizeScope="True">
                                     <Border Style="{StaticResource RowLine}" Padding="0,0,0,6" BorderBrush="{DynamicResource ControlStrongStrokeColorDefaultBrush}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="PayName" MinWidth="180" />
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="PayBelt" MinWidth="150" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="PayGeneral" MinWidth="80" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="PayStamp" MinWidth="80" />
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="PayBeltPrice" MinWidth="130" />
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="PayDue" MinWidth="90" />
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="PayPaid" MinWidth="110" />
                                                 <ColumnDefinition Width="Auto" SharedSizeGroup="PayNote" MinWidth="200" />
@@ -608,14 +622,18 @@
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{loc:Loc Pay_Member}" Style="{StaticResource HeaderText}" />
                                             <TextBlock Grid.Column="1" Text="{loc:Loc Pay_Belt}" Style="{StaticResource HeaderText}" Margin="8,0" />
-                                            <TextBlock Grid.Column="2" Text="{loc:Loc Pay_Due}" Style="{StaticResource HeaderText}" />
-                                            <TextBlock Grid.Column="3" Text="{loc:Loc Pay_Paid}" Style="{StaticResource HeaderText}" Margin="8,0" />
-                                            <TextBlock Grid.Column="4" Text="{loc:Loc Pay_Note}" Style="{StaticResource HeaderText}" Margin="8,0" />
-                                            <TextBlock Grid.Column="5" Text="{loc:Loc Col_Status}" Style="{StaticResource HeaderText}" Margin="8,0" />
+                                            <TextBlock Grid.Column="2" Text="{loc:Loc Pay_General}" Style="{StaticResource HeaderText}" />
+                                            <TextBlock Grid.Column="3" Text="{loc:Loc Pay_Stamp}" Style="{StaticResource HeaderText}" />
+                                            <TextBlock Grid.Column="4" Text="{loc:Loc Pay_BeltPrice}" Style="{StaticResource HeaderText}" />
+                                            <TextBlock Grid.Column="5" Text="{loc:Loc Pay_Due}" Style="{StaticResource HeaderText}" />
+                                            <TextBlock Grid.Column="6" Text="{loc:Loc Pay_Paid}" Style="{StaticResource HeaderText}" Margin="8,0" />
+                                            <TextBlock Grid.Column="7" Text="{loc:Loc Pay_Note}" Style="{StaticResource HeaderText}" Margin="8,0" />
+                                            <TextBlock Grid.Column="8" Text="{loc:Loc Col_Status}" Style="{StaticResource HeaderText}" Margin="8,0" />
                                         </Grid>
                                     </Border>
                                     <ItemsControl ItemsSource="{Binding PaymentRows}" ItemTemplate="{StaticResource PaymentItem}" IsTabStop="False" />
                                 </StackPanel>
+                                </ScrollViewer>
                             </StackPanel>
                         </StackPanel>
                     </Border>

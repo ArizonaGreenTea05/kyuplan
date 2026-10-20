@@ -124,7 +124,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         var kept = sameExam ? _watched.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => r.IsSelected) : new Dictionary<int, bool>();
         _members = [];
         _resultsLoaded = false;
-        var keptPayments = sameExam ? PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note)) : [];
+        var keptPayments = sameExam ? PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note, r.OwnBelt)) : [];
         ShowPayments(null, keptPayments);
         ShowSuggestions(null, new Dictionary<int, bool>());
         ShowAttendees();
@@ -573,7 +573,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         PaymentRows.Count(r => r.Status == PaymentStatus.Partial),
         PaymentRows.Count(r => r.Status == PaymentStatus.Open));
 
-    private async Task LoadPaymentsAsync(ExamRow exam, IReadOnlyDictionary<int, (string Paid, string Note)> kept, CancellationToken cancellationToken)
+    private async Task LoadPaymentsAsync(ExamRow exam, IReadOnlyDictionary<int, (string Paid, string Note, bool OwnBelt)> kept, CancellationToken cancellationToken)
     {
         var payments = await _api.GetExamPaymentsAsync(exam.Id, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -582,7 +582,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         ShowPayments(payments, kept);
     }
 
-    private void ShowPayments(ExamPaymentsDto? payments, IReadOnlyDictionary<int, (string Paid, string Note)> kept)
+    private void ShowPayments(ExamPaymentsDto? payments, IReadOnlyDictionary<int, (string Paid, string Note, bool OwnBelt)> kept)
     {
         if (payments is null) _paymentsLoaded = false;
 
@@ -595,6 +595,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
                 {
                     row.Paid.Text = typed.Paid;
                     row.Note = typed.Note;
+                    row.OwnBelt = typed.OwnBelt;
                 }
 
                 return row;
@@ -611,7 +612,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
     {
         if (!CanViewPayments) return;
 
-        var kept = PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note));
+        var kept = PaymentRows.Where(r => r.HasChange).ToDictionary(r => r.MemberId, r => (r.Paid.Text, r.Note, r.OwnBelt));
         await LoadAsync(ct => LoadPaymentsAsync(exam, kept, ct));
     }
 
@@ -626,7 +627,7 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
             if (!ReferenceEquals(Exam, exam)) return;
 
             ExamPaymentDto? saved = null;
-            var input = new ExamPaymentInputDto(row.Paid.Amount, null, string.IsNullOrWhiteSpace(row.Note) ? null : row.Note.Trim());
+            var input = new ExamPaymentInputDto(row.Paid.Amount, null, string.IsNullOrWhiteSpace(row.Note) ? null : row.Note.Trim(), row.OwnBelt);
             await LoadAsync(async ct => saved = await _api.SetExamPaymentAsync(exam.Id, row.MemberId, input, ct));
             if (saved is null) return;
 

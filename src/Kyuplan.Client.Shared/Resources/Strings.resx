@@ -2834,19 +2834,19 @@
     <value>Change the exam prices</value>
   </data>
   <data name="Prices_Intro" xml:space="preserve">
-    <value>Every member pays the general fee for an exam, plus the additional price of the belt they will receive.</value>
+    <value>Every member pays the general fee for an exam, plus the fee for the exam stamp (Prüfungsmarke) and the price of the belt they will receive. A member who got the belt elsewhere does not pay for the belt.</value>
   </data>
   <data name="Prices_General" xml:space="preserve">
     <value>General fee per member</value>
   </data>
   <data name="Prices_Belts" xml:space="preserve">
-    <value>Additional price by belt</value>
+    <value>Costs by belt</value>
   </data>
   <data name="Prices_BeltsHint" xml:space="preserve">
-    <value>Added to the general fee when the member receives this belt. 0 = no additional price.</value>
+    <value>Added to the general fee when the member receives this belt. 0 = nothing extra.</value>
   </data>
   <data name="Prices_NoBelts" xml:space="preserve">
-    <value>There are no belts yet. Add belts to give them an additional price.</value>
+    <value>There are no belts yet. Add belts to give them a stamp fee and a price.</value>
   </data>
   <data name="Prices_Save" xml:space="preserve">
     <value>Save prices</value>
@@ -2867,7 +2867,7 @@
     <value>Payments</value>
   </data>
   <data name="Pay_Intro" xml:space="preserve">
-    <value>What each member owes for this exam: the general fee plus the additional price of the belt they receive.</value>
+    <value>What each member owes for this exam: the general fee, the exam stamp fee and the price of the belt they receive (not charged when they got the belt elsewhere).</value>
   </data>
   <data name="Pay_Member" xml:space="preserve">
     <value>Member</value>
@@ -2916,5 +2916,26 @@
   </data>
   <data name="Pay_Invalid" xml:space="preserve">
     <value>Enter an amount of at least 0 with at most two decimals.</value>
+  </data>
+  <data name="Prices_StampFee" xml:space="preserve">
+    <value>Exam stamp</value>
+  </data>
+  <data name="Prices_BeltPrice" xml:space="preserve">
+    <value>Belt</value>
+  </data>
+  <data name="Pay_General" xml:space="preserve">
+    <value>General fee</value>
+  </data>
+  <data name="Pay_Stamp" xml:space="preserve">
+    <value>Exam stamp</value>
+  </data>
+  <data name="Pay_BeltPrice" xml:space="preserve">
+    <value>Belt price</value>
+  </data>
+  <data name="Pay_OwnBelt" xml:space="preserve">
+    <value>Own belt</value>
+  </data>
+  <data name="Pay_OwnBeltHint" xml:space="preserve">
+    <value>The member got the belt elsewhere (e.g. from a sibling), so its price is not charged.</value>
   </data>
 </root>

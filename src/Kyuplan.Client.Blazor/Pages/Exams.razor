@@ -401,6 +401,9 @@
                                         <tr>
                                             <th>@Strings.Pay_Member</th>
                                             <th>@Strings.Pay_Belt</th>
+                                            <th>@Strings.Pay_General</th>
+                                            <th>@Strings.Pay_Stamp</th>
+                                            <th>@Strings.Pay_BeltPrice</th>
                                             <th>@Strings.Pay_Due</th>
                                             <th>@Strings.Pay_Paid</th>
                                             <th>@Strings.Pay_Note</th>
@@ -417,7 +420,23 @@
                                             <tr @key="row.MemberId">
                                                 <td class="name"><strong>@row.Name</strong></td>
                                                 <td><BeltBadge Belt="row.Belt" ShowName="true" /></td>
-                                                <td>@row.DueText</td>
+                                                <td>@row.GeneralFeeText</td>
+                                                <td>@row.StampFeeText</td>
+                                                <td>
+                                                    @row.BeltPriceText
+                                                    @if (Detail.CanEditPayments)
+                                                    {
+                                                        <label class="check" title="@Strings.Pay_OwnBeltHint">
+                                                            <input type="checkbox" @bind="row.OwnBelt" />
+                                                            <span>@Strings.Pay_OwnBelt</span>
+                                                        </label>
+                                                    }
+                                                    else if (row.OwnBelt)
+                                                    {
+                                                        <small class="note">@Strings.Pay_OwnBelt</small>
+                                                    }
+                                                </td>
+                                                <td><strong>@row.DueText</strong></td>
                                                 <td>
                                                     @if (Detail.CanEditPayments)
                                                     {

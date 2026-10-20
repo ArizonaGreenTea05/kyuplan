@@ -360,12 +360,23 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<decimal>("BeltPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<bool>("OwnBelt")
+                        .HasColumnType("boolean");
+
                     b.Property<DateOnly?>("PaidOn")
                         .HasColumnType("date");
+
+                    b.Property<decimal>("StampFee")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
 
                     b.HasKey("ExamId", "MemberId");
 
@@ -392,6 +403,10 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Property<int?>("BeltId")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("BeltPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BeltId")
@@ -399,7 +414,7 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
 
                     b.ToTable("ExamPrices", t =>
                         {
-                            t.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0");
+                            t.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0 AND \"BeltPrice\" >= 0");
                         });
                 });
 

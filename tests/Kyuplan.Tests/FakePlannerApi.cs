@@ -324,7 +324,7 @@ internal sealed class FakePlannerApi : IPlannerApi
         {
             PaymentCalls.Add("set-prices");
             if (!PaymentRules.IsAmount(prices.GeneralFee)) throw BadRequest("The fee is no amount.");
-            return ExamPrices = prices with { BeltPrices = [.. prices.BeltPrices.Where(p => p.Surcharge > 0)] };
+            return ExamPrices = prices with { BeltPrices = [.. prices.BeltPrices.Where(p => p.StampFee > 0 || p.BeltPrice > 0)] };
         });
 
     public Task<ExamPaymentsDto> GetExamPaymentsAsync(int examId, CancellationToken cancellationToken = default) =>
@@ -348,10 +348,12 @@ internal sealed class FakePlannerApi : IPlannerApi
             var row = rows[index];
             return rows[index] = row with
             {
+                OwnBelt = payment.OwnBelt,
+                BeltPrice = payment.OwnBelt ? 0 : row.BeltPrice,
                 Paid = payment.Paid,
                 PaidOn = payment.Paid > 0 ? payment.PaidOn ?? new DateOnly(2026, 10, 13) : null,
                 Note = string.IsNullOrWhiteSpace(payment.Note) ? null : payment.Note.Trim(),
-                Status = PaymentRules.StatusOf(row.Due, payment.Paid),
+                Status = PaymentRules.StatusOf(row.GeneralFee + row.StampFee + (payment.OwnBelt ? 0 : row.BeltPrice), payment.Paid),
             };
         });
 

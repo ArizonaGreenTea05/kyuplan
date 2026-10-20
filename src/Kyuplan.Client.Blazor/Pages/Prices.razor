@@ -48,7 +48,8 @@
                             <thead>
                                 <tr>
                                     <th>@Strings.Pay_Belt</th>
-                                    <th>@Strings.Prices_Belts</th>
+                                    <th>@Strings.Prices_StampFee</th>
+                                    <th>@Strings.Prices_BeltPrice</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -57,8 +58,12 @@
                                     <tr @key="row.Belt.Id">
                                         <td class="name"><BeltBadge Belt="row.Belt" ShowName="true" /></td>
                                         <td>
-                                            <input type="text" inputmode="decimal" disabled="@(!Vm.CanEdit)" @bind="row.Price.Text" @bind:event="oninput"
-                                                   aria-label="@($"{Strings.Prices_Belts}: {row.Name}")" />
+                                            <input type="text" inputmode="decimal" disabled="@(!Vm.CanEdit)" @bind="row.StampFee.Text" @bind:event="oninput"
+                                                   aria-label="@($"{Strings.Prices_StampFee}: {row.Name}")" />
+                                        </td>
+                                        <td>
+                                            <input type="text" inputmode="decimal" disabled="@(!Vm.CanEdit)" @bind="row.BeltPrice.Text" @bind:event="oninput"
+                                                   aria-label="@($"{Strings.Prices_BeltPrice}: {row.Name}")" />
                                         </td>
                                     </tr>
                                 }

@@ -347,11 +347,22 @@ namespace Kyuplan.Api.Persistence.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("BeltPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("OwnBelt")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateOnly?>("PaidOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("StampFee")
+                        .HasPrecision(10, 2)
                         .HasColumnType("TEXT");
 
                     b.HasKey("ExamId", "MemberId");
@@ -377,6 +388,10 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Property<int?>("BeltId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("BeltPrice")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("BeltId")
@@ -384,7 +399,7 @@ namespace Kyuplan.Api.Persistence.Migrations
 
                     b.ToTable("ExamPrices", t =>
                         {
-                            t.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0");
+                            t.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0 AND \"BeltPrice\" >= 0");
                         });
                 });
 

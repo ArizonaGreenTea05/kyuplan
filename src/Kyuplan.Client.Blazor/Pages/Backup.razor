@@ -32,6 +32,15 @@
                 <p class="note">@Strings.Backup_FileHint</p>
             </div>
 
+            @if (Vm.CanDownload || Vm.CanRestore)
+            {
+                <label class="field">
+                    <span>@Strings.Backup_PassphraseLabel</span>
+                    <input type="password" maxlength="@BackupRules.MaxPassphraseLength" autocomplete="new-password" @bind="Vm.Passphrase" @bind:event="oninput" />
+                    <small class="@(Vm.PassphraseProblem is null ? "" : "field-error")">@(Vm.PassphraseProblem ?? Strings.Backup_PassphraseHint)</small>
+                </label>
+            }
+
             <div class="form-actions">
                 @if (Vm.CanDownload)
                 {

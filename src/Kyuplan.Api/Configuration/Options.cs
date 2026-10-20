@@ -180,6 +180,9 @@ public sealed class BackupOptions
     /// </summary>
     public string? InitialDataFile { get; set; }
 
+    /// <summary>The passphrase of <see cref="InitialDataFile"/> when that file was downloaded encrypted. Empty = not encrypted.</summary>
+    public string? InitialDataPassphrase { get; set; }
+
     /// <summary>The largest backup file that can be uploaded.</summary>
     public int MaxUploadMegabytes { get; set; } = 256;
 

@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
              xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
              Loaded="OnLoaded" Unloaded="OnUnloaded">
 
     <UserControl.Resources>
@@ -49,6 +50,11 @@
                     <StackPanel>
                         <TextBlock Text="{loc:Loc Backup_FileTitle}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,4" />
                         <TextBlock Text="{loc:Loc Backup_FileHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                        <TextBlock Text="{loc:Loc Backup_PassphraseLabel}" Style="{StaticResource FieldLabelText}" />
+                        <ctl:RevealPasswordBox MaxLength="{x:Static contracts:BackupRules.MaxPassphraseLength}" PasswordChanged="OnPassphraseChanged" Margin="0,0,0,4" />
+                        <TextBlock Text="{loc:Loc Backup_PassphraseHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding PassphraseProblem}" Foreground="{DynamicResource DataRiskTextBrush}" Margin="0,0,0,12" TextWrapping="Wrap" />
 
                         <StackPanel Orientation="Horizontal">
                             <Button Command="{Binding DownloadCommand}" Content="{loc:Loc Backup_Download}" Style="{StaticResource AccentButtonStyle}"

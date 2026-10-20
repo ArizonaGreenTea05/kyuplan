@@ -50,9 +50,12 @@ public static class BackupEndpoints
             {
                 // A file that is saved and sent on must not be cached.
                 http.Response.Headers.CacheControl = "no-store";
-                return Results.Stream(stream => service.WriteAsync(stream, http.RequestAborted), BackupRules.ContentType, service.FileName());
+                var passphrase = BackupRules.DecodePassphrase(http.Request.Headers[BackupRules.PassphraseHeader]);
+                if (BackupRules.CheckPassphrase(passphrase) is { } problem) return Results.Problem(problem, statusCode: StatusCodes.Status400BadRequest);
+
+                return Results.Stream(stream => service.WriteAsync(stream, passphrase, http.RequestAborted), BackupRules.ContentType, service.FileName());
             })
-            .WithSummary("Download a backup file (zip) with all data of both databases. It can be uploaded to restore, or be the InitialDataFile of a new instance.")
+            .WithSummary("Download a backup file (zip) with all data of both databases; encrypted with a passphrase (header X-Backup-Passphrase, base64 of UTF-8, at least 8 characters) when one is sent. It can be uploaded to restore, or be the InitialDataFile of a new instance.")
             .RequirePermission(Permission.BackupsDownload);
 
         group.MapPost("/restore", async (HttpRequest request, BackupService service, IAppRestarter restarter, IOptions<BackupOptions> options, CancellationToken ct) =>
@@ -67,7 +70,7 @@ public static class BackupEndpoints
                 {
                     await using (var file = File.Create(temporary)) await request.Body.CopyToAsync(file, ct);
                     await using var stream = File.OpenRead(temporary);
-                    var restored = await service.RestoreAsync(stream, ct);
+                    var restored = await service.RestoreAsync(stream, BackupRules.DecodePassphrase(request.Headers[BackupRules.PassphraseHeader]), ct);
                     restarter.Request(); // everything that was read from the old data (logins, caches) is read again
                     return Results.Ok(restored);
                 }
@@ -78,7 +81,7 @@ public static class BackupEndpoints
             })
             .Accepts<Stream>(BackupRules.ContentType)
             .Produces<BackupRestoredDto>()
-            .WithSummary("Replace ALL data (both databases) with an uploaded backup file (the body). 400 with the reason, and nothing changed, when it is no backup this program can read. The API restarts afterwards.")
+            .WithSummary("Replace ALL data (both databases) with an uploaded backup file (the body; header X-Backup-Passphrase when it is encrypted). 400 with the reason, and nothing changed, when it is no backup this program can read. The API restarts afterwards.")
             .RequirePermission(Permission.BackupsRestore);
 
         return app;

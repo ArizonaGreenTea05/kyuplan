@@ -55,6 +55,37 @@ public static class BackupRules
 
     public const string ContentType = "application/zip";
 
+    /// <summary>Request header with the passphrase of an encrypted backup (download: encrypt with it; restore: decrypt with it), see <see cref="EncodePassphrase"/>.</summary>
+    public const string PassphraseHeader = "X-Backup-Passphrase";
+
+    public const int MinPassphraseLength = 8;
+    public const int MaxPassphraseLength = 200;
+
+    /// <summary>A header carries ASCII only: the passphrase goes over as base64 of its UTF-8 bytes.</summary>
+    public static string EncodePassphrase(string passphrase) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(passphrase));
+
+    /// <summary>The passphrase of a header value; <c>null</c> when there is none or it is no base64.</summary>
+    public static string? DecodePassphrase(string? header)
+    {
+        if (string.IsNullOrEmpty(header)) return null;
+
+        try
+        {
+            return System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(header));
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The problem with a passphrase for a new backup file in words, or <c>null</c>. An empty one means "not encrypted" and is fine.</summary>
+    public static string? CheckPassphrase(string? passphrase) =>
+        string.IsNullOrEmpty(passphrase) ? null
+        : passphrase.Length < MinPassphraseLength ? $"the passphrase must be at least {MinPassphraseLength} characters long."
+        : passphrase.Length > MaxPassphraseLength ? $"the passphrase must be at most {MaxPassphraseLength} characters long."
+        : null;
+
     public static string? Check(BackupTargetInputDto? input)
     {
         if (input is null) return "the target is required.";

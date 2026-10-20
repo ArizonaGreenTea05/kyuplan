@@ -415,15 +415,15 @@ internal sealed class FakePlannerApi : IPlannerApi
             };
         });
 
-    public Task<BackupFile> DownloadBackupAsync(CancellationToken cancellationToken = default) =>
+    public Task<BackupFile> DownloadBackupAsync(string? passphrase = null, CancellationToken cancellationToken = default) =>
         Run(() =>
         {
             if (!Account.Can(Permission.BackupsDownload)) throw Forbidden();
-            BackupCalls.Add("download");
+            BackupCalls.Add(string.IsNullOrEmpty(passphrase) ? "download" : "download:" + passphrase);
             return new BackupFile("kyuplan-backup-test.kyubackup", [1, 2, 3]);
         });
 
-    public async Task<BackupRestoredDto> RestoreBackupAsync(Stream file, CancellationToken cancellationToken = default)
+    public async Task<BackupRestoredDto> RestoreBackupAsync(Stream file, string? passphrase = null, CancellationToken cancellationToken = default)
     {
         using var copy = new MemoryStream();
         await file.CopyToAsync(copy, cancellationToken);
@@ -432,7 +432,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             if (!Account.Can(Permission.BackupsRestore)) throw Forbidden();
             if (copy.Length == 0) throw BadRequest("This is not a backup file.");
 
-            BackupCalls.Add("restore:" + copy.Length);
+            BackupCalls.Add("restore:" + copy.Length + (string.IsNullOrEmpty(passphrase) ? "" : ":" + passphrase));
             return BackupRestored;
         });
     }

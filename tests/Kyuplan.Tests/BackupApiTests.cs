@@ -325,6 +325,52 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Equal(HttpStatusCode.NotFound, (await admin.PostAsync("/api/backup/targets/99/run", null)).StatusCode);
     }
 
+    private static async Task<HttpResponseMessage> WithPassphraseAsync(HttpClient client, HttpMethod method, string url, string? passphrase, byte[]? body = null)
+    {
+        var request = new HttpRequestMessage(method, url) { Content = body is null ? null : new ByteArrayContent(body) };
+        if (passphrase is not null) request.Headers.Add(BackupRules.PassphraseHeader, BackupRules.EncodePassphrase(passphrase));
+        return await client.SendAsync(request);
+    }
+
+    [Fact]
+    public async Task An_encrypted_backup_is_not_a_zip_and_restores_only_with_its_passphrase()
+    {
+        const string passphrase = "correct horse ü battery";
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        await ReadAsync<BeltDto>(await admin.PostAsJsonAsync("/api/belts", Belt("White")));
+
+        var response = await WithPassphraseAsync(admin, HttpMethod.Get, "/api/backup/download", passphrase);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var file = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(BackupEncryption.IsEncrypted(file));
+        Assert.NotEqual((byte)'P', file[0]); // not the start of a zip
+
+        var white = (await admin.GetFromJsonAsync<List<BeltDto>>("/api/belts"))!.Single();
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"/api/belts/{white.Id}")).StatusCode);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadAsync(admin, file)).StatusCode); // no passphrase
+        Assert.Equal(HttpStatusCode.BadRequest, (await WithPassphraseAsync(admin, HttpMethod.Post, "/api/backup/restore", "wrong passphrase", file)).StatusCode);
+        Assert.Empty(await BeltNamesAsync(admin));
+        Assert.Equal(0, _restarter.Requests);
+
+        await ReadAsync<BackupRestoredDto>(await WithPassphraseAsync(admin, HttpMethod.Post, "/api/backup/restore", passphrase, file));
+        Assert.Equal(["White"], await BeltNamesAsync(admin));
+    }
+
+    [Fact]
+    public async Task A_passphrase_that_is_too_short_is_refused_and_a_damaged_encrypted_file_is_not_read()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await WithPassphraseAsync(admin, HttpMethod.Get, "/api/backup/download", "short")).StatusCode);
+
+        var file = await (await WithPassphraseAsync(admin, HttpMethod.Get, "/api/backup/download", "long enough phrase")).Content.ReadAsByteArrayAsync();
+        file[^1] ^= 0xFF;
+        Assert.Equal(HttpStatusCode.BadRequest, (await WithPassphraseAsync(admin, HttpMethod.Post, "/api/backup/restore", "long enough phrase", file)).StatusCode);
+    }
+
     [Fact]
     public async Task A_run_that_fails_is_reported_on_the_backup_database_and_not_as_an_error()
     {

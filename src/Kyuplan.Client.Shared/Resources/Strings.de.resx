@@ -3238,4 +3238,16 @@
   <data name="Settings_ScriptTooLong" xml:space="preserve">
     <value>Das Skript ist zu lang (höchstens {0} Zeichen).</value>
   </data>
+  <data name="Backup_PassphraseLabel" xml:space="preserve">
+    <value>Passwortsatz (optional)</value>
+  </data>
+  <data name="Backup_PassphraseHint" xml:space="preserve">
+    <value>Mit einem Passwortsatz wird die heruntergeladene Datei verschlüsselt; zum Wiederherstellen wird derselbe Passwortsatz gebraucht. Ein vergessener Passwortsatz lässt sich nicht wiederherstellen. Leer lassen für eine unverschlüsselte Datei.</value>
+  </data>
+  <data name="Backup_PassphraseShort" xml:space="preserve">
+    <value>Der Passwortsatz muss mindestens {0} Zeichen lang sein.</value>
+  </data>
+  <data name="Backup_DownloadedEncrypted" xml:space="preserve">
+    <value>Die verschlüsselte Sicherungsdatei wurde heruntergeladen.</value>
+  </data>
 </root>

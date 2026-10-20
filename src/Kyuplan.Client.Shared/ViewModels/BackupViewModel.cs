@@ -347,7 +347,17 @@ public sealed partial class BackupViewModel : PageViewModel
     /// <summary>The API sent a backup file; the client saves it where the user says.</summary>
     public event EventHandler<BackupFile>? DownloadReady;
 
-    private bool CanStartDownload() => CanDownload && !IsBusy && !IsRestarting;
+    /// <summary>Encrypts the downloaded file, and opens an encrypted one that is restored. Empty = not encrypted.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PassphraseProblem))]
+    private string _passphrase = "";
+
+    partial void OnPassphraseChanged(string value) => DownloadCommand.NotifyCanExecuteChanged();
+
+    /// <summary>What is wrong with the passphrase for a download, in words; <c>null</c> when it is fine or empty.</summary>
+    public string? PassphraseProblem => BackupRules.CheckPassphrase(Passphrase) is null ? null : string.Format(Strings.Backup_PassphraseShort, BackupRules.MinPassphraseLength);
+
+    private bool CanStartDownload() => CanDownload && !IsBusy && !IsRestarting && PassphraseProblem is null;
 
     [RelayCommand(CanExecute = nameof(CanStartDownload))]
     private async Task DownloadAsync()
@@ -356,11 +366,11 @@ public sealed partial class BackupViewModel : PageViewModel
 
         Prepare();
         BackupFile? file = null;
-        await LoadAsync(async ct => file = await _api.DownloadBackupAsync(ct));
+        await LoadAsync(async ct => file = await _api.DownloadBackupAsync(Passphrase, ct));
         if (file is null) return;
 
         DownloadReady?.Invoke(this, file);
-        SetNotice(() => Strings.Backup_Downloaded);
+        SetNotice(() => string.IsNullOrEmpty(Passphrase) ? Strings.Backup_Downloaded : Strings.Backup_DownloadedEncrypted);
     }
 
     // --- The backup file: restore ----------------------------------------------------------------------------
@@ -406,10 +416,11 @@ public sealed partial class BackupViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             await using var file = open();
-            restored = await _api.RestoreBackupAsync(file, ct);
+            restored = await _api.RestoreBackupAsync(file, Passphrase, ct);
         });
         if (restored is null) return; // the API refused the file, and nothing was changed: the error says why
 
+        Passphrase = "";
         IsRestarting = true;
         var rows = restored.Rows;
         SetNotice(() => string.Format(Strings.Backup_RestoredRestarting, rows));
@@ -449,5 +460,6 @@ public sealed partial class BackupViewModel : PageViewModel
         OnPropertyChanged(nameof(Kinds));
         OnPropertyChanged(nameof(ConfirmDeleteText));
         OnPropertyChanged(nameof(ConfirmRestoreText));
+        OnPropertyChanged(nameof(PassphraseProblem));
     }
 }

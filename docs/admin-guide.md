@@ -478,6 +478,8 @@ Open **Administration → Backup**. It has two parts; each has its own permissio
 
 The file is independent of the database system: a backup of a SQLite server restores into a PostgreSQL one and back.
 
+**Encryption (optional).** Type a *passphrase* (at least 8 characters) above the buttons before you download, and the file is encrypted (AES-256-GCM, key derived with PBKDF2): without the passphrase it cannot be read, and a wrong passphrase or a damaged file is refused. Restoring an encrypted file needs the same passphrase in the same field. **A lost passphrase cannot be recovered.** For a new server (`Backup:InitialDataFile`) set `Backup:InitialDataPassphrase` as well. The mirror databases below are not encrypted (they are normal databases: protect them like the live one).
+
 *Restore from file…* (`backups.restore`) **replaces all data on the running server** with the content of a backup file. The page asks you to confirm first; nothing happens before that. Then:
 
 - the file is checked completely before anything is changed: a file that is no backup, is damaged, or was made by a **newer** version of the program than this server is refused and nothing changes;
@@ -499,6 +501,7 @@ A *backup database* is a **second database** that the server keeps a complete co
 
 - **Never choose the live database.** The server refuses a folder that holds its own SQLite files or its own PostgreSQL database. Pick a different disk, share or server so that a failure of the first does not take the copy with it.
 - The kinds are independent of the live database's system: a SQLite server can mirror into PostgreSQL and the other way round.
+- **Restore test.** After every update (scheduled or *Update now*) the server reads the whole backup database back, as a restore would, and compares it table by table with what it wrote. A mismatch or an unreadable database makes the run **fail** with the reason, so a mirror that could not be restored shows up in the list instead of on the day you need it.
 - **Update now** runs one at once. The list shows when each one was last updated and, for a failed run, the reason (database unreachable, wrong password, folder not writable). A failed run is tried again at the next interval; a switched-off backup database is not updated.
 - A backup database is a normal database of this program: to switch to it, point `Database:ConnectionString` / `Accounts:ConnectionString` at it (it carries the current schema, and the server brings it up to date when it starts).
 - The definitions are kept in the file `backup-targets.json` next to the settings file (`Backup:TargetsFile` moves it); the locations are stored encrypted, because a connection string holds a password. They are not part of a backup file.

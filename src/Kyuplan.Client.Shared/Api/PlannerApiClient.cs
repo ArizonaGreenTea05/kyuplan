@@ -100,17 +100,24 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PostAsync($"api/backup/targets/{id}/run", null, cancellationToken), PlannerJsonContext.Default.BackupTargetDto, cancellationToken);
 
-    public async Task<BackupFile> DownloadBackupAsync(CancellationToken cancellationToken = default)
+    public async Task<BackupFile> DownloadBackupAsync(string? passphrase = null, CancellationToken cancellationToken = default)
     {
-        using var response = await SendAsync(() => http.GetAsync("api/backup/download", cancellationToken));
+        using var response = await SendAsync(() => http.SendAsync(WithPassphrase(new HttpRequestMessage(HttpMethod.Get, "api/backup/download"), passphrase), cancellationToken));
         await EnsureSuccessAsync(response, cancellationToken);
 
         var name = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') is { Length: > 0 } given ? given : $"kyuplan-backup{BackupRules.Extension}";
         return new BackupFile(name, await response.Content.ReadAsByteArrayAsync(cancellationToken));
     }
 
-    public Task<BackupRestoredDto> RestoreBackupAsync(Stream file, CancellationToken cancellationToken = default) =>
-        SendJsonAsync(() => http.PostAsync("api/backup/restore", new StreamContent(file), cancellationToken), PlannerJsonContext.Default.BackupRestoredDto, cancellationToken);
+    public Task<BackupRestoredDto> RestoreBackupAsync(Stream file, string? passphrase = null, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.SendAsync(WithPassphrase(new HttpRequestMessage(HttpMethod.Post, "api/backup/restore") { Content = new StreamContent(file) }, passphrase), cancellationToken),
+            PlannerJsonContext.Default.BackupRestoredDto, cancellationToken);
+
+    private static HttpRequestMessage WithPassphrase(HttpRequestMessage request, string? passphrase)
+    {
+        if (!string.IsNullOrEmpty(passphrase)) request.Headers.Add(BackupRules.PassphraseHeader, BackupRules.EncodePassphrase(passphrase));
+        return request;
+    }
 
     public Task<UserDto> SetThemeAsync(ThemePreferenceDto preference, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PutAsync("api/account/theme", Json(preference, PlannerJsonContext.Default.ThemePreferenceDto), cancellationToken),

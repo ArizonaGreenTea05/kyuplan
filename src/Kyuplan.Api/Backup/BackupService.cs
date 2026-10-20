@@ -58,9 +58,11 @@ public sealed class BackupService(
 
     // --- Files -------------------------------------------------------------------------------------------------
 
-    /// <summary>Writes a backup of everything as a zip file.</summary>
-    public async Task WriteAsync(Stream output, CancellationToken cancellationToken)
+    /// <summary>Writes a backup of everything as a zip file, encrypted with the passphrase when there is one (<see cref="BackupEncryption"/>).</summary>
+    public async Task WriteAsync(Stream output, string? passphrase, CancellationToken cancellationToken)
     {
+        if (BackupRules.CheckPassphrase(passphrase) is { } problem) throw new InvalidInputException(problem);
+
         var content = await ReadAllAsync(planner, accounts, cancellationToken);
         var manifest = new BackupManifest(FormatVersion, time.GetUtcNow(), database.Value.Provider.ToString(), SchemaOf(planner), SchemaOf(accounts), content.Rows);
 
@@ -73,8 +75,14 @@ public sealed class BackupService(
             foreach (var (name, rows) in content.Accounts) await WriteEntryAsync(zip, $"{AccountsFolder}{name}.json", rows, cancellationToken);
         }
 
-        packed.Position = 0;
-        await packed.CopyToAsync(output, cancellationToken);
+        if (string.IsNullOrEmpty(passphrase))
+        {
+            packed.Position = 0;
+            await packed.CopyToAsync(output, cancellationToken);
+            return;
+        }
+
+        await output.WriteAsync(BackupEncryption.Encrypt(packed.ToArray(), passphrase), cancellationToken);
     }
 
     /// <summary>The file name a downloaded backup gets.</summary>
@@ -84,9 +92,9 @@ public sealed class BackupService(
     /// Replaces everything in both databases with the backup file's data. Throws <see cref="InvalidInputException"/> before anything is changed when the
     /// file is no backup this program can read; a failure while writing undoes everything (one transaction per database).
     /// </summary>
-    public async Task<BackupRestoredDto> RestoreAsync(Stream file, CancellationToken cancellationToken)
+    public async Task<BackupRestoredDto> RestoreAsync(Stream file, string? passphrase, CancellationToken cancellationToken)
     {
-        var (manifest, content) = Read(file);
+        var (manifest, content) = Read(await DecryptAsync(file, passphrase, cancellationToken));
 
         await gate.WaitAsync(cancellationToken);
         await sync.WaitAsync(cancellationToken);
@@ -142,8 +150,24 @@ public sealed class BackupService(
         }
 
         await using var file = File.OpenRead(path);
-        await RestoreAsync(file, cancellationToken);
+        await RestoreAsync(file, options.Value.InitialDataPassphrase, cancellationToken);
         return true;
+    }
+
+    /// <summary>The file as a plain zip: an encrypted one is decrypted (in memory, it is at most the upload limit), a plain one is passed on.</summary>
+    private static async Task<Stream> DecryptAsync(Stream file, string? passphrase, CancellationToken cancellationToken)
+    {
+        var head = new byte[8];
+        var read = await file.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false, cancellationToken);
+        if (file.CanSeek) file.Position = 0;
+        else throw new InvalidOperationException("The backup stream must be seekable.");
+        if (!BackupEncryption.IsEncrypted(head.AsSpan(0, read))) return file;
+
+        if (string.IsNullOrEmpty(passphrase)) throw new InvalidInputException("This backup file is encrypted: enter its passphrase.");
+
+        using var all = new MemoryStream();
+        await file.CopyToAsync(all, cancellationToken);
+        return new MemoryStream(BackupEncryption.Decrypt(all.ToArray(), passphrase));
     }
 
     private (BackupManifest Manifest, Content Content) Read(Stream file)
@@ -277,11 +301,28 @@ public sealed class BackupService(
                 await targetAccounts.EnsureUpToDateAsync(cancellationToken);
                 await DatabaseCopier.ReplaceAsync(targetAccounts, content.Accounts, cancellationToken);
                 await DatabaseCopier.ReplaceAsync(targetPlanner, content.Planner, cancellationToken);
+
+                // The restore test: what a restore from this database would read must be what was written.
+                var problems = Differences("planner", content.Planner, await ReadTablesAsync(targetPlanner, cancellationToken))
+                    .Concat(Differences("accounts", content.Accounts, await ReadTablesAsync(targetAccounts, cancellationToken))).ToList();
+                if (problems.Count > 0) throw new InvalidOperationException($"Restore test failed: {string.Join("; ", problems.Take(5))}.");
             }
         }
         finally
         {
             gate.Release();
+        }
+    }
+
+    /// <summary>Tables whose rows read back from the backup database are not the rows that were written (compared as sets of JSON rows).</summary>
+    private static IEnumerable<string> Differences(string database, Dictionary<string, List<JsonObject>> written, Dictionary<string, List<JsonObject>> readBack)
+    {
+        foreach (var (table, rows) in written)
+        {
+            var back = readBack.GetValueOrDefault(table) ?? [];
+            if (rows.Count != back.Count) yield return $"{database}/{table} has {back.Count} rows instead of {rows.Count}";
+            else if (!rows.Select(r => r.ToJsonString()).Order(StringComparer.Ordinal).SequenceEqual(back.Select(r => r.ToJsonString()).Order(StringComparer.Ordinal)))
+                yield return $"{database}/{table} differs from the original";
         }
     }
 

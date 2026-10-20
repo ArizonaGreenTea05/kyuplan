@@ -3337,4 +3337,16 @@
   <data name="Settings_ScriptTooLong" xml:space="preserve">
     <value>The script is too long (at most {0} characters).</value>
   </data>
+  <data name="Backup_PassphraseLabel" xml:space="preserve">
+    <value>Passphrase (optional)</value>
+  </data>
+  <data name="Backup_PassphraseHint" xml:space="preserve">
+    <value>With a passphrase the downloaded file is encrypted; the same passphrase is needed to restore it. There is no way to recover a lost passphrase. Leave it empty for a plain file.</value>
+  </data>
+  <data name="Backup_PassphraseShort" xml:space="preserve">
+    <value>The passphrase must be at least {0} characters long.</value>
+  </data>
+  <data name="Backup_DownloadedEncrypted" xml:space="preserve">
+    <value>The encrypted backup file was downloaded.</value>
+  </data>
 </root>

@@ -227,6 +227,23 @@ public sealed class BackupViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task A_passphrase_encrypts_the_download_and_a_short_one_blocks_it()
+    {
+        var vm = await ShownAsync();
+
+        vm.Passphrase = "short";
+        Assert.NotNull(vm.PassphraseProblem);
+        Assert.False(vm.DownloadCommand.CanExecute(null));
+
+        vm.Passphrase = "long enough phrase";
+        Assert.Null(vm.PassphraseProblem);
+        await vm.DownloadCommand.ExecuteAsync(null);
+
+        Assert.Contains("download:long enough phrase", _api.BackupCalls);
+        Assert.Equal("The encrypted backup file was downloaded.", vm.NoticeText);
+    }
+
+    [Fact]
     public async Task A_download_that_fails_is_not_saved()
     {
         var vm = await ShownAsync();

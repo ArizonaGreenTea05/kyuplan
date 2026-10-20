@@ -62,6 +62,11 @@ public partial class BackupView : UserControl
         }
     }
 
+    private void OnPassphraseChanged(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } viewModel && sender is Controls.RevealPasswordBox box) viewModel.Passphrase = box.Password;
+    }
+
     private void OnChooseFile(object sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } viewModel) return;

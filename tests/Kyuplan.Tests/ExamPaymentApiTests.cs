@@ -57,10 +57,10 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
         return new Club(api, past, next, white, yellow, member);
     }
 
-    private static void AssertPrices(decimal general, (int BeltId, decimal Surcharge)[] surcharges, ExamPricesDto actual)
+    private static void AssertPrices(decimal general, (int BeltId, decimal StampFee, decimal BeltPrice)[] belts, ExamPricesDto actual)
     {
         Assert.Equal(general, actual.GeneralFee);
-        Assert.Equal(surcharges, actual.BeltPrices.Select(p => (p.BeltId, p.Surcharge)));
+        Assert.Equal(belts, actual.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
     }
 
     private static async Task<HttpStatusCode> StatusOfAsync(Func<Task> call) =>
@@ -74,10 +74,10 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
         var club = await StartAsync();
         AssertPrices(0, [], await club.Api.GetExamPricesAsync());
 
-        var saved = await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5.5m), new BeltPriceDto(club.White.Id, 0)]));
+        var saved = await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5.5m, 0), new BeltPriceDto(club.White.Id, 0, 0)]));
 
         Assert.Equal(20m, saved.GeneralFee);
-        Assert.Equal([(club.Yellow.Id, 5.5m)], saved.BeltPrices.Select(p => (p.BeltId, p.Surcharge))); // 0 = no surcharge = no line
+        Assert.Equal([(club.Yellow.Id, 5.5m, 0m)], saved.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice))); // 0 and 0 = nothing extra = no line
 
         var again = await club.Api.SetExamPricesAsync(new ExamPricesDto(18m, []));
         AssertPrices(18m, [], again);
@@ -90,11 +90,11 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     [InlineData(1000000, 0)]
     [InlineData(10, -1)]
     [InlineData(10, 2.005)]
-    public async Task Prices_must_be_amounts_of_money(double general, double surcharge)
+    public async Task Prices_must_be_amounts_of_money(double general, double stampFee)
     {
         var club = await StartAsync();
 
-        var status = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto((decimal)general, [new BeltPriceDto(club.Yellow.Id, (decimal)surcharge)])));
+        var status = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto((decimal)general, [new BeltPriceDto(club.Yellow.Id, (decimal)stampFee, 0)])));
 
         Assert.Equal(HttpStatusCode.BadRequest, status);
         AssertPrices(0, [], await club.Api.GetExamPricesAsync());
@@ -105,18 +105,18 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     {
         var club = await StartAsync();
 
-        var twice = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto(1, [new BeltPriceDto(club.Yellow.Id, 1), new BeltPriceDto(club.Yellow.Id, 2)])));
-        var unknown = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto(1, [new BeltPriceDto(9999, 1)])));
+        var twice = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto(1, [new BeltPriceDto(club.Yellow.Id, 1, 0), new BeltPriceDto(club.Yellow.Id, 2, 0)])));
+        var unknown = await StatusOfAsync(() => club.Api.SetExamPricesAsync(new ExamPricesDto(1, [new BeltPriceDto(9999, 1, 0)])));
 
         Assert.Equal((HttpStatusCode.BadRequest, HttpStatusCode.BadRequest), (twice, unknown));
     }
 
     [Fact]
-    public async Task A_belt_that_is_deleted_takes_its_surcharge_with_it()
+    public async Task A_belt_that_is_deleted_takes_its_prices_with_it()
     {
         var club = await StartAsync();
         var orange = await club.Api.CreateBeltAsync(new BeltInputDto("Orange", "#FF8800", null, []));
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20, [new BeltPriceDto(orange.Id, 3)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20, [new BeltPriceDto(orange.Id, 3, 0)]));
 
         await club.Api.DeleteBeltAsync(orange.Id);
 
@@ -126,10 +126,10 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     // --- Payments -------------------------------------------------------------------------------------------
 
     [Fact]
-    public async Task A_member_owes_the_general_fee_plus_the_surcharge_of_the_next_belt_until_a_belt_is_recorded()
+    public async Task A_member_owes_the_general_fee_plus_the_stamp_fee_of_the_next_belt_until_a_belt_is_recorded()
     {
         var club = await StartAsync();
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 0)]));
 
         var row = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == club.Member.MemberId);
 
@@ -137,7 +137,7 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
 
         // The belt the member really received is what counts once it is recorded.
         var orange = await club.Api.CreateBeltAsync(new BeltInputDto("Orange", "#FF8800", null, []));
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m), new BeltPriceDto(orange.Id, 9m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 0), new BeltPriceDto(orange.Id, 9m, 0)]));
         await club.Api.SetExamResultAsync(club.Past.Id, club.Member.MemberId, new ExamResultInputDto(orange.Id));
 
         row = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == club.Member.MemberId);
@@ -148,7 +148,7 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     public async Task Without_a_belt_that_comes_next_only_the_general_fee_is_due()
     {
         var club = await StartAsync();
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 0)]));
         await club.Api.UpdateMemberAsync(club.Member.MemberId, new MemberInputDto(club.Yellow.Id, null, null, new DateOnly(2026, 1, 1))); // nothing asks for Yellow
 
         var row = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == club.Member.MemberId);
@@ -160,7 +160,7 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     public async Task What_a_member_paid_is_tracked_as_open_partly_paid_and_paid()
     {
         var club = await StartAsync();
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 0)]));
         var id = club.Member.MemberId;
 
         var partly = await club.Api.SetExamPaymentAsync(club.Past.Id, id, new ExamPaymentInputDto(10m, null, " cash "));
@@ -183,15 +183,73 @@ public sealed class ExamPaymentApiTests(WebApplicationFactory<Program> factory) 
     public async Task A_recorded_payment_keeps_its_amount_due_when_the_prices_change_later()
     {
         var club = await StartAsync();
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 0)]));
         var other = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.First(m => m.MemberId != club.Member.MemberId);
         await club.Api.SetExamPaymentAsync(club.Past.Id, club.Member.MemberId, new ExamPaymentInputDto(25m, null, null));
 
-        await club.Api.SetExamPricesAsync(new ExamPricesDto(30m, [new BeltPriceDto(club.Yellow.Id, 5m)]));
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(30m, [new BeltPriceDto(club.Yellow.Id, 5m, 0)]));
 
         var all = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members;
         Assert.Equal((25m, PaymentStatus.Paid), (all.Single(m => m.MemberId == club.Member.MemberId).Due, all.Single(m => m.MemberId == club.Member.MemberId).Status));
         Assert.Equal(other.Due + 10m, all.Single(m => m.MemberId == other.MemberId).Due); // members without a record follow the new prices
+    }
+
+    [Fact]
+    public async Task The_belt_price_is_part_of_what_is_due_and_split_from_the_other_parts()
+    {
+        var club = await StartAsync();
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 8m)]));
+
+        var row = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == club.Member.MemberId);
+
+        Assert.Equal((20m, 5m, 8m, false, 33m), (row.GeneralFee, row.StampFee, row.BeltPrice, row.OwnBelt, row.Due));
+        Assert.Equal([(club.Yellow.Id, 5m, 8m)], (await club.Api.GetExamPricesAsync()).BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
+    }
+
+    [Fact]
+    public async Task A_belt_that_only_has_a_belt_price_is_kept_and_one_with_neither_is_dropped()
+    {
+        var club = await StartAsync();
+
+        var saved = await club.Api.SetExamPricesAsync(new ExamPricesDto(0, [new BeltPriceDto(club.Yellow.Id, 0, 8m), new BeltPriceDto(club.White.Id, 0, 0)]));
+
+        Assert.Equal([(club.Yellow.Id, 0m, 8m)], saved.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
+    }
+
+    [Fact]
+    public async Task A_member_with_their_own_belt_does_not_pay_for_the_belt_but_for_everything_else()
+    {
+        var club = await StartAsync();
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 8m)]));
+        var id = club.Member.MemberId;
+
+        var own = await club.Api.SetExamPaymentAsync(club.Past.Id, id, new ExamPaymentInputDto(0m, null, null, OwnBelt: true));
+
+        Assert.Equal((20m, 5m, 0m, true, 25m, PaymentStatus.Open), (own.GeneralFee, own.StampFee, own.BeltPrice, own.OwnBelt, own.Due, own.Status)); // the flag alone is a record
+        var listed = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == id);
+        Assert.Equal((true, 25m), (listed.OwnBelt, listed.Due));
+
+        // Paying what is due settles it; the other members still owe the belt.
+        var paid = await club.Api.SetExamPaymentAsync(club.Past.Id, id, new ExamPaymentInputDto(25m, null, null, OwnBelt: true));
+        Assert.Equal(PaymentStatus.Paid, paid.Status);
+        Assert.All((await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Where(m => m.MemberId != id), m => Assert.False(m.OwnBelt));
+
+        // Taking the flag back charges the belt again, at today's price.
+        var back = await club.Api.SetExamPaymentAsync(club.Past.Id, id, new ExamPaymentInputDto(25m, null, null, OwnBelt: false));
+        Assert.Equal((8m, 33m, PaymentStatus.Partial), (back.BeltPrice, back.Due, back.Status));
+    }
+
+    [Fact]
+    public async Task A_recorded_payment_keeps_the_split_of_its_amount_due_when_the_prices_change_later()
+    {
+        var club = await StartAsync();
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(20m, [new BeltPriceDto(club.Yellow.Id, 5m, 8m)]));
+        await club.Api.SetExamPaymentAsync(club.Past.Id, club.Member.MemberId, new ExamPaymentInputDto(33m, null, null));
+
+        await club.Api.SetExamPricesAsync(new ExamPricesDto(30m, [new BeltPriceDto(club.Yellow.Id, 6m, 9m)]));
+
+        var row = (await club.Api.GetExamPaymentsAsync(club.Past.Id)).Members.Single(m => m.MemberId == club.Member.MemberId);
+        Assert.Equal((20m, 5m, 8m, PaymentStatus.Paid), (row.GeneralFee, row.StampFee, row.BeltPrice, row.Status));
     }
 
     [Fact]

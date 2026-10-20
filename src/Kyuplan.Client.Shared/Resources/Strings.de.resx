@@ -2735,19 +2735,19 @@
     <value>Prüfungspreise ändern</value>
   </data>
   <data name="Prices_Intro" xml:space="preserve">
-    <value>Jedes Mitglied zahlt für eine Prüfung die allgemeine Gebühr plus den Aufpreis für den Gürtel, den es erhalten wird.</value>
+    <value>Jedes Mitglied zahlt für eine Prüfung die allgemeine Gebühr plus die Gebühr für die Prüfungsmarke und den Preis des Gürtels, den es erhalten wird. Wer den Gürtel anderweitig bekommen hat, zahlt den Gürtel nicht.</value>
   </data>
   <data name="Prices_General" xml:space="preserve">
     <value>Allgemeine Gebühr pro Mitglied</value>
   </data>
   <data name="Prices_Belts" xml:space="preserve">
-    <value>Aufpreis je Gürtel</value>
+    <value>Kosten je Gürtel</value>
   </data>
   <data name="Prices_BeltsHint" xml:space="preserve">
-    <value>Wird zur allgemeinen Gebühr addiert, wenn das Mitglied diesen Gürtel erhält. 0 = kein Aufpreis.</value>
+    <value>Werden zur allgemeinen Gebühr addiert, wenn das Mitglied diesen Gürtel erhält. 0 = nichts extra.</value>
   </data>
   <data name="Prices_NoBelts" xml:space="preserve">
-    <value>Es gibt noch keine Gürtel. Lege Gürtel an, um ihnen einen Aufpreis zu geben.</value>
+    <value>Es gibt noch keine Gürtel. Lege Gürtel an, um ihnen eine Prüfungsmarke und einen Preis zu geben.</value>
   </data>
   <data name="Prices_Save" xml:space="preserve">
     <value>Preise speichern</value>
@@ -2768,7 +2768,7 @@
     <value>Zahlungen</value>
   </data>
   <data name="Pay_Intro" xml:space="preserve">
-    <value>Was jedes Mitglied für diese Prüfung schuldet: die allgemeine Gebühr plus den Aufpreis für den Gürtel, den es erhält.</value>
+    <value>Was jedes Mitglied für diese Prüfung schuldet: die allgemeine Gebühr, die Prüfungsmarke und den Preis des Gürtels, den es erhält (nicht berechnet, wenn es den Gürtel anderweitig bekommen hat).</value>
   </data>
   <data name="Pay_Member" xml:space="preserve">
     <value>Mitglied</value>
@@ -2817,5 +2817,26 @@
   </data>
   <data name="Pay_Invalid" xml:space="preserve">
     <value>Gib einen Betrag von mindestens 0 mit höchstens zwei Nachkommastellen ein.</value>
+  </data>
+  <data name="Prices_StampFee" xml:space="preserve">
+    <value>Prüfungsmarke</value>
+  </data>
+  <data name="Prices_BeltPrice" xml:space="preserve">
+    <value>Gürtel</value>
+  </data>
+  <data name="Pay_General" xml:space="preserve">
+    <value>Allgemeine Gebühr</value>
+  </data>
+  <data name="Pay_Stamp" xml:space="preserve">
+    <value>Prüfungsmarke</value>
+  </data>
+  <data name="Pay_BeltPrice" xml:space="preserve">
+    <value>Gürtelpreis</value>
+  </data>
+  <data name="Pay_OwnBelt" xml:space="preserve">
+    <value>Eigener Gürtel</value>
+  </data>
+  <data name="Pay_OwnBeltHint" xml:space="preserve">
+    <value>Das Mitglied hat den Gürtel anderweitig bekommen (z. B. von einem Geschwisterkind), daher wird sein Preis nicht berechnet.</value>
   </data>
 </root>

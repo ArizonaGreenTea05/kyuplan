@@ -6,8 +6,8 @@ using Kyuplan.Contracts;
 namespace Kyuplan.Api.Persistence;
 
 /// <summary>
-/// The price list of the exams and who paid what for an exam. A member owes the general fee plus the surcharge of the belt they receive
-/// (see docs/exam-planning.md). Input is expected to be validated by the endpoints.
+/// The price list of the exams and who paid what for an exam. A member owes the general fee plus the stamp fee and the price of the belt
+/// they receive; the belt price falls away for a member who got the belt elsewhere (see docs/exam-planning.md). Input is expected to be validated by the endpoints.
 /// </summary>
 public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
 {
@@ -19,11 +19,11 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
         return ToDto(rows);
     }
 
-    /// <summary>Replaces the price list. A belt that is not named has no surcharge afterwards.</summary>
+    /// <summary>Replaces the price list. A belt that is not named costs nothing extra afterwards.</summary>
     /// <exception cref="InvalidInputException">A belt does not exist.</exception>
     public async Task<ExamPricesDto> SetPricesAsync(ExamPricesDto prices, CancellationToken cancellationToken)
     {
-        var wanted = prices.BeltPrices.Where(p => p.Surcharge > 0).ToDictionary(p => p.BeltId, p => p.Surcharge);
+        var wanted = prices.BeltPrices.Where(p => p.StampFee > 0 || p.BeltPrice > 0).ToDictionary(p => p.BeltId);
 
         var beltIds = await db.Belts.AsNoTracking().Select(b => b.Id).ToListAsync(cancellationToken);
         if (wanted.Keys.Except(beltIds).Cast<int?>().FirstOrDefault() is { } unknown)
@@ -37,11 +37,11 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
 
         foreach (var row in rows.Where(r => r.BeltId is { } id && !wanted.ContainsKey(id)))
             db.ExamPrices.Remove(row);
-        foreach (var (beltId, amount) in wanted)
+        foreach (var (beltId, price) in wanted)
         {
             var row = rows.FirstOrDefault(r => r.BeltId == beltId);
-            if (row is null) db.ExamPrices.Add(new ExamPrice { BeltId = beltId, Amount = amount });
-            else row.Amount = amount;
+            if (row is null) db.ExamPrices.Add(new ExamPrice { BeltId = beltId, Amount = price.StampFee, BeltPrice = price.BeltPrice });
+            else (row.Amount, row.BeltPrice) = (price.StampFee, price.BeltPrice);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -50,7 +50,7 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
 
     private static ExamPricesDto ToDto(List<ExamPrice> rows) => new(
         rows.FirstOrDefault(r => r.BeltId is null)?.Amount ?? 0,
-        [.. rows.Where(r => r.BeltId is not null).OrderBy(r => r.BeltId).Select(r => new BeltPriceDto(r.BeltId!.Value, r.Amount))]);
+        [.. rows.Where(r => r.BeltId is not null).OrderBy(r => r.BeltId).Select(r => new BeltPriceDto(r.BeltId!.Value, r.Amount, r.BeltPrice))]);
 
     // --- Payments --------------------------------------------------------------------------------------------
 
@@ -62,8 +62,8 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
     }
 
     /// <summary>
-    /// Records what a member paid for the exam in total, and keeps the amount due as of now with it. A total of 0 and no note take the
-    /// record back.
+    /// Records what a member paid for the exam in total, and keeps the amount due as of now with it. A total of 0, no note and the belt
+    /// not marked as the member's own take the record back.
     /// </summary>
     /// <exception cref="ExamNotFoundException"/>
     /// <exception cref="InvalidInputException">The member does not owe anything for this exam: they did not accept it, are not saved for it and received no belt at it.</exception>
@@ -76,7 +76,7 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
         var note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim();
         var stored = await db.ExamPayments.FirstOrDefaultAsync(p => p.ExamId == examId && p.MemberId == memberId, cancellationToken);
 
-        if (input.Paid == 0 && note is null)
+        if (input.Paid == 0 && note is null && !input.OwnBelt)
         {
             if (stored is not null) db.ExamPayments.Remove(stored);
         }
@@ -89,7 +89,11 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
                 db.ExamPayments.Add(stored);
             }
 
-            stored.AmountDue = live[memberId].Due;
+            var due = live[memberId];
+            stored.OwnBelt = input.OwnBelt;
+            stored.StampFee = due.StampFee;
+            stored.BeltPrice = input.OwnBelt ? 0 : due.BeltPrice;
+            stored.AmountDue = due.GeneralFee + stored.StampFee + stored.BeltPrice;
             stored.AmountPaid = input.Paid;
             stored.PaidOn = input.Paid > 0 ? input.PaidOn ?? clock.Today : null;
             stored.Note = note;
@@ -120,9 +124,14 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
             .Select(id =>
             {
                 records.TryGetValue(id, out var record);
-                var due = record?.AmountDue ?? live[id].Due;
                 var paid = record?.AmountPaid ?? 0;
-                return new ExamPaymentDto(id, names[id], live[id].BeltId, due, paid, record?.PaidOn, record?.Note, PaymentRules.StatusOf(due, paid));
+
+                // A record keeps the amounts of the day it was saved; the general fee is what is left of its total.
+                var (general, stamp, belt) = record is null
+                    ? (live[id].GeneralFee, live[id].StampFee, live[id].BeltPrice)
+                    : (record.AmountDue - record.StampFee - record.BeltPrice, record.StampFee, record.BeltPrice);
+                return new ExamPaymentDto(id, names[id], live[id].BeltId, general, stamp, belt, record?.OwnBelt ?? false, paid, record?.PaidOn, record?.Note,
+                    PaymentRules.StatusOf(general + stamp + belt, paid));
             })
             .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(r => r.MemberId)
             .ToList();
@@ -130,13 +139,14 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
 
     /// <summary>
     /// What each member would owe at today's prices, and for which belt: the belt recorded at the exam, else the first belt (in the order of the
-    /// progression) that asks for the belt the member holds. Without either only the general fee is due.
+    /// progression) that asks for the belt the member holds. Without either only the general fee is due. The belt price is the full one here:
+    /// a member's own belt is applied where it is known (<see cref="SetPaymentAsync"/>, <see cref="ListAsync"/>).
     /// </summary>
-    private async Task<Dictionary<int, (int? BeltId, decimal Due)>> LiveDueAsync(Exam exam, IReadOnlySet<int> memberIds, CancellationToken cancellationToken)
+    private async Task<Dictionary<int, (int? BeltId, decimal GeneralFee, decimal StampFee, decimal BeltPrice)>> LiveDueAsync(Exam exam, IReadOnlySet<int> memberIds, CancellationToken cancellationToken)
     {
         var prices = await db.ExamPrices.AsNoTracking().ToListAsync(cancellationToken);
         var general = prices.FirstOrDefault(p => p.BeltId is null)?.Amount ?? 0;
-        var surcharges = prices.Where(p => p.BeltId is not null).ToDictionary(p => p.BeltId!.Value, p => p.Amount);
+        var beltPrices = prices.Where(p => p.BeltId is not null).ToDictionary(p => p.BeltId!.Value);
 
         var received = await db.ExamResults.AsNoTracking().Where(r => r.ExamId == exam.Id).ToDictionaryAsync(r => r.MemberId, r => r.BeltId, cancellationToken);
         var held = await db.Members.AsNoTracking().Where(m => memberIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id, m => m.BeltId, cancellationToken);
@@ -148,7 +158,8 @@ public sealed class ExamPaymentService(PlannerDbContext db, ClubClock clock)
                 : held.GetValueOrDefault(id) is { } holds ? belts.FirstOrDefault(b => b.Prerequisites.Any(p => p.RequiredBeltId == holds))?.Id
                 : null;
 
-            return (belt, general + (belt is { } id2 && surcharges.TryGetValue(id2, out var extra) ? extra : 0));
+            var price = belt is { } beltId && beltPrices.TryGetValue(beltId, out var row) ? row : null;
+            return (belt, general, price?.Amount ?? 0, price?.BeltPrice ?? 0);
         });
     }
 

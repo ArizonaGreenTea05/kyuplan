@@ -43,19 +43,24 @@ public sealed class Exam
 }
 
 /// <summary>
-/// One line of the exam price list: the general fee (<see cref="BeltId"/> null, at most one row) or the surcharge for one belt (at most
-/// one row per belt). What a member owes for an exam is the general fee plus the surcharge of the belt they receive; no row = 0.
+/// One line of the exam price list: the general fee (<see cref="BeltId"/> null, at most one row) or the extra costs of one belt (at most
+/// one row per belt). What a member owes for an exam is the general fee plus the stamp fee and the belt price of the belt they receive
+/// (the belt price not when they got the belt elsewhere); no row = 0.
 /// </summary>
 public sealed class ExamPrice
 {
     public int Id { get; set; }
 
-    /// <summary>The belt the surcharge is for; null = the general fee.</summary>
+    /// <summary>The belt the costs are for; null = the general fee.</summary>
     public int? BeltId { get; set; }
 
     public Belt? Belt { get; set; }
 
+    /// <summary>The general fee on the general row; the fee for the belt's exam stamp (Prüfungsmarke) on a belt row.</summary>
     public decimal Amount { get; set; }
+
+    /// <summary>The price of the belt itself (belt rows only; 0 on the general row).</summary>
+    public decimal BeltPrice { get; set; }
 }
 
 /// <summary>
@@ -73,7 +78,17 @@ public sealed class ExamPayment
 
     public Member Member { get; set; } = null!;
 
+    /// <summary>What was due when this was saved: the general fee, <see cref="StampFee"/> and <see cref="BeltPrice"/> together.</summary>
     public decimal AmountDue { get; set; }
+
+    /// <summary>The part of <see cref="AmountDue"/> that is the fee for the exam stamp.</summary>
+    public decimal StampFee { get; set; }
+
+    /// <summary>The part of <see cref="AmountDue"/> that is the price of the belt; 0 when <see cref="OwnBelt"/>.</summary>
+    public decimal BeltPrice { get; set; }
+
+    /// <summary>The member got the belt elsewhere (e.g. handed down by a sibling): the belt itself is not charged.</summary>
+    public bool OwnBelt { get; set; }
 
     public decimal AmountPaid { get; set; }
 

@@ -42,18 +42,36 @@ public sealed partial class MoneyField : ObservableObject
     }
 }
 
-/// <summary>One line of the price list: a belt and the price that is added to the general fee when a member receives it.</summary>
-public sealed class BeltPriceRow(BeltOption belt, MoneyField price)
+/// <summary>One line of the price list: a belt, the fee for its exam stamp and the price of the belt itself; both are added to the general fee when a member receives it.</summary>
+public sealed class BeltPriceRow(BeltOption belt, MoneyField stampFee, MoneyField beltPrice)
 {
     public BeltOption Belt => belt;
 
     public string Name => belt.Label;
 
-    public MoneyField Price => price;
+    public MoneyField StampFee => stampFee;
+
+    public MoneyField BeltPrice => beltPrice;
+
+    public bool HasChange => StampFee.HasChange || BeltPrice.HasChange;
+
+    public bool IsValid => StampFee.IsValid && BeltPrice.IsValid;
+
+    public void Reset(BeltPriceDto? saved)
+    {
+        StampFee.Reset(saved?.StampFee ?? 0);
+        BeltPrice.Reset(saved?.BeltPrice ?? 0);
+    }
+
+    public void Revert()
+    {
+        StampFee.Reset(StampFee.Saved);
+        BeltPrice.Reset(BeltPrice.Saved);
+    }
 }
 
 /// <summary>
-/// The price list of the exams: the general fee every member pays, and the additional price of each belt. Used by both clients. Reading it
+/// The price list of the exams: the general fee every member pays, and the stamp fee and belt price of each belt. Used by both clients. Reading it
 /// needs <c>payments.view</c>, changing it <c>prices.edit</c>.
 /// </summary>
 public sealed partial class ExamPricesViewModel : PageViewModel
@@ -121,13 +139,28 @@ public sealed partial class ExamPricesViewModel : PageViewModel
 
     private void Show(IReadOnlyList<BeltDto> belts, ExamPricesDto prices)
     {
-        foreach (var row in Rows) row.Price.PropertyChanged -= OnFieldChanged;
+        foreach (var row in Rows)
+        {
+            row.StampFee.PropertyChanged -= OnFieldChanged;
+            row.BeltPrice.PropertyChanged -= OnFieldChanged;
+        }
 
-        var surcharges = prices.BeltPrices.ToDictionary(p => p.BeltId, p => p.Surcharge);
+        var byBelt = prices.BeltPrices.ToDictionary(p => p.BeltId);
         General.Reset(prices.GeneralFee);
-        Rows = [.. belts.Select(b => new BeltPriceRow(new BeltOption(b), new MoneyField(surcharges.GetValueOrDefault(b.Id))))];
+        Rows =
+        [
+            .. belts.Select(b =>
+            {
+                byBelt.TryGetValue(b.Id, out var price);
+                return new BeltPriceRow(new BeltOption(b), new MoneyField(price?.StampFee ?? 0), new MoneyField(price?.BeltPrice ?? 0));
+            }),
+        ];
 
-        foreach (var row in Rows) row.Price.PropertyChanged += OnFieldChanged;
+        foreach (var row in Rows)
+        {
+            row.StampFee.PropertyChanged += OnFieldChanged;
+            row.BeltPrice.PropertyChanged += OnFieldChanged;
+        }
         NotifyChanged();
     }
 
@@ -149,10 +182,10 @@ public sealed partial class ExamPricesViewModel : PageViewModel
     // --- Saving ------------------------------------------------------------------------------------------------
 
     /// <summary>A price differs from what the server holds (or is not a valid amount).</summary>
-    public bool HasChanges => General.HasChange || Rows.Any(r => r.Price.HasChange);
+    public bool HasChanges => General.HasChange || Rows.Any(r => r.HasChange);
 
     /// <summary>Some price is not a valid amount: it is pointed out instead of saved.</summary>
-    public bool HasInvalid => !General.IsValid || Rows.Any(r => !r.Price.IsValid);
+    public bool HasInvalid => !General.IsValid || Rows.Any(r => !r.IsValid);
 
     public bool CanSave => CanEdit && HasChanges && !HasInvalid && !IsBusy;
 
@@ -176,15 +209,15 @@ public sealed partial class ExamPricesViewModel : PageViewModel
 
         var input = new ExamPricesDto(
             General.Amount,
-            [.. Rows.Where(r => r.Price.Amount > 0).Select(r => new BeltPriceDto(r.Belt.Id!.Value, r.Price.Amount))]);
+            [.. Rows.Where(r => r.StampFee.Amount > 0 || r.BeltPrice.Amount > 0).Select(r => new BeltPriceDto(r.Belt.Id!.Value, r.StampFee.Amount, r.BeltPrice.Amount))]);
 
         ExamPricesDto? saved = null;
         await LoadAsync(async ct => saved = await _api.SetExamPricesAsync(input, ct));
         if (saved is null) return; // refused: the reason is in ErrorMessage, what was typed stays
 
-        var surcharges = saved.BeltPrices.ToDictionary(p => p.BeltId, p => p.Surcharge);
+        var byBelt = saved.BeltPrices.ToDictionary(p => p.BeltId);
         General.Reset(saved.GeneralFee);
-        foreach (var row in Rows) row.Price.Reset(surcharges.GetValueOrDefault(row.Belt.Id!.Value));
+        foreach (var row in Rows) row.Reset(byBelt.GetValueOrDefault(row.Belt.Id!.Value));
 
         SetNotice(() => Strings.Prices_Saved);
         NotifyChanged();
@@ -195,7 +228,7 @@ public sealed partial class ExamPricesViewModel : PageViewModel
     private void Discard()
     {
         General.Reset(General.Saved);
-        foreach (var row in Rows) row.Price.Reset(row.Price.Saved);
+        foreach (var row in Rows) row.Revert();
         SetNotice(null);
     }
 

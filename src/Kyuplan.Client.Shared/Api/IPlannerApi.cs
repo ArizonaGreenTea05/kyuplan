@@ -162,7 +162,7 @@ public interface IPlannerApi
     /// <summary>Records the belt a member received at an exam (<c>null</c> takes the result back). 400 while the exam has not taken place.</summary>
     Task<ExamMemberDto> SetExamResultAsync(int examId, int memberId, ExamResultInputDto result, CancellationToken cancellationToken = default);
 
-    /// <summary>The price list of the exams: the general fee and the surcharge per belt. Needs <c>payments.view</c> or <c>prices.edit</c>.</summary>
+    /// <summary>The price list of the exams: the general fee and the stamp fee and belt price per belt. Needs <c>payments.view</c> or <c>prices.edit</c>.</summary>
     Task<ExamPricesDto> GetExamPricesAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Replaces the price list. Needs <c>prices.edit</c>.</summary>

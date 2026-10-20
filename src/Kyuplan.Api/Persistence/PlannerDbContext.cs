@@ -194,17 +194,20 @@ public class PlannerDbContext : DbContext
         modelBuilder.Entity<ExamPrice>(price =>
         {
             price.Property(p => p.Amount).HasPrecision(10, 2);
+            price.Property(p => p.BeltPrice).HasPrecision(10, 2);
             price.HasIndex(p => p.BeltId).IsUnique(); // the general fee (null) is kept to one row by ExamPaymentService
 
-            // The surcharge goes with its belt.
+            // The belt's costs go with it.
             price.HasOne(p => p.Belt).WithMany().HasForeignKey(p => p.BeltId).OnDelete(DeleteBehavior.Cascade);
-            price.ToTable(table => table.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0"));
+            price.ToTable(table => table.HasCheckConstraint("CK_ExamPrices_Amount", "\"Amount\" >= 0 AND \"BeltPrice\" >= 0"));
         });
 
         modelBuilder.Entity<ExamPayment>(payment =>
         {
             payment.HasKey(p => new { p.ExamId, p.MemberId });
             payment.Property(p => p.AmountDue).HasPrecision(10, 2);
+            payment.Property(p => p.StampFee).HasPrecision(10, 2);
+            payment.Property(p => p.BeltPrice).HasPrecision(10, 2);
             payment.Property(p => p.AmountPaid).HasPrecision(10, 2);
             payment.Property(p => p.Note).HasMaxLength(PaymentRules.MaxNoteLength);
 

@@ -374,8 +374,8 @@ public sealed partial class AttendeeRow : ObservableObject
 }
 
 /// <summary>
-/// One member's payment for the exam on show: what is due, and the fields an administrator fills in (what was paid, a note). The fields
-/// are only saved when asked to; <see cref="Reset"/> shows what the server holds.
+/// One member's payment for the exam on show: what is due (general fee, stamp fee, belt price), and the fields an administrator fills in
+/// (what was paid, a note, whether the member got the belt elsewhere). The fields are only saved when asked to; <see cref="Reset"/> shows what the server holds.
 /// </summary>
 public sealed partial class PaymentRow : ObservableObject
 {
@@ -390,6 +390,7 @@ public sealed partial class PaymentRow : ObservableObject
         _save = save;
         Paid = new MoneyField(payment.Paid);
         _note = payment.Note ?? "";
+        _ownBelt = payment.OwnBelt;
         Paid.PropertyChanged += (_, _) => NotifyEdited();
     }
 
@@ -404,6 +405,19 @@ public sealed partial class PaymentRow : ObservableObject
     public BeltOption Belt { get; }
 
     public string DueText => Display.Money(Payment.Due);
+
+    public string GeneralFeeText => Display.Money(Payment.GeneralFee);
+
+    public string StampFeeText => Display.Money(Payment.StampFee);
+
+    /// <summary>The price of the belt as it is charged: 0 for a member with their own belt.</summary>
+    public string BeltPriceText => Display.Money(Payment.BeltPrice);
+
+    /// <summary>The member got the belt elsewhere (e.g. handed down by a sibling), so its price is not charged. Takes effect when saved.</summary>
+    [ObservableProperty]
+    private bool _ownBelt;
+
+    partial void OnOwnBeltChanged(bool value) => NotifyEdited();
 
     /// <summary>What was paid, as typed.</summary>
     public MoneyField Paid { get; }
@@ -427,14 +441,14 @@ public sealed partial class PaymentRow : ObservableObject
     public string PaidOnText => Payment.PaidOn is { } day ? string.Format(Strings.Pay_PaidOn, Display.Date(day)) : "";
 
     /// <summary>The fields differ from what the server holds.</summary>
-    public bool HasChange => Paid.HasChange || Note.Trim() != (Payment.Note ?? "");
+    public bool HasChange => Paid.HasChange || Note.Trim() != (Payment.Note ?? "") || OwnBelt != Payment.OwnBelt;
 
     public bool CanEdit => _canEdit();
 
     public bool CanSave => CanEdit && HasChange && Paid.IsValid;
 
-    /// <summary>Paying what is due would change something: less than that is paid.</summary>
-    public bool CanMarkPaid => CanEdit && Paid.Amount < Payment.Due;
+    /// <summary>Paying what is due would change something: less than that is paid. Not while the own belt is changed, which changes what is due once saved.</summary>
+    public bool CanMarkPaid => CanEdit && Paid.Amount < Payment.Due && OwnBelt == Payment.OwnBelt;
 
     /// <summary>Counts how often the row was set to what the server holds; a page that cannot tell it went back keys by this.</summary>
     public int Revision { get; private set; }
@@ -466,6 +480,7 @@ public sealed partial class PaymentRow : ObservableObject
         Revision++;
         Paid.Reset(payment.Paid);
         Note = payment.Note ?? "";
+        OwnBelt = payment.OwnBelt;
         OnPropertyChanged(string.Empty);
         NotifyEdited();
     }
@@ -483,5 +498,8 @@ public sealed partial class PaymentRow : ObservableObject
         OnPropertyChanged(nameof(StatusText));
         OnPropertyChanged(nameof(PaidOnText));
         OnPropertyChanged(nameof(DueText));
+        OnPropertyChanged(nameof(GeneralFeeText));
+        OnPropertyChanged(nameof(StampFeeText));
+        OnPropertyChanged(nameof(BeltPriceText));
     }
 }

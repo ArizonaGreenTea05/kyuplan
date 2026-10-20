@@ -13,7 +13,7 @@ public static class PaymentEndpoints
     {
         app.MapGet("/api/exam-prices", (ExamPaymentService service, CancellationToken ct) => service.GetPricesAsync(ct))
             .WithTags("Exam prices and payments")
-            .WithSummary("The price list: the general fee every member pays for an exam, and the surcharge of each belt that costs extra.")
+            .WithSummary("The price list: the general fee every member pays for an exam, and the stamp fee (Prüfungsmarke) and price of each belt that costs extra.")
             .RequirePermission(Permission.PaymentsView, Permission.PricesEdit);
 
         app.MapPut("/api/exam-prices", async (ExamPricesDto input, ExamPaymentService service, CancellationToken ct) =>
@@ -23,13 +23,13 @@ public static class PaymentEndpoints
                 return Results.Ok(await service.SetPricesAsync(input, ct));
             })
             .WithTags("Exam prices and payments")
-            .WithSummary("Replace the price list. A belt that is not named has no surcharge. Payments that were recorded keep the amount due they were saved with.")
+            .WithSummary("Replace the price list. A belt that is not named costs nothing extra. Payments that were recorded keep the amount due they were saved with.")
             .RequirePermission(Permission.PricesEdit);
 
         var payments = app.MapGroup("/api/exams/{examId:int}/payments").WithTags("Exam prices and payments");
 
         payments.MapGet("/", (int examId, ExamPaymentService service, CancellationToken ct) => service.GetPaymentsAsync(examId, ct))
-            .WithSummary("Who pays for the exam, what each owes (general fee plus the surcharge of the belt they receive), what they paid and whether that settles it.")
+            .WithSummary("Who pays for the exam, what each owes (general fee, stamp fee and belt price of the belt they receive, the belt price not for those with their own belt), what they paid and whether that settles it.")
             .RequirePermission(Permission.PaymentsView);
 
         payments.MapPut("/{memberId:int}", async (int examId, int memberId, ExamPaymentInputDto input, ExamPaymentService service, CancellationToken ct) =>
@@ -38,7 +38,7 @@ public static class PaymentEndpoints
 
                 return Results.Ok(await service.SetPaymentAsync(examId, memberId, input, ct));
             })
-            .WithSummary("Record the total a member paid for the exam (0 and no note takes the record back). The amount due is worked out again from the current prices.")
+            .WithSummary("Record the total a member paid for the exam and whether they got the belt elsewhere (0, no note and no own belt takes the record back). The amount due is worked out again from the current prices.")
             .RequirePermission(Permission.PaymentsEdit);
 
         return app;
@@ -56,8 +56,8 @@ public static class PaymentEndpoints
             errors[nameof(input.BeltPrices)] = ["beltPrices is required (it may be empty)."];
         else if (input.BeltPrices.Count > MaxBeltPrices || input.BeltPrices.Select(p => p.BeltId).Distinct().Count() != input.BeltPrices.Count)
             errors[nameof(input.BeltPrices)] = [$"At most {MaxBeltPrices} belts, each one once."];
-        else if (input.BeltPrices.Any(p => !PaymentRules.IsAmount(p.Surcharge)))
-            errors[nameof(input.BeltPrices)] = [AmountMessage("surcharge")];
+        else if (input.BeltPrices.Any(p => !PaymentRules.IsAmount(p.StampFee) || !PaymentRules.IsAmount(p.BeltPrice)))
+            errors[nameof(input.BeltPrices)] = [AmountMessage("stampFee and beltPrice")];
 
         return errors.Count == 0 ? null : errors;
     }

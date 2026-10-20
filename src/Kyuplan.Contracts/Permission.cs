@@ -35,7 +35,7 @@ public static class Permission
     public const string PaymentsView = "payments.view";
     /// <summary>Record what members paid for an exam.</summary>
     public const string PaymentsEdit = "payments.edit";
-    /// <summary>Change the price list of the exams: the general fee and the surcharge per belt.</summary>
+    /// <summary>Change the price list of the exams: the general fee and the stamp fee and belt price per belt.</summary>
     public const string PricesEdit = "prices.edit";
 
     public const string CommentsView = "comments.view";

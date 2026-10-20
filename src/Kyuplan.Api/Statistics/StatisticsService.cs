@@ -14,7 +14,7 @@ public sealed class EventNotFoundException(string eventId, int monthsBack, int m
 
 /// <summary>Loads data from the configured source and runs the calculators over it.</summary>
 public sealed class StatisticsService(
-    ISpondDataSource source,
+    IDataSource source,
     ClubClock clock,
     IOptions<StatisticsOptions> options)
 {

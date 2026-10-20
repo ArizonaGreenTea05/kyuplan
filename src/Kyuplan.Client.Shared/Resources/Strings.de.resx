@@ -2165,10 +2165,10 @@
     <value>Abgleich</value>
   </data>
   <data name="Settings_SyncEnabled" xml:space="preserve">
-    <value>Automatisch mit Spond abgleichen</value>
+    <value>Automatisch mit der Datenquelle abgleichen</value>
   </data>
   <data name="Settings_SyncEnabledHint" xml:space="preserve">
-    <value>Hält die Mitglieder und die Einladungen der Prüfungen mit Spond in Einklang.</value>
+    <value>Hält die Mitglieder und die Einladungen der Prüfungen mit der Datenquelle in Einklang.</value>
   </data>
   <data name="Settings_SyncInterval" xml:space="preserve">
     <value>Minuten zwischen zwei Abgleichen</value>
@@ -2988,5 +2988,254 @@
   </data>
   <data name="CalendarFeeds_Invitation_Only" xml:space="preserve">
     <value>Nur sie sind eingeladen (sonst niemand)</value>
+  </data>
+  <data name="Nav_ManualData" xml:space="preserve">
+    <value>Manuelle Daten</value>
+  </data>
+  <data name="PermissionGroup_manualdata" xml:space="preserve">
+    <value>Manuelle Daten</value>
+  </data>
+  <data name="Permission_manualdata_edit" xml:space="preserve">
+    <value>Gruppen, Mitglieder und Termine von Hand pflegen</value>
+  </data>
+  <data name="Manual_WrongSource" xml:space="preserve">
+    <value>Die Datenquelle ist nicht „Manuell“, deshalb werden die Eingaben hier nicht verwendet. Ein Administrator kann sie in den Einstellungen umstellen.</value>
+  </data>
+  <data name="Manual_Group" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="Manual_NoGroups" xml:space="preserve">
+    <value>Es gibt noch keine Gruppe. Lege die erste an, um Mitglieder und Termine zu erfassen.</value>
+  </data>
+  <data name="Manual_NewGroup" xml:space="preserve">
+    <value>Neue Gruppe</value>
+  </data>
+  <data name="Manual_RenameGroup" xml:space="preserve">
+    <value>Gruppe umbenennen</value>
+  </data>
+  <data name="Manual_DeleteGroup" xml:space="preserve">
+    <value>Gruppe löschen</value>
+  </data>
+  <data name="Manual_TabMembers" xml:space="preserve">
+    <value>Mitglieder</value>
+  </data>
+  <data name="Manual_TabSubGroups" xml:space="preserve">
+    <value>Untergruppen</value>
+  </data>
+  <data name="Manual_TabEvents" xml:space="preserve">
+    <value>Termine</value>
+  </data>
+  <data name="Manual_NewSubGroup" xml:space="preserve">
+    <value>Neue Untergruppe</value>
+  </data>
+  <data name="Manual_NewMember" xml:space="preserve">
+    <value>Neues Mitglied</value>
+  </data>
+  <data name="Manual_NewEvent" xml:space="preserve">
+    <value>Neuer Termin</value>
+  </data>
+  <data name="Manual_Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="Manual_Rename" xml:space="preserve">
+    <value>Umbenennen</value>
+  </data>
+  <data name="Manual_Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="Manual_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="Manual_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="Manual_FormNewGroup" xml:space="preserve">
+    <value>Neue Gruppe</value>
+  </data>
+  <data name="Manual_FormRenameGroup" xml:space="preserve">
+    <value>Gruppe „{0}“ umbenennen</value>
+  </data>
+  <data name="Manual_FormNewSubGroup" xml:space="preserve">
+    <value>Neue Untergruppe</value>
+  </data>
+  <data name="Manual_FormRenameSubGroup" xml:space="preserve">
+    <value>Untergruppe „{0}“ umbenennen</value>
+  </data>
+  <data name="Manual_FormNewMember" xml:space="preserve">
+    <value>Neues Mitglied</value>
+  </data>
+  <data name="Manual_FormEditMember" xml:space="preserve">
+    <value>{0} bearbeiten</value>
+  </data>
+  <data name="Manual_FormNewEvent" xml:space="preserve">
+    <value>Neuer Termin</value>
+  </data>
+  <data name="Manual_FormEditEvent" xml:space="preserve">
+    <value>{0} bearbeiten</value>
+  </data>
+  <data name="Manual_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Manual_BirthDate" xml:space="preserve">
+    <value>Geburtsdatum</value>
+  </data>
+  <data name="Manual_ClearBirth" xml:space="preserve">
+    <value>Leeren</value>
+  </data>
+  <data name="Manual_SubGroups" xml:space="preserve">
+    <value>Untergruppen</value>
+  </data>
+  <data name="Manual_NoSubGroupsHint" xml:space="preserve">
+    <value>Diese Gruppe hat noch keine Untergruppen; lege sie im Reiter „Untergruppen“ an.</value>
+  </data>
+  <data name="Manual_NameInvalid" xml:space="preserve">
+    <value>Der Name darf nicht leer und höchstens {0} Zeichen lang sein.</value>
+  </data>
+  <data name="Manual_Start" xml:space="preserve">
+    <value>Beginn</value>
+  </data>
+  <data name="Manual_End" xml:space="preserve">
+    <value>Ende</value>
+  </data>
+  <data name="Manual_TimeHint" xml:space="preserve">
+    <value>Uhrzeit (hh:mm)</value>
+  </data>
+  <data name="Manual_Cancelled" xml:space="preserve">
+    <value>Der Termin fällt aus</value>
+  </data>
+  <data name="Manual_CancelledMark" xml:space="preserve">
+    <value>abgesagt</value>
+  </data>
+  <data name="Manual_Invitations" xml:space="preserve">
+    <value>Einladungen</value>
+  </data>
+  <data name="Manual_InviteAll" xml:space="preserve">
+    <value>Alle einladen</value>
+  </data>
+  <data name="Manual_InviteNone" xml:space="preserve">
+    <value>Niemanden einladen</value>
+  </data>
+  <data name="Manual_AcceptAll" xml:space="preserve">
+    <value>Alle Eingeladenen waren da</value>
+  </data>
+  <data name="Manual_NoMembersToInvite" xml:space="preserve">
+    <value>Die Gruppe hat noch keine Mitglieder zum Einladen.</value>
+  </data>
+  <data name="Manual_ColInvited" xml:space="preserve">
+    <value>Eingeladen</value>
+  </data>
+  <data name="Manual_ColAnswer" xml:space="preserve">
+    <value>Antwort</value>
+  </data>
+  <data name="Manual_Rsvp_accepted" xml:space="preserve">
+    <value>Zugesagt</value>
+  </data>
+  <data name="Manual_Rsvp_declined" xml:space="preserve">
+    <value>Abgesagt</value>
+  </data>
+  <data name="Manual_Rsvp_unanswered" xml:space="preserve">
+    <value>Keine Antwort</value>
+  </data>
+  <data name="Manual_Rsvp_other" xml:space="preserve">
+    <value>Warteliste</value>
+  </data>
+  <data name="Manual_TimeInvalid" xml:space="preserve">
+    <value>Gib für Beginn und Ende ein Datum und eine Uhrzeit wie 18:00 an.</value>
+  </data>
+  <data name="Manual_EndBeforeStart" xml:space="preserve">
+    <value>Das Ende darf nicht vor dem Beginn liegen.</value>
+  </data>
+  <data name="Manual_ColName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Manual_ColBirth" xml:space="preserve">
+    <value>Geboren</value>
+  </data>
+  <data name="Manual_ColSubGroups" xml:space="preserve">
+    <value>Untergruppen</value>
+  </data>
+  <data name="Manual_ColStart" xml:space="preserve">
+    <value>Beginn</value>
+  </data>
+  <data name="Manual_ColMembers" xml:space="preserve">
+    <value>Mitglieder</value>
+  </data>
+  <data name="Manual_NoMembers" xml:space="preserve">
+    <value>Noch keine Mitglieder.</value>
+  </data>
+  <data name="Manual_NoSubGroups" xml:space="preserve">
+    <value>Noch keine Untergruppen.</value>
+  </data>
+  <data name="Manual_NoEvents" xml:space="preserve">
+    <value>Noch keine Termine.</value>
+  </data>
+  <data name="Manual_MemberCount" xml:space="preserve">
+    <value>Mitglieder: {0}</value>
+  </data>
+  <data name="Manual_InvitedCount" xml:space="preserve">
+    <value>{0} eingeladen, {1} zugesagt</value>
+  </data>
+  <data name="Manual_ConfirmDeleteGroup" xml:space="preserve">
+    <value>Gruppe „{0}“ mit ihren {1} Mitgliedern, Untergruppen und Terminen löschen? Gürtel, Kommentare und Ergebnisse der Mitglieder werden mit gelöscht.</value>
+  </data>
+  <data name="Manual_ConfirmDeleteSubGroup" xml:space="preserve">
+    <value>Untergruppe „{0}“ löschen? Ihre Mitglieder bleiben in der Gruppe.</value>
+  </data>
+  <data name="Manual_ConfirmDeleteMember" xml:space="preserve">
+    <value>Mitglied „{0}“ löschen? Gürtel, Kommentare und Ergebnisse werden mit gelöscht.</value>
+  </data>
+  <data name="Manual_ConfirmDeleteEvent" xml:space="preserve">
+    <value>Termin „{0}“ löschen?</value>
+  </data>
+  <data name="Manual_ConfirmYes" xml:space="preserve">
+    <value>Ja, löschen</value>
+  </data>
+  <data name="Manual_Created" xml:space="preserve">
+    <value>„{0}“ angelegt.</value>
+  </data>
+  <data name="Manual_Saved" xml:space="preserve">
+    <value>„{0}“ gespeichert.</value>
+  </data>
+  <data name="Manual_Deleted" xml:space="preserve">
+    <value>„{0}“ gelöscht.</value>
+  </data>
+  <data name="Settings_DataSource" xml:space="preserve">
+    <value>Datenquelle</value>
+  </data>
+  <data name="Settings_DataSource_spond" xml:space="preserve">
+    <value>Spond</value>
+  </data>
+  <data name="Settings_DataSource_custom" xml:space="preserve">
+    <value>Eigene (Skript)</value>
+  </data>
+  <data name="Settings_DataSource_manual" xml:space="preserve">
+    <value>Manuell (von Hand erfasst)</value>
+  </data>
+  <data name="Settings_DataSource_demo" xml:space="preserve">
+    <value>Demodaten</value>
+  </data>
+  <data name="Settings_DataSourceHint_spond" xml:space="preserve">
+    <value>Gruppen, Mitglieder und Termine werden aus Spond gelesen.</value>
+  </data>
+  <data name="Settings_DataSourceHint_custom" xml:space="preserve">
+    <value>Ein JavaScript, das du schreibst, liest sie aus einem beliebigen Dienst (siehe Administrationshandbuch).</value>
+  </data>
+  <data name="Settings_DataSourceHint_manual" xml:space="preserve">
+    <value>Benutzer mit der Berechtigung erfassen Gruppen, Mitglieder und Termine auf der Seite „Manuelle Daten“.</value>
+  </data>
+  <data name="Settings_CustomScript" xml:space="preserve">
+    <value>Skript</value>
+  </data>
+  <data name="Settings_CustomScriptHint" xml:space="preserve">
+    <value>Definiere getGroups() und getEvents(groupId, from, to); mit http.get und http.post kann das Skript andere Dienste aufrufen. Die API prüft es beim Speichern auf Fehler.</value>
+  </data>
+  <data name="Settings_ScriptTemplate" xml:space="preserve">
+    <value>Beispielskript einfügen</value>
+  </data>
+  <data name="Settings_ScriptEmpty" xml:space="preserve">
+    <value>Die eigene Datenquelle braucht ein Skript.</value>
+  </data>
+  <data name="Settings_ScriptTooLong" xml:space="preserve">
+    <value>Das Skript ist zu lang (höchstens {0} Zeichen).</value>
   </data>
 </root>

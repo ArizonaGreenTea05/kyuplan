@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(
         ShellViewModel shell, ExamsViewModel exams, DashboardViewModel dashboard, AttendanceStatisticsViewModel statistics,
         MembersViewModel members, BeltsViewModel belts, TagsViewModel tags, AccountViewModel account, PreferencesViewModel preferences,
-        UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, LoginSession session, ClientUpdateViewModel update,
+        UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, ManualDataViewModel manualData, LoginSession session, ClientUpdateViewModel update,
         CalendarViewModel calendar, EventBannerViewModel banner)
     {
         Shell = shell;
@@ -49,11 +49,12 @@ public sealed partial class MainViewModel : ObservableObject
             new NavigationItem(backup, ""), // HardDrive
             new NavigationItem(prices, ""), // Calculator: what an exam costs
             new NavigationItem(calendarFeeds, ""), // Calendar: the calendars apps subscribe to
+            new NavigationItem(manualData, ""), // Edit: groups, members and events entered by hand
         };
         NavigationItem Item(PageViewModel page) => all.First(i => ReferenceEquals(i.Page, page));
 
         // The order of the navigation pane: the dashboard first (it is what opens), the groups Administration and Account at the bottom.
-        _main = [Item(dashboard), Item(statistics), Item(calendar), Item(exams), Item(members), Item(belts), Item(prices), Item(tags)];
+        _main = [Item(dashboard), Item(statistics), Item(calendar), Item(exams), Item(members), Item(belts), Item(prices), Item(tags), Item(manualData)];
         _admin = [Item(users), Item(roles), Item(branding), Item(calendarFeeds), Item(backup)];
         _account = [Item(account), Item(preferences)];
         Items = new ReadOnlyObservableCollection<NavigationItem>(_items);
@@ -63,6 +64,10 @@ public sealed partial class MainViewModel : ObservableObject
 
         ShowPermittedPages();
         shell.PermissionsChanged += (_, _) => ShowPermittedPages();
+        shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Info)) ShowPermittedPages(); // the data source decides on the manual data page
+        };
 
         // The banner of an event in progress opens the event on the calendar page, whatever page is shown.
         banner.OpenRequested += async (_, e) =>
@@ -113,7 +118,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     private static void Sync(NavigationItem[] source, ObservableCollection<NavigationItem> target)
     {
-        var wanted = source.Where(i => i.Page.CanView).ToList();
+        var wanted = source.Where(i => i.Page.ShowInNavigation).ToList();
         foreach (var item in target.Where(i => !wanted.Contains(i)).ToList()) target.Remove(item);
         for (var i = 0; i < wanted.Count; i++)
         {

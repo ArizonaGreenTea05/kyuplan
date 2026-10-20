@@ -482,4 +482,72 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
             Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", input)).StatusCode);
         Assert.Equal(0, _restarter.Requests);
     }
+
+    // --- The data source ---------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task The_data_source_and_its_script_are_saved_and_a_script_with_a_syntax_error_is_refused()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        Assert.Equal(DataSourceKinds.Demo, (await SettingsOfAsync(admin)).DataSource);
+
+        var broken = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = DataSourceKinds.Custom, CustomScript = "function getGroups( {" });
+        var empty = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = DataSourceKinds.Custom, CustomScript = "" });
+        var unknown = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = "carrier-pigeon" });
+        Assert.Equal(HttpStatusCode.BadRequest, broken.StatusCode);
+        Assert.Contains("customScript", await broken.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal(0, _restarter.Requests);
+
+        const string script = "function getGroups() { return []; } function getEvents() { return []; }";
+        var saved = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = DataSourceKinds.Custom, CustomScript = script });
+
+        Assert.True((await saved.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
+        var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!;
+        Assert.Equal("custom", (string?)written["DataSource"]!["Kind"]);
+        Assert.Equal(script, (string?)written["DataSource"]!["Script"]);
+        Assert.Equal("false", (string?)written["Spond"]!["UseDemoData"]);
+    }
+
+    [Fact]
+    public async Task Switching_to_the_manual_source_and_back_to_spond_needs_no_script()
+    {
+        using var demo = CreateHost(withAdmin: true);
+        var admin = demo.CreateSignedInClient();
+        await admin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(admin)) with { UseDemoData = false, DataSource = DataSourceKinds.Manual });
+        Assert.Equal("manual", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["DataSource"]!["Kind"]);
+
+        // The API has restarted with it.
+        using var manual = CreateHost(withAdmin: true, builder =>
+        {
+            builder.UseSetting("Spond:UseDemoData", "false");
+            builder.UseSetting("DataSource:Kind", "manual");
+        });
+        admin = manual.CreateSignedInClient();
+        await admin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(admin)) with { UseDemoData = false, DataSource = DataSourceKinds.Spond });
+        Assert.Equal("spond", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["DataSource"]!["Kind"]);
+    }
+
+    [Fact]
+    public async Task An_older_client_that_knows_no_data_source_still_switches_the_demo_data_on_and_off()
+    {
+        using var host = CreateHost(withAdmin: true, builder =>
+        {
+            builder.UseSetting("Spond:UseDemoData", "false");
+            builder.UseSetting("DataSource:Kind", "manual");
+        });
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        Assert.Equal("manual", (await SettingsOfAsync(admin)).DataSource);
+
+        var unchanged = await admin.PutAsJsonAsync("/api/settings", settings); // no data source in it: manual stays
+        Assert.False((await unchanged.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
+
+        await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = true });
+        Assert.Equal("true", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["UseDemoData"]);
+        Assert.Null(JsonNode.Parse(File.ReadAllText(SettingsFile))!["DataSource"]); // what was chosen under it is left alone
+    }
 }

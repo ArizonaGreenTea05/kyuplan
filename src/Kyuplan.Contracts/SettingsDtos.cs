@@ -19,6 +19,8 @@ namespace Kyuplan.Contracts;
 /// <param name="DefaultEventStars">What an event counts for a member who attended it and whom nobody evaluated (0–5).</param>
 /// <param name="ExamMinAverageStars">The average evaluation a member needs to be suggested for an exam (0–5; 0 = not asked).</param>
 /// <param name="UnregisteredSubGroup">Name (or id) of the Spond subgroup of the people not registered in the club yet; empty = none.</param>
+/// <param name="DataSource">Where groups, members and events come from, one of <see cref="DataSourceKinds"/>; <see cref="UseDemoData"/> is the same as <see cref="DataSourceKinds.Demo"/>.</param>
+/// <param name="CustomScript">The JavaScript that reads the data when <paramref name="DataSource"/> is <see cref="DataSourceKinds.Custom"/> (see docs/admin-guide.md).</param>
 public sealed record SettingsDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -37,7 +39,9 @@ public sealed record SettingsDto(
     string? AllowedHosts = null,
     double DefaultEventStars = RatingRules.StandardDefaultEventStars,
     double ExamMinAverageStars = RatingRules.StandardExamMinAverageStars,
-    string? UnregisteredSubGroup = null);
+    string? UnregisteredSubGroup = null,
+    string DataSource = DataSourceKinds.Spond,
+    string CustomScript = "");
 
 /// <summary>A backup Spond login as the settings show it; the password itself is never sent back.</summary>
 public sealed record SpondAccountDto(string? Email, string? PhoneNumber, bool HasPassword);
@@ -48,6 +52,8 @@ public sealed record SpondAccountInputDto(string? Email, string? PhoneNumber, st
 
 /// <summary>What is saved: the settings as <see cref="SettingsDto"/>, with the Spond password to set.</summary>
 /// <param name="SpondPassword"><c>null</c> or empty = keep the stored password.</param>
+/// <param name="DataSource"><c>null</c> = an older client: <see cref="UseDemoData"/> chooses between demo and what is set now.</param>
+/// <param name="CustomScript"><c>null</c> = keep the stored script.</param>
 public sealed record SettingsInputDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -66,7 +72,9 @@ public sealed record SettingsInputDto(
     string? AllowedHosts = null,
     double? DefaultEventStars = null,
     double? ExamMinAverageStars = null,
-    string? UnregisteredSubGroup = null);
+    string? UnregisteredSubGroup = null,
+    string? DataSource = null,
+    string? CustomScript = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>
@@ -93,6 +101,10 @@ public static class SettingsRules
         !string.IsNullOrWhiteSpace(path) && path.Trim().Length <= MaxPathLength && !path.Any(char.IsControl) && !path.Contains(';');
 
     public const int MaxBackupAccounts = 10;
+
+    public const int MaxScriptLength = 100_000;
+
+    public static bool IsDataSource(string? kind) => kind is null || DataSourceKinds.IsKnown(kind.Trim().ToLowerInvariant());
 
     public const string AnyHost = "*";
 

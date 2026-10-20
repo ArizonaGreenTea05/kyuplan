@@ -36,6 +36,9 @@
         <DataTemplate DataType="{x:Type vm:CalendarFeedsViewModel}">
             <views:CalendarFeedsView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ManualDataViewModel}">
+            <views:ManualDataView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:AccountViewModel}">
             <views:AccountView />
         </DataTemplate>

@@ -73,6 +73,16 @@ namespace Kyuplan.Client.Api;
 [JsonSerializable(typeof(List<CalendarFeedDto>))]
 [JsonSerializable(typeof(CalendarFeedDto))]
 [JsonSerializable(typeof(CalendarFeedInputDto))]
+[JsonSerializable(typeof(List<ManualGroupDto>))]
+[JsonSerializable(typeof(ManualGroupDto))]
+[JsonSerializable(typeof(SubGroupDto))]
+[JsonSerializable(typeof(ManualNameInputDto))]
+[JsonSerializable(typeof(List<ManualMemberDto>))]
+[JsonSerializable(typeof(ManualMemberDto))]
+[JsonSerializable(typeof(ManualMemberInputDto))]
+[JsonSerializable(typeof(List<ManualEventDto>))]
+[JsonSerializable(typeof(ManualEventDto))]
+[JsonSerializable(typeof(ManualEventInputDto))]
 [JsonSerializable(typeof(ProblemDetailsPayload))]
 internal sealed partial class PlannerJsonContext : JsonSerializerContext;
 

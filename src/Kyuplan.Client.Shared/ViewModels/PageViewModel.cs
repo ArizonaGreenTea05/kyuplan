@@ -44,6 +44,9 @@ public abstract partial class PageViewModel : ViewModelBase
     /// <summary>Whether the signed-in user may use the page. A page that may not be used shows nothing and loads nothing.</summary>
     public bool CanView => ViewPermission is null || Shell.Can(ViewPermission);
 
+    /// <summary>Whether the navigation offers the page: usually whether it may be used, a page can be left out while it has no use.</summary>
+    public virtual bool ShowInNavigation => CanView;
+
     /// <summary>
     /// Whether the page shows data that depends on the selected group or on the Spond data (the default). Pages that do not, like
     /// the account and user pages, keep what they show and what the user typed when either changes.

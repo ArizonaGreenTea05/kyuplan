@@ -23,7 +23,7 @@ namespace Kyuplan.Api.Spond;
 /// (<see cref="SpondOptions.Accounts"/>): when one yields no groups or events, the next is asked, and so on.
 /// </para>
 /// </summary>
-public sealed class SpondApiDataSource : ISpondDataSource, IDisposable
+public sealed class SpondApiDataSource : IDataSource, IDisposable
 {
     private static readonly TimeSpan EmptyResultCacheDuration = TimeSpan.FromMinutes(2);
 

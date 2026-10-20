@@ -503,3 +503,92 @@ public sealed class CustomBrandingImage
 
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+/// <summary>
+/// A group the users keep by hand when the data source is <see cref="Kyuplan.Contracts.DataSourceKinds.Manual"/>: what Spond would
+/// deliver, entered in the clients instead (see <see cref="ManualDataService"/>, read by <see cref="Sources.ManualDataSource"/>).
+/// </summary>
+public sealed class ManualGroup
+{
+    /// <summary>A GUID in the format "N"; it is the group's id for everything else (members, exams, filters).</summary>
+    public string Id { get; set; } = "";
+
+    public string Name { get; set; } = "";
+
+    public List<ManualSubGroup> SubGroups { get; set; } = [];
+
+    public List<ManualMember> Members { get; set; } = [];
+
+    public List<ManualEvent> Events { get; set; } = [];
+}
+
+public sealed class ManualSubGroup
+{
+    public string Id { get; set; } = "";
+
+    public string GroupId { get; set; } = "";
+
+    public ManualGroup Group { get; set; } = null!;
+
+    public string Name { get; set; } = "";
+}
+
+public sealed class ManualMember
+{
+    public string Id { get; set; } = "";
+
+    public string GroupId { get; set; } = "";
+
+    public ManualGroup Group { get; set; } = null!;
+
+    public string Name { get; set; } = "";
+
+    public DateOnly? BirthDate { get; set; }
+
+    public List<ManualMemberSubGroup> SubGroups { get; set; } = [];
+}
+
+public sealed class ManualMemberSubGroup
+{
+    public string MemberId { get; set; } = "";
+
+    public ManualMember Member { get; set; } = null!;
+
+    public string SubGroupId { get; set; } = "";
+
+    public ManualSubGroup SubGroup { get; set; } = null!;
+}
+
+public sealed class ManualEvent
+{
+    public string Id { get; set; } = "";
+
+    public string GroupId { get; set; } = "";
+
+    public ManualGroup Group { get; set; } = null!;
+
+    public string Name { get; set; } = "";
+
+    public DateTimeOffset Start { get; set; }
+
+    public DateTimeOffset End { get; set; }
+
+    public bool Cancelled { get; set; }
+
+    public List<ManualInvitation> Invitations { get; set; } = [];
+}
+
+/// <summary>One member invited to a manual event and what they answered.</summary>
+public sealed class ManualInvitation
+{
+    public string EventId { get; set; } = "";
+
+    public ManualEvent Event { get; set; } = null!;
+
+    public string MemberId { get; set; } = "";
+
+    public ManualMember Member { get; set; } = null!;
+
+    /// <summary>Stored by name (<c>Accepted</c>, <c>Declined</c>, …) like <see cref="ExamParticipant.Rsvp"/>.</summary>
+    public Rsvp Rsvp { get; set; }
+}

@@ -7,7 +7,7 @@ namespace Kyuplan.Tests;
 /// A Spond that the test controls: the groups and events it serves can be replaced between two syncs (as people join, leave and
 /// answer on the real one), and it can be made unreachable. Like the real data source it returns events by the day they end.
 /// </summary>
-internal sealed class FakeSpondDataSource : ISpondDataSource
+internal sealed class FakeSpondDataSource : IDataSource
 {
     private readonly object _lock = new();
     private IReadOnlyList<GroupInfo> _groups = [];

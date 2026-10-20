@@ -1044,3 +1044,9 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 .feed-source-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .check-scroll { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 4px 2px; }
 .feed-url { width: 100%; min-width: 260px; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+
+/* Manual data: the tabs of a group (members, subgroups, events) and the script of the custom data source */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin: 8px 0; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 14px; font: inherit; color: var(--muted); cursor: pointer; }
+.tab.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.script-box { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; tab-size: 2; white-space: pre; overflow: auto; }

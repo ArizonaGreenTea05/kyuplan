@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="Spond.API" />
+    <PackageReference Include="Jint" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Scalar.AspNetCore" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />

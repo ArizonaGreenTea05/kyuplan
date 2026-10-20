@@ -99,7 +99,8 @@ src/
     Endpoints/             Route groups: Planner, Exam, Belt, Comment, Account, Branding, Settings, ClientDownload, Documentation
     Persistence/           EF context, Entities.cs, services (Exam, ExamPlanning, Member, Belt, Comment, Tag), SpondSync(+Worker)
     Accounts/              Users, roles, Basic auth handler, permission authorization, login throttle, default roles
-    Spond/                 ISpondDataSource: SpondApiDataSource (real), DemoDataSource, multi-account fallback
+    Spond/                 IDataSource: SpondApiDataSource (real), DemoDataSource, multi-account fallback
+    Sources/               The other IDataSource implementations: CustomScriptDataSource (Jint), ManualDataSource (database)
     Statistics/            AttendanceCalculator, ExamSuggestionCalculator, span finder, ...
     Infrastructure/        Middleware (security headers, API key), settings service, restart loop, database registration, branding, logging
     Domain/                Plain records the services work on
@@ -145,8 +146,10 @@ picks the contexts; `Infrastructure/PostgresModel.cs` holds the provider differe
 
 ### Spond access and sync
 
-`ISpondDataSource` hides where groups, members and events come from (`SpondApiDataSource` for Spond.API with caching, re-login and optional
-backup accounts; `DemoDataSource` for generated data). The API **only reads** from Spond. `SpondSyncWorker` (a hosted service) runs `SpondSync`
+`IDataSource` hides where groups, members and events come from (`SpondApiDataSource` for Spond.API with caching, re-login and optional
+backup accounts; `DemoDataSource` for generated data; `CustomScriptDataSource`, the administrator's JavaScript run by Jint; `ManualDataSource`,
+rows entered by users in the `Manual*` tables). Which one runs is decided once, in `Program.cs`, from `DataSourceOptions.Resolve`
+(`DataSource:Kind`, `Spond:UseDemoData` wins); the settings page changes it and restarts the API. The API **only reads** from the source. `SpondSyncWorker` (a hosted service) runs `SpondSync`
 at start and every `Sync:Interval`: members, start days, birth dates and the invitations of exams are kept in line; what users entered (belts,
 belt days, comments, saved members, results) is never touched.
 
@@ -252,8 +255,9 @@ Add `Strings.<culture>.resx` with all keys of `Strings.resx`, list the culture i
 
 ### Add a Spond feature
 
-Everything Spond-related passes through `ISpondDataSource`. Extend the interface, implement it for the real source **and** the demo data
-(`DemoDataSource`), and use `FakeSpondDataSource` in tests. Remember: Spond.API never refreshes its token and reports failures as empty
+Everything Spond-related passes through `IDataSource`. Extend the interface, implement it for every source (Spond, demo, custom script,
+manual), and use `FakeSpondDataSource` in tests. A new kind of source: add the id to `DataSourceKinds`, the class, one line in `Program.cs`,
+and an option in the settings page (`SettingsForm.DataSources`, the `Settings_DataSource_*` texts). Remember: Spond.API never refreshes its token and reports failures as empty
 lists; see the handling in `SpondApiDataSource`.
 
 ### Add a client for another operating system

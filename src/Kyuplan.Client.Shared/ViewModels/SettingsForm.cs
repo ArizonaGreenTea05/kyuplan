@@ -19,7 +19,51 @@ public sealed partial class SettingsForm : ObservableObject
 
     [ObservableProperty] private string _databasePath = "";
     [ObservableProperty] private string _accountsDatabasePath = "";
-    [ObservableProperty] private bool _useDemoData;
+
+    /// <summary>Where groups, members and events come from, one of <see cref="DataSourceKinds"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UseDemoData), nameof(IsSpondSource), nameof(IsCustomSource), nameof(IsManualSource), nameof(SpondProblem), nameof(BackupProblem), nameof(CustomScriptProblem))]
+    private string _dataSource = DataSourceKinds.Spond;
+
+    /// <summary>The JavaScript of the custom data source.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomScriptProblem))]
+    private string _customScript = "";
+
+    /// <summary>The demo data is one of the data sources; this is the older way to ask for it.</summary>
+    public bool UseDemoData
+    {
+        get => DataSource == DataSourceKinds.Demo;
+        set => DataSource = value ? DataSourceKinds.Demo : DataSource == DataSourceKinds.Demo ? DataSourceKinds.Spond : DataSource;
+    }
+
+    public bool IsSpondSource => DataSource == DataSourceKinds.Spond;
+
+    public bool IsCustomSource => DataSource == DataSourceKinds.Custom;
+
+    public bool IsManualSource => DataSource == DataSourceKinds.Manual;
+
+    /// <summary>The data sources to choose from, in the order they are offered.</summary>
+    public static IReadOnlyList<string> DataSources { get; } = DataSourceKinds.All;
+
+    public static string DataSourceText(string kind) => kind switch
+    {
+        DataSourceKinds.Custom => Strings.Settings_DataSource_custom,
+        DataSourceKinds.Manual => Strings.Settings_DataSource_manual,
+        DataSourceKinds.Demo => Strings.Settings_DataSource_demo,
+        _ => Strings.Settings_DataSource_spond,
+    };
+
+    /// <summary>What the chosen data source means, in a sentence.</summary>
+    public string DataSourceHint => DataSource switch
+    {
+        DataSourceKinds.Custom => Strings.Settings_DataSourceHint_custom,
+        DataSourceKinds.Manual => Strings.Settings_DataSourceHint_manual,
+        DataSourceKinds.Demo => Strings.Settings_UseDemoDataHint,
+        _ => Strings.Settings_DataSourceHint_spond,
+    };
+
+    partial void OnDataSourceChanged(string value) => OnPropertyChanged(nameof(DataSourceHint));
     [ObservableProperty] private string _spondEmail = "";
     [ObservableProperty] private string _spondPhoneNumber = "";
     [ObservableProperty] private string _spondPassword = "";
@@ -50,7 +94,8 @@ public sealed partial class SettingsForm : ObservableObject
     {
         DatabasePath = settings.DatabasePath;
         AccountsDatabasePath = settings.AccountsDatabasePath;
-        UseDemoData = settings.UseDemoData;
+        DataSource = DataSourceKinds.Normalize(settings.UseDemoData ? DataSourceKinds.Demo : settings.DataSource);
+        CustomScript = settings.CustomScript;
         SpondEmail = settings.SpondEmail ?? "";
         SpondPhoneNumber = settings.SpondPhoneNumber ?? "";
         SpondPassword = "";
@@ -72,11 +117,14 @@ public sealed partial class SettingsForm : ObservableObject
     }
 
     public SettingsInputDto ToInput() => new(
-        DatabasePath.Trim(), AccountsDatabasePath.Trim(), UseDemoData, SpondEmail.Trim(), SpondPhoneNumber.Trim(),
+        DatabasePath.Trim(), AccountsDatabasePath.Trim(), DataSource == DataSourceKinds.Demo, SpondEmail.Trim(), SpondPhoneNumber.Trim(),
         SpondPassword.Length == 0 ? null : SpondPassword, IgnoreAdministrators, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
         [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
-        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim());
+        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScript);
+
+    [RelayCommand]
+    private void InsertScriptTemplate() => CustomScript = CustomScriptTemplate.Text;
 
     [RelayCommand]
     private void AddBackupAccount() => AddBackup(new BackupAccountForm());
@@ -92,7 +140,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     /// <summary>Everything typed is what the API runs with (and no new Spond password was typed).</summary>
     public bool Matches(SettingsDto s) =>
-        DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && UseDemoData == s.UseDemoData &&
+        DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && DataSource == DataSourceKinds.Normalize(s.UseDemoData ? DataSourceKinds.Demo : s.DataSource) && CustomScript == s.CustomScript &&
         SpondEmail.Trim() == (s.SpondEmail ?? "") && SpondPhoneNumber.Trim() == (s.SpondPhoneNumber ?? "") && SpondPassword.Length == 0 &&
         IgnoreAdministrators == s.IgnoreAdministrators && TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
@@ -114,12 +162,18 @@ public sealed partial class SettingsForm : ObservableObject
         : null;
 
     public string? SpondProblem =>
-        !UseDemoData && SettingsRules.HasHalfCredentials(SpondEmail, SpondPhoneNumber, SpondPassword.Length > 0 || HasSpondPassword)
+        IsSpondSource && SettingsRules.HasHalfCredentials(SpondEmail, SpondPhoneNumber, SpondPassword.Length > 0 || HasSpondPassword)
             ? Strings.Settings_SpondIncomplete
             : null;
 
     public string? BackupProblem =>
-        !UseDemoData && BackupAccounts.Any(a => a.IsIncomplete) ? Strings.Settings_BackupIncomplete : null;
+        IsSpondSource && BackupAccounts.Any(a => a.IsIncomplete) ? Strings.Settings_BackupIncomplete : null;
+
+    public string? CustomScriptProblem =>
+        !IsCustomSource ? null
+        : string.IsNullOrWhiteSpace(CustomScript) ? Strings.Settings_ScriptEmpty
+        : CustomScript.Length > SettingsRules.MaxScriptLength ? string.Format(Strings.Settings_ScriptTooLong, SettingsRules.MaxScriptLength)
+        : null;
 
     public string? TimeZoneProblem => string.IsNullOrWhiteSpace(TimeZone) ? Strings.Settings_TimeZoneInvalid : null;
 
@@ -137,7 +191,7 @@ public sealed partial class SettingsForm : ObservableObject
     public string? AllowedHostsProblem => SettingsRules.IsAllowedHosts(AllowedHosts) ? null : Strings.Settings_AllowedHostsInvalid;
 
     public bool IsValid =>
-        DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && TimeZoneProblem is null &&
+        DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && CustomScriptProblem is null && TimeZoneProblem is null &&
         PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null;
 }
 

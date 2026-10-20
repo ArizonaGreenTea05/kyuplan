@@ -458,6 +458,148 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.ToTable("ExamResults");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEvent", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Cancelled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("End")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("Start")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("ManualEvents");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("ManualGroups");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualInvitation", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MemberId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Rsvp")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("ManualInvitations");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualMember", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("ManualMembers");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualMemberSubGroup", b =>
+                {
+                    b.Property<string>("MemberId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubGroupId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MemberId", "SubGroupId");
+
+                    b.HasIndex("SubGroupId");
+
+                    b.ToTable("ManualMemberSubGroups");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualSubGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ManualSubGroups");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.Member", b =>
                 {
                     b.Property<int>("Id")
@@ -827,6 +969,77 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEvent", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualGroup", "Group")
+                        .WithMany("Events")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualInvitation", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualEvent", "Event")
+                        .WithMany("Invitations")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kyuplan.Api.Persistence.ManualMember", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualMember", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualGroup", "Group")
+                        .WithMany("Members")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualMemberSubGroup", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualMember", "Member")
+                        .WithMany("SubGroups")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kyuplan.Api.Persistence.ManualSubGroup", "SubGroup")
+                        .WithMany()
+                        .HasForeignKey("SubGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+
+                    b.Navigation("SubGroup");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualSubGroup", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualGroup", "Group")
+                        .WithMany("SubGroups")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.Member", b =>
                 {
                     b.HasOne("Kyuplan.Api.Persistence.Belt", "Belt")
@@ -884,6 +1097,25 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Navigation("Payments");
 
                     b.Navigation("Results");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEvent", b =>
+                {
+                    b.Navigation("Invitations");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualGroup", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Members");
+
+                    b.Navigation("SubGroups");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualMember", b =>
+                {
+                    b.Navigation("SubGroups");
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Persistence.Member", b =>

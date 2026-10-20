@@ -463,7 +463,7 @@ public sealed class ExamApiTests(WebApplicationFactory<Program> factory) : IClas
         Cancelled: false, new Dictionary<string, Rsvp>());
 
     /// <summary>A Spond that can be told to rename and move events, and to go away. Events within the search window of 13 October 2026.</summary>
-    private sealed class FakeSpond : ISpondDataSource
+    private sealed class FakeSpond : IDataSource
     {
         public List<EventInfo> Events { get; } =
         [
@@ -494,7 +494,7 @@ public sealed class ExamApiTests(WebApplicationFactory<Program> factory) : IClas
 
     private (HttpClient Client, PlannerApiClient Api) CreateHostWith(FakeSpond spond)
     {
-        var client = CreateHost(b => b.ConfigureTestServices(s => s.AddSingleton<ISpondDataSource>(spond))).CreateSignedInClient();
+        var client = CreateHost(b => b.ConfigureTestServices(s => s.AddSingleton<IDataSource>(spond))).CreateSignedInClient();
         return (client, new PlannerApiClient(client));
     }
 
@@ -558,7 +558,7 @@ public sealed class ExamApiTests(WebApplicationFactory<Program> factory) : IClas
 
         var exam = await api.CreateExamAsync(Input(events.September));
 
-        var source = host.Services.GetRequiredService<ISpondDataSource>();
+        var source = host.Services.GetRequiredService<IDataSource>();
         var invited = (await source.GetEventsAsync(Group, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, CancellationToken.None))
             .Single(e => e.Id == events.September.Id).Responses;
         await using var scope = host.Services.CreateAsyncScope();

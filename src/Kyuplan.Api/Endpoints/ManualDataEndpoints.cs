@@ -1,5 +1,6 @@
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Spond;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Endpoints;
@@ -14,6 +15,12 @@ public static class ManualDataEndpoints
     public static IEndpointRouteBuilder MapManualDataEndpoints(this IEndpointRouteBuilder app)
     {
         var manual = app.MapGroup("/api/manual").WithTags("Manual data").RequirePermission(Permission.ManualDataEdit);
+
+        // The rows only matter (and are synced) while they are the data source; anything else would write into a table nobody reads.
+        manual.AddEndpointFilter(async (context, next) =>
+            context.HttpContext.RequestServices.GetRequiredService<IDataSource>().Kind == DataSourceKinds.Manual
+                ? await next(context)
+                : Results.Problem("The data source is not 'manual'; choose it in the settings first.", statusCode: StatusCodes.Status409Conflict, title: "Manual data is not the data source"));
 
         manual.MapGet("/groups", (ManualDataService service, CancellationToken ct) => service.ListGroupsAsync(ct))
             .WithSummary("The groups kept by hand, with their subgroups.");

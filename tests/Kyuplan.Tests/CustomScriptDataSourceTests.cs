@@ -19,8 +19,8 @@ public sealed class CustomScriptDataSourceTests
 {
     private static readonly ClubClock Clock = new(new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero)), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin"));
 
-    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null) =>
-        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20) }), Clock, NullLogger<CustomScriptDataSource>.Instance);
+    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true) =>
+        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal }), Clock, NullLogger<CustomScriptDataSource>.Instance);
 
     private const string StaticScript = """
         function getGroups() {
@@ -75,11 +75,36 @@ public sealed class CustomScriptDataSourceTests
         var first = await source.GetEventsAsync("g", from, to, CancellationToken.None);
         var again = await source.GetEventsAsync("g", from, to, CancellationToken.None);
 
-        Assert.Equal("g|2026-01-01T00:00:00.0000000Z|2026-02-01T00:00:00.0000000Z", Assert.Single(first).Id);
+        Assert.Equal("g|2026-01-01T00:00:00.0000000Z|2026-02-02T00:00:00.0000000Z", Assert.Single(first).Id);
         Assert.Same(first, again);
 
         source.InvalidateCache();
         Assert.NotSame(first, await source.GetEventsAsync("g", from, to, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Windows_within_the_same_days_share_one_run_of_the_script()
+    {
+        using var source = Source("function getGroups() { return []; } function getEvents() { return []; }");
+        var day = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero);
+
+        var first = await source.GetEventsAsync("g", day, day.AddDays(5).AddHours(3), CancellationToken.None);
+        var later = await source.GetEventsAsync("g", day.AddHours(2), day.AddDays(5).AddHours(9), CancellationToken.None);
+
+        Assert.Same(first, later);
+    }
+
+    [Theory]
+    [InlineData("http://127.0.0.1:1/")]
+    [InlineData("http://localhost:1/")]
+    [InlineData("http://169.254.169.254/")]
+    public async Task Local_addresses_are_refused_unless_allowed(string url)
+    {
+        using var source = Source($"function getGroups() {{ http.get('{url}'); return []; }}", allowLocal: false);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("local address", ex.Message);
     }
 
     [Theory]

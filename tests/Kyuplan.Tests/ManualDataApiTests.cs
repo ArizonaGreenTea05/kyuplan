@@ -149,4 +149,21 @@ public sealed class ManualDataApiTests(WebApplicationFactory<Program> factory) :
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/manual/groups")).StatusCode);
     }
+
+    [Fact]
+    public async Task The_manual_data_can_only_be_changed_while_it_is_the_data_source()
+    {
+        using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("DataSource:Kind", "spond");
+            builder.UseSetting("Spond:UseDemoData", "true");
+            builder.UseSetting("Sync:Enabled", "false");
+            builder.UseSetting("DefaultData:Enabled", "false");
+            builder.UseSetting("Database:ConnectionString", _database.ConnectionString);
+            TestAccounts.Configure(builder, _accounts);
+        });
+        var admin = host.CreateSignedInClient();
+
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsJsonAsync("/api/manual/groups", new ManualNameInputDto("Dojo"))).StatusCode);
+    }
 }

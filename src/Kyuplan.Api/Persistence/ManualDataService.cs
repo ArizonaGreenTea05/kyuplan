@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Kyuplan.Api.Domain;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Persistence;
@@ -31,7 +32,7 @@ public sealed class ManualDataService(PlannerDbContext db)
 
         var group = new ManualGroup { Id = NewId(), Name = name };
         db.ManualGroups.Add(group);
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveNameAsync($"A group named '{name}' exists already.", cancellationToken);
         return new ManualGroupDto(group.Id, group.Name, [], 0);
     }
 
@@ -44,7 +45,7 @@ public sealed class ManualDataService(PlannerDbContext db)
         if (await GroupNameTakenAsync(name, groupId, cancellationToken)) throw new AlreadyExistsException($"A group named '{name}' exists already.");
 
         group.Name = name;
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveNameAsync($"A group named '{name}' exists already.", cancellationToken);
         return (await ListGroupsAsync(cancellationToken)).First(g => g.Id == groupId);
     }
 
@@ -65,7 +66,7 @@ public sealed class ManualDataService(PlannerDbContext db)
 
         var subGroup = new ManualSubGroup { Id = NewId(), GroupId = groupId, Name = name };
         db.ManualSubGroups.Add(subGroup);
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveNameAsync($"A subgroup named '{name}' exists already.", cancellationToken);
         return new SubGroupDto(subGroup.Id, subGroup.Name);
     }
 
@@ -76,7 +77,7 @@ public sealed class ManualDataService(PlannerDbContext db)
         if (await SubGroupNameTakenAsync(subGroup.GroupId, name, subGroupId, cancellationToken)) throw new AlreadyExistsException($"A subgroup named '{name}' exists already.");
 
         subGroup.Name = name;
-        await db.SaveChangesAsync(cancellationToken);
+        await SaveNameAsync($"A subgroup named '{name}' exists already.", cancellationToken);
         return new SubGroupDto(subGroup.Id, subGroup.Name);
     }
 
@@ -214,6 +215,19 @@ public sealed class ManualDataService(PlannerDbContext db)
 
     private async Task<ManualSubGroup> FindSubGroupAsync(string subGroupId, CancellationToken cancellationToken) =>
         await db.ManualSubGroups.FirstOrDefaultAsync(s => s.Id == subGroupId, cancellationToken) ?? throw new ManualDataNotFoundException("subgroup", subGroupId);
+
+    /// <summary>The unique indexes decide what a duplicate is, so two requests racing for one name cannot both win; the check above gives the usual early answer.</summary>
+    private async Task SaveNameAsync(string conflictMessage, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.IsUniqueViolation())
+        {
+            throw new AlreadyExistsException(conflictMessage);
+        }
+    }
 
     // Compared in code: SQLite's lower() does not know umlauts.
     private async Task<bool> GroupNameTakenAsync(string name, string? exceptId, CancellationToken cancellationToken) =>

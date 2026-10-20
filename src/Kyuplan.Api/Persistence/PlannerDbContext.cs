@@ -180,14 +180,16 @@ public class PlannerDbContext : DbContext
         modelBuilder.Entity<ManualGroup>(group =>
         {
             group.Property(g => g.Id).HasMaxLength(IdLength);
-            group.Property(g => g.Name).HasMaxLength(NameLength);
+            group.Property(g => g.Name).HasMaxLength(NameLength).UseCollation(NoCase);
+            group.HasIndex(g => g.Name).IsUnique();
         });
 
         modelBuilder.Entity<ManualSubGroup>(subGroup =>
         {
             subGroup.Property(s => s.Id).HasMaxLength(IdLength);
             subGroup.Property(s => s.GroupId).HasMaxLength(IdLength);
-            subGroup.Property(s => s.Name).HasMaxLength(NameLength);
+            subGroup.Property(s => s.Name).HasMaxLength(NameLength).UseCollation(NoCase);
+            subGroup.HasIndex(s => new { s.GroupId, s.Name }).IsUnique();
             subGroup.HasOne(s => s.Group).WithMany(g => g.SubGroups).HasForeignKey(s => s.GroupId).OnDelete(DeleteBehavior.Cascade);
         });
 

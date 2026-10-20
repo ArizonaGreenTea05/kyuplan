@@ -515,9 +515,12 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("citext");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("ManualGroups");
                 });
@@ -601,11 +604,12 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("citext");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId");
+                    b.HasIndex("GroupId", "Name")
+                        .IsUnique();
 
                     b.ToTable("ManualSubGroups");
                 });

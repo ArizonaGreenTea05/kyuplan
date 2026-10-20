@@ -116,9 +116,15 @@ The button **Insert example script** puts a complete example into the box. Insid
 
 - `http.get(url, headers)`, `http.post(url, body, headers)`, `http.put(url, body, headers)` and `http.delete(url, headers)`. Each waits for the answer
   and returns `{ status, ok, text, json() }`. A `body` that is not text is sent as JSON. Only `http://` and `https://` addresses work, an answer may
-  be at most 10 MB, and one request is given up after 30 seconds.
+  be at most 10 MB, and one request is given up after 30 seconds. A call of the script as a whole is stopped after 60 seconds, a request that is
+  still waiting included.
 - `console.log(...)`, which writes to the server's log.
 - Everything of plain JavaScript (ECMAScript), and nothing else: no file system, no network but `http`, no .NET.
+
+> **Who can reach what.** The requests are made **by the server**, from its network position, and follow redirects. A script can therefore reach addresses only the server
+> can: other containers, the internal network and the like. Loopback (`localhost`) and link-local addresses (`169.254.x.x`, the cloud metadata service)
+> are refused unless `DataSource:AllowLocalAddresses` is `true`; every other address is open. Only give the permission to change the settings to people you trust with that, and never paste a script you did not read.
+> Credentials in the script are stored in `data/settings.json` and shown to everybody who may open the Settings page.
 
 Rules to know:
 

@@ -34,7 +34,7 @@ public sealed class CustomScriptDataSource(
     private const int MaxRecursion = 300;
     private const int MaxResponseBytes = 10 * 1024 * 1024;
 
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private readonly HttpClient _http = CreateHttp(options);
 
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -46,15 +46,22 @@ public sealed class CustomScriptDataSource(
     public Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
         CachedAsync("groups", () => RunAsync(engine => ParseGroups(Call(engine, "getGroups")), cancellationToken));
 
-    public Task<IReadOnlyList<EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
-        CachedAsync($"events|{groupId}|{from.UtcTicks}|{to.UtcTicks}", () => RunAsync(
-            engine => ParseEvents(Call(engine, "getEvents", groupId, from.UtcDateTime.ToString("o", CultureInfo.InvariantCulture), to.UtcDateTime.ToString("o", CultureInfo.InvariantCulture))),
+    public Task<IReadOnlyList<EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    {
+        // The window is widened to whole UTC days (the interface allows a superset): callers pass "now + n days", which would otherwise be a new
+        // cache key, and a new run of the script, on every call.
+        var start = from.UtcDateTime.Date;
+        var end = to.UtcDateTime.Date is var last && last < DateTime.MaxValue.Date ? last.AddDays(1) : last;
+        return CachedAsync($"events|{groupId}|{start.Ticks}|{end.Ticks}", () => RunAsync(
+            engine => ParseEvents(Call(engine, "getEvents", groupId, start.ToString("o", CultureInfo.InvariantCulture), end.ToString("o", CultureInfo.InvariantCulture))),
             cancellationToken));
+    }
 
     public void InvalidateCache() => _cache.Compact(1.0);
 
     public void Dispose()
     {
+        _http.Dispose();
         _cache.Dispose();
         _gate.Dispose();
     }
@@ -96,9 +103,16 @@ public sealed class CustomScriptDataSource(
             await _gate.WaitAsync(cancellationToken);
             try
             {
-                var engine = CreateEngine(cancellationToken);
+                // The time limit also ends a request that is waiting for an answer, which Jint's own timeout cannot interrupt.
+                using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                limit.CancelAfter(options.Value.ScriptTimeout);
+                var engine = CreateEngine(limit.Token);
                 engine.Execute(script);
                 return work(engine);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new SpondUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -120,7 +134,7 @@ public sealed class CustomScriptDataSource(
             .LimitRecursion(MaxRecursion)
             .CancellationToken(cancellationToken));
 
-        engine.SetValue("__request", new Func<string, string, string?, string?, string>(Request));
+        engine.SetValue("__request", new Func<string, string, string?, string?, string>((method, url, body, headers) => Request(method, url, body, headers, cancellationToken)));
         engine.SetValue("__log", new Action<string>(message => logger.LogInformation("Custom data script: {Message}", message)));
         engine.Execute(Prelude);
         return engine;
@@ -139,7 +153,7 @@ public sealed class CustomScriptDataSource(
     }
 
     /// <summary>What <c>http.get</c> and friends do: one request, answered as JSON <c>{ status, text }</c>.</summary>
-    private static string Request(string method, string url, string? body, string? headersJson)
+    private string Request(string method, string url, string? body, string? headersJson, CancellationToken cancellationToken)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
             throw new InvalidOperationException($"http: '{url}' is not an http or https address.");
@@ -162,8 +176,8 @@ public sealed class CustomScriptDataSource(
             request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
         }
 
-        using var response = Http.Send(request, HttpCompletionOption.ResponseHeadersRead);
-        using var stream = response.Content.ReadAsStream();
+        using var response = _http.Send(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var stream = response.Content.ReadAsStream(cancellationToken);
         using var buffer = new MemoryStream();
         var chunk = new byte[16 * 1024];
         int read;
@@ -176,11 +190,46 @@ public sealed class CustomScriptDataSource(
         return System.Text.Json.JsonSerializer.Serialize(new { status = (int)response.StatusCode, text = Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length) });
     }
 
+    private static HttpClient CreateHttp(IOptions<DataSourceOptions> options) => new(new SocketsHttpHandler
+    {
+        ConnectCallback = async (context, cancellationToken) =>
+        {
+            // Checked on the addresses the name resolved to (redirects and DNS tricks included), not on the text of the URL.
+            var addresses = await System.Net.Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
+            if (!options.Value.AllowLocalAddresses && addresses.Any(IsLocal))
+                throw new InvalidOperationException($"http: {context.DnsEndPoint.Host} is a local address (loopback, link-local or the cloud metadata service); DataSource:AllowLocalAddresses allows it.");
+
+            var socket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp) { NoDelay = true };
+            try
+            {
+                await socket.ConnectAsync(addresses, context.DnsEndPoint.Port, cancellationToken);
+                return new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+            }
+            catch
+            {
+                socket.Dispose();
+                throw;
+            }
+        },
+    }) { Timeout = TimeSpan.FromSeconds(30) };
+
+    private static bool IsLocal(System.Net.IPAddress address)
+    {
+        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
+        if (System.Net.IPAddress.IsLoopback(address) || address.Equals(System.Net.IPAddress.Any) || address.Equals(System.Net.IPAddress.IPv6Any)) return true;
+        if (address.IsIPv6LinkLocal) return true;
+        if (address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return false;
+
+        var b = address.GetAddressBytes();
+        return b[0] == 169 && b[1] == 254;
+    }
+
     private const string Prelude = """
         var console = { log: function () { __log(Array.prototype.slice.call(arguments).map(String).join(' ')); } };
         var http = (function () {
             function call(method, url, body, headers) {
-                var h = headers || {};
+                var h = {};
+                for (var k in (headers || {})) h[k] = headers[k];
                 var payload = null;
                 if (body !== undefined && body !== null) {
                     if (typeof body === 'string') payload = body;

@@ -316,6 +316,24 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task DeleteTagAsync(int tagId, CancellationToken cancellationToken = default) =>
         SendNoContentAsync(() => http.DeleteAsync($"api/tags/{tagId}", cancellationToken), cancellationToken);
 
+    public async Task<IReadOnlyList<CalendarFeedDto>> GetCalendarFeedsAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/calendar-feeds", PlannerJsonContext.Default.ListCalendarFeedDto, cancellationToken);
+
+    public Task<CalendarFeedDto> CreateCalendarFeedAsync(CalendarFeedInputDto feed, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/calendar-feeds", Json(feed, PlannerJsonContext.Default.CalendarFeedInputDto), cancellationToken),
+            PlannerJsonContext.Default.CalendarFeedDto, cancellationToken);
+
+    public Task<CalendarFeedDto> UpdateCalendarFeedAsync(int feedId, CalendarFeedInputDto feed, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/calendar-feeds/{feedId}", Json(feed, PlannerJsonContext.Default.CalendarFeedInputDto), cancellationToken),
+            PlannerJsonContext.Default.CalendarFeedDto, cancellationToken);
+
+    public Task<CalendarFeedDto> RegenerateCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/calendar-feeds/{feedId}/regenerate", null, cancellationToken),
+            PlannerJsonContext.Default.CalendarFeedDto, cancellationToken);
+
+    public Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/calendar-feeds/{feedId}", cancellationToken), cancellationToken);
+
     private static JsonContent Json<T>(T value, JsonTypeInfo<T> typeInfo) => JsonContent.Create(value, typeInfo);
 
     private Task<T> GetAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken cancellationToken) =>

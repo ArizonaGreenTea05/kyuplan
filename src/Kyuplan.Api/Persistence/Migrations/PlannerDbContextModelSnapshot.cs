@@ -79,6 +79,41 @@ namespace Kyuplan.Api.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.CalendarFeed", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("SourcesJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.ToTable("CalendarFeeds");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.Comment", b =>
                 {
                     b.Property<int>("Id")

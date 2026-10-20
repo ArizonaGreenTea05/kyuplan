@@ -235,4 +235,18 @@ public interface IPlannerApi
 
     /// <summary>Deletes a tag and takes it off the comments that carry it.</summary>
     Task DeleteTagAsync(int tagId, CancellationToken cancellationToken = default);
+
+    /// <summary>All calendar feeds (ICS addresses for calendar apps) with their sources; needs calendar.feeds.</summary>
+    Task<IReadOnlyList<CalendarFeedDto>> GetCalendarFeedsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Makes a calendar feed. 409 when the name is taken, 404 when a group is not found, 400 when a subgroup is not one of its group.</summary>
+    Task<CalendarFeedDto> CreateCalendarFeedAsync(CalendarFeedInputDto feed, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the name and sources of a feed; its address stays.</summary>
+    Task<CalendarFeedDto> UpdateCalendarFeedAsync(int feedId, CalendarFeedInputDto feed, CancellationToken cancellationToken = default);
+
+    /// <summary>Gives a feed a new secret address; the old one stops working.</summary>
+    Task<CalendarFeedDto> RegenerateCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default);
+
+    Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default);
 }

@@ -174,6 +174,8 @@ public sealed class PermissionApiTests(WebApplicationFactory<Program> factory) :
             { "GET", "/api/members/999/ratings", null, Permission.RatingsView + "," + Permission.RatingsViewOwn },
             { "PUT", "/api/calendar/events/e1/members/999/rating?groupId=g", "{\"stars\":3}", Permission.RatingsWrite },
             { "DELETE", "/api/calendar/events/e1/members/999/rating?groupId=g", null, Permission.RatingsWrite },
+            { "GET", "/api/calendar-feeds", null, Permission.CalendarFeeds },
+            { "POST", "/api/calendar-feeds/1/regenerate", null, Permission.CalendarFeeds },
             { "GET", "/api/tags", null, Any(Permission.ReadsTags) },
             { "GET", "/api/tags/999", null, Any(Permission.ReadsTags) },
             { "POST", "/api/tags", "{}", Permission.TagsEdit },

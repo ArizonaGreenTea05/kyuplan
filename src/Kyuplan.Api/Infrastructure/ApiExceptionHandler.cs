@@ -24,6 +24,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger
             MemberNotFoundException => (StatusCodes.Status404NotFound, "Member not found"),
             CommentNotFoundException => (StatusCodes.Status404NotFound, "Comment not found"),
             TagNotFoundException => (StatusCodes.Status404NotFound, "Tag not found"),
+            CalendarFeedNotFoundException => (StatusCodes.Status404NotFound, "Calendar feed not found"),
             ForbiddenException => (StatusCodes.Status403Forbidden, "Not allowed"),
             AlreadyExistsException => (StatusCodes.Status409Conflict, "Already exists"),
             BeltInUseException => (StatusCodes.Status409Conflict, "Belt in use"),

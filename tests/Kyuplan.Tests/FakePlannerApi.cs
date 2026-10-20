@@ -1325,6 +1325,56 @@ internal sealed class FakePlannerApi : IPlannerApi
             return 0;
         });
 
+    /// <summary>The calendar feeds the server holds.</summary>
+    public List<CalendarFeedDto> CalendarFeeds { get; } = [];
+
+    /// <summary>Every call that changed feeds, e.g. <c>create-feed:Kids</c>, <c>update-feed:3</c>, <c>regenerate-feed:3</c>, <c>delete-feed:3</c>.</summary>
+    public List<string> FeedCalls { get; } = [];
+
+    public List<CalendarFeedInputDto> FeedInputs { get; } = [];
+
+    public Task<IReadOnlyList<CalendarFeedDto>> GetCalendarFeedsAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<CalendarFeedDto>>(() => [.. CalendarFeeds]);
+
+    public Task<CalendarFeedDto> CreateCalendarFeedAsync(CalendarFeedInputDto feed, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            FeedCalls.Add($"create-feed:{feed.Name}");
+            FeedInputs.Add(feed);
+            var id = _nextId++;
+            var created = new CalendarFeedDto(id, feed.Name, $"token{id}", $"https://x/calendar-feeds/token{id}.ics", feed.Sources, Now);
+            CalendarFeeds.Add(created);
+            return created;
+        });
+
+    public Task<CalendarFeedDto> UpdateCalendarFeedAsync(int feedId, CalendarFeedInputDto feed, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            FeedCalls.Add($"update-feed:{feedId}");
+            FeedInputs.Add(feed);
+            var index = CalendarFeeds.FindIndex(f => f.Id == feedId);
+            if (index < 0) throw NotFound();
+            return CalendarFeeds[index] = CalendarFeeds[index] with { Name = feed.Name, Sources = feed.Sources };
+        });
+
+    public Task<CalendarFeedDto> RegenerateCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            FeedCalls.Add($"regenerate-feed:{feedId}");
+            var index = CalendarFeeds.FindIndex(f => f.Id == feedId);
+            if (index < 0) throw NotFound();
+            var token = $"new{_nextId++}";
+            return CalendarFeeds[index] = CalendarFeeds[index] with { Token = token, Url = $"https://x/calendar-feeds/{token}.ics" };
+        });
+
+    public Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            FeedCalls.Add($"delete-feed:{feedId}");
+            CalendarFeeds.Remove(CalendarFeeds.FirstOrDefault(f => f.Id == feedId) ?? throw NotFound());
+            return 0;
+        });
+
     private Task<T> Run<T>(Func<T> action)
     {
         if (FailWith is { } ex) return Task.FromException<T>(ex);

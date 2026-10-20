@@ -1,0 +1,235 @@
+@page "/calendar-feeds"
+@inherits ViewModelComponent<CalendarFeedsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.CalendarFeeds_Lede</p>
+        </div>
+        @if (Vm.CanView)
+        {
+            <button type="button" class="btn" disabled="@(!Vm.BeginCreateCommand.CanExecute(null))" @onclick="() => Vm.BeginCreateCommand.Execute(null)">
+                <Icon Name="plus" /><span>@Strings.CalendarFeeds_New</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.Editor.IsOpen)
+        {
+            <article class="card card-form">
+                <div class="tag-form" role="group" aria-label="@Vm.Editor.Title">
+                    <h3 class="tag-form-title">@Vm.Editor.Title</h3>
+
+                    <label class="field">
+                        <span>@Strings.CalendarFeeds_FormName</span>
+                        <input type="text" maxlength="@CalendarFeedRules.MaxNameLength" autocomplete="off" @bind="Vm.Editor.Name" @bind:event="oninput" />
+                        @if (Vm.Editor.NameProblem is { } problem)
+                        {
+                            <p class="field-error" role="alert">@problem</p>
+                        }
+                    </label>
+
+                    @for (var i = 0; i < Vm.Editor.Sources.Count; i++)
+                    {
+                        var source = Vm.Editor.Sources[i];
+                        var number = i + 1;
+                        <fieldset class="feed-source" @key="source">
+                            <legend>@($"{Strings.CalendarFeeds_Source} {number}")</legend>
+
+                            <div class="feed-source-row">
+                                <label class="field">
+                                    <span>@Strings.CalendarFeeds_FieldKind</span>
+                                    <select @bind="source.Kind">
+                                        @foreach (var kind in FeedSourceEditor.KindChoices)
+                                        {
+                                            <option value="@kind.Value">@kind.Text</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label class="field">
+                                    <span>@Strings.CalendarFeeds_FieldGroup</span>
+                                    <select @bind="source.GroupId">
+                                        @foreach (var group in source.Groups)
+                                        {
+                                            <option value="@group.Id">@group.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                                <label class="field">
+                                    <span>@Strings.CalendarFeeds_FieldLabel</span>
+                                    <input type="text" maxlength="@CalendarFeedRules.MaxLabelLength" autocomplete="off" @bind="source.Label" @bind:event="oninput" />
+                                </label>
+                            </div>
+
+                            <div class="feed-source-row">
+                                @if (source.SubGroups.Count > 0)
+                                {
+                                    <div class="field" role="group" aria-label="@Strings.CalendarFeeds_FieldSubGroups">
+                                        <span>@Strings.CalendarFeeds_FieldSubGroups</span>
+                                        <div class="check-scroll">
+                                            @foreach (var option in source.SubGroups)
+                                            {
+                                                <label class="check pick" @key="option.Key"><input type="checkbox" @bind="option.IsSelected" /><span>@option.Name</span></label>
+                                                @if (option.IsSelected)
+                                                {
+                                                    <input type="text" maxlength="@CalendarFeedRules.MaxLabelLength" autocomplete="off" placeholder="@Strings.CalendarFeeds_SubGroupLabel"
+                                                           aria-label="@string.Format(Strings.CalendarFeeds_SubGroupLabelAria, option.Name)" @bind="option.Label" @bind:event="oninput" />
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @if (source.Members.Count > 0)
+                                {
+                                    <div class="field" role="group" aria-label="@Strings.CalendarFeeds_FieldMembers">
+                                        <span>@Strings.CalendarFeeds_FieldMembers</span>
+                                        <div class="check-scroll">
+                                            @foreach (var option in source.Members)
+                                            {
+                                                <label class="check pick" @key="option.Key"><input type="checkbox" @bind="option.IsSelected" /><span>@option.Name</span></label>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <small>@Strings.CalendarFeeds_PeopleHint</small>
+
+                            @if (source.IsEvents)
+                            {
+                                <label class="field">
+                                    <span>@Strings.CalendarFeeds_FieldInvitation</span>
+                                    <select @bind="source.Invitation">
+                                        @foreach (var choice in FeedSourceEditor.InvitationChoices)
+                                        {
+                                            <option value="@choice.Value">@choice.Text</option>
+                                        }
+                                    </select>
+                                </label>
+                                <div class="feed-source-row">
+                                    <label class="field">
+                                        <span>@Strings.CalendarFeeds_FieldContains</span>
+                                        <input type="text" maxlength="@CalendarFeedRules.MaxTermsLength" autocomplete="off" @bind="source.NameContains" @bind:event="oninput" />
+                                    </label>
+                                    <label class="field">
+                                        <span>@Strings.CalendarFeeds_FieldExcludes</span>
+                                        <input type="text" maxlength="@CalendarFeedRules.MaxTermsLength" autocomplete="off" @bind="source.NameExcludes" @bind:event="oninput" />
+                                    </label>
+                                </div>
+                                <label class="check"><input type="checkbox" @bind="source.OnlyExams" /><span>@Strings.CalendarFeeds_FieldOnlyExams</span></label>
+                                <label class="check"><input type="checkbox" @bind="source.IncludeCancelled" /><span>@Strings.CalendarFeeds_FieldCancelled</span></label>
+                            }
+
+                            <div>
+                                <button type="button" class="btn ghost danger" @onclick="() => Vm.Editor.RemoveSourceCommand.Execute(source)">
+                                    <Icon Name="trash" /><span>@Strings.CalendarFeeds_RemoveSource</span>
+                                </button>
+                            </div>
+                        </fieldset>
+                    }
+
+                    <div>
+                        <button type="button" class="btn ghost" disabled="@(!Vm.Editor.AddSourceCommand.CanExecute(null))" @onclick="() => Vm.Editor.AddSourceCommand.Execute(null)">
+                            <Icon Name="plus" /><span>@Strings.CalendarFeeds_AddSource</span>
+                        </button>
+                    </div>
+
+                    @if (Vm.Editor.HasError)
+                    {
+                        <p class="field-error" role="alert">@Vm.Editor.ErrorMessage</p>
+                    }
+
+                    <div class="form-actions">
+                        <button type="button" class="btn" disabled="@(!Vm.Editor.SaveCommand.CanExecute(null))" @onclick="() => Vm.Editor.SaveCommand.ExecuteAsync(null)">
+                            @(Vm.Editor.IsCreating ? Strings.CalendarFeeds_Create : Strings.CalendarFeeds_Save)
+                        </button>
+                        <button type="button" class="btn ghost" @onclick="() => Vm.Editor.CancelCommand.Execute(null)">@Strings.CalendarFeeds_Cancel</button>
+                    </div>
+                </div>
+            </article>
+        }
+
+        @if (Vm.IsConfirming)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.ConfirmText">
+                <span>@Vm.ConfirmText</span>
+                <button type="button" class="btn danger" @onclick="() => Vm.ConfirmCommand.ExecuteAsync(null)"><span>@Strings.CalendarFeeds_ConfirmYes</span></button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelConfirmCommand.Execute(null)"><span>@Strings.CalendarFeeds_Cancel</span></button>
+            </div>
+        }
+
+        @if (Vm.IsEmpty)
+        {
+            <p class="empty">@Strings.CalendarFeeds_Empty</p>
+        }
+        else if (Vm.Feeds.Count > 0)
+        {
+            <p class="lede">@Strings.CalendarFeeds_AddressHint</p>
+            <article class="card results">
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                <th>@Strings.CalendarFeeds_ColName</th>
+                                <th>@Strings.CalendarFeeds_ColSources</th>
+                                <th>@Strings.CalendarFeeds_ColAddress</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var feed in Vm.Feeds)
+                            {
+                                <tr @key="feed.Id">
+                                    <td><strong>@feed.Name</strong></td>
+                                    <td>@feed.SourcesText</td>
+                                    <td><input type="text" class="feed-url" readonly value="@feed.Url" aria-label="@($"{Strings.CalendarFeeds_ColAddress}: {feed.Name}")" /></td>
+                                    <td class="row-actions">
+                                        <button type="button" class="btn ghost" disabled="@(!Vm.BeginEditCommand.CanExecute(feed))" @onclick="() => Vm.BeginEditCommand.Execute(feed)">
+                                            <Icon Name="edit" /><span>@Strings.CalendarFeeds_Edit</span>
+                                        </button>
+                                        <button type="button" class="btn ghost" disabled="@(!Vm.AskRegenerateCommand.CanExecute(feed))" @onclick="() => Vm.AskRegenerateCommand.Execute(feed)">
+                                            <span>@Strings.CalendarFeeds_NewAddress</span>
+                                        </button>
+                                        <button type="button" class="btn ghost danger" disabled="@(!Vm.AskDeleteCommand.CanExecute(feed))" @onclick="() => Vm.AskDeleteCommand.Execute(feed)">
+                                            <Icon Name="trash" /><span>@Strings.CalendarFeeds_Delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        }
+    </PageGate>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Vm.Editor];
+
+    private EventCallback RetryLoading =>
+        Vm.HasLoaded ? default : EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    public override void Dispose()
+    {
+        Vm.Deactivate();
+        base.Dispose();
+    }
+}

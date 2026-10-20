@@ -34,14 +34,39 @@
 </section>
 
 <section class="card card-form" aria-labelledby="set-spond">
-    <h2 id="set-spond">@Strings.Settings_SpondTitle</h2>
+    <h2 id="set-spond">@Strings.Settings_DataSource</h2>
 
-    <label class="check">
-        <input type="checkbox" disabled="@Disabled" @bind="Form.UseDemoData" />
-        <span>@Strings.Settings_UseDemoData<small>@Strings.Settings_UseDemoDataHint</small></span>
+    <label class="field">
+        <span>@Strings.Settings_DataSource</span>
+        <select value="@Form.DataSource" disabled="@Disabled" @onchange="e => Form.DataSource = e.Value?.ToString() ?? DataSourceKinds.Spond">
+            @foreach (var kind in SettingsForm.DataSources)
+            {
+                <option value="@kind">@SettingsForm.DataSourceText(kind)</option>
+            }
+        </select>
+        <small>@Form.DataSourceHint</small>
     </label>
 
-    @if (!Form.UseDemoData)
+    @if (Form.IsCustomSource)
+    {
+        <label class="field">
+            <span>@Strings.Settings_CustomScript</span>
+            <textarea class="script-box" rows="18" spellcheck="false" autocomplete="off" disabled="@Disabled" @bind="Form.CustomScript" @bind:event="oninput"></textarea>
+            @if (Form.CustomScriptProblem is { } scriptProblem)
+            {
+                <p class="field-error" role="alert">@scriptProblem</p>
+            }
+            else
+            {
+                <small>@Strings.Settings_CustomScriptHint</small>
+            }
+        </label>
+        <div class="form-actions">
+            <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => Form.InsertScriptTemplateCommand.Execute(null)">@Strings.Settings_ScriptTemplate</button>
+        </div>
+    }
+
+    @if (Form.IsSpondSource)
     {
         <div class="grid two">
             <label class="field">
@@ -196,6 +221,8 @@
     </div>
 </section>
 
+@if (!Form.IsManualSource)
+{
 <section class="card card-form" aria-labelledby="set-sync">
     <h2 id="set-sync">@Strings.Settings_SyncTitle</h2>
 
@@ -220,6 +247,7 @@
         </label>
     }
 </section>
+}
 
 <section class="card card-form" aria-labelledby="set-security">
     <h2 id="set-security">@Strings.Settings_SecurityTitle</h2>

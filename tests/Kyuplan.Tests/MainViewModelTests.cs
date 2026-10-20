@@ -79,7 +79,7 @@ public sealed class MainViewModelTests : IDisposable
     {
         _session.User = Boss;
 
-        Assert.Equal(8, _main.Items.Count);
+        Assert.Equal(8, _main.Items.Count); // the manual data page waits for the server to say the source is manual
         Assert.Equal(5, _main.AdminItems.Count);
         Assert.IsType<UserAdminViewModel>(_main.AdminItems[0].Page);
         Assert.IsType<RolesViewModel>(_main.AdminItems[1].Page);
@@ -121,7 +121,7 @@ public sealed class MainViewModelTests : IDisposable
         Assert.Empty(_main.AdminItems);
 
         _session.User = Boss;
-        Assert.Equal(8, _main.Items.Count);
+        Assert.Equal(8, _main.Items.Count); // the manual data page waits for the server to say the source is manual
         Assert.Equal(5, _main.AdminItems.Count);
     }
 

@@ -69,6 +69,9 @@ public static class Permission
     /// <summary>Replace all data with an uploaded backup file.</summary>
     public const string BackupsRestore = "backups.restore";
 
+    /// <summary>Keep the groups, members and events by hand when the data source is <see cref="DataSourceKinds.Manual"/>.</summary>
+    public const string ManualDataEdit = "manualdata.edit";
+
     public const string SettingsView = "settings.view";
     public const string SettingsEdit = "settings.edit";
 
@@ -96,6 +99,7 @@ public static class Permission
         new("branding", [BrandingView, BrandingEdit]),
         new("themes", [ThemesEdit]),
         new("backups", [BackupsView, BackupsEdit, BackupsDownload, BackupsRestore]),
+        new("manualdata", [ManualDataEdit]),
         new("settings", [SettingsView, SettingsEdit]),
         new("users", [UsersView, UsersEdit, UsersDelete, UsersGrant]),
         new("roles", [RolesView, RolesEdit]),
@@ -109,7 +113,7 @@ public static class Permission
     public static List<string> InCatalogueOrder(IEnumerable<string> permissions) => [.. All.Where(permissions.ToHashSet().Contains)];
 
     /// <summary>Whoever holds any of these may read what Spond knows (groups and events); the pages that show it need it.</summary>
-    public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, CalendarFeeds, ExamsView, MembersView, TagsView];
+    public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, CalendarFeeds, ExamsView, MembersView, TagsView, ManualDataEdit];
 
     /// <summary>Whoever holds any of these may read the belts: members and exams show them.</summary>
     public static IReadOnlyList<string> ReadsBelts { get; } = [BeltsView, MembersView, ExamsView, PaymentsView, PricesEdit];

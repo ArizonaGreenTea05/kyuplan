@@ -38,7 +38,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddLogging();
         services.AddSingleton<TimeProvider>(Time);
         services.AddSingleton(_clock);
-        services.AddSingleton<ISpondDataSource>(Spond);
+        services.AddSingleton<IDataSource>(Spond);
         services.AddSingleton<IOptions<StatisticsOptions>>(Options.Create(new StatisticsOptions { ExamMinAverageStars = 0 })); // stars have tests of their own
         services.AddSingleton<IOptions<SpondOptions>>(Options.Create(SpondSettings));
         services.AddSingleton<StatisticsService>();

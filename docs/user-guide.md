@@ -63,6 +63,13 @@ cancel the dialog, the page says that you are not signed in and offers **Try aga
 5. **Updates**: when the server has a newer version, an **Update to x.y.z** button appears at the bottom left. A click downloads and
    installs it, and the app restarts by itself.
 
+### Where the data comes from
+
+Your administrator decides where the groups, members and events come from: from Spond, from another service, or from entries made in kyuplan itself.
+If your role has the permission to enter data by hand, the **Manual data** page appears in the navigation; see the
+[administrator guide](admin-guide.md#manual-data) for how it works (pick or add a group, then keep its members, subgroups and events; events
+record who was invited and who came).
+
 ### Demo data
 
 If the page shows a **Demo data** marker, the server serves generated sample data for a fictional club, not your real Spond groups.

@@ -111,6 +111,8 @@ the address and give them the [user guide](user-guide.md).
 | `Api__AllowInsecureHttp=true` | Trusted network without HTTPS |
 | `Api__TrustedProxies__0=10.0.0.5` (more: `__1`, ...) | The reverse proxies whose `X-Forwarded-*` headers are believed (addresses or networks like `10.0.0.0/8`); default: loopback and the private networks. Anybody else who sends them is ignored. Set it to your proxy's address when the container's port is reachable from other machines. |
 | `AllowedHosts` | Host names the site answers to (the setup proposes the address in use) |
+| `DataSource__Kind` | `Spond` (default), `Custom`, `Manual` or `Demo`; see the [administrator guide](admin-guide.md#data-sources) (usually chosen in the browser) |
+| `DataSource__Script`, `DataSource__ScriptTimeout`, `DataSource__CacheDuration` | The JavaScript of the custom source, the longest a call may take (`00:01:00`) and how long answers are reused (`00:15:00`) |
 | `Spond__Email`, `Spond__Password`, `Spond__UseDemoData` | Spond login or demo mode (usually entered in the browser) |
 | `Accounts__InitialAdminPassword` | Create the administrator `admin` without the setup screen |
 | `Statistics__TimeZone` | The club's time zone (default `Europe/Berlin`) |

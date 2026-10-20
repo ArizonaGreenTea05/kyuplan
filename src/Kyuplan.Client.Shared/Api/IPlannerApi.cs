@@ -249,4 +249,42 @@ public interface IPlannerApi
     Task<CalendarFeedDto> RegenerateCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default);
 
     Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default);
+
+    /// <summary>The groups kept by hand (data source "manual") with their subgroups; needs manualdata.edit.</summary>
+    Task<IReadOnlyList<ManualGroupDto>> GetManualGroupsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a group. 409 when the name is taken.</summary>
+    Task<ManualGroupDto> CreateManualGroupAsync(ManualNameInputDto group, CancellationToken cancellationToken = default);
+
+    Task<ManualGroupDto> RenameManualGroupAsync(string groupId, ManualNameInputDto group, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a group with its subgroups, members and events.</summary>
+    Task DeleteManualGroupAsync(string groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a subgroup to a group. 409 when the name is taken in the group.</summary>
+    Task<SubGroupDto> CreateManualSubGroupAsync(string groupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default);
+
+    Task<SubGroupDto> RenameManualSubGroupAsync(string subGroupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes a subgroup; its members stay in the group.</summary>
+    Task DeleteManualSubGroupAsync(string subGroupId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ManualMemberDto>> GetManualMembersAsync(string groupId, CancellationToken cancellationToken = default);
+
+    Task<ManualMemberDto> CreateManualMemberAsync(string groupId, ManualMemberInputDto member, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces the name, birth date and subgroups of a member.</summary>
+    Task<ManualMemberDto> UpdateManualMemberAsync(string memberId, ManualMemberInputDto member, CancellationToken cancellationToken = default);
+
+    Task DeleteManualMemberAsync(string memberId, CancellationToken cancellationToken = default);
+
+    /// <summary>The events of a group, the latest first.</summary>
+    Task<IReadOnlyList<ManualEventDto>> GetManualEventsAsync(string groupId, CancellationToken cancellationToken = default);
+
+    Task<ManualEventDto> CreateManualEventAsync(string groupId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default);
+
+    /// <summary>Replaces an event, its invitations and answers included.</summary>
+    Task<ManualEventDto> UpdateManualEventAsync(string eventId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default);
+
+    Task DeleteManualEventAsync(string eventId, CancellationToken cancellationToken = default);
 }

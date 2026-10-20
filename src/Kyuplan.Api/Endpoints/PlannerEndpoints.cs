@@ -18,7 +18,7 @@ public static class PlannerEndpoints
     {
         var api = app.MapGroup("/api");
 
-        api.MapGet("/info", (ISpondDataSource source, IOptions<StatisticsOptions> options, ClientInstaller installer, DocumentationFiles documentation, IConfiguration configuration) => new ServerInfoDto(
+        api.MapGet("/info", (IDataSource source, IOptions<StatisticsOptions> options, ClientInstaller installer, DocumentationFiles documentation, IConfiguration configuration) => new ServerInfoDto(
                 "Kyuplan",
                 typeof(PlannerEndpoints).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "0.0.0",
                 source.IsDemo,
@@ -28,7 +28,8 @@ public static class PlannerEndpoints
                 installer.FindAll().ToDictionary(i => i.Key, i => i.Value.Version),
                 documentation.Exists,
                 configuration["Repository:Url"],
-                options.Value.ExamMinAverageStars))
+                options.Value.ExamMinAverageStars,
+                source.Kind))
             .WithSummary("Server metadata and defaults for the filter controls.");
 
         api.MapGet("/groups", (StatisticsService service, CancellationToken ct) => service.GetGroupsAsync(ct))
@@ -61,7 +62,7 @@ public static class PlannerEndpoints
             .WithSummary("Per-member and per-event attendance for a time span (two dates or two events), with qualification against a minimum percentage.")
             .RequirePermission(Permission.StatisticsView);
 
-        api.MapPost("/refresh", (ISpondDataSource source, TimeProvider time) =>
+        api.MapPost("/refresh", (IDataSource source, TimeProvider time) =>
             {
                 // Every drop costs a login and requests at Spond, which answers an account that asks too often with nothing: one drop per
                 // cooldown is enough for everybody, a request in between finds the data fresh already.

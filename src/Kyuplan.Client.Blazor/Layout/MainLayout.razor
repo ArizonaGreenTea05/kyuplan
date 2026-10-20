@@ -74,6 +74,12 @@
                     <Icon Name="tag" /><span>@Strings.Nav_Tags</span>
                 </NavLink>
             }
+            @if (Shell.Can(Permission.ManualDataEdit) && Shell.Info?.DataSource == DataSourceKinds.Manual)
+            {
+                <NavLink class="nav-item" href="manual-data">
+                    <Icon Name="members" /><span>@Strings.Nav_ManualData</span>
+                </NavLink>
+            }
         </nav>
 
         @* The documentation the user may read (the user guide for everybody, more for administrators), each in a tab of its own. *@

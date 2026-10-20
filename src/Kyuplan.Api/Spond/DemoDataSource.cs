@@ -10,7 +10,7 @@ namespace Kyuplan.Api.Spond;
 /// credentials. Deterministic per day: the same day always yields the same members and RSVPs. The main group is named
 /// after the instance's <see cref="BrandingOptions.OrganizationName"/>.
 /// </summary>
-public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> branding) : ISpondDataSource
+public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> branding) : IDataSource
 {
     private const int HistoryDays = 540;
 

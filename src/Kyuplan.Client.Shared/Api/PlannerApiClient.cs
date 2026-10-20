@@ -334,6 +334,59 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>
         SendNoContentAsync(() => http.DeleteAsync($"api/calendar-feeds/{feedId}", cancellationToken), cancellationToken);
 
+    public async Task<IReadOnlyList<ManualGroupDto>> GetManualGroupsAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/manual/groups", PlannerJsonContext.Default.ListManualGroupDto, cancellationToken);
+
+    public Task<ManualGroupDto> CreateManualGroupAsync(ManualNameInputDto group, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/manual/groups", Json(group, PlannerJsonContext.Default.ManualNameInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualGroupDto, cancellationToken);
+
+    public Task<ManualGroupDto> RenameManualGroupAsync(string groupId, ManualNameInputDto group, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}", Json(group, PlannerJsonContext.Default.ManualNameInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualGroupDto, cancellationToken);
+
+    public Task DeleteManualGroupAsync(string groupId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}", cancellationToken), cancellationToken);
+
+    public Task<SubGroupDto> CreateManualSubGroupAsync(string groupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}/subgroups", Json(subGroup, PlannerJsonContext.Default.ManualNameInputDto), cancellationToken),
+            PlannerJsonContext.Default.SubGroupDto, cancellationToken);
+
+    public Task<SubGroupDto> RenameManualSubGroupAsync(string subGroupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/manual/subgroups/{Uri.EscapeDataString(subGroupId)}", Json(subGroup, PlannerJsonContext.Default.ManualNameInputDto), cancellationToken),
+            PlannerJsonContext.Default.SubGroupDto, cancellationToken);
+
+    public Task DeleteManualSubGroupAsync(string subGroupId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/manual/subgroups/{Uri.EscapeDataString(subGroupId)}", cancellationToken), cancellationToken);
+
+    public async Task<IReadOnlyList<ManualMemberDto>> GetManualMembersAsync(string groupId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}/members", PlannerJsonContext.Default.ListManualMemberDto, cancellationToken);
+
+    public Task<ManualMemberDto> CreateManualMemberAsync(string groupId, ManualMemberInputDto member, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}/members", Json(member, PlannerJsonContext.Default.ManualMemberInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualMemberDto, cancellationToken);
+
+    public Task<ManualMemberDto> UpdateManualMemberAsync(string memberId, ManualMemberInputDto member, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/manual/members/{Uri.EscapeDataString(memberId)}", Json(member, PlannerJsonContext.Default.ManualMemberInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualMemberDto, cancellationToken);
+
+    public Task DeleteManualMemberAsync(string memberId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/manual/members/{Uri.EscapeDataString(memberId)}", cancellationToken), cancellationToken);
+
+    public async Task<IReadOnlyList<ManualEventDto>> GetManualEventsAsync(string groupId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}/events", PlannerJsonContext.Default.ListManualEventDto, cancellationToken);
+
+    public Task<ManualEventDto> CreateManualEventAsync(string groupId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/manual/groups/{Uri.EscapeDataString(groupId)}/events", Json(manualEvent, PlannerJsonContext.Default.ManualEventInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualEventDto, cancellationToken);
+
+    public Task<ManualEventDto> UpdateManualEventAsync(string eventId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PutAsync($"api/manual/events/{Uri.EscapeDataString(eventId)}", Json(manualEvent, PlannerJsonContext.Default.ManualEventInputDto), cancellationToken),
+            PlannerJsonContext.Default.ManualEventDto, cancellationToken);
+
+    public Task DeleteManualEventAsync(string eventId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/manual/events/{Uri.EscapeDataString(eventId)}", cancellationToken), cancellationToken);
+
     private static JsonContent Json<T>(T value, JsonTypeInfo<T> typeInfo) => JsonContent.Create(value, typeInfo);
 
     private Task<T> GetAsync<T>(string url, JsonTypeInfo<T> typeInfo, CancellationToken cancellationToken) =>

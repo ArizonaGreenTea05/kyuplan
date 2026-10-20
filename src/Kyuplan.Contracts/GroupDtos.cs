@@ -2,6 +2,7 @@ namespace Kyuplan.Contracts;
 
 /// <summary>Information about the running API, used by clients to configure themselves.</summary>
 /// <param name="IsDemoData">True when the API serves generated sample data instead of real Spond data.</param>
+/// <param name="DataSource">Where the groups, members and events come from, one of <see cref="DataSourceKinds"/>.</param>
 /// <param name="DefaultMinAttendancePercent">Server-side default for the attendance threshold.</param>
 /// <param name="DefaultMinInvitedEvents">Server-side default for the minimum number of invitations.</param>
 /// <param name="DefaultExamMinAverageStars">Server-side default for the average evaluation an exam asks for.</param>
@@ -19,7 +20,8 @@ public sealed record ServerInfoDto(
     IReadOnlyDictionary<string, string>? ClientVersions = null,
     bool HasDocumentation = false,
     string? RepositoryUrl = null,
-    double DefaultExamMinAverageStars = RatingRules.StandardExamMinAverageStars)
+    double DefaultExamMinAverageStars = RatingRules.StandardExamMinAverageStars,
+    string DataSource = DataSourceKinds.Spond)
 {
     /// <summary>The version of the installer for this platform, <c>null</c> when the server has none.</summary>
     public string? ClientVersion(string platform) => ClientVersions is not null && ClientVersions.TryGetValue(platform, out var v) ? v : null;

@@ -1375,6 +1375,148 @@ internal sealed class FakePlannerApi : IPlannerApi
             return 0;
         });
 
+    /// <summary>The groups, members and events kept by hand (data source "manual").</summary>
+    public List<ManualGroupDto> ManualGroups { get; } = [];
+
+    public List<ManualMemberDto> ManualMembers { get; } = [];
+
+    public List<ManualEventDto> ManualEvents { get; } = [];
+
+    /// <summary>Every call that changed the manual data, e.g. <c>create-group:Dojo</c>, <c>update-member:m1</c>, <c>delete-event:e1</c>.</summary>
+    public List<string> ManualCalls { get; } = [];
+
+    public ManualEventInputDto? LastManualEventInput { get; private set; }
+
+    public ManualMemberInputDto? LastManualMemberInput { get; private set; }
+
+    public Task<IReadOnlyList<ManualGroupDto>> GetManualGroupsAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<ManualGroupDto>>(() => [.. ManualGroups.Select(g => g with { MemberCount = ManualMembers.Count(m => m.GroupId == g.Id) })]);
+
+    public Task<ManualGroupDto> CreateManualGroupAsync(ManualNameInputDto group, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"create-group:{group.Name}");
+            var created = new ManualGroupDto($"g{_nextId++}", group.Name, [], 0);
+            ManualGroups.Add(created);
+            return created;
+        });
+
+    public Task<ManualGroupDto> RenameManualGroupAsync(string groupId, ManualNameInputDto group, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"rename-group:{groupId}:{group.Name}");
+            var index = ManualGroups.FindIndex(g => g.Id == groupId);
+            if (index < 0) throw NotFound();
+            return ManualGroups[index] = ManualGroups[index] with { Name = group.Name };
+        });
+
+    public Task DeleteManualGroupAsync(string groupId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"delete-group:{groupId}");
+            ManualGroups.Remove(ManualGroups.FirstOrDefault(g => g.Id == groupId) ?? throw NotFound());
+            ManualMembers.RemoveAll(m => m.GroupId == groupId);
+            ManualEvents.RemoveAll(e => e.GroupId == groupId);
+            return 0;
+        });
+
+    public Task<SubGroupDto> CreateManualSubGroupAsync(string groupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"create-subgroup:{subGroup.Name}");
+            var index = ManualGroups.FindIndex(g => g.Id == groupId);
+            if (index < 0) throw NotFound();
+            var created = new SubGroupDto($"s{_nextId++}", subGroup.Name);
+            ManualGroups[index] = ManualGroups[index] with { SubGroups = [.. ManualGroups[index].SubGroups, created] };
+            return created;
+        });
+
+    public Task<SubGroupDto> RenameManualSubGroupAsync(string subGroupId, ManualNameInputDto subGroup, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"rename-subgroup:{subGroupId}:{subGroup.Name}");
+            var index = ManualGroups.FindIndex(g => g.SubGroups.Any(s => s.Id == subGroupId));
+            if (index < 0) throw NotFound();
+            var renamed = new SubGroupDto(subGroupId, subGroup.Name);
+            ManualGroups[index] = ManualGroups[index] with { SubGroups = [.. ManualGroups[index].SubGroups.Select(s => s.Id == subGroupId ? renamed : s)] };
+            return renamed;
+        });
+
+    public Task DeleteManualSubGroupAsync(string subGroupId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"delete-subgroup:{subGroupId}");
+            var index = ManualGroups.FindIndex(g => g.SubGroups.Any(s => s.Id == subGroupId));
+            if (index < 0) throw NotFound();
+            ManualGroups[index] = ManualGroups[index] with { SubGroups = [.. ManualGroups[index].SubGroups.Where(s => s.Id != subGroupId)] };
+            return 0;
+        });
+
+    public Task<IReadOnlyList<ManualMemberDto>> GetManualMembersAsync(string groupId, CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<ManualMemberDto>>(() => [.. ManualMembers.Where(m => m.GroupId == groupId)]);
+
+    public Task<ManualMemberDto> CreateManualMemberAsync(string groupId, ManualMemberInputDto member, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"create-member:{member.Name}");
+            LastManualMemberInput = member;
+            var created = new ManualMemberDto($"m{_nextId++}", groupId, member.Name, member.BirthDate, member.SubGroupIds ?? []);
+            ManualMembers.Add(created);
+            return created;
+        });
+
+    public Task<ManualMemberDto> UpdateManualMemberAsync(string memberId, ManualMemberInputDto member, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"update-member:{memberId}");
+            LastManualMemberInput = member;
+            var index = ManualMembers.FindIndex(m => m.Id == memberId);
+            if (index < 0) throw NotFound();
+            return ManualMembers[index] = ManualMembers[index] with { Name = member.Name, BirthDate = member.BirthDate, SubGroupIds = member.SubGroupIds ?? [] };
+        });
+
+    public Task DeleteManualMemberAsync(string memberId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"delete-member:{memberId}");
+            ManualMembers.Remove(ManualMembers.FirstOrDefault(m => m.Id == memberId) ?? throw NotFound());
+            return 0;
+        });
+
+    public Task<IReadOnlyList<ManualEventDto>> GetManualEventsAsync(string groupId, CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<ManualEventDto>>(() => [.. ManualEvents.Where(e => e.GroupId == groupId).OrderByDescending(e => e.Start)]);
+
+    public Task<ManualEventDto> CreateManualEventAsync(string groupId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"create-event:{manualEvent.Name}");
+            LastManualEventInput = manualEvent;
+            var created = new ManualEventDto($"e{_nextId++}", groupId, manualEvent.Name, manualEvent.Start, manualEvent.End, manualEvent.Cancelled, manualEvent.Invitations ?? []);
+            ManualEvents.Add(created);
+            return created;
+        });
+
+    public Task<ManualEventDto> UpdateManualEventAsync(string eventId, ManualEventInputDto manualEvent, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"update-event:{eventId}");
+            LastManualEventInput = manualEvent;
+            var index = ManualEvents.FindIndex(e => e.Id == eventId);
+            if (index < 0) throw NotFound();
+            return ManualEvents[index] = ManualEvents[index] with
+            {
+                Name = manualEvent.Name, Start = manualEvent.Start, End = manualEvent.End, Cancelled = manualEvent.Cancelled, Invitations = manualEvent.Invitations ?? [],
+            };
+        });
+
+    public Task DeleteManualEventAsync(string eventId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            ManualCalls.Add($"delete-event:{eventId}");
+            ManualEvents.Remove(ManualEvents.FirstOrDefault(e => e.Id == eventId) ?? throw NotFound());
+            return 0;
+        });
+
     private Task<T> Run<T>(Func<T> action)
     {
         if (FailWith is { } ex) return Task.FromException<T>(ex);

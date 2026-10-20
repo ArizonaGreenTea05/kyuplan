@@ -72,6 +72,18 @@ public class PlannerDbContext : DbContext
 
     public DbSet<CalendarFeed> CalendarFeeds => Set<CalendarFeed>();
 
+    public DbSet<ManualGroup> ManualGroups => Set<ManualGroup>();
+
+    public DbSet<ManualSubGroup> ManualSubGroups => Set<ManualSubGroup>();
+
+    public DbSet<ManualMember> ManualMembers => Set<ManualMember>();
+
+    public DbSet<ManualMemberSubGroup> ManualMemberSubGroups => Set<ManualMemberSubGroup>();
+
+    public DbSet<ManualEvent> ManualEvents => Set<ManualEvent>();
+
+    public DbSet<ManualInvitation> ManualInvitations => Set<ManualInvitation>();
+
     public DbSet<CustomBranding> CustomBranding => Set<CustomBranding>();
 
     public DbSet<CustomBrandingImage> CustomBrandingImages => Set<CustomBrandingImage>();
@@ -163,6 +175,55 @@ public class PlannerDbContext : DbContext
 
             // A belt that somebody holds cannot be deleted.
             member.HasOne(m => m.Belt).WithMany().HasForeignKey(m => m.BeltId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ManualGroup>(group =>
+        {
+            group.Property(g => g.Id).HasMaxLength(IdLength);
+            group.Property(g => g.Name).HasMaxLength(NameLength);
+        });
+
+        modelBuilder.Entity<ManualSubGroup>(subGroup =>
+        {
+            subGroup.Property(s => s.Id).HasMaxLength(IdLength);
+            subGroup.Property(s => s.GroupId).HasMaxLength(IdLength);
+            subGroup.Property(s => s.Name).HasMaxLength(NameLength);
+            subGroup.HasOne(s => s.Group).WithMany(g => g.SubGroups).HasForeignKey(s => s.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualMember>(member =>
+        {
+            member.Property(m => m.Id).HasMaxLength(IdLength);
+            member.Property(m => m.GroupId).HasMaxLength(IdLength);
+            member.Property(m => m.Name).HasMaxLength(NameLength);
+            member.HasOne(m => m.Group).WithMany(g => g.Members).HasForeignKey(m => m.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualMemberSubGroup>(link =>
+        {
+            link.HasKey(l => new { l.MemberId, l.SubGroupId });
+            link.Property(l => l.MemberId).HasMaxLength(IdLength);
+            link.Property(l => l.SubGroupId).HasMaxLength(IdLength);
+            link.HasOne(l => l.Member).WithMany(m => m.SubGroups).HasForeignKey(l => l.MemberId).OnDelete(DeleteBehavior.Cascade);
+            link.HasOne(l => l.SubGroup).WithMany().HasForeignKey(l => l.SubGroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualEvent>(manualEvent =>
+        {
+            manualEvent.Property(e => e.Id).HasMaxLength(IdLength);
+            manualEvent.Property(e => e.GroupId).HasMaxLength(IdLength);
+            manualEvent.Property(e => e.Name).HasMaxLength(NameLength);
+            manualEvent.HasOne(e => e.Group).WithMany(g => g.Events).HasForeignKey(e => e.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualInvitation>(invitation =>
+        {
+            invitation.HasKey(i => new { i.EventId, i.MemberId });
+            invitation.Property(i => i.EventId).HasMaxLength(IdLength);
+            invitation.Property(i => i.MemberId).HasMaxLength(IdLength);
+            invitation.Property(i => i.Rsvp).HasConversion<string>().HasMaxLength(RsvpLength);
+            invitation.HasOne(i => i.Event).WithMany(e => e.Invitations).HasForeignKey(i => i.EventId).OnDelete(DeleteBehavior.Cascade);
+            invitation.HasOne(i => i.Member).WithMany().HasForeignKey(i => i.MemberId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ExamParticipant>(participant =>

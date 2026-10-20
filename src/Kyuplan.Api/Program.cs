@@ -12,8 +12,10 @@ using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Endpoints;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Sources;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
+using Kyuplan.Contracts;
 using Scalar.AspNetCore;
 
 // Settings that were saved in the web client only apply to an application that is built anew: it stops and is built and started again here,
@@ -75,10 +77,15 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddMemoryCache();
 
     // Decided when first resolved (not at registration) so that configuration overrides, e.g. in tests, are honoured.
-    builder.Services.AddSingleton<ISpondDataSource>(sp =>
-        sp.GetRequiredService<IOptions<SpondOptions>>().Value.UseDemoData
-            ? ActivatorUtilities.CreateInstance<DemoDataSource>(sp)
-            : ActivatorUtilities.CreateInstance<SpondApiDataSource>(sp));
+    builder.Services.Configure<DataSourceOptions>(builder.Configuration.GetSection(DataSourceOptions.Section));
+    builder.Services.AddSingleton<IDataSource>(sp =>
+        sp.GetRequiredService<IOptions<DataSourceOptions>>().Value.Resolve(sp.GetRequiredService<IOptions<SpondOptions>>().Value) switch
+        {
+            DataSourceKinds.Demo => ActivatorUtilities.CreateInstance<DemoDataSource>(sp),
+            DataSourceKinds.Custom => ActivatorUtilities.CreateInstance<CustomScriptDataSource>(sp),
+            DataSourceKinds.Manual => ActivatorUtilities.CreateInstance<ManualDataSource>(sp),
+            _ => ActivatorUtilities.CreateInstance<SpondApiDataSource>(sp),
+        });
     builder.Services.AddSingleton<StatisticsService>();
 
     // Exams, members, belts and comments live in the API's own database (SQLite by default, or PostgreSQL: Database:Provider). The connection string is resolved when the context
@@ -96,6 +103,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddScoped<RatingService>();
     builder.Services.AddScoped<CalendarService>();
     builder.Services.AddScoped<CalendarFeedService>();
+    builder.Services.AddScoped<ManualDataService>();
 
     // A new database starts with the standard belts and roles (DefaultBelts, DefaultRoles); see DefaultDataOptions.
     builder.Services.Configure<DefaultDataOptions>(builder.Configuration.GetSection(DefaultDataOptions.Section));
@@ -252,6 +260,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapCommentEndpoints();
     app.MapCalendarEndpoints();
     app.MapCalendarFeedEndpoints();
+    app.MapManualDataEndpoints();
     app.MapRatingEndpoints();
     app.MapAccountEndpoints();
     app.MapSettingsEndpoints();

@@ -42,7 +42,8 @@ The setup screen asks for:
 | --- | --- |
 | **Settings file** | Where the settings are kept (`data/settings.json`; fixed, and shown read-only, when the deployment pins it). |
 | **Planner / Accounts database** | The two SQLite files (only with SQLite; with PostgreSQL the connection strings are environment settings). Keep them as two different files. |
-| **Spond** | Email (or phone number) and password of the Spond account, or **Use demo data** to try kyuplan out. **Subgroup of members not registered yet** (`Spond:UnregisteredSubGroup`): name (or id, case-insensitive) of the Spond subgroup that holds the people who are in the group but not registered in the club yet; the Members page shows them as "not registered yet", and each sync keeps this in line with Spond. Empty, or no such subgroup in a group = everybody is registered. |
+| **Data source** | Where groups, members and events come from: **Spond**, **Custom (script)**, **Manual** or **Demo data**; see [Data sources](#data-sources). |
+| **Spond** | (Data source Spond.) Email (or phone number) and password of the Spond account. **Subgroup of members not registered yet** (`Spond:UnregisteredSubGroup`): name (or id, case-insensitive) of the Spond subgroup that holds the people who are in the group but not registered in the club yet; the Members page shows them as "not registered yet", and each sync keeps this in line with Spond. Empty, or no such subgroup in a group = everybody is registered. |
 | **Time zone**, **Exam keyword**, **default minimum attendance**, **default minimum invited events** | See [Statistics settings](#statistics-and-exams). |
 | **Synchronisation** | Whether to sync with Spond automatically and how often. |
 | **Allowed host names** | The proposal is the address you opened. Requests to other host names are refused. |
@@ -68,6 +69,87 @@ After the setup, sign in and do, in this order:
 4. [Prepare the belts and members' data](#preparing-the-clubs-data).
 5. [Set the branding](#branding).
 
+## Data sources
+
+Everything kyuplan analyses (groups, subgroups, members, events and who answered what) comes from one **data source**, which you choose on the
+Settings page (**Data source**; `DataSource:Kind`). Saving a change restarts the server, which takes a few seconds. All sources deliver the same
+information, so every page works the same with each of them.
+
+| Data source | Where the data comes from |
+| --- | --- |
+| **Spond** | A Spond account; see [Connecting Spond](#connecting-spond). |
+| **Custom (script)** | A JavaScript you write that reads the data from any service; see [Custom data source](#custom-data-source). |
+| **Manual** | Users with the permission *Enter groups, members and events by hand* (`manualdata.edit`) keep everything on the **Manual data** page; see [Manual data](#manual-data). |
+| **Demo data** | Generated data of a fictional club, for training (`Spond:UseDemoData`, the older switch, also turns it on). |
+
+Whatever the source, the members, belts, exams, comments and ratings kyuplan keeps itself stay in its own database. **Changing the source
+changes the ids of groups, members and events**: members, exams and filters that belong to groups the new source does not know are removed by
+the next sync. Switch the source once, at the beginning, not back and forth; take a [backup](#backups) before you do.
+
+### Custom data source
+
+With **Custom (script)** the Settings page shows a text box for a script. It defines two functions, which the server calls whenever it needs
+the data (what they return is cached for 15 minutes; the **Refresh** button drops the cache):
+
+```js
+// All groups, with their subgroups and members.
+function getGroups() {
+  return [{
+    id: "g1", name: "Dojo",                              // ids may be strings or numbers; they must stay the same from call to call
+    subGroups: [{ id: "k", name: "Kids" }],
+    members: [{ id: "m1", name: "Anna", subGroupIds: ["k"], birthDate: "2014-05-01" }]   // subGroupIds and birthDate are optional
+  }];
+}
+
+// The events of one group that end between from and to (ISO 8601 texts). Return more if you like; the server filters again.
+function getEvents(groupId, from, to) {
+  return [{
+    id: "e1", name: "Training",
+    start: "2026-10-01T16:00:00Z", end: "2026-10-01T17:30:00Z",   // ISO 8601 (without an offset: UTC), a Date or epoch milliseconds
+    cancelled: false,
+    responses: { m1: "accepted", m2: "declined" }       // every invited member: accepted | declined | unanswered | other. Not listed = not invited
+  }];
+}
+```
+
+The button **Insert example script** puts a complete example into the box. Inside the script you have:
+
+- `http.get(url, headers)`, `http.post(url, body, headers)`, `http.put(url, body, headers)` and `http.delete(url, headers)`. Each waits for the answer
+  and returns `{ status, ok, text, json() }`. A `body` that is not text is sent as JSON. Only `http://` and `https://` addresses work, an answer may
+  be at most 10 MB, and one request is given up after 30 seconds.
+- `console.log(...)`, which writes to the server's log.
+- Everything of plain JavaScript (ECMAScript), and nothing else: no file system, no network but `http`, no .NET.
+
+Rules to know:
+
+- The script runs in a fresh, sandboxed engine for every call, one call at a time, and is stopped after `DataSource:ScriptTimeout` (60 seconds), at
+  128 MB of memory or at 300 nested calls. A script that fails (an exception, a result that is not as described above) makes the pages show the
+  error message and the server log the details; the rest of kyuplan keeps working with what it has.
+- **Treat the script like code of the server.** Whoever may save the settings (`settings.edit`) can make the server send requests to any address it
+  can reach, including addresses inside your network. Keep that permission to people you trust. Tokens in the script are stored in `settings.json`
+  as plain text, so protect that file; the script is also part of backups of the settings file.
+- The settings page checks the **syntax** when you save; whether the functions return the right things shows when the data is read the next time.
+  Try a change on a copy first, e.g. with `DataSource__Script` in the environment of a test container.
+- The members of a group are identified by the `id` you return. Keep ids stable, or members are seen as new people (belts and comments are lost
+  with the old ones at the next sync).
+
+### Manual data
+
+With **Manual** nobody needs an outside service: the club keeps its groups on the **Manual data** page. The page is in the navigation of users who have the
+permission `manualdata.edit`; give it to a role on the Roles page (administrators have it anyway).
+
+1. **Group**: add the first group (a Spond "group" is a squad, a dojo, a team ...). Rename or delete it with the buttons next to the group
+   picker. Deleting a group deletes its subgroups, members and events, and the planner forgets the belts, comments and exam data of those members.
+2. **Subgroups** (tab): classes or teams inside the group, e.g. *Kids*, *Adults*. Statistics and exams narrow by them.
+3. **Members** (tab): name, date of birth (the belt rules need it) and the subgroups they are in.
+4. **Events** (tab): trainings, exams and other dates, with start and end in the club's time zone. In the form, invite everybody or nobody
+   (then tick who is invited) and choose what each answered: *Accepted*, *Declined*, *No answer* or *Waiting list*. **All invited came**
+   marks everybody invited as accepted, the quick way to record a training: *accepted* counts as attended (see
+   [attendance statistics](attendance-statistics.md)).
+
+Every change is saved at once and the members and exams are brought in line right away, so the other pages show it immediately; no waiting for
+the next sync. The page tells you when the data source is not Manual (what you enter is then not used).
+
 ## Connecting Spond
 
 kyuplan only **reads** from Spond (groups, members, events and answers). Use a **dedicated Spond account that is an administrator of
@@ -86,7 +168,7 @@ the groups to analyse**; the account sees the groups it belongs to.
   cache. The server logs in again every 6 hours (`Spond:LoginLifetime`).
 - The Spond password is stored **encrypted** in `settings.json`; the key is in the `keys` folder next to it. Keep that folder safe and, if
   you share backups, keep the key apart from the settings file (`Setup__KeyDirectory`).
-- **Demo mode**: *Use demo data instead of Spond* serves generated data for a fictional club (the clients show a "Demo data" marker). Good
+- **Demo mode**: the data source *Demo data* serves generated data for a fictional club (the clients show a "Demo data" marker). Good
   for training users, never for real use.
 
 ### The automatic sync

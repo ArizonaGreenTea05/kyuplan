@@ -1,0 +1,411 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.ManualDataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+
+    <UserControl.Resources>
+        <ctl:BindingProxy x:Key="Page" Data="{Binding}" />
+
+        <Style x:Key="GridHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource DefaultDataGridColumnHeaderStyle}">
+            <Setter Property="Padding" Value="8,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <Style x:Key="CellText" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="8,0" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+
+        <!-- A list only shows once it has rows: before that comes the sentence that says there are none. -->
+        <Style x:Key="ListCard" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,14,0,0" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel Margin="24,6,24,32">
+
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+
+                <!-- What went wrong / what was achieved / that the entries are not used -->
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Command="{Binding RetryCommand}" Content="{loc:Loc Shell_TryAgain}" Margin="12,0,0,0"
+                                Visibility="{Binding HasLoaded, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding IsWrongSource, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{loc:Loc Manual_WrongSource}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Border>
+                <Border Style="{StaticResource NoticeBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Border>
+
+                <!-- The group: pick one, or add / rename / delete -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <StackPanel Visibility="{Binding HasGroups, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,12">
+                            <TextBlock Text="{loc:Loc Manual_Group}" Style="{StaticResource FieldLabelText}" />
+                            <ComboBox ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" DisplayMemberPath="Name" MaxWidth="420"
+                                      HorizontalAlignment="Left" MinWidth="260" AutomationProperties.Name="{loc:Loc Manual_Group}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding BeginNewGroupCommand}" Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                                    <TextBlock Text="{loc:Loc Manual_NewGroup}" />
+                                </StackPanel>
+                            </Button>
+                            <Button Command="{Binding BeginRenameGroupCommand}" Content="{loc:Loc Manual_RenameGroup}" Margin="8,0,0,0"
+                                    Visibility="{Binding HasGroup, Converter={StaticResource BoolToVisibility}}" />
+                            <Button Command="{Binding AskDeleteGroupCommand}" Content="{loc:Loc Manual_DeleteGroup}" Margin="8,0,0,0"
+                                    Visibility="{Binding HasGroup, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- A name: new group, renamed group, new or renamed subgroup -->
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding IsNameFormOpen, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding NameFormTitle}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                        <TextBlock Text="{loc:Loc Manual_Name}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                        <TextBox Text="{Binding NameFormText, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" MaxWidth="420" HorizontalAlignment="Left" MinWidth="260"
+                                 AutomationProperties.Name="{loc:Loc Manual_Name}" />
+                        <TextBlock Text="{Binding NameFormProblem}" Style="{StaticResource ProblemText}"
+                                   Visibility="{Binding NameFormProblem, Converter={StaticResource StringToVisibility}}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                            <Button Command="{Binding SaveNameCommand}" Content="{loc:Loc Manual_Save}" Style="{StaticResource AccentButtonStyle}" IsDefault="True" />
+                            <Button Command="{Binding CancelNameCommand}" Content="{loc:Loc Manual_Cancel}" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Nothing is deleted before this question is answered -->
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                            <Button Command="{Binding ConfirmCommand}" Content="{loc:Loc Manual_ConfirmYes}" />
+                            <Button Command="{Binding CancelConfirmCommand}" Content="{loc:Loc Manual_Cancel}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding ConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+
+                <TextBlock Margin="0,32,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center" MaxWidth="560"
+                           Text="{loc:Loc Manual_NoGroups}"
+                           Visibility="{Binding HasNoGroups, Converter={StaticResource BoolToVisibility}}" />
+
+                <!-- Members, subgroups and events of the group -->
+                <TabControl Margin="0,16,0,0" SelectedIndex="{Binding SectionIndex, Mode=TwoWay}"
+                            Visibility="{Binding HasGroup, Converter={StaticResource BoolToVisibility}}">
+
+                    <!-- Members -->
+                    <TabItem Header="{loc:Loc Manual_TabMembers}">
+                        <StackPanel Margin="0,12,0,0">
+                            <Button HorizontalAlignment="Left" Command="{Binding BeginNewMemberCommand}" Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                                    <TextBlock Text="{loc:Loc Manual_NewMember}" />
+                                </StackPanel>
+                            </Button>
+
+                            <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0"
+                                    Visibility="{Binding IsMemberFormOpen, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding MemberFormTitle}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                    <TextBlock Text="{loc:Loc Manual_Name}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                                    <TextBox Text="{Binding MemberName, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" MaxWidth="420" HorizontalAlignment="Left" MinWidth="260"
+                                             AutomationProperties.Name="{loc:Loc Manual_Name}" />
+                                    <TextBlock Text="{Binding MemberNameProblem}" Style="{StaticResource ProblemText}"
+                                               Visibility="{Binding MemberNameProblem, Converter={StaticResource StringToVisibility}}" />
+
+                                    <TextBlock Text="{loc:Loc Manual_BirthDate}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                                    <DockPanel MaxWidth="420" HorizontalAlignment="Left" MinWidth="260">
+                                        <Button DockPanel.Dock="Right" Command="{Binding ClearMemberBirthDateCommand}" Content="{loc:Loc Manual_ClearBirth}" Margin="8,0,0,0" />
+                                        <DatePicker SelectedDateFormat="Short" SelectedDate="{Binding MemberBirthDate, UpdateSourceTrigger=PropertyChanged}"
+                                                    AutomationProperties.Name="{loc:Loc Manual_BirthDate}" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding MemberBirthProblem}" Style="{StaticResource ProblemText}"
+                                               Visibility="{Binding MemberBirthProblem, Converter={StaticResource StringToVisibility}}" />
+
+                                    <TextBlock Text="{loc:Loc Manual_SubGroups}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                                    <ItemsControl ItemsSource="{Binding MemberSubGroups}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Name}" Margin="0,2" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Text="{loc:Loc Manual_NoSubGroupsHint}" Style="{StaticResource MutedText}"
+                                               Visibility="{Binding HasSubGroupChoices, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <Button Command="{Binding SaveMemberCommand}" Content="{loc:Loc Manual_Save}" Style="{StaticResource AccentButtonStyle}" />
+                                        <Button Command="{Binding CancelMemberCommand}" Content="{loc:Loc Manual_Cancel}" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource ListCard}" Visibility="{Binding HasMembers, Converter={StaticResource BoolToVisibility}}">
+                                <DataGrid ItemsSource="{Binding Members}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                          CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False" CanUserSortColumns="False"
+                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" MinRowHeight="44" FontSize="13"
+                                          ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single" Background="Transparent" BorderThickness="0"
+                                          AutomationProperties.Name="{loc:Loc Manual_TabMembers}" PreviewMouseWheel="OnGridMouseWheel">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColName}" Width="2*" MinWidth="160">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CellText}" ToolTip="{Binding Name}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColBirth}" Width="*" MinWidth="110">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding BirthText}" Style="{StaticResource CellText}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColSubGroups}" Width="2*" MinWidth="140">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding SubGroupsText}" Style="{StaticResource CellText}" ToolTip="{Binding SubGroupsText}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Width="200" MinWidth="190">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                        <Button Content="{loc:Loc Manual_Edit}"
+                                                                Command="{Binding DataContext.BeginEditMemberCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="{loc:Loc Manual_Delete}" Margin="8,0,0,0"
+                                                                Command="{Binding DataContext.AskDeleteMemberCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                            <TextBlock Margin="0,24,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" Text="{loc:Loc Manual_NoMembers}"
+                                       Visibility="{Binding MembersEmpty, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </TabItem>
+
+                    <!-- Subgroups -->
+                    <TabItem Header="{loc:Loc Manual_TabSubGroups}">
+                        <StackPanel Margin="0,12,0,0">
+                            <Button HorizontalAlignment="Left" Command="{Binding BeginNewSubGroupCommand}" Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                                    <TextBlock Text="{loc:Loc Manual_NewSubGroup}" />
+                                </StackPanel>
+                            </Button>
+
+                            <Border Style="{StaticResource ListCard}" Visibility="{Binding HasSubGroupRows, Converter={StaticResource BoolToVisibility}}">
+                                <DataGrid ItemsSource="{Binding SubGroups}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                          CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False" CanUserSortColumns="False"
+                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" MinRowHeight="44" FontSize="13"
+                                          ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single" Background="Transparent" BorderThickness="0"
+                                          AutomationProperties.Name="{loc:Loc Manual_TabSubGroups}" PreviewMouseWheel="OnGridMouseWheel">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColName}" Width="2*" MinWidth="160">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CellText}" ToolTip="{Binding Name}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColMembers}" Width="*" MinWidth="110">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding CountText}" Style="{StaticResource CellText}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Width="220" MinWidth="200">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                        <Button Content="{loc:Loc Manual_Rename}"
+                                                                Command="{Binding DataContext.BeginRenameSubGroupCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="{loc:Loc Manual_Delete}" Margin="8,0,0,0"
+                                                                Command="{Binding DataContext.AskDeleteSubGroupCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                            <TextBlock Margin="0,24,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" Text="{loc:Loc Manual_NoSubGroups}"
+                                       Visibility="{Binding SubGroupsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </TabItem>
+
+                    <!-- Events -->
+                    <TabItem Header="{loc:Loc Manual_TabEvents}">
+                        <StackPanel Margin="0,12,0,0">
+                            <Button HorizontalAlignment="Left" Command="{Binding BeginNewEventCommand}" Style="{StaticResource AccentButtonStyle}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                                    <TextBlock Text="{loc:Loc Manual_NewEvent}" />
+                                </StackPanel>
+                            </Button>
+
+                            <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0"
+                                    Visibility="{Binding IsEventFormOpen, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding EventFormTitle}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                    <TextBlock Text="{loc:Loc Manual_Name}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                                    <TextBox Text="{Binding EventName, UpdateSourceTrigger=PropertyChanged}" MaxLength="100" MaxWidth="420" HorizontalAlignment="Left" MinWidth="260"
+                                             AutomationProperties.Name="{loc:Loc Manual_Name}" />
+                                    <TextBlock Text="{Binding EventNameProblem}" Style="{StaticResource ProblemText}"
+                                               Visibility="{Binding EventNameProblem, Converter={StaticResource StringToVisibility}}" />
+
+                                    <Grid Margin="0,12,0,0" HorizontalAlignment="Left">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="32" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Manual_Start}" Style="{StaticResource FieldLabelText}" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <DatePicker Width="160" SelectedDateFormat="Short" SelectedDate="{Binding EventStartDate, UpdateSourceTrigger=PropertyChanged}"
+                                                            AutomationProperties.Name="{loc:Loc Manual_Start}" />
+                                                <TextBox Width="80" Margin="8,0,0,0" Text="{Binding EventStartTime, UpdateSourceTrigger=PropertyChanged}" MaxLength="8"
+                                                         AutomationProperties.Name="{loc:Loc Manual_TimeHint}" ToolTip="{loc:Loc Manual_TimeHint}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{loc:Loc Manual_End}" Style="{StaticResource FieldLabelText}" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <DatePicker Width="160" SelectedDateFormat="Short" SelectedDate="{Binding EventEndDate, UpdateSourceTrigger=PropertyChanged}"
+                                                            AutomationProperties.Name="{loc:Loc Manual_End}" />
+                                                <TextBox Width="80" Margin="8,0,0,0" Text="{Binding EventEndTime, UpdateSourceTrigger=PropertyChanged}" MaxLength="8"
+                                                         AutomationProperties.Name="{loc:Loc Manual_TimeHint}" ToolTip="{loc:Loc Manual_TimeHint}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Text="{Binding EventTimeProblem}" Style="{StaticResource ProblemText}"
+                                               Visibility="{Binding EventTimeProblem, Converter={StaticResource StringToVisibility}}" />
+
+                                    <CheckBox IsChecked="{Binding EventCancelled}" Content="{loc:Loc Manual_Cancelled}" Margin="0,12,0,0" />
+
+                                    <TextBlock Text="{loc:Loc Manual_Invitations}" Style="{StaticResource FieldLabelText}" Margin="0,16,0,0" />
+                                    <StackPanel Visibility="{Binding HasInvitees, Converter={StaticResource BoolToVisibility}}">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <Button Command="{Binding InviteAllCommand}" Content="{loc:Loc Manual_InviteAll}" />
+                                            <Button Command="{Binding InviteNoneCommand}" Content="{loc:Loc Manual_InviteNone}" Margin="8,0,0,0" />
+                                            <Button Command="{Binding AcceptAllCommand}" Content="{loc:Loc Manual_AcceptAll}" Margin="8,0,0,0" />
+                                        </StackPanel>
+                                        <ScrollViewer MaxHeight="320" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Invitees}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid Margin="0,2">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" MinWidth="200" />
+                                                                <ColumnDefinition Width="200" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <CheckBox IsChecked="{Binding IsInvited}" Content="{Binding Name}" VerticalAlignment="Center" />
+                                                            <ComboBox Grid.Column="1" DisplayMemberPath="Text" IsEnabled="{Binding IsInvited}"
+                                                                      ItemsSource="{Binding DataContext.RsvpOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                      SelectedItem="{Binding Answer}" AutomationProperties.Name="{loc:Loc Manual_ColAnswer}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                    <TextBlock Text="{loc:Loc Manual_NoMembersToInvite}" Style="{StaticResource MutedText}"
+                                               Visibility="{Binding HasInvitees, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                                        <Button Command="{Binding SaveEventCommand}" Content="{loc:Loc Manual_Save}" Style="{StaticResource AccentButtonStyle}" />
+                                        <Button Command="{Binding CancelEventCommand}" Content="{loc:Loc Manual_Cancel}" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource ListCard}" Visibility="{Binding HasEvents, Converter={StaticResource BoolToVisibility}}">
+                                <DataGrid ItemsSource="{Binding Events}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                                          CanUserDeleteRows="False" CanUserReorderColumns="False" CanUserResizeRows="False" CanUserSortColumns="False"
+                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeaderWidth="0" MinRowHeight="44" FontSize="13"
+                                          ColumnHeaderStyle="{StaticResource GridHeader}" SelectionMode="Single" Background="Transparent" BorderThickness="0"
+                                          AutomationProperties.Name="{loc:Loc Manual_TabEvents}" PreviewMouseWheel="OnGridMouseWheel">
+                                    <DataGrid.Columns>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColName}" Width="2*" MinWidth="160">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CellText}" ToolTip="{Binding Name}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_ColStart}" Width="*" MinWidth="150">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StartText}" Style="{StaticResource CellText}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Header="{loc:Loc Manual_Invitations}" Width="*" MinWidth="150">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding InvitedText}" Style="{StaticResource CellText}" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTemplateColumn Width="200" MinWidth="190">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0">
+                                                        <Button Content="{loc:Loc Manual_Edit}"
+                                                                Command="{Binding DataContext.BeginEditEventCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Content="{loc:Loc Manual_Delete}" Margin="8,0,0,0"
+                                                                Command="{Binding DataContext.AskDeleteEventCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                                CommandParameter="{Binding}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Border>
+                            <TextBlock Margin="0,24,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" Text="{loc:Loc Manual_NoEvents}"
+                                       Visibility="{Binding EventsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <TextBlock Style="{StaticResource NotAllowedText}" Text="{loc:Loc Page_NotAllowed}"
+                   Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+                     Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+    </Grid>
+</UserControl>

@@ -140,7 +140,7 @@ public sealed class SpondSyncHostTests(WebApplicationFactory<Program> factory) :
         });
         _ = host.CreateClient(); // starts the host, and with it the worker
 
-        var inSpond = (await host.Services.GetRequiredService<ISpondDataSource>().GetGroupsAsync(CancellationToken.None))
+        var inSpond = (await host.Services.GetRequiredService<IDataSource>().GetGroupsAsync(CancellationToken.None))
             .Sum(g => g.Members.Count);
         Assert.True(inSpond > 0);
 

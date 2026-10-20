@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Sources;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Infrastructure;
@@ -23,6 +24,7 @@ public sealed class SettingsService(
     IOptions<DatabaseOptions> database,
     IOptions<AccountsOptions> accounts,
     IOptions<SpondOptions> spond,
+    IOptions<DataSourceOptions> dataSource,
     IOptions<StatisticsOptions> statistics,
     IOptions<SyncOptions> sync,
     IOptions<DefaultDataOptions> defaultData,
@@ -57,8 +59,19 @@ public sealed class SettingsService(
             configuration[AllowedHostsKey] is { Length: > 0 } hosts ? hosts : SettingsRules.AnyHost,
             statistics.Value.DefaultEventStars,
             statistics.Value.ExamMinAverageStars,
-            first.UnregisteredSubGroup ?? "");
+            first.UnregisteredSubGroup ?? "",
+            CurrentKind,
+            dataSource.Value.Script);
     }
+
+    /// <summary>The data source the API runs with (the demo data included).</summary>
+    private string CurrentKind => dataSource.Value.Resolve(spond.Value);
+
+    /// <summary>The data source a save asks for; an older client that does not know the field chooses between the demo data and what runs now.</summary>
+    private string RequestedKind(SettingsInputDto input) =>
+        input.DataSource is { } kind ? DataSourceKinds.Normalize(kind)
+        : input.UseDemoData ? DataSourceKinds.Demo
+        : CurrentKind == DataSourceKinds.Demo ? DataSourceKinds.Spond : CurrentKind;
 
     /// <summary>
     /// Whether the databases are SQLite files, whose paths this page can change. With PostgreSQL they are set in the configuration only
@@ -97,7 +110,12 @@ public sealed class SettingsService(
                 Fail("accountsDatabasePath", "The accounts database must be another file than the planner database.");
         }
 
-        if (!input.UseDemoData &&
+        if (!SettingsRules.IsDataSource(input.DataSource)) Fail("dataSource", $"dataSource must be one of: {string.Join(", ", DataSourceKinds.All)}.");
+        var script = input.CustomScript ?? dataSource.Value.Script;
+        if (script.Length > SettingsRules.MaxScriptLength) Fail("customScript", $"customScript is too long (at most {SettingsRules.MaxScriptLength} characters).");
+        else if (RequestedKind(input) == DataSourceKinds.Custom && CustomScriptDataSource.CheckSyntax(script) is { } problem) Fail("customScript", $"customScript: {problem}");
+
+        if (RequestedKind(input) == DataSourceKinds.Spond &&
             SettingsRules.HasHalfCredentials(input.SpondEmail, input.SpondPhoneNumber, !string.IsNullOrEmpty(input.SpondPassword) || Get().HasSpondPassword))
             Fail("spondPassword", "A Spond login needs the email (or phone number) and the password.");
 
@@ -216,7 +234,12 @@ public sealed class SettingsService(
         if (ManagesDatabaseFiles && input.AccountsDatabasePath.Trim() != now.AccountsDatabasePath)
             changes["Accounts:ConnectionString"] = new SqliteConnectionStringBuilder { DataSource = input.AccountsDatabasePath.Trim() }.ToString();
 
-        Set("Spond:UseDemoData", Flag(now.UseDemoData), Flag(input.UseDemoData));
+        var kind = RequestedKind(input);
+        // The demo data is the older switch alone (Spond:UseDemoData), so that the source that is chosen under it is still there when it is switched off.
+        if (kind != DataSourceKinds.Demo) Set("DataSource:Kind", DataSourceKinds.Normalize(dataSource.Value.Kind), kind);
+        Set("Spond:UseDemoData", Flag(now.UseDemoData), Flag(kind == DataSourceKinds.Demo));
+        // An older client that does not know the field sends none: that keeps the script.
+        if (input.CustomScript is not null) Set("DataSource:Script", dataSource.Value.Script, input.CustomScript);
         Set("Spond:Email", now.SpondEmail ?? "", input.SpondEmail?.Trim() ?? "");
         Set("Spond:PhoneNumber", now.SpondPhoneNumber ?? "", input.SpondPhoneNumber?.Trim() ?? "");
         if (!string.IsNullOrEmpty(input.SpondPassword) && input.SpondPassword != spond.Value.Password) changes["Spond:Password"] = input.SpondPassword;

@@ -4,6 +4,30 @@ using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Configuration;
 
+/// <summary>
+/// Where groups, members and events come from. <see cref="Kind"/> chooses between Spond (<see cref="SpondOptions"/>), a script, entries
+/// the users make by hand and generated demo data; it is decided when the API starts, so changing it restarts the API (the settings page does that).
+/// </summary>
+public sealed class DataSourceOptions
+{
+    public const string Section = "DataSource";
+
+    /// <summary>One of <see cref="DataSourceKinds"/>; empty = Spond. <c>Spond:UseDemoData</c> overrides it with the demo data.</summary>
+    public string Kind { get; set; } = "";
+
+    /// <summary>The JavaScript of the <see cref="DataSourceKinds.Custom"/> source (<see cref="Sources.CustomScriptDataSource"/>).</summary>
+    public string Script { get; set; } = "";
+
+    /// <summary>How long one call of the script may run, waiting for other services included.</summary>
+    public TimeSpan ScriptTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>How long what the script returned is reused before it is asked again.</summary>
+    public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>The source that runs: the demo data when <see cref="SpondOptions.UseDemoData"/> is set (the older switch), else <see cref="Kind"/>.</summary>
+    public string Resolve(SpondOptions spond) => spond.UseDemoData ? DataSourceKinds.Demo : DataSourceKinds.Normalize(Kind);
+}
+
 public sealed class SpondOptions
 {
     public const string Section = "Spond";

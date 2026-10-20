@@ -29,7 +29,7 @@ public sealed class SyncGate
 /// </summary>
 public sealed class SpondSync(
     PlannerDbContext db,
-    ISpondDataSource source,
+    IDataSource source,
     StatisticsService statistics,
     ClubClock clock,
     TimeProvider time,

@@ -24,6 +24,8 @@ public class AccountsDbContext : DbContext
 
     public DbSet<UserAlias> UserAliases => Set<UserAlias>();
 
+    public DbSet<AccountName> AccountNames => Set<AccountName>();
+
     public DbSet<Role> Roles => Set<Role>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -45,6 +47,13 @@ public class AccountsDbContext : DbContext
             alias.Property(a => a.Alias).HasMaxLength(UserNameLength).UseCollation(PostgresModel.NoCase);
             alias.HasIndex(a => a.Alias).IsUnique();
             alias.HasOne<UserAccount>().WithMany(u => u.Aliases).HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AccountName>(name =>
+        {
+            name.Property(n => n.Name).HasMaxLength(UserNameLength).UseCollation(PostgresModel.NoCase);
+            name.HasIndex(n => n.Name).IsUnique();
+            name.HasOne<UserAccount>().WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Role>(role =>

@@ -57,8 +57,22 @@ public sealed class UserAlias
 
     public int UserId { get; set; }
 
-    /// <summary>Unique regardless of case. That it differs from every user name is checked by <see cref="AccountService"/>: an index cannot span two tables.</summary>
+    /// <summary>Unique regardless of case. That it differs from every user name is guaranteed by <see cref="AccountName"/>.</summary>
     public string Alias { get; set; } = "";
+}
+
+/// <summary>
+/// Every login name, the user name and each alias, once: its unique index is what stops two users from owning one name, which an index
+/// on <see cref="UserAccount"/> or <see cref="UserAlias"/> alone cannot (it cannot span two tables). Kept in step by <see cref="AccountService"/>.
+/// </summary>
+public sealed class AccountName
+{
+    public int Id { get; set; }
+
+    public int UserId { get; set; }
+
+    /// <summary>Unique regardless of case.</summary>
+    public string Name { get; set; } = "";
 }
 
 /// <summary>A set of permissions many users have in common. One role is the <see cref="IsSystem">administrator</see>.</summary>

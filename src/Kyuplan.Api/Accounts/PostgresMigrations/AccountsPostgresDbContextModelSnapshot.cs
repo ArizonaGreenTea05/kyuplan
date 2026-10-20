@@ -24,6 +24,32 @@ namespace Kyuplan.Api.Accounts.PostgresMigrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Kyuplan.Api.Accounts.AccountName", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("citext");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AccountNames");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Accounts.Role", b =>
                 {
                     b.Property<int>("Id")
@@ -143,6 +169,15 @@ namespace Kyuplan.Api.Accounts.PostgresMigrations
                     b.HasIndex("UsersId");
 
                     b.ToTable("UserRoles");
+                });
+
+            modelBuilder.Entity("Kyuplan.Api.Accounts.AccountName", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Accounts.UserAccount", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Accounts.UserAlias", b =>

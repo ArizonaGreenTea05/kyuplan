@@ -248,7 +248,7 @@ public sealed class AccountApiTests(WebApplicationFactory<Program> factory) : IC
             Assert.NotEqual(users[0].PasswordHash, hasher.HashPassword(users[0], AdminPassword)); // salted: the same password never hashes the same
         }
 
-        Assert.Equal(["Roles", "UserAliases", "UserRoles", "Users"], Tables(_accounts).Where(t => !t.StartsWith("__")).Order());
+        Assert.Equal(["AccountNames", "Roles", "UserAliases", "UserRoles", "Users"], Tables(_accounts).Where(t => !t.StartsWith("__")).Order());
         Assert.DoesNotContain("Users", Tables(_planner));
         Assert.Contains("Exams", Tables(_planner));
         Assert.DoesNotContain("Exams", Tables(_accounts));
@@ -310,6 +310,23 @@ public sealed class AccountApiTests(WebApplicationFactory<Program> factory) : IC
         Assert.Equal(HttpStatusCode.OK, swapped.StatusCode);
         Assert.Equal("2|Annie|Anna K.|Anna|User|", (await swapped.Content.ReadFromJsonAsync<UserDto>()).Show());
         Assert.Equal(HttpStatusCode.OK, await StatusAsync(host.CreateClient(), "Anna", GoodPassword));
+    }
+
+    [Fact]
+    public async Task The_database_refuses_a_name_two_users_would_share_even_when_the_service_check_is_raced()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var anna = await CreateUserAsync(admin, "Anna");
+        var ben = await CreateUserAsync(admin, "Ben");
+
+        // What a race between two requests amounts to: both passed the check, the second write meets the index.
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AccountsDbContext>();
+        db.UserAliases.Add(new UserAlias { UserId = ben.Id, Alias = "Beni" });
+        db.AccountNames.Add(new AccountName { UserId = ben.Id, Name = "ANNA" });
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        Assert.NotEqual(anna.Id, ben.Id);
     }
 
     [Fact]

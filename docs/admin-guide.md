@@ -330,8 +330,7 @@ delete themselves; the last administrator cannot be deleted.
 ### Rules to know
 
 - User names and aliases are **login names**: unique across all users and aliases regardless of case, at most 64 characters, no colon
-  or control characters. (The uniqueness between names and aliases is checked in code, not by an index; two requests racing for the same
-  name at the same instant could both succeed. Create users one at a time.)
+  or control characters. (A unique index in the database guarantees it, so even simultaneous requests cannot take one name twice.)
 - **Nobody can give or touch more than they have.** Roles and permissions given to a user, and permissions added to a role, must all be ones the
   giver has themselves. Changing a user's names or password, or deleting a user, needs at least the permissions that user has (so somebody
   with `users.edit` cannot reset an administrator's password). Only an administrator (or somebody with every permission) can do all of it.

@@ -274,7 +274,7 @@ public sealed class AccountService(
 
     /// <summary>
     /// Saves the user and, when <paramref name="aliases"/> is given, makes them the user's aliases (<c>null</c> leaves them alone). The unique
-    /// indexes decide what a duplicate is within the user names and within the aliases, so two requests racing for one name cannot both win.
+    /// indexes (of the users, the aliases and <see cref="AccountName"/> across both) decide what a duplicate is, so two requests racing for one name cannot both win.
     /// </summary>
     private async Task SaveAsync(UserAccount user, IReadOnlyList<string>? aliases, CancellationToken cancellationToken)
     {
@@ -297,6 +297,14 @@ public sealed class AccountService(
                 await db.SaveChangesAsync(cancellationToken);
             }
 
+            // The names table (one unique index over user names and aliases) follows the same way: removals first, then additions.
+            List<string> names = [user.UserName, .. user.Aliases.Select(a => a.Alias)];
+            var owned = await db.AccountNames.Where(n => n.UserId == user.Id).ToListAsync(cancellationToken);
+            db.AccountNames.RemoveRange(owned.Where(n => !names.Contains(n.Name, StringComparer.Ordinal)));
+            await db.SaveChangesAsync(cancellationToken);
+            db.AccountNames.AddRange(names.Except(owned.Select(n => n.Name), StringComparer.Ordinal).Select(n => new AccountName { UserId = user.Id, Name = n }));
+            await db.SaveChangesAsync(cancellationToken);
+
             await transaction.CommitAsync(cancellationToken);
         }
         catch (DbUpdateException ex) when (ex.IsUniqueViolation())
@@ -306,9 +314,8 @@ public sealed class AccountService(
     }
 
     /// <summary>
-    /// No name signs in as two users: the user name and the aliases of a user must not be a user name or alias of anybody else. The unique indexes
-    /// each see one table only, so this is checked here. <c>ponytail:</c> two requests racing for the same name across the tables can both pass;
-    /// the name then signs in as whichever user the database finds first (the password still has to fit). A trigger would close it.
+    /// No name signs in as two users: the user name and the aliases of a user must not be a user name or alias of anybody else. The unique index of
+    /// <see cref="AccountName"/> guarantees it; this check only gives the early answer that names the clashing name.
     /// </summary>
     private async Task EnsureNamesFreeAsync(UserAccount user, IReadOnlyList<string>? aliases, CancellationToken cancellationToken)
     {

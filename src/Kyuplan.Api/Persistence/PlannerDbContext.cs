@@ -29,6 +29,7 @@ public class PlannerDbContext : DbContext
     private const int RsvpLength = 20;
     private const int SlotLength = 30;
     private const int ContentTypeLength = 50;
+    public const int TokenLength = 64;
 
     /// <summary>Check that a column holds <c>#RRGGBB</c>: the colours go straight into CSS and WPF brushes, so nothing else may be stored.</summary>
     private static string IsColor(string column, bool postgres) => postgres
@@ -68,6 +69,8 @@ public class PlannerDbContext : DbContext
     public DbSet<Tag> Tags => Set<Tag>();
 
     public DbSet<CommentTag> CommentTags => Set<CommentTag>();
+
+    public DbSet<CalendarFeed> CalendarFeeds => Set<CalendarFeed>();
 
     public DbSet<CustomBranding> CustomBranding => Set<CustomBranding>();
 
@@ -259,6 +262,14 @@ public class PlannerDbContext : DbContext
                 "CK_Tags_Event",
                 "(\"EventId\" IS NULL AND \"EventGroupId\" IS NULL AND \"EventName\" IS NULL AND \"EventStart\" IS NULL) " +
                 "OR (\"EventId\" IS NOT NULL AND \"EventGroupId\" IS NOT NULL AND \"EventName\" IS NOT NULL AND \"EventStart\" IS NOT NULL)"));
+        });
+
+        modelBuilder.Entity<CalendarFeed>(feed =>
+        {
+            feed.Property(f => f.Name).HasMaxLength(CalendarFeedRules.MaxNameLength).UseCollation(NoCase);
+            feed.Property(f => f.Token).HasMaxLength(TokenLength);
+            feed.HasIndex(f => f.Name).IsUnique();
+            feed.HasIndex(f => f.Token).IsUnique();
         });
 
         modelBuilder.Entity<CommentTag>(commentTag =>

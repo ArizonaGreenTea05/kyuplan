@@ -2440,6 +2440,9 @@
   <data name="Permission_calendar_view" xml:space="preserve">
     <value>Den Kalender und seine Termine sehen</value>
   </data>
+  <data name="Permission_calendar_feeds" xml:space="preserve">
+    <value>Kalender-Feeds festlegen (Adressen für Kalender-Apps)</value>
+  </data>
   <data name="Calendar_FilterAll" xml:space="preserve">
     <value>Alle</value>
   </data>
@@ -2838,5 +2841,152 @@
   </data>
   <data name="Pay_OwnBeltHint" xml:space="preserve">
     <value>Das Mitglied hat den Gürtel anderweitig bekommen (z. B. von einem Geschwisterkind), daher wird sein Preis nicht berechnet.</value>
+  </data>
+  <data name="Nav_CalendarFeeds" xml:space="preserve">
+    <value>Kalender-Feeds</value>
+  </data>
+  <data name="CalendarFeeds_Lede" xml:space="preserve">
+    <value>Kalender, die Kalender-Apps über eine Adresse abonnieren. Jeder sammelt Termine einer Gruppe (eingegrenzt danach, wer eingeladen ist), Geburtstage und Jubiläen von Mitgliedern.</value>
+  </data>
+  <data name="CalendarFeeds_New" xml:space="preserve">
+    <value>Neuer Kalender</value>
+  </data>
+  <data name="CalendarFeeds_Empty" xml:space="preserve">
+    <value>Noch kein Kalender-Feed. Lege den ersten an und füge seine Adresse in eine Kalender-App ein.</value>
+  </data>
+  <data name="CalendarFeeds_ColName" xml:space="preserve">
+    <value>Kalender</value>
+  </data>
+  <data name="CalendarFeeds_ColSources" xml:space="preserve">
+    <value>Enthält</value>
+  </data>
+  <data name="CalendarFeeds_ColAddress" xml:space="preserve">
+    <value>Adresse für Kalender-Apps</value>
+  </data>
+  <data name="CalendarFeeds_Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="CalendarFeeds_NewAddress" xml:space="preserve">
+    <value>Neue Adresse</value>
+  </data>
+  <data name="CalendarFeeds_Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="CalendarFeeds_ConfirmYes" xml:space="preserve">
+    <value>Ja, ausführen</value>
+  </data>
+  <data name="CalendarFeeds_Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="CalendarFeeds_ConfirmDelete" xml:space="preserve">
+    <value>Den Kalender „{0}“ löschen? Seine Adresse funktioniert dann nicht mehr.</value>
+  </data>
+  <data name="CalendarFeeds_ConfirmRegenerate" xml:space="preserve">
+    <value>„{0}“ eine neue Adresse geben? Die alte funktioniert dann nicht mehr; Apps, die ihn abonniert haben, brauchen die neue.</value>
+  </data>
+  <data name="CalendarFeeds_Created" xml:space="preserve">
+    <value>Kalender „{0}“ angelegt.</value>
+  </data>
+  <data name="CalendarFeeds_Saved" xml:space="preserve">
+    <value>Kalender „{0}“ gespeichert.</value>
+  </data>
+  <data name="CalendarFeeds_Deleted" xml:space="preserve">
+    <value>Kalender „{0}“ gelöscht.</value>
+  </data>
+  <data name="CalendarFeeds_Regenerated" xml:space="preserve">
+    <value>„{0}“ hat eine neue Adresse.</value>
+  </data>
+  <data name="CalendarFeeds_AddressHint" xml:space="preserve">
+    <value>Abonniere diese Adresse in einer Kalender-App („Internetkalender hinzufügen“). Wer sie kennt, kann den Kalender ohne Anmeldung lesen – behandle sie wie ein Passwort.</value>
+  </data>
+  <data name="CalendarFeeds_FormNew" xml:space="preserve">
+    <value>Neuer Kalender</value>
+  </data>
+  <data name="CalendarFeeds_FormEdit" xml:space="preserve">
+    <value>„{0}“ bearbeiten</value>
+  </data>
+  <data name="CalendarFeeds_FormName" xml:space="preserve">
+    <value>Name (wird in der Kalender-App angezeigt)</value>
+  </data>
+  <data name="CalendarFeeds_NameInvalid" xml:space="preserve">
+    <value>Ein Name ist nötig, höchstens {0} Zeichen.</value>
+  </data>
+  <data name="CalendarFeeds_NameTaken" xml:space="preserve">
+    <value>Es gibt bereits einen Kalender mit diesem Namen.</value>
+  </data>
+  <data name="CalendarFeeds_AddSource" xml:space="preserve">
+    <value>Quelle hinzufügen</value>
+  </data>
+  <data name="CalendarFeeds_RemoveSource" xml:space="preserve">
+    <value>Quelle entfernen</value>
+  </data>
+  <data name="CalendarFeeds_Create" xml:space="preserve">
+    <value>Kalender anlegen</value>
+  </data>
+  <data name="CalendarFeeds_Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="CalendarFeeds_Source" xml:space="preserve">
+    <value>Quelle</value>
+  </data>
+  <data name="CalendarFeeds_FieldKind" xml:space="preserve">
+    <value>Was</value>
+  </data>
+  <data name="CalendarFeeds_FieldGroup" xml:space="preserve">
+    <value>Gruppe</value>
+  </data>
+  <data name="CalendarFeeds_FieldSubGroups" xml:space="preserve">
+    <value>Untergruppen</value>
+  </data>
+  <data name="CalendarFeeds_FieldMembers" xml:space="preserve">
+    <value>Mitglieder</value>
+  </data>
+  <data name="CalendarFeeds_PeopleHint" xml:space="preserve">
+    <value>Untergruppen und Mitglieder werden zusammengenommen. Beides leer lassen: alle der Gruppe.</value>
+  </data>
+  <data name="CalendarFeeds_FieldInvitation" xml:space="preserve">
+    <value>Ein Termin kommt in den Kalender, wenn die gewählten Personen eingeladen sind</value>
+  </data>
+  <data name="CalendarFeeds_FieldContains" xml:space="preserve">
+    <value>Terminname enthält (Wörter durch Komma getrennt)</value>
+  </data>
+  <data name="CalendarFeeds_FieldExcludes" xml:space="preserve">
+    <value>Terminname enthält nicht</value>
+  </data>
+  <data name="CalendarFeeds_FieldOnlyExams" xml:space="preserve">
+    <value>Nur Prüfungen</value>
+  </data>
+  <data name="CalendarFeeds_FieldCancelled" xml:space="preserve">
+    <value>Abgesagte Termine einschließen (als abgesagt markiert)</value>
+  </data>
+  <data name="CalendarFeeds_FieldLabel" xml:space="preserve">
+    <value>Wort vor jedem Titel (optional)</value>
+  </data>
+  <data name="CalendarFeeds_SubGroupLabel" xml:space="preserve">
+    <value>Wort davor (optional)</value>
+  </data>
+  <data name="CalendarFeeds_SubGroupLabelAria" xml:space="preserve">
+    <value>Wort vor den Titeln für die Untergruppe {0} (optional)</value>
+  </data>
+  <data name="CalendarFeeds_Kind_Events" xml:space="preserve">
+    <value>Termine</value>
+  </data>
+  <data name="CalendarFeeds_Kind_Birthdays" xml:space="preserve">
+    <value>Geburtstage</value>
+  </data>
+  <data name="CalendarFeeds_Kind_ClubAnniversaries" xml:space="preserve">
+    <value>Jahre im Verein</value>
+  </data>
+  <data name="CalendarFeeds_Kind_BeltAnniversaries" xml:space="preserve">
+    <value>Jahre mit dem aktuellen Gürtel</value>
+  </data>
+  <data name="CalendarFeeds_Invitation_Any" xml:space="preserve">
+    <value>Mindestens eine ist eingeladen</value>
+  </data>
+  <data name="CalendarFeeds_Invitation_All" xml:space="preserve">
+    <value>Alle sind eingeladen</value>
+  </data>
+  <data name="CalendarFeeds_Invitation_Only" xml:space="preserve">
+    <value>Nur sie sind eingeladen (sonst niemand)</value>
   </data>
 </root>

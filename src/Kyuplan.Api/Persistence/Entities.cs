@@ -361,6 +361,26 @@ public sealed class CommentEdit
 }
 
 /// <summary>
+/// A calendar the API offers as an ICS address (<c>/calendar-feeds/{token}.ics</c>) that calendar apps subscribe to. What it contains is
+/// defined by its sources (<see cref="Kyuplan.Contracts.CalendarSourceDto"/>, see <see cref="CalendarFeedService"/>).
+/// </summary>
+public sealed class CalendarFeed
+{
+    public int Id { get; set; }
+
+    /// <summary>Unique regardless of case.</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>The secret in the address; whoever knows it may read the calendar without logging in. Unique.</summary>
+    public string Token { get; set; } = "";
+
+    /// <summary>The sources as a JSON array, in one column: they are only ever read and written together with the feed.</summary>
+    public string SourcesJson { get; set; } = "[]";
+
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>
 /// A topic comments can be about. It may be connected to one Spond event (a training, an exam, ...); one event can have many tags.
 /// The event's name and start are kept as last seen, so that a tag reads without Spond; <see cref="TagService"/> keeps them current.
 /// </summary>

@@ -1037,3 +1037,10 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 }
 .phone-only { display: none; }
 @media (max-width: 720px) { .phone-only { display: block; } }
+
+/* Calendar feeds: one block per source, lists of subgroups and members that scroll, the address that is copied */
+.feed-source { display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--line, rgba(128, 128, 128, .3)); border-radius: 10px; padding: 12px 14px; margin: 0; }
+.feed-source legend { font-weight: 600; padding: 0 6px; }
+.feed-source-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.check-scroll { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 4px 2px; }
+.feed-url { width: 100%; min-width: 260px; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }

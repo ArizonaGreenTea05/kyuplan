@@ -161,7 +161,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | --- | --- |
 | dashboard | `dashboard.view` |
 | statistics | `statistics.view` |
-| calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`) |
+| calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`), `calendar.feeds` (define calendar feeds, see [Calendar feeds](#calendar-feeds)) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
 | payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the stamp fee and belt price per belt) |
 | members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
@@ -353,6 +353,33 @@ The server refuses a pack whose text is hard to read, and says why: `text` needs
 `sidebar` (7:1 for a high contrast pack), `muted` at least 3:1 on `sheet` (4.5:1), an `accent` at least 3:1 on `sheet`. A file is at most 16 KB, and
 at most 50 packs can be installed. The desktop app draws a pack with its flat controls (the same colours, the rounded look of Dracula), so
 installing one never needs a new version of either client.
+
+## Calendar feeds
+
+A calendar feed is a calendar of your own that calendar apps (Google Calendar, Apple Calendar, Outlook, Thunderbird, ...) subscribe to as an *internet calendar*. Open **Administration → Calendar feeds** (needs `calendar.feeds`; a role that exists already must get it ticked on the Roles page) to make, change and delete them, copy the address and give a feed a new one. The same is available through the API (`/api/calendar-feeds`, see `/scalar` in development). A feed has a name and one or more **sources**; its entries are all the sources' entries together.
+
+| Source `kind` | Entries |
+| --- | --- |
+| `events` | The events of a Spond group (its search window, cancelled ones only with `includeCancelled`). |
+| `birthdays` | Every member's birthday as an all-day entry titled `🎂 Name (age)`. |
+| `clubAnniversaries` | The day a member started in the club, titled `🏅 Name (years)`. |
+| `beltAnniversaries` | The day a member got the belt they hold, titled `🥋 Name: Belt (years)`. |
+
+Every source names its `groupId` and can be narrowed to **people**: `subGroupIds` (Spond subgroups of the group) plus `memberIds` (ids from the members list) are put together; with neither, everybody of the group counts. For `events`, `invitation` says how the selected people must be invited: `any` (at least one, the default), `all` (all of them: "every event that invites a, b and c") or `only` (nobody else: "the events of this subgroup alone"). Events can also be narrowed with `nameContains` / `nameExcludes` (words separated by commas, like the statistics filter) and `onlyExams` (events that are exams in the planner). `label` puts a word in front of each title (`Kids: Training`). `subGroupLabels` (subgroup id → word) does the same per selected subgroup: an entry gets the word of every subgroup it concerns (an event that invites someone of it, a member's birthday), after `label`: `Kids / Teens: Training`.
+
+Example: kids' trainings and the kids' birthdays in one calendar.
+
+```json
+{
+  "name": "Kids",
+  "sources": [
+    { "kind": "events", "groupId": "…", "subGroupIds": ["…"], "invitation": "only", "label": "Kids" },
+    { "kind": "birthdays", "groupId": "…", "subGroupIds": ["…"] }
+  ]
+}
+```
+
+The answer carries `url`, e.g. `https://planner.example.org/calendar-feeds/<token>.ics`: that is the address to paste into the calendar app. **It needs no login**, because calendar apps cannot send one: the secret token in the address is the key, so treat the address like a password. `POST /api/calendar-feeds/{id}/regenerate` gives a feed a new token (the old address stops working), deleting the feed ends it. Calendar apps ask again every few hours (the file suggests one); the entries are made from Spond and the member data at each request. Birthdays and anniversaries are written for last year, this year and next year, so the age in the title is right; a member without the date is skipped. Mind who may see a feed: birthdays name members, and with `https` only the address is secret.
 
 ## Backups
 

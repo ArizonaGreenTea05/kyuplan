@@ -70,6 +70,9 @@ namespace Kyuplan.Client.Api;
 [JsonSerializable(typeof(List<TagDto>))]
 [JsonSerializable(typeof(TagDto))]
 [JsonSerializable(typeof(TagInputDto))]
+[JsonSerializable(typeof(List<CalendarFeedDto>))]
+[JsonSerializable(typeof(CalendarFeedDto))]
+[JsonSerializable(typeof(CalendarFeedInputDto))]
 [JsonSerializable(typeof(ProblemDetailsPayload))]
 internal sealed partial class PlannerJsonContext : JsonSerializerContext;
 

@@ -19,6 +19,8 @@ public static class Permission
     public const string StatisticsView = "statistics.view";
 
     public const string CalendarView = "calendar.view";
+    /// <summary>Define the calendar feeds (ICS addresses for calendar apps). A feed's address works without a login, so this is for administrators.</summary>
+    public const string CalendarFeeds = "calendar.feeds";
 
     public const string ExamsView = "exams.view";
     public const string ExamsEdit = "exams.edit";
@@ -83,7 +85,7 @@ public static class Permission
     [
         new("dashboard", [DashboardView]),
         new("statistics", [StatisticsView]),
-        new("calendar", [CalendarView]),
+        new("calendar", [CalendarView, CalendarFeeds]),
         new("exams", [ExamsView, ExamsEdit, ExamsFilters, ExamsCandidates, ExamsResults]),
         new("members", [MembersView, MembersEdit]),
         new("belts", [BeltsView, BeltsEdit]),
@@ -107,7 +109,7 @@ public static class Permission
     public static List<string> InCatalogueOrder(IEnumerable<string> permissions) => [.. All.Where(permissions.ToHashSet().Contains)];
 
     /// <summary>Whoever holds any of these may read what Spond knows (groups and events); the pages that show it need it.</summary>
-    public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, ExamsView, MembersView, TagsView];
+    public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, CalendarFeeds, ExamsView, MembersView, TagsView];
 
     /// <summary>Whoever holds any of these may read the belts: members and exams show them.</summary>
     public static IReadOnlyList<string> ReadsBelts { get; } = [BeltsView, MembersView, ExamsView, PaymentsView, PricesEdit];

@@ -25,7 +25,7 @@ public sealed partial class MainViewModel : ObservableObject
     public MainViewModel(
         ShellViewModel shell, ExamsViewModel exams, DashboardViewModel dashboard, AttendanceStatisticsViewModel statistics,
         MembersViewModel members, BeltsViewModel belts, TagsViewModel tags, AccountViewModel account, PreferencesViewModel preferences,
-        UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, ExamPricesViewModel prices, LoginSession session, ClientUpdateViewModel update,
+        UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, LoginSession session, ClientUpdateViewModel update,
         CalendarViewModel calendar, EventBannerViewModel banner)
     {
         Shell = shell;
@@ -48,12 +48,13 @@ public sealed partial class MainViewModel : ObservableObject
             new NavigationItem(branding, ""), // Color
             new NavigationItem(backup, ""), // HardDrive
             new NavigationItem(prices, ""), // Calculator: what an exam costs
+            new NavigationItem(calendarFeeds, ""), // Calendar: the calendars apps subscribe to
         };
         NavigationItem Item(PageViewModel page) => all.First(i => ReferenceEquals(i.Page, page));
 
         // The order of the navigation pane: the dashboard first (it is what opens), the groups Administration and Account at the bottom.
         _main = [Item(dashboard), Item(statistics), Item(calendar), Item(exams), Item(members), Item(belts), Item(prices), Item(tags)];
-        _admin = [Item(users), Item(roles), Item(branding), Item(backup)];
+        _admin = [Item(users), Item(roles), Item(branding), Item(calendarFeeds), Item(backup)];
         _account = [Item(account), Item(preferences)];
         Items = new ReadOnlyObservableCollection<NavigationItem>(_items);
         AdminItems = new ReadOnlyObservableCollection<NavigationItem>(_adminItems);

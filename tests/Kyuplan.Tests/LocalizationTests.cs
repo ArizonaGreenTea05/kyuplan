@@ -102,7 +102,7 @@ public sealed class LanguageServiceTests : IDisposable
         Assert.Equal(1, changes);
         Assert.Equal("Aktualisieren", Strings.Shell_Refresh);
         Assert.Equal("66,7 %", Display.Percent(66.7));
-        Assert.Equal("de-DE", CultureInfo.DefaultThreadCurrentCulture?.Name);
+        Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name); // not the process-wide default: parallel tests reset that
 
         service.Select("de"); // nothing changed
         Assert.Equal(1, changes);

@@ -3271,4 +3271,37 @@
   <data name="Export_FileExcel" xml:space="preserve">
     <value>Excel-Arbeitsmappe</value>
   </data>
+  <data name="PermissionGroup_audit" xml:space="preserve">
+    <value>Änderungsprotokoll</value>
+  </data>
+  <data name="Permission_audit_view" xml:space="preserve">
+    <value>Das Änderungsprotokoll lesen (wer was geändert hat)</value>
+  </data>
+  <data name="AuditArea_exams" xml:space="preserve">
+    <value>Prüfungen</value>
+  </data>
+  <data name="AuditArea_payments" xml:space="preserve">
+    <value>Zahlungen</value>
+  </data>
+  <data name="AuditArea_belts" xml:space="preserve">
+    <value>Gürtel</value>
+  </data>
+  <data name="AuditArea_members" xml:space="preserve">
+    <value>Mitglieder</value>
+  </data>
+  <data name="AuditArea_users" xml:space="preserve">
+    <value>Benutzer</value>
+  </data>
+  <data name="AuditArea_roles" xml:space="preserve">
+    <value>Rollen</value>
+  </data>
+  <data name="AuditAction_create" xml:space="preserve">
+    <value>Angelegt</value>
+  </data>
+  <data name="AuditAction_update" xml:space="preserve">
+    <value>Geändert</value>
+  </data>
+  <data name="AuditAction_delete" xml:space="preserve">
+    <value>Gelöscht</value>
+  </data>
 </root>

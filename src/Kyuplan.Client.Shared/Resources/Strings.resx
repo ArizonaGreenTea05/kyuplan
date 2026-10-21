@@ -3370,4 +3370,37 @@
   <data name="Export_FileExcel" xml:space="preserve">
     <value>Excel workbook</value>
   </data>
+  <data name="PermissionGroup_audit" xml:space="preserve">
+    <value>Audit log</value>
+  </data>
+  <data name="Permission_audit_view" xml:space="preserve">
+    <value>Read the audit log (who changed what)</value>
+  </data>
+  <data name="AuditArea_exams" xml:space="preserve">
+    <value>Exams</value>
+  </data>
+  <data name="AuditArea_payments" xml:space="preserve">
+    <value>Payments</value>
+  </data>
+  <data name="AuditArea_belts" xml:space="preserve">
+    <value>Belts</value>
+  </data>
+  <data name="AuditArea_members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="AuditArea_users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="AuditArea_roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="AuditAction_create" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="AuditAction_update" xml:space="preserve">
+    <value>Changed</value>
+  </data>
+  <data name="AuditAction_delete" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
 </root>

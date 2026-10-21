@@ -32,6 +32,7 @@ public static class BeltEndpoints
                 return Results.CreatedAtRoute("GetBelt", new { beltId = belt.Id }, belt);
             })
             .WithSummary("Create a belt. Its name must be new (regardless of case); it is taken from one of the belts in prerequisites, each with the minimum age and waiting time that apply when coming from it, or from none (the first belt).")
+            .Audited(AuditAreas.Belts, AuditActions.Create)
             .RequirePermission(Permission.BeltsEdit);
 
         belts.MapPut("/{beltId:int}", async (int beltId, BeltInputDto input, BeltService service, CancellationToken ct) =>
@@ -41,6 +42,7 @@ public static class BeltEndpoints
                 return Results.Ok(await service.UpdateAsync(beltId, input, ct));
             })
             .WithSummary("Replace the name, colours and requirements of a belt. A belt cannot require itself, directly or through other belts.")
+            .Audited(AuditAreas.Belts, AuditActions.Update)
             .RequirePermission(Permission.BeltsEdit);
 
         belts.MapDelete("/{beltId:int}", async (int beltId, BeltService service, CancellationToken ct) =>
@@ -49,6 +51,7 @@ public static class BeltEndpoints
                 return Results.NoContent();
             })
             .WithSummary("Delete a belt. Refused (409) while a member holds it, another belt requires it or it was handed out at an exam.")
+            .Audited(AuditAreas.Belts, AuditActions.Delete)
             .RequirePermission(Permission.BeltsEdit);
 
         var members = app.MapGroup("/api/members").WithTags("Members");
@@ -75,6 +78,7 @@ public static class BeltEndpoints
                 return Results.Ok(await service.UpdateAsync(memberId, input, ct));
             })
             .WithSummary("Set the belt (or none), the day it was received, the start day and the birth date (each or none) of a member. Name and group are Spond's and cannot be changed.")
+            .Audited(AuditAreas.Members, AuditActions.Update)
             .RequirePermission(Permission.MembersEdit);
 
         return app;

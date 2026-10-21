@@ -1,4 +1,5 @@
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -34,6 +35,7 @@ public static class ExamEndpoints
                 return Results.CreatedAtRoute("GetExam", new { examId = exam.Id }, exam);
             })
             .WithSummary("Make a Spond event an exam. Its name and day are the event's; an event is at most one exam.")
+            .Audited(AuditAreas.Exams, AuditActions.Create)
             .RequirePermission(Permission.ExamsEdit);
 
         exams.MapPut("/{examId:int}", async (int examId, ExamInputDto input, ExamService service, CancellationToken ct) =>
@@ -43,6 +45,7 @@ public static class ExamEndpoints
                 return Results.Ok(await service.UpdateAsync(examId, input, ct));
             })
             .WithSummary("Point an exam at another Spond event (e.g. after it was moved to a new event); its filters stay.")
+            .Audited(AuditAreas.Exams, AuditActions.Update)
             .RequirePermission(Permission.ExamsEdit);
 
         exams.MapDelete("/{examId:int}", async (int examId, ExamService service, CancellationToken ct) =>
@@ -51,6 +54,7 @@ public static class ExamEndpoints
                 return Results.NoContent();
             })
             .WithSummary("Delete an exam together with all filters saved for it.")
+            .Audited(AuditAreas.Exams, AuditActions.Delete)
             .RequirePermission(Permission.ExamsEdit);
 
         exams.MapGet("/{examId:int}/members", (int examId, ExamPlanningService service, CancellationToken ct) =>
@@ -70,6 +74,7 @@ public static class ExamEndpoints
                 return Results.Ok(await service.SetCandidatesAsync(examId, input.Add, input.Remove, ct));
             })
             .WithSummary("Save the members in add for the exam and take those in remove off its list, to be invited on Spond later; whoever is not named stays as they are. Nobody is invited by this.")
+            .Audited(AuditAreas.Exams, AuditActions.Update)
             .RequirePermission(Permission.ExamsCandidates);
 
         exams.MapPut("/{examId:int}/results/{memberId:int}", async (int examId, int memberId, ExamResultInputDto input, ExamPlanningService service, CancellationToken ct) =>
@@ -79,6 +84,7 @@ public static class ExamEndpoints
                 return Results.Ok(await service.SetResultAsync(examId, memberId, input.BeltId, ct));
             })
             .WithSummary("Record the belt a member received at the exam (it becomes the belt they hold, with the day of the exam as the day they got it, unless they got one later), or take the result back with beltId null. Only once the exam has taken place.")
+            .Audited(AuditAreas.Exams, AuditActions.Update)
             .RequirePermission(Permission.ExamsResults);
 
         var filters = exams.MapGroup("/{examId:int}/filters");

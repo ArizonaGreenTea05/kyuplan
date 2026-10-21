@@ -83,6 +83,9 @@ public static class Permission
     public const string RolesView = "roles.view";
     public const string RolesEdit = "roles.edit";
 
+    /// <summary>Read the audit log: who changed exams, payments, belts, members, users and roles.</summary>
+    public const string AuditView = "audit.view";
+
     /// <summary>All permissions by domain, in the order the clients list them.</summary>
     public static IReadOnlyList<PermissionGroup> Groups { get; } =
     [
@@ -103,6 +106,7 @@ public static class Permission
         new("settings", [SettingsView, SettingsEdit]),
         new("users", [UsersView, UsersEdit, UsersDelete, UsersGrant]),
         new("roles", [RolesView, RolesEdit]),
+        new("audit", [AuditView]),
     ];
 
     public static IReadOnlyList<string> All { get; } = [.. Groups.SelectMany(g => g.Permissions)];

@@ -262,6 +262,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
+| audit | `audit.view` (read the [audit log](#audit-log)) |
 | settings | `settings.view`, `settings.edit` |
 
 `ratings.view` and `ratings.write` came with the star evaluations: the Leading Trainer and Trainer roles of a **new** installation have both, the Passive User only `ratings.view`; a role that already exists in your database has neither until you tick them on the Roles page. Until somebody may evaluate, no member has an evaluation and, with the standard minimum of 3 stars for exams, nobody is suggested for an exam: lower *Minimum average evaluation for exams* (0 switches it off) if that is not what you want yet.
@@ -440,6 +441,25 @@ The server refuses a pack whose text is hard to read, and says why: `text` needs
 `sidebar` (7:1 for a high contrast pack), `muted` at least 3:1 on `sheet` (4.5:1), an `accent` at least 3:1 on `sheet`. A file is at most 16 KB, and
 at most 50 packs can be installed. The desktop app draws a pack with its flat controls (the same colours, the rounded look of Dracula), so
 installing one never needs a new version of either client.
+
+## Audit log
+
+Kyuplan keeps a record of who changed what, so that payments and role changes can be traced afterwards. An entry is written for every change that went through to:
+
+| Area | Changes recorded |
+| --- | --- |
+| exams | add, change and delete an exam; save members for an exam; record or take back a belt handed out |
+| payments | record what a member paid; change the price list |
+| belts | create, change and delete a belt |
+| members | change the belt, belt day, start day and birth date of a member |
+| users | create, change and delete a user; say which members a user is (including the roles and permissions given to them) |
+| roles | create, change and delete a role (including its permissions) |
+
+Each entry holds the time, the user who made the change (by the name shown to other users, kept as it was even if the user is deleted or renamed later), the area, what was done, the ids it concerned (such as `examId=3, memberId=12`) and what was sent, as JSON. **Passwords are never written to the log.** A request that was refused or failed changes nothing and leaves no entry. Nothing in the log can be changed or deleted through the API; it is part of the [backup file](#backup-file-download-and-restore) like all other data.
+
+Reading the log needs `audit.view`, which only administrators have by default (give it with a role if more people should be able to check). It is read with `GET /api/audit` (see `/scalar`): newest first, `limit` entries at a time (default 50, at most 200), narrowed down with `area` and/or `userId`; pass the `nextBefore` of a page as `before` to read the next, older page.
+
+The log only lists changes made after it was introduced. Changes to comments, ratings, tags, branding, themes, settings, backups and calendar feeds are not part of it (comments keep their own history).
 
 ## Calendar feeds
 

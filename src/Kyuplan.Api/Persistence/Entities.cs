@@ -592,3 +592,28 @@ public sealed class ManualInvitation
     /// <summary>Stored by name (<c>Accepted</c>, <c>Declined</c>, …) like <see cref="ExamParticipant.Rsvp"/>.</summary>
     public Rsvp Rsvp { get; set; }
 }
+
+/// <summary>
+/// One change somebody made to exams, payments, belts, members, users or roles. Written by <c>AuditFilter</c> after the change succeeded;
+/// never changed afterwards. The user is an id of the accounts database, which is a database of its own, so no foreign key.
+/// </summary>
+public sealed class AuditEntry
+{
+    public long Id { get; set; }
+
+    public DateTimeOffset At { get; set; }
+
+    public int? UserId { get; set; }
+
+    /// <summary>The user's name when the change was made, so that the log still reads after the user is gone.</summary>
+    public string UserName { get; set; } = "";
+
+    public string Area { get; set; } = "";
+
+    public string Action { get; set; } = "";
+
+    public string? Target { get; set; }
+
+    /// <summary>What was sent, as JSON, without passwords.</summary>
+    public string? Details { get; set; }
+}

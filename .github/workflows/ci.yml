@@ -71,6 +71,112 @@ jobs:
           npm ci --no-audit --no-fund
           node scripts/build-all.mjs
 
+  # Smoke tests of the web client in a real browser (Playwright, tests/ui) against the API in demo mode. Every page is opened as the
+  # administrator, in a light and a dark desktop browser and (some pages) on a phone; the screenshots are the artifact "ui-screenshots".
+  ui-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build the API (it carries the web client)
+        run: dotnet build src/Kyuplan.Api -c Release
+
+      - name: Install Playwright
+        working-directory: tests/ui
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Smoke tests
+        working-directory: tests/ui
+        env:
+          KYUPLAN_UI_NO_BUILD: '1'
+        run: npx playwright test
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: tests/ui/artifacts/screenshots
+          if-no-files-found: warn
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-report
+          path: |
+            tests/ui/artifacts/report
+            tests/ui/artifacts/test-results
+          if-no-files-found: warn
+
+  # Screenshots of every page of the WPF client (tests/Kyuplan.WpfShots: the main window rendered offscreen against the API in demo mode).
+  # Windows only, as WPF is; the screenshots are the artifact "wpf-screenshots".
+  wpf-screenshots:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build the API and the screenshot tool
+        run: |
+          dotnet build src/Kyuplan.Api -c Release
+          dotnet build tests/Kyuplan.WpfShots -c Release
+
+      - name: Take the screenshots
+        shell: pwsh
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          Spond__UseDemoData: 'true'
+          Sync__Enabled: 'true'
+          Accounts__InitialAdminUserName: admin
+          Accounts__InitialAdminPassword: wpf-shots-password
+          Api__MaxLoginFailuresPerAddress: '0'
+          Setup__SettingsFile: ${{ runner.temp }}/no-settings/settings.json
+          Database__ConnectionString: Data Source=${{ runner.temp }}/kyuplan.db
+          Accounts__ConnectionString: Data Source=${{ runner.temp }}/accounts.db
+        run: |
+          $api = Start-Process dotnet -ArgumentList 'run --project src/Kyuplan.Api -c Release --no-build --no-launch-profile --urls http://127.0.0.1:5198' -PassThru -NoNewWindow
+          try {
+            $up = $false
+            for ($i = 0; $i -lt 60 -and -not $up; $i++) {
+              try { Invoke-WebRequest http://127.0.0.1:5198/healthz -UseBasicParsing | Out-Null; $up = $true } catch { Start-Sleep 2 }
+            }
+            if (-not $up) { throw 'The API did not start.' }
+            # the first sync of the demo data: wait until the members are in the database
+            $auth = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('admin:wpf-shots-password')) }
+            $synced = $false
+            for ($i = 0; $i -lt 60 -and -not $synced; $i++) {
+              try { $synced = @(Invoke-RestMethod http://127.0.0.1:5198/api/members -Headers $auth).Count -gt 0 } catch { }
+              if (-not $synced) { Start-Sleep 2 }
+            }
+            if (-not $synced) { throw 'The demo data was not synced.' }
+            $exe = Get-ChildItem tests/Kyuplan.WpfShots/bin/Release -Recurse -Filter Kyuplan.WpfShots.exe | Select-Object -First 1
+            $p = Start-Process $exe.FullName -ArgumentList 'http://127.0.0.1:5198','admin','wpf-shots-password','wpf-screenshots' -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "Kyuplan.WpfShots failed with exit code $($p.ExitCode)." }
+          } finally {
+            Stop-Process -Id $api.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Upload the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wpf-screenshots
+          path: wpf-screenshots
+          if-no-files-found: warn
+
   # The image the server ships in (API + web client + documentation), built but not pushed. One platform is enough here:
   # the Dockerfile cross-compiles, and the release builds both. Its "installer" stage is empty without the release's installers.
   image:

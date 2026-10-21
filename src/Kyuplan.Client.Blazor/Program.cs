@@ -23,7 +23,7 @@ builder.Services.AddPlannerClient(options =>
 builder.Services.AddTransient<BrowserNoCredentialsHandler>();
 builder.Services.ConfigureHttpClientDefaults(http => http.AddHttpMessageHandler<BrowserNoCredentialsHandler>());
 builder.Services.AddSingleton<ILoginStore, SessionOnlyLoginStore>();
-builder.Services.AddTransient<LoginViewModel>();
+builder.Services.AddSingleton<LoginViewModel>(); // the login screen is replaced while a sign-in runs; a rejected login must find its error again
 
 // The filter of the statistics page comes back after a reload, like the theme and the language.
 builder.Services.AddSingleton<IFilterSettingsStore, LocalStorageFilterStore>();

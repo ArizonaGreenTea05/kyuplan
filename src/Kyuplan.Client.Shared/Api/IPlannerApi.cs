@@ -74,6 +74,9 @@ public interface IPlannerApi
     Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default);
 
     /// <summary>Downloads a backup file with all data, encrypted with <paramref name="passphrase"/> when it is not empty. Needs <c>backups.download</c>.</summary>
+    /// <summary>The payment list or the results of an exam as a CSV (<paramref name="excel"/> false) or Excel file. Needs <c>payments.view</c> or <c>exams.view</c>.</summary>
+    Task<BackupFile> DownloadExamExportAsync(int examId, ExamExportKind kind, bool excel, CancellationToken cancellationToken = default);
+
     Task<BackupFile> DownloadBackupAsync(string? passphrase = null, CancellationToken cancellationToken = default);
 
     /// <summary>Replaces ALL data with a backup file; the API restarts afterwards. Needs <c>backups.restore</c>; the API says what is wrong with a file it refuses.</summary>

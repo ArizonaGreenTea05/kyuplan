@@ -100,6 +100,17 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task<BackupTargetDto> RunBackupTargetAsync(int id, CancellationToken cancellationToken = default) =>
         SendJsonAsync(() => http.PostAsync($"api/backup/targets/{id}/run", null, cancellationToken), PlannerJsonContext.Default.BackupTargetDto, cancellationToken);
 
+    public async Task<BackupFile> DownloadExamExportAsync(int examId, ExamExportKind kind, bool excel, CancellationToken cancellationToken = default)
+    {
+        var what = kind == ExamExportKind.Payments ? "payments" : "results";
+        var format = excel ? "xlsx" : "csv";
+        using var response = await SendAsync(() => http.GetAsync($"api/exams/{examId}/{what}/export?format={format}", cancellationToken));
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        var name = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') is { Length: > 0 } given ? given : $"exam-{examId}-{what}.{format}";
+        return new BackupFile(name, await response.Content.ReadAsByteArrayAsync(cancellationToken));
+    }
+
     public async Task<BackupFile> DownloadBackupAsync(string? passphrase = null, CancellationToken cancellationToken = default)
     {
         using var response = await SendAsync(() => http.SendAsync(WithPassphrase(new HttpRequestMessage(HttpMethod.Get, "api/backup/download"), passphrase), cancellationToken));

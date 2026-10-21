@@ -3250,4 +3250,25 @@
   <data name="Backup_DownloadedEncrypted" xml:space="preserve">
     <value>Die verschlüsselte Sicherungsdatei wurde heruntergeladen.</value>
   </data>
+  <data name="Export_Title" xml:space="preserve">
+    <value>Exportieren</value>
+  </data>
+  <data name="Export_PaymentsCsv" xml:space="preserve">
+    <value>Zahlungsliste (CSV)</value>
+  </data>
+  <data name="Export_PaymentsExcel" xml:space="preserve">
+    <value>Zahlungsliste (Excel)</value>
+  </data>
+  <data name="Export_ResultsCsv" xml:space="preserve">
+    <value>Ergebnisse (CSV)</value>
+  </data>
+  <data name="Export_ResultsExcel" xml:space="preserve">
+    <value>Ergebnisse (Excel)</value>
+  </data>
+  <data name="Export_FileCsv" xml:space="preserve">
+    <value>CSV-Datei</value>
+  </data>
+  <data name="Export_FileExcel" xml:space="preserve">
+    <value>Excel-Arbeitsmappe</value>
+  </data>
 </root>

@@ -415,6 +415,18 @@ internal sealed class FakePlannerApi : IPlannerApi
             };
         });
 
+    /// <summary>Every export asked for, e.g. <c>payments:7:csv</c>.</summary>
+    public List<string> ExportCalls { get; } = [];
+
+    public Task<BackupFile> DownloadExamExportAsync(int examId, ExamExportKind kind, bool excel, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(kind == ExamExportKind.Payments ? Permission.PaymentsView : Permission.ExamsView)) throw Forbidden();
+            var call = $"{kind.ToString().ToLowerInvariant()}:{examId}:{(excel ? "xlsx" : "csv")}";
+            ExportCalls.Add(call);
+            return new BackupFile(call.Replace(':', '-'), [1, 2, 3]);
+        });
+
     public Task<BackupFile> DownloadBackupAsync(string? passphrase = null, CancellationToken cancellationToken = default) =>
         Run(() =>
         {

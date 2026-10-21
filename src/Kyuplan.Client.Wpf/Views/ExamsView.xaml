@@ -4,7 +4,8 @@
              xmlns:contracts="clr-namespace:Kyuplan.Contracts;assembly=Kyuplan.Contracts"
              xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
              xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
-             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared">
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+             Loaded="OnLoaded" Unloaded="OnUnloaded">
 
     <UserControl.Resources>
         <Style x:Key="HeaderText" TargetType="TextBlock" BasedOn="{StaticResource FieldLabelText}">
@@ -593,7 +594,14 @@
                             Visibility="{Binding CanViewPayments, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="{loc:Loc Pay_Title}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,2" />
-                            <TextBlock Text="{loc:Loc Pay_Intro}" Style="{StaticResource LedeText}" Margin="0,0,0,14" />
+                            <TextBlock Text="{loc:Loc Pay_Intro}" Style="{StaticResource LedeText}" Margin="0,0,0,10" />
+
+                            <WrapPanel Margin="0,0,0,14">
+                                <Button Command="{Binding ExportPaymentsCsvCommand}" Content="{loc:Loc Export_PaymentsCsv}" Margin="0,0,8,6" />
+                                <Button Command="{Binding ExportPaymentsExcelCommand}" Content="{loc:Loc Export_PaymentsExcel}" Margin="0,0,8,6" />
+                                <Button Command="{Binding ExportResultsCsvCommand}" Content="{loc:Loc Export_ResultsCsv}" Margin="0,0,8,6" />
+                                <Button Command="{Binding ExportResultsExcelCommand}" Content="{loc:Loc Export_ResultsExcel}" Margin="0,0,8,6" />
+                            </WrapPanel>
 
                             <TextBlock Text="{loc:Loc Pay_Empty}" Style="{StaticResource LedeText}" Margin="0,4,0,4"
                                        Visibility="{Binding NobodyPays, Converter={StaticResource BoolToVisibility}}" />

@@ -142,6 +142,20 @@ two prices per belt (0 = none). What a member owes for an exam is the sum of thr
 - Permissions: `payments.view` (the price page, the payments of every exam), `payments.edit` (record payments), `prices.edit` (change the price
   list). The built-in roles do not carry them (money is not the trainers' business); give them through a role.
 
+## Export for the treasurer
+
+Two spreadsheets per exam, as CSV (default) or Excel (`?format=xlsx`). The *Payments* section of the exam has a button for each of the four
+downloads (payment list and results, CSV and Excel); the API serves them at:
+
+- `GET /api/exams/{id}/payments/export` (`payments.view`): one row per member with belt, general fee, stamp fee, belt price, own belt, due,
+  paid, day of payment, note and status, and a *Total* row with the sums of due and paid.
+- `GET /api/exams/{id}/results/export` (`exams.view`): one row per member the exam knows with belt, answer to the invitation, saved for the
+  exam and belt received.
+
+CSV is UTF-8 with a byte order mark and `;` as separator (opens correctly in Excel with a German locale); numbers use a point and text that
+starts with `=`, `+`, `-` or `@` gets a leading `'` so that no spreadsheet reads it as a formula. Excel files hold real numbers. Column
+headings are in English in both formats.
+
 ## What the Members page adds
 
 Besides the belt and the day they started, a member has **the day they got their belt** and a **birth date**. The birth date is taken over

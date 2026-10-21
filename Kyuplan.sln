@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.Client.Blazor", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.Client.Wpf", "src\Kyuplan.Client.Wpf\Kyuplan.Client.Wpf.csproj", "{0541B386-0BD7-4B40-911B-7CDC0BC155CD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.WpfShots", "tests\Kyuplan.WpfShots\Kyuplan.WpfShots.csproj", "{F9C467D5-3DA7-4F7E-AEF6-83A403465608}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,18 @@ Global
 		{0541B386-0BD7-4B40-911B-7CDC0BC155CD}.Release|x64.Build.0 = Release|Any CPU
 		{0541B386-0BD7-4B40-911B-7CDC0BC155CD}.Release|x86.ActiveCfg = Release|Any CPU
 		{0541B386-0BD7-4B40-911B-7CDC0BC155CD}.Release|x86.Build.0 = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|x64.Build.0 = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Debug|x86.Build.0 = Debug|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|x64.ActiveCfg = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|x64.Build.0 = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|x86.ActiveCfg = Release|Any CPU
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -112,6 +126,7 @@ Global
 		{CBEC285D-49A0-4AC0-9B6C-E09650A38832} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{42770A3C-3D3A-4C16-834C-1BEB83B2E777} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{0541B386-0BD7-4B40-911B-7CDC0BC155CD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{F9C467D5-3DA7-4F7E-AEF6-83A403465608} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DFEEF9E6-AF75-44F8-8F57-4D3D341E7C7D}

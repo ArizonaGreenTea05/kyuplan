@@ -20,6 +20,7 @@ Logic goes in `Client.Shared` or `Api`, never duplicated in the UIs.
 - A running Api locks its DLLs (MSB3021): build/test with `--artifacts-path <other dir>` or stop it first.
 - Run API in demo mode (no Spond credentials): `dotnet run --project src/Kyuplan.Api --launch-profile http -- --Spond:UseDemoData=true` (port 5100, docs at `/scalar`). The launch profile alone does NOT enable demo data.
 - Every API call needs HTTP Basic login; a new API has no user: the Blazor client then shows a setup screen (settings + first admin, `Endpoints/SettingsEndpoints.cs`), or set `Accounts:InitialAdminPassword`. Settings live in `data/settings.json` (read on top of appsettings, saving restarts the app inside `Program.cs`'s loop); tests set `Setup:SettingsFile` to a missing file. Authorization is permission/role based (see `Accounts/PermissionAuthorization.cs`), there is no admin flag.
+- Browser smoke tests of the Blazor client (Playwright, demo data, screenshots of every page): `cd tests/ui && npm install && npx playwright test`; details in `docs/developer-guide.md#browser-smoke-tests`. A new Blazor page = an entry in `tests/ui/smoke.spec.ts`. WPF page screenshots (Windows, needs a running demo API): `tests/Kyuplan.WpfShots`, see `docs/developer-guide.md#wpf-screenshots`.
 - Before `dotnet ef`: `dotnet tool restore` (tool pinned in `.config/dotnet-tools.json`) and rebuild the Api project.
 
 ## Rules that bite

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Screenshots of every page of the WPF client against a running API (demo data). Windows only; not a test project, so that
+       "dotnet test tests/Kyuplan.Tests" stays Linux-safe. See docs/developer-guide.md#wpf-screenshots. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kyuplan.WpfShots</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kyuplan.Client.Wpf\Kyuplan.Client.Wpf.csproj" />
+  </ItemGroup>
+
+</Project>

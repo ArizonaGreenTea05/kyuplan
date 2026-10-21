@@ -1,0 +1,16 @@
+{
+  "name": "kyuplan-ui-smoke",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Browser smoke tests of the Blazor web client against the API in demo mode (Playwright). See docs/developer-guide.md#browser-smoke-tests.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report artifacts/report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.55.0",
+    "@types/node": "22.10.0"
+  }
+}

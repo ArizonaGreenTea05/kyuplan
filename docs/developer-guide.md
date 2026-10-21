@@ -293,11 +293,46 @@ dotnet test tests/Kyuplan.Tests
   one planner, one accounts), the Spond sync (against a Spond the test controls: `FakeSpondDataSource`, `SyncTestClub`), the migrations
   (including the PostgreSQL twin check), accounts and permissions, branding, the typed API client, and the **view models** (including the German texts).
 - Test clients sign in as a known administrator (`TestAccounts`).
-- There are **no automated UI tests** for Razor and XAML: keep views thin and test the view models. The WPF-only classes under test
+- There are no unit tests for Razor and XAML: keep views thin and test the view models. The web client also has [browser smoke tests](#browser-smoke-tests); WPF has [screenshots of every page](#wpf-screenshots). The WPF-only classes under test
   (`DpapiLoginStore`, `MainViewModel`) are compiled into the test project from their source files.
 - Conventions: put a test next to the closest existing `*Tests.cs`; name tests after the rule they pin; keep the rules documents in sync with
   the tests that cite them.
 - Run the narrow filter while you work and the **full suite once at the end**. Tests that start a host must not depend on shipped appsettings.
+
+### Browser smoke tests
+
+`tests/ui` holds Playwright tests of the web client (Node 22, not needed for `dotnet test`). They start the API in demo mode (fresh databases in the
+temp folder, administrator `admin`), open **every page** as that administrator in a light and a dark desktop browser (and some pages on a phone),
+and fail on an unhandled script error, the Blazor error bar, the "not allowed" text or a login that is not accepted. They compare nothing:
+the point is the screenshot of each page, so that a UI change can be looked at.
+
+```bash
+cd tests/ui
+npm install
+npx playwright install chromium   # once
+npx playwright test               # starts the API itself (dotnet run -c Release, port 5199)
+npx playwright show-report artifacts/report
+```
+
+- Screenshots: `tests/ui/artifacts/screenshots/<desktop-light|desktop-dark|mobile>/<page>.png`. CI uploads them as the artifact `ui-screenshots`
+  (job `ui-smoke`); a failed run also uploads the report and the traces (`ui-report`).
+- `KYUPLAN_UI_BASE_URL` (+ `KYUPLAN_UI_PASSWORD`) tests an API that already runs; `KYUPLAN_UI_STRICT_CONSOLE=1` also fails on errors in the browser console.
+- A new page of the web client = an entry in the list at the top of `smoke.spec.ts`.
+
+### WPF screenshots
+
+`tests/Kyuplan.WpfShots` (Windows only, not part of `dotnet test`) opens the main window of the WPF client offscreen, signs in as the
+administrator of a **running** API and saves a PNG of every page. It is not a test: only a page that cannot be shown (error message of the page,
+sign-in refused) fails it.
+
+```bash
+dotnet run --project src/Kyuplan.Api --launch-profile http -- --Spond:UseDemoData=true   # note the administrator password it is started with
+dotnet run --project tests/Kyuplan.WpfShots -- http://localhost:5100 <user> <password> wpf-screenshots
+```
+
+- It follows the theme and language preferences of the Windows user (`%LocalAppData%\Kyuplan`) but never signs in with, or saves, a login.
+- The API needs `Sync:Enabled=true` (the default): members and exams of the demo data reach the database through the sync. Both screenshot jobs do the same.
+- CI: job `wpf-screenshots`, artifact `wpf-screenshots`.
 
 ## Releases and CI
 

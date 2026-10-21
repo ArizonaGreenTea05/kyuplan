@@ -59,6 +59,21 @@ public sealed class ExamPaymentsViewModelTests : IDisposable
     // --- The price list ---------------------------------------------------------------------------------------
 
     [Fact]
+    public async Task Export_asks_the_API_for_the_exam_on_show_and_hands_the_file_to_the_client()
+    {
+        var detail = await PaymentsShownAsync(Row(_anna, _yellow.Id, 30));
+        var saved = new List<BackupFile>();
+        detail.ExportReady += (_, file) => saved.Add(file);
+
+        await detail.ExportPaymentsExcelCommand.ExecuteAsync(null);
+        await detail.ExportResultsCsvCommand.ExecuteAsync(null);
+
+        Assert.Equal(new[] { $"payments:{_past.Id}:xlsx", $"results:{_past.Id}:csv" }, _api.ExportCalls);
+        Assert.Equal(2, saved.Count);
+        Assert.Null(detail.ErrorMessage);
+    }
+
+    [Fact]
     public async Task The_price_page_shows_the_general_fee_and_a_line_for_every_belt()
     {
         _api.ExamPrices = new ExamPricesDto(20m, [new BeltPriceDto(_yellow.Id, 5.5m, 0)]);

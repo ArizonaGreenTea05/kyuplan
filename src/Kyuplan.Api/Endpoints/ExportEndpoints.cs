@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Export;
@@ -64,7 +65,9 @@ public static partial class ExportEndpoints
 
     private static string Slug(string text)
     {
-        var slug = NotFileName().Replace(text, "-").Trim('-');
+        var plain = text.Replace("ß", "ss").Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue")
+            .Replace("Ä", "Ae").Replace("Ö", "Oe").Replace("Ü", "Ue").Normalize(NormalizationForm.FormD);
+        var slug = NotFileName().Replace(plain, "-").Trim('-');
         return slug.Length == 0 ? "exam" : slug;
     }
 

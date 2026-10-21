@@ -144,7 +144,8 @@ two prices per belt (0 = none). What a member owes for an exam is the sum of thr
 
 ## Export for the treasurer
 
-Two downloads per exam, as CSV (default) or Excel (`?format=xlsx`), for the API consumers and scripts of the treasurer:
+Two spreadsheets per exam, as CSV (default) or Excel (`?format=xlsx`). The *Payments* section of the exam has a button for each of the four
+downloads (payment list and results, CSV and Excel); the API serves them at:
 
 - `GET /api/exams/{id}/payments/export` (`payments.view`): one row per member with belt, general fee, stamp fee, belt price, own belt, due,
   paid, day of payment, note and status, and a *Total* row with the sums of due and paid.

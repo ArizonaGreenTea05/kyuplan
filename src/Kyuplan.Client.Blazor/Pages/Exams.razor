@@ -1,5 +1,7 @@
 @page "/exams"
 @using System.ComponentModel
+@using Kyuplan.Client.Api
+@inject IJSRuntime Js
 @inherits ViewModelComponent<ExamsViewModel>
 
 <BrandedTitle Title="@Vm.Title" />
@@ -387,6 +389,21 @@
                             <p class="lede">@Strings.Pay_Intro</p>
                         </div>
 
+                        <div class="actions" role="group" aria-label="@Strings.Export_Title">
+                            <button type="button" class="btn" disabled="@(!Detail.ExportPaymentsCsvCommand.CanExecute(null))" @onclick="() => Detail.ExportPaymentsCsvCommand.ExecuteAsync(null)">
+                                <Icon Name="download" /><span>@Strings.Export_PaymentsCsv</span>
+                            </button>
+                            <button type="button" class="btn" disabled="@(!Detail.ExportPaymentsExcelCommand.CanExecute(null))" @onclick="() => Detail.ExportPaymentsExcelCommand.ExecuteAsync(null)">
+                                <Icon Name="download" /><span>@Strings.Export_PaymentsExcel</span>
+                            </button>
+                            <button type="button" class="btn" disabled="@(!Detail.ExportResultsCsvCommand.CanExecute(null))" @onclick="() => Detail.ExportResultsCsvCommand.ExecuteAsync(null)">
+                                <Icon Name="download" /><span>@Strings.Export_ResultsCsv</span>
+                            </button>
+                            <button type="button" class="btn" disabled="@(!Detail.ExportResultsExcelCommand.CanExecute(null))" @onclick="() => Detail.ExportResultsExcelCommand.ExecuteAsync(null)">
+                                <Icon Name="download" /><span>@Strings.Export_ResultsExcel</span>
+                            </button>
+                        </div>
+
                         @if (Detail.NobodyPays)
                         {
                             <p class="empty-inline pad">@Strings.Pay_Empty</p>
@@ -502,7 +519,23 @@
     /// <summary>The page also follows the detail: it is another view model, one instance for every exam.</summary>
     protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Detail];
 
-    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        Detail.ExportReady += OnExportReady;
+        await Vm.ActivateAsync();
+    }
+
+    private async void OnExportReady(object? sender, BackupFile file)
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("ppFiles.save", file.FileName, file.Content);
+        }
+        catch (JSException)
+        {
+            // The browser refused the download; there is nothing more to do here.
+        }
+    }
 
     /// <summary>Only when the list could not be loaded: a failed save is not helped by loading again.</summary>
     private EventCallback RetryLoading =>
@@ -549,6 +582,7 @@
 
     public override void Dispose()
     {
+        Detail.ExportReady -= OnExportReady;
         Vm.Deactivate();
         base.Dispose();
     }

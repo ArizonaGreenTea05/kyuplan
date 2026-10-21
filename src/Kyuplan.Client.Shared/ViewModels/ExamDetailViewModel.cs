@@ -52,6 +52,9 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
     /// <summary>Raised when the user changed something other pages show: members saved for the exam, belts handed out.</summary>
     public event EventHandler? Changed;
 
+    /// <summary>The API sent a spreadsheet of the exam on show; the client saves it where the user says.</summary>
+    public event EventHandler<BackupFile>? ExportReady;
+
     /// <summary>Whether the user may save members for an exam (tick them); without it the list of who is fit is only to look at.</summary>
     public bool CanPlan => _shell.Can(Permission.ExamsCandidates);
 
@@ -402,6 +405,10 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanSave));
         SelectFitCommand.NotifyCanExecuteChanged();
         ClearSelectionCommand.NotifyCanExecuteChanged();
+        ExportPaymentsCsvCommand.NotifyCanExecuteChanged();
+        ExportPaymentsExcelCommand.NotifyCanExecuteChanged();
+        ExportResultsCsvCommand.NotifyCanExecuteChanged();
+        ExportResultsExcelCommand.NotifyCanExecuteChanged();
         DiscardChangesCommand.NotifyCanExecuteChanged();
         SaveSelectionCommand.NotifyCanExecuteChanged();
     }
@@ -643,6 +650,31 @@ public sealed partial class ExamDetailViewModel : ViewModelBase
         {
             _results.Release();
         }
+    }
+
+    // --- Export ----------------------------------------------------------------------------------------------
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private Task ExportPaymentsCsvAsync() => ExportAsync(ExamExportKind.Payments, excel: false);
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private Task ExportPaymentsExcelAsync() => ExportAsync(ExamExportKind.Payments, excel: true);
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private Task ExportResultsCsvAsync() => ExportAsync(ExamExportKind.Results, excel: false);
+
+    [RelayCommand(CanExecute = nameof(CanExport))]
+    private Task ExportResultsExcelAsync() => ExportAsync(ExamExportKind.Results, excel: true);
+
+    private bool CanExport() => Exam is not null && !IsBusy;
+
+    private async Task ExportAsync(ExamExportKind kind, bool excel)
+    {
+        if (Exam is not { } exam) return;
+
+        BackupFile? file = null;
+        await LoadAsync(async ct => file = await _api.DownloadExamExportAsync(exam.Id, kind, excel, ct));
+        if (file is not null) ExportReady?.Invoke(this, file);
     }
 
     // --- Language --------------------------------------------------------------------------------------------

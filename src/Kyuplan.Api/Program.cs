@@ -256,6 +256,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapDocumentationEndpoints();
     app.MapExamEndpoints();
     app.MapPaymentEndpoints();
+    app.MapExportEndpoints();
     app.MapBeltEndpoints();
     app.MapCommentEndpoints();
     app.MapCalendarEndpoints();

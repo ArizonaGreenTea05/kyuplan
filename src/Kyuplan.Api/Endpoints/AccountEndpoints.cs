@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -78,6 +79,7 @@ public static class AccountEndpoints
                 return Results.CreatedAtRoute("GetUser", new { userId = user.Id }, user);
             })
             .WithSummary("Create a user. The password is required; the user name and the aliases must be new (regardless of case: no name belongs to two users). Roles and permissions can only be given with users.grant; without them the user may do nothing but manage their own account.")
+            .Audited(AuditAreas.Users, AuditActions.Create)
             .RequirePermission(Permission.UsersEdit);
 
         users.MapPut("/{userId:int}", async (int userId, UserInputDto input, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
@@ -90,6 +92,7 @@ public static class AccountEndpoints
                 return Results.Ok(await WithMembers(await service.UpdateAsync(userId, input, ct), members, ct));
             })
             .WithSummary("Change a user's names and, when a password is given, password; with users.grant also their roles and permissions (leave them out to keep them). The last user with the administrator role cannot lose it.")
+            .Audited(AuditAreas.Users, AuditActions.Update)
             .RequirePermission(Permission.UsersEdit);
 
         users.MapPut("/{userId:int}/members", async (int userId, UserMembersDto input, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
@@ -101,6 +104,7 @@ public static class AccountEndpoints
                 return Results.Ok(await WithMembers(await service.GetAsync(userId, ct), members, ct));
             })
             .WithSummary("Say which members a user is (all of them; the others are released): what is written about them is then hidden from the user unless they have comments.viewOwn / ratings.viewOwn. A member can be one user's only (409), and a user may be one member per Spond group.")
+            .Audited(AuditAreas.Users, AuditActions.Update)
             .RequirePermission(Permission.UsersEdit);
 
         users.MapDelete("/{userId:int}", async (int userId, ClaimsPrincipal principal, AccountService service, MemberService members, CancellationToken ct) =>
@@ -113,6 +117,7 @@ public static class AccountEndpoints
                 return Results.NoContent();
             })
             .WithSummary("Delete a user. You cannot delete yourself, so the last administrator stays.")
+            .Audited(AuditAreas.Users, AuditActions.Delete)
             .RequirePermission(Permission.UsersDelete);
 
         var roles = app.MapGroup("/api/roles").WithTags("Roles");
@@ -135,6 +140,7 @@ public static class AccountEndpoints
                 return Results.CreatedAtRoute("GetRole", new { roleId = role.Id }, role);
             })
             .WithSummary("Create a role. Its name must be new (regardless of case); permissions are keys of the catalogue.")
+            .Audited(AuditAreas.Roles, AuditActions.Create)
             .RequirePermission(Permission.RolesEdit);
 
         roles.MapPut("/{roleId:int}", async (int roleId, RoleInputDto input, ClaimsPrincipal principal, RoleService service, CancellationToken ct) =>
@@ -145,6 +151,7 @@ public static class AccountEndpoints
                 return Results.Ok(await service.UpdateAsync(roleId, input, ct));
             })
             .WithSummary("Replace the name and the permissions of a role; everybody who has it is affected from their next request on. The administrator role cannot be changed (409).")
+            .Audited(AuditAreas.Roles, AuditActions.Update)
             .RequirePermission(Permission.RolesEdit);
 
         roles.MapDelete("/{roleId:int}", async (int roleId, RoleService service, CancellationToken ct) =>
@@ -153,6 +160,7 @@ public static class AccountEndpoints
                 return Results.NoContent();
             })
             .WithSummary("Delete a role and take it from its users. The administrator role cannot be deleted (409).")
+            .Audited(AuditAreas.Roles, AuditActions.Delete)
             .RequirePermission(Permission.RolesEdit);
 
         return app;

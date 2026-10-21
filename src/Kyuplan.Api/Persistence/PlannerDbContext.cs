@@ -64,6 +64,8 @@ public class PlannerDbContext : DbContext
 
     public DbSet<CommentEdit> CommentEdits => Set<CommentEdit>();
 
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+
     public DbSet<MemberRating> MemberRatings => Set<MemberRating>();
 
     public DbSet<Tag> Tags => Set<Tag>();
@@ -298,6 +300,16 @@ public class PlannerDbContext : DbContext
             edit.Property(e => e.PreviousBody).HasMaxLength(CommentRules.MaxBodyLength);
 
             edit.HasOne(e => e.Comment).WithMany(c => c.Edits).HasForeignKey(e => e.CommentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AuditEntry>(entry =>
+        {
+            entry.Property(e => e.UserName).HasMaxLength(AccountRules.MaxUserNameLength);
+            entry.Property(e => e.Area).HasMaxLength(ContentTypeLength);
+            entry.Property(e => e.Action).HasMaxLength(ContentTypeLength);
+            entry.Property(e => e.Target).HasMaxLength(NameLength);
+            entry.HasIndex(e => new { e.Area, e.Id });
+            entry.HasIndex(e => new { e.UserId, e.Id });
         });
 
         modelBuilder.Entity<MemberRating>(rating =>

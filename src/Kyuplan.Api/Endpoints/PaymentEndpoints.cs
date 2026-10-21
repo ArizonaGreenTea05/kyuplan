@@ -1,4 +1,5 @@
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -24,6 +25,7 @@ public static class PaymentEndpoints
             })
             .WithTags("Exam prices and payments")
             .WithSummary("Replace the price list. A belt that is not named costs nothing extra. Payments that were recorded keep the amount due they were saved with.")
+            .Audited(AuditAreas.Payments, AuditActions.Update)
             .RequirePermission(Permission.PricesEdit);
 
         var payments = app.MapGroup("/api/exams/{examId:int}/payments").WithTags("Exam prices and payments");
@@ -39,6 +41,7 @@ public static class PaymentEndpoints
                 return Results.Ok(await service.SetPaymentAsync(examId, memberId, input, ct));
             })
             .WithSummary("Record the total a member paid for the exam and whether they got the belt elsewhere (0, no note and no own belt takes the record back). The amount due is worked out again from the current prices.")
+            .Audited(AuditAreas.Payments, AuditActions.Update)
             .RequirePermission(Permission.PaymentsEdit);
 
         return app;

@@ -96,6 +96,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddScoped<ExamService>();
     builder.Services.AddScoped<ExamPlanningService>();
     builder.Services.AddScoped<ExamPaymentService>();
+    builder.Services.AddScoped<AuditService>();
     builder.Services.AddScoped<BeltService>();
     builder.Services.AddScoped<MemberService>();
     builder.Services.AddScoped<CommentService>();
@@ -256,6 +257,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapDocumentationEndpoints();
     app.MapExamEndpoints();
     app.MapPaymentEndpoints();
+    app.MapAuditEndpoints();
     app.MapExportEndpoints();
     app.MapBeltEndpoints();
     app.MapCommentEndpoints();

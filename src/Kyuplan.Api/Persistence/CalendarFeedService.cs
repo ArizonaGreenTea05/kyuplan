@@ -68,11 +68,13 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>The ICS text of the feed with that token, or <c>null</c> when there is none.</summary>
-    public async Task<string?> RenderAsync(string token, CancellationToken cancellationToken)
+    /// <summary>The name and ICS text of the feed with that token, or <c>null</c> when there is none.</summary>
+    public async Task<(string Name, string Ics)?> RenderAsync(string token, CancellationToken cancellationToken)
     {
         var feed = await db.CalendarFeeds.AsNoTracking().FirstOrDefaultAsync(f => f.Token == token, cancellationToken);
-        if (feed is null) return null;
+        // The database compares the token as text; the check again in constant time keeps a match from depending on how many characters agree.
+        if (feed is null || !CryptographicOperations.FixedTimeEquals(
+                System.Text.Encoding.UTF8.GetBytes(feed.Token), System.Text.Encoding.UTF8.GetBytes(token))) return null;
 
         var entries = new List<IcsEntry>();
         foreach (var source in ReadSources(feed))
@@ -82,7 +84,7 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
                 : await MemberDayEntriesAsync(source, cancellationToken));
         }
 
-        return IcsWriter.Write(feed.Name, entries.DistinctBy(e => e.Uid), time.GetUtcNow());
+        return (feed.Name, IcsWriter.Write(feed.Name, entries.DistinctBy(e => e.Uid), time.GetUtcNow()));
     }
 
     private async Task<List<IcsEntry>> EventEntriesAsync(CalendarSourceDto source, CancellationToken cancellationToken)

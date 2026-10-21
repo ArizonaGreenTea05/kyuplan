@@ -205,6 +205,9 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
    `Accounts/PostgresMigrations`. **Never hand-edit an existing migration.** `PostgresMigrationTests` fails when the PostgreSQL twin is
    missing. No database server is contacted. Rebuild before every `dotnet ef` call. Catch unique/foreign-key violations with
    `DbUpdateException.IsUniqueViolation()` / `IsForeignKeyViolation()`, never with `SqliteException`.
+   Tests that must run on a real server (`PostgresApiTests`, marked `[PostgresFact]`) read its connection string from the environment
+   variable `KYUPLAN_TEST_POSTGRES` (a user who may create databases; each test creates and drops a database of its own) and are skipped
+   without it. CI runs them in the `postgres` job against a PostgreSQL container.
 3. **Both UIs must keep working.** A change to a view model or a contract may need edits in the Blazor page *and* the WPF view.
 4. **Contracts first.** When the API shape changes, change `Kyuplan.Contracts` first, then the API, `IPlannerApi`/`PlannerApiClient`, the view
    model, then both UIs. The JSON context (`PlannerJsonContext`) needs new DTOs registered.

@@ -41,6 +41,13 @@ Logic goes in `Client.Shared` or `Api`, never duplicated in the UIs.
 - Tests use in-memory SQLite (`InMemoryDatabase.cs`). Add tests next to the closest existing `*Tests.cs`. Test hosts must set `Sync:Enabled=false` and `DefaultData:Enabled=false`, and must not depend on shipped `appsettings.json` values (that once broke every CI workflow).
 - Both UIs must keep working: a change to a view model or contract may need Blazor and WPF edits.
 
+## Tests and coverage
+- **Every change ships with tests**: new code, bug fixes (a test that fails without the fix) and changed behaviour. No task is done without them, even if not asked.
+- Aim for the highest realistic coverage: cover every branch, validation rule, error path and edge case (empty, null, boundaries, duplicates, permission denied/401/403/404, invalid input) of the code you touch, not only the happy path. Prefer view-model and API tests over UI tests.
+- **Hunt for edge cases beyond line coverage**: before finishing, list how the change could break (whitespace/very long/unicode strings, case differences, zero/negative/max values, `decimal` rounding, dates around midnight, time zones, DST and year boundaries, empty and single-item collections, duplicates, concurrent or repeated calls, missing or deleted related rows, German vs English culture) and add a test for each that is plausible. Use `[Theory]` for value ranges. Coverage numbers do not replace this.
+- Only leave code uncovered when testing it is not realistically possible (WPF/Blazor markup, OS-specific or process-restart code); say so in the final report.
+- Check with `dotnet test tests/Kyuplan.Tests --collect:"XPlat Code Coverage"` when touching larger areas, and add tests for uncovered lines of the changed files.
+
 ## Token savers
 - Don't read `Migrations/*`, `*.Designer.cs`, `wwwroot/`, `assets/`, `installer/`, `deploy/`, `bin/`, `obj/`, `logs/`, `.github/` (read `.github/` and `deploy/` only when changing releases). Irrelevant to almost every task.
 - Use `grep`/Glob to locate a symbol, then read only that range (offset/limit). Don't read whole files or the whole README.

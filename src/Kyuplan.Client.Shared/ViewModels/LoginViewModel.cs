@@ -101,6 +101,7 @@ public sealed partial class LoginViewModel : ViewModelBase
             else _store.Clear();
 
             SignedIn?.Invoke(this, EventArgs.Empty);
+            Password = "";
             return SignInOutcome.SignedIn;
         }
         catch (PlannerApiException ex)

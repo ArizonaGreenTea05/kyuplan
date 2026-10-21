@@ -31,6 +31,32 @@ jobs:
       - name: Test
         run: dotnet test tests/Kyuplan.Tests -c Release
 
+  # The tests marked PostgresFact (case-insensitive names, decimal amounts, the migrations) need a real server; locally they are skipped.
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust # throwaway container, only reachable from this job
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      KYUPLAN_TEST_POSTGRES: Host=localhost;Username=postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test against PostgreSQL
+        run: dotnet test tests/Kyuplan.Tests -c Release --filter "FullyQualifiedName~PostgresApiTests"
+
   docs:
     runs-on: ubuntu-latest
     steps:

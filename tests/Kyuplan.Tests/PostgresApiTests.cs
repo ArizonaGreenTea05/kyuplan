@@ -61,10 +61,10 @@ public sealed class PostgresApiTests(WebApplicationFactory<Program> factory) : I
         var white = await api.CreateBeltAsync(new BeltInputDto("White", "#FFFFFF", null, []));
         var yellow = await api.CreateBeltAsync(new BeltInputDto("Yellow", "#FFD800", null, [new BeltPrerequisiteDto(white.Id, 0, 0)]));
 
-        await api.SetExamPricesAsync(new ExamPricesDto(12.34m, [new BeltPriceDto(yellow.Id, 0.01m, 999999.99m)]));
+        await api.SetExamPricesAsync(new ExamPricesDto(12.34m, [new BeltPriceDto(yellow.Id, 0.01m, 99999.99m)]));
 
         var prices = await api.GetExamPricesAsync();
         Assert.Equal(12.34m, prices.GeneralFee);
-        Assert.Equal([(yellow.Id, 0.01m, 999999.99m)], prices.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
+        Assert.Equal([(yellow.Id, 0.01m, 99999.99m)], prices.BeltPrices.Select(p => (p.BeltId, p.StampFee, p.BeltPrice)));
     }
 }

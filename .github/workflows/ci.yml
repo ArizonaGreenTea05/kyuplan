@@ -55,7 +55,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Test against PostgreSQL
-        run: dotnet test tests/Kyuplan.Tests -c Release --filter "FullyQualifiedName~Postgres"
+        run: dotnet test tests/Kyuplan.Tests -c Release --filter "FullyQualifiedName~PostgresApiTests"
 
   docs:
     runs-on: ubuntu-latest

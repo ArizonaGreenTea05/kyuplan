@@ -39,7 +39,8 @@ export async function openSignedIn(page: Page, address: string): Promise<void> {
 
 /** Waits until the page has its content: the heading is there and nothing is loading any more. */
 export async function waitUntilShown(page: Page): Promise<void> {
-    await expect(page.locator('.content h1').first()).toBeVisible();
+    // Attached, not visible: the phone layout hides the heading of the calendar page.
+    await expect(page.locator('.content h1').first()).toBeAttached();
     await expect(page.locator('.content h1').first()).not.toBeEmpty();
     await expect(page.locator('.progress.on')).toHaveCount(0);
 }

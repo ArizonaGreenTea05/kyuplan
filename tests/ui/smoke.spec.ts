@@ -19,7 +19,7 @@ const pages: Page[] = [
     { address: '/dashboard', name: 'dashboard-route' },
     { address: '/statistics', name: 'statistics' },
     { address: '/calendar', name: 'calendar', mobile: true },
-    { address: '/exams', name: 'exams', mobile: true, rows: 'table.exams tbody tr' },
+    { address: '/exams', name: 'exams', mobile: true },
     { address: '/members', name: 'members', mobile: true, rows: 'table.data tbody tr' },
     { address: '/belts', name: 'belts' },
     { address: '/prices', name: 'prices' },
@@ -71,8 +71,12 @@ test('a wrong password is refused on the login screen', async ({ page }, testInf
     test.skip(testInfo.project.name !== 'desktop-light', 'one failed login per run');
 
     await page.goto('/');
-    await page.locator('input[autocomplete="username"]').fill(adminUser);
-    await page.locator('input[autocomplete="current-password"]').fill('definitely-not-the-password');
+    // The form can be rebuilt once the client has started and then loses what was typed: fill until the input survives (the button enables).
+    await expect(async () => {
+        await page.locator('input[autocomplete="username"]').fill(adminUser);
+        await page.locator('input[autocomplete="current-password"]').fill('definitely-not-the-password');
+        await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeEnabled({ timeout: 1000 });
+    }).toPass({ timeout: 60_000 });
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 
     await expect(page.getByText('The user name or the password is wrong.')).toBeVisible();

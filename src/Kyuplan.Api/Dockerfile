@@ -15,7 +15,7 @@
 #   docker buildx build --platform linux/amd64,linux/arm64 -f src/Kyuplan.Api/Dockerfile -t kyuplan .
 
 # The documentation: one Docusaurus site per audience (website/, from docs/), served under /docs by the API to the users who may read each.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS docs
+FROM --platform=$BUILDPLATFORM node:25-alpine AS docs
 WORKDIR /repo/website
 COPY website/package.json website/package-lock.json ./
 RUN npm ci --no-audit --no-fund

@@ -1,0 +1,53 @@
+name: Audit dependencies
+description: >
+  Fails when a NuGet package of the server or the WPF client (transitive ones included) or an npm package of the documentation or the
+  browser tests has a known vulnerability.
+
+inputs:
+  npm-level:
+    description: The lowest npm severity that fails the check (low, moderate, high, critical).
+    default: high
+
+runs:
+  using: composite
+  steps:
+    - name: NuGet packages
+      shell: bash
+      env:
+        # Lets the Windows-only WPF client restore on Linux (nothing is built).
+        EnableWindowsTargeting: 'true'
+      run: |
+        set -o pipefail
+        report="$RUNNER_TEMP/nuget-audit.txt"
+        : > "$report"
+        # The test project reaches the server, the web client and the shared libraries; the WPF client is the only one outside it.
+        for project in tests/Kyuplan.Tests src/Kyuplan.Client.Wpf; do
+          dotnet list "$project" package --vulnerable --include-transitive 2>&1 | tee -a "$report"
+        done
+        # dotnet list exits with 0 even when it finds something, so the report is read.
+        if grep -q 'has the following vulnerable packages' "$report"; then
+          echo "::error::Vulnerable NuGet packages, see the log."
+          exit 1
+        fi
+        # Without the vulnerability data (NU1900: the feed could not be reached) nothing was checked, which must not look like a pass.
+        if grep -q 'NU1900' "$report"; then
+          echo "::error::The NuGet vulnerability data could not be loaded, nothing was checked."
+          exit 1
+        fi
+
+    - name: npm packages (documentation)
+      shell: bash
+      working-directory: website
+      env:
+        NPM_LEVEL: ${{ inputs.npm-level }}
+      run: npm audit --audit-level="$NPM_LEVEL"
+
+    # tests/ui has no lock file in the repository (CI uses npm install); a temporary one is enough for the audit.
+    - name: npm packages (browser tests)
+      shell: bash
+      working-directory: tests/ui
+      env:
+        NPM_LEVEL: ${{ inputs.npm-level }}
+      run: |
+        npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+        npm audit --audit-level="$NPM_LEVEL"

@@ -1,0 +1,2 @@
+# Findings of the image scan in the release (.github/workflows/release.yml) that are accepted: one CVE id per line, and above it why
+# (not reachable, no fix yet, ...) and until when to look at it again. Empty is the normal state.

@@ -348,6 +348,7 @@ dotnet run --project tests/Kyuplan.WpfShots -- http://localhost:5100 <user> <pas
   `downloads/`), builds the documentation (the image carries the guides for users, `Kyuplan-docs-<version>.zip` carries all of them), and publishes a GitHub release with the installer and the archive attached.
 - The tag's version becomes `-p:Version` for every build: assembly versions, `GET /api/info`, the installer and the self-update comparison.
 - Locally built versions use `<Version>` of `Directory.Build.props`.
+- Dependencies: Dependabot (`.github/dependabot.yml`) updates NuGet, npm, the Dockerfile, the Compose files and the actions weekly; `dependency-audit.yml` (every PR and weekly) and the start of the release fail on known vulnerabilities; the release scans the image with Trivy before pushing and attaches an SBOM. A new `package.json`, Dockerfile, Compose folder or composite action needs a Dependabot entry (`SupplyChainConfigTests`). Details in [deployment.md](deployment.md#dependency-and-supply-chain-checks).
 - Details, tag formats, prerelease behaviour and building the pieces by hand are in [deployment.md](deployment.md#releasing).
 
 ```bash

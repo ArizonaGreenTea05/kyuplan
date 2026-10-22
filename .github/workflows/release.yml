@@ -3,7 +3,7 @@ name: Release
 # A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every desktop client (today Windows, built with Inno Setup;
 # further systems get a job beside "windows" that uploads its installer as Kyuplan-<platform>-<version>.<ext>) is built and goes
 # into the Docker image of the server (API + web client), which offers them for download and as the update of the installed clients, and
-# the image is pushed to ghcr.io/<owner>/kyuplan. The GitHub release carries the installers and the documentation archive as well.
+# the image is pushed to ghcr.io/<owner>/kyuplan. The GitHub release carries the installers, the documentation archive and the SBOM of the image as well.
 on:
   push:
     tags: ['v*']
@@ -13,7 +13,23 @@ permissions:
   packages: write
 
 jobs:
+  # A known vulnerability in a NuGet or npm dependency stops the release before anything is built (the image is scanned again below).
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: ./.github/actions/audit-dependencies
+
   windows:
+    needs: audit
     # The test suite includes tests of the WPF client's Windows-only encrypted login file, and the installer is built here.
     runs-on: windows-latest
     defaults:
@@ -103,6 +119,7 @@ jobs:
   # The documentation (Docusaurus, website/): the image carries the guides the server shows its users (the Dockerfile builds them itself), the
   # release carries all of them, the developer guide too, as one archive that any web server can serve at /docs/.
   docs:
+    needs: audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -183,6 +200,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Scan before anything is pushed: the same build for amd64 (the Dockerfile cross-compiles, both CPUs share the packages) is loaded
+      # into the runner and checked with Trivy; a fixable HIGH or CRITICAL vulnerability (operating system packages of the base image
+      # and the .NET dependencies alike) stops the release. Without a fix there is nothing to update to, so those do not.
+      # The push below finds everything in the build cache.
+      - name: Build the image for the scan
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/Kyuplan.Api/Dockerfile
+          build-contexts: installer=artifacts/installer
+          platforms: linux/amd64
+          load: true
+          tags: kyuplan-scan:${{ steps.v.outputs.version }}
+          build-args: |
+            VERSION=${{ steps.v.outputs.version }}
+            DOCS_REPO_REF=${{ github.ref_name }}
+            REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Pinned to the commit (Dependabot keeps the comment's version in step): a scanner that runs in the release is a supply-chain risk itself.
+      - name: Scan the image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: kyuplan-scan:${{ steps.v.outputs.version }}
+          severity: HIGH,CRITICAL
+          # Vulnerabilities only: the secret scanner would stop the release on things that are no dependency.
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: '1'
+          # .trivyignore lists accepted findings (one CVE id per line, with the reason as a comment above it).
+          trivyignores: .trivyignore
+
+      # The software bill of materials of the image (CycloneDX), attached to the release.
+      - name: Prepare the SBOM folder
+        run: mkdir -p artifacts/sbom
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: kyuplan-scan:${{ steps.v.outputs.version }}
+          format: cyclonedx
+          output: artifacts/sbom/Kyuplan-sbom-${{ steps.v.outputs.version }}.cdx.json
+
       # The Dockerfile's "installer" stage is empty; here it is the folder with the installer built above.
       - uses: docker/build-push-action@v7
         with:
@@ -214,7 +274,7 @@ jobs:
             docker pull ${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}
             ```
 
-            The web client offers the desktop apps (the installers attached below) for download, and an installed app updates itself from the server. The documentation is part of the server (Help in the web client and the desktop app, each user sees the guides they may read) and is attached as well (`Kyuplan-docs-${{ steps.v.outputs.version }}.zip`: every guide, the developer guide too). Settings, volumes and the TrueNAS setup are described in [docs/deployment.md](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/docs/deployment.md).
+            The web client offers the desktop apps (the installers attached below) for download, and an installed app updates itself from the server. `Kyuplan-sbom-${{ steps.v.outputs.version }}.cdx.json` is the software bill of materials of the image (CycloneDX). The documentation is part of the server (Help in the web client and the desktop app, each user sees the guides they may read) and is attached as well (`Kyuplan-docs-${{ steps.v.outputs.version }}.zip`: every guide, the developer guide too). Settings, volumes and the TrueNAS setup are described in [docs/deployment.md](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/docs/deployment.md).
           prerelease: ${{ steps.v.outputs.prerelease }}
           previous-tag: ${{ steps.v.outputs.previous-tag }}
-          files: artifacts/installer/* artifacts/docs/*
+          files: artifacts/installer/* artifacts/docs/* artifacts/sbom/*

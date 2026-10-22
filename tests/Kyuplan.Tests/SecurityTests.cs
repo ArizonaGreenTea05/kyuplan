@@ -256,4 +256,21 @@ public sealed class SecurityTests(WebApplicationFactory<Program> factory) : ICla
     [InlineData("a/b", false)]
     public void Allowed_hosts_are_names_separated_by_semicolons(string hosts, bool valid) =>
         Assert.Equal(valid, SettingsRules.IsAllowedHosts(hosts));
+
+    [Theory]
+    [InlineData("0123456789abcdef", true)]
+    [InlineData("0123456789abcde", false)]
+    [InlineData("0123456789abcdef ", false)]
+    [InlineData("tökentökentökentöken", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void A_metrics_token_is_long_enough_and_a_header_value(string? token, bool valid) =>
+        Assert.Equal(valid, SettingsRules.IsMetricsToken(token));
+
+    [Fact]
+    public void A_metrics_token_has_a_maximum_length()
+    {
+        Assert.True(SettingsRules.IsMetricsToken(new string('a', SettingsRules.MaxMetricsTokenLength)));
+        Assert.False(SettingsRules.IsMetricsToken(new string('a', SettingsRules.MaxMetricsTokenLength + 1)));
+    }
 }

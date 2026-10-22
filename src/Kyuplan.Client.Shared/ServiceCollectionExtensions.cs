@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RolesViewModel>();
         services.AddSingleton<BrandingAdminViewModel>();
         services.AddSingleton<BackupViewModel>();
+        services.AddSingleton<SyncStatusViewModel>();
         services.AddSingleton<ExamPricesViewModel>();
         services.AddSingleton<CalendarFeedsViewModel>();
         services.AddSingleton<ManualDataViewModel>();

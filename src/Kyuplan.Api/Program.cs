@@ -16,6 +16,8 @@ using Kyuplan.Api.Sources;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
 
 // Settings that were saved in the web client only apply to an application that is built anew: it stops and is built and started again here,
@@ -112,8 +114,23 @@ static async Task<WebApplication> BuildAsync(string[] args)
     // Members and the invitations of exams are copies of what Spond says; this keeps them in line (see SpondSync).
     builder.Services.Configure<SyncOptions>(builder.Configuration.GetSection(SyncOptions.Section));
     builder.Services.AddSingleton<SyncGate>();
+    builder.Services.AddSingleton<SyncStatusTracker>();
     builder.Services.AddScoped<SpondSync>();
     builder.Services.AddHostedService<SpondSyncWorker>();
+
+    // Metrics for monitoring (GET /metrics, Prometheus format): the sync, the requests and the runtime. Off unless Metrics:Enabled (settings page).
+    builder.Services.Configure<MetricsOptions>(builder.Configuration.GetSection(MetricsOptions.Section));
+    if (builder.Configuration.GetValue("Metrics:Enabled", false))
+    {
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource.AddService("kyuplan"))
+            .WithMetrics(metrics => metrics
+                .AddMeter(SyncStatusTracker.MeterName)
+                .AddView("kyuplan.sync.duration", new ExplicitBucketHistogramConfiguration { Boundaries = [0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300] })
+                .AddAspNetCoreInstrumentation()
+                .AddRuntimeInstrumentation()
+                .AddPrometheusExporter());
+    }
 
     // Backups: a file to download and upload, and backup databases that are kept up to date on a schedule (see BackupService).
     builder.Services.Configure<BackupOptions>(builder.Configuration.GetSection(BackupOptions.Section));
@@ -172,6 +189,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     }));
 
     var app = builder.Build();
+    app.Services.GetRequiredService<SyncStatusTracker>(); // its meter exists from the start, so /metrics lists the sync before the first run
 
     using (var scope = app.Services.CreateScope())
     {
@@ -260,6 +278,13 @@ static async Task<WebApplication> BuildAsync(string[] args)
             await db.Database.CanConnectAsync(cancellationToken) ? Results.Text("ok") : Results.StatusCode(StatusCodes.Status503ServiceUnavailable))
         .AllowAnonymous().ExcludeFromDescription();
 
+    // For the monitoring system: no user login, but the bearer token of Metrics:Token (MetricsTokenMiddleware). Off by default.
+    if (app.Configuration.GetValue("Metrics:Enabled", false))
+    {
+        app.UseWhen(c => c.Request.Path.StartsWithSegments("/metrics"), b => b.UseMiddleware<MetricsTokenMiddleware>());
+        app.MapPrometheusScrapingEndpoint("/metrics").AllowAnonymous();
+    }
+
     app.MapBrandingEndpoints();
     app.MapThemeEndpoints();
     app.MapBackupEndpoints();
@@ -269,6 +294,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.MapExamEndpoints();
     app.MapPaymentEndpoints();
     app.MapAuditEndpoints();
+    app.MapSyncStatusEndpoints();
     app.MapExportEndpoints();
     app.MapBeltEndpoints();
     app.MapCommentEndpoints();

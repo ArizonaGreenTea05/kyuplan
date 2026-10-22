@@ -286,4 +286,32 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.Equal("Exam", page.Form.ExamKeyword);
         Assert.False(page.IsRestarting);
     }
+
+    [Fact]
+    public void The_metrics_form_needs_a_token_when_they_are_on_and_sends_it_only_when_typed()
+    {
+        var form = new SettingsForm();
+        form.Load(FakePlannerApi.DefaultSettings);
+        Assert.False(form.MetricsEnabled);
+        Assert.Null(form.MetricsTokenProblem);
+        Assert.False(form.ToInput().MetricsEnabled!.Value);
+        Assert.Null(form.ToInput().MetricsToken);
+
+        form.MetricsEnabled = true;
+        Assert.Equal(Strings.Settings_MetricsTokenMissing, form.MetricsTokenProblem);
+        Assert.False(form.IsValid);
+
+        form.MetricsToken = "short";
+        Assert.NotNull(form.MetricsTokenProblem);
+
+        form.MetricsToken = "scrape-token-0123456789";
+        Assert.Null(form.MetricsTokenProblem);
+        Assert.Equal("scrape-token-0123456789", form.ToInput().MetricsToken);
+        Assert.False(form.Matches(FakePlannerApi.DefaultSettings));
+
+        form.Load(FakePlannerApi.DefaultSettings with { MetricsEnabled = true, HasMetricsToken = true });
+        Assert.Null(form.MetricsTokenProblem); // the stored token is enough
+        Assert.Equal("", form.MetricsToken);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { MetricsEnabled = true, HasMetricsToken = true }));
+    }
 }

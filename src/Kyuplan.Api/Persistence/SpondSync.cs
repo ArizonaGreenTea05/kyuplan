@@ -35,13 +35,16 @@ public sealed class SpondSync(
     TimeProvider time,
     SyncGate gate,
     IOptions<SpondOptions> spondOptions,
-    ILogger<SpondSync> logger)
+    ILogger<SpondSync> logger,
+    SyncStatusTracker? tracker = null)
 {
     /// <summary>Syncs every group and every exam.</summary>
     /// <exception cref="SpondUnavailableException">Spond cannot be read at all; nothing was changed.</exception>
     public async Task SyncAllAsync(CancellationToken cancellationToken)
     {
         await gate.WaitAsync(cancellationToken);
+        var run = tracker?.Begin();
+        var started = time.GetTimestamp();
         try
         {
             var groups = await source.GetGroupsAsync(cancellationToken);
@@ -56,6 +59,19 @@ public sealed class SpondSync(
                 var exams = await db.Exams.Where(e => e.GroupId == group.Id).ToListAsync(cancellationToken);
                 await SyncGroupAsync(group, exams, cancellationToken);
             }
+
+            run?.Succeed();
+            logger.LogInformation("Synced {GroupCount} groups with the data source in {DurationMs} ms.", groups.Count, (int)time.GetElapsedTime(started).TotalMilliseconds);
+        }
+        catch (OperationCanceledException)
+        {
+            run?.Abandon();
+            throw;
+        }
+        catch (Exception ex)
+        {
+            run?.Fail(ex);
+            throw;
         }
         finally
         {

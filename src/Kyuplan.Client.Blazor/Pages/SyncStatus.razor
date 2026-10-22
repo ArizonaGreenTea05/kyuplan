@@ -1,0 +1,62 @@
+@page "/sync-status"
+@inherits ViewModelComponent<SyncStatusViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!Vm.IsBusy)"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.SyncStatus_Lede</p>
+        </div>
+        @if (Vm.CanView)
+        {
+            <button type="button" class="btn ghost" disabled="@Vm.IsBusy" @onclick="() => Vm.RetryCommand.ExecuteAsync(null)">
+                <Icon Name="refresh" /><span>@Strings.SyncStatus_Refresh</span>
+            </button>
+        }
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasLoaded)
+        {
+            <div class="banner @(Vm.IsFailing ? "error" : "ok")" role="status" id="sync-headline">
+                <Icon Name="@(Vm.IsFailing ? "alert" : "check")" />
+                <span>@Vm.Headline</span>
+            </div>
+
+            <section class="card card-form" aria-labelledby="sync-summary">
+                <div>
+                    <h2 id="sync-summary">@Vm.IntervalText</h2>
+                    <p class="note">@Vm.LastSuccessText</p>
+                    @if (Vm.IsFailing)
+                    {
+                        <p class="note">@Vm.LastFailureText</p>
+                    }
+                </div>
+            </section>
+
+            <section class="card card-form" aria-labelledby="sync-recent">
+                <h2 id="sync-recent">@Strings.SyncStatus_RecentTitle</h2>
+                @if (!Vm.HasRuns)
+                {
+                    <p class="note">@Strings.SyncStatus_RecentEmpty</p>
+                }
+                <ul style="list-style: none; margin: 0; padding: 0;" aria-labelledby="sync-recent">
+                    @foreach (var run in Vm.Runs)
+                    {
+                        <li class="@(run.Succeeded ? "" : "field-error")">@run.Text</li>
+                    }
+                </ul>
+            </section>
+        }
+    </PageGate>
+</section>
+
+@code {
+    private EventCallback RetryLoading => EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+}

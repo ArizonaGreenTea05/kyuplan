@@ -160,6 +160,7 @@ public sealed class PermissionApiTests(WebApplicationFactory<Program> factory) :
             { "GET", "/api/exams/999/payments", null, Permission.PaymentsView },
             { "PUT", "/api/exams/999/payments/1", """{"paid":0}""", Permission.PaymentsEdit },
             { "GET", "/api/audit", null, Permission.AuditView },
+            { "GET", "/api/sync/status", null, Permission.SyncView },
             { "GET", "/api/belts", null, Any(Permission.ReadsBelts) },
             { "GET", "/api/belts/999", null, Any(Permission.ReadsBelts) },
             { "POST", "/api/belts", "{}", Permission.BeltsEdit },

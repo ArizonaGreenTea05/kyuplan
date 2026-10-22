@@ -107,7 +107,7 @@
 
         @* Administration (what an administrator may use) above the account; signing out forgets the login held in memory. *@
         <nav class="nav-groups" aria-label="@Strings.Nav_Account">
-            @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView, Permission.BackupsView, Permission.CalendarFeeds]))
+            @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView, Permission.BackupsView, Permission.CalendarFeeds, Permission.SyncView]))
             {
                 <div class="nav-group">
                     <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="sliders" /><span>@Strings.Nav_Administration</span></button>
@@ -146,6 +146,12 @@
                     {
                         <NavLink class="nav-item" href="backup">
                             <Icon Name="download" /><span>@Strings.Nav_Backup</span>
+                        </NavLink>
+                    }
+                    @if (Shell.Can(Permission.SyncView))
+                    {
+                        <NavLink class="nav-item" href="sync-status">
+                            <Icon Name="refresh" /><span>@Strings.Nav_SyncStatus</span>
                         </NavLink>
                     }
                     </div>

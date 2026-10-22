@@ -58,6 +58,9 @@ public interface IPlannerApi
     /// <summary>Deletes an uploaded theme pack. Answers with the catalog.</summary>
     Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>How the sync with the data source is doing. Needs <c>sync.view</c>.</summary>
+    Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default);
+
     /// <summary>The backup databases and how their last run went. Needs <c>backups.view</c>.</summary>
     Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default);
 

@@ -137,9 +137,10 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
         return plain;
     }
 
-    /// <summary>The places in the file where a Spond password stands: the configuration key, the object that holds it and its name.</summary>
+    /// <summary>The places in the file where a secret stands (the Spond passwords, the metrics token): the configuration key, the object that holds it and its name.</summary>
     private static IEnumerable<(string Key, JsonObject Holder, string Name)> PasswordsIn(JsonObject root)
     {
+        if (root["Metrics"] is JsonObject metrics && metrics["Token"] is JsonValue) yield return ("Metrics:Token", metrics, "Token");
         if (root["Spond"] is not JsonObject spond) yield break;
 
         if (spond["Password"] is JsonValue) yield return ("Spond:Password", spond, "Password");

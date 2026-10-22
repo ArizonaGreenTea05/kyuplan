@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -140,6 +141,43 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         HttpStatusCode last = default;
         for (var i = 0; i < 30; i++) last = (await client.GetAsync(path)).StatusCode;
         Assert.Equal(HttpStatusCode.TooManyRequests, last);
+    }
+
+    private sealed class ClientAddressFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                if (context.Request.Headers.TryGetValue("X-Test-Ip", out var ip)) context.Connection.RemoteIpAddress = IPAddress.Parse(ip.ToString());
+                return nextMiddleware();
+            });
+            next(app);
+        };
+    }
+
+    [Fact]
+    public async Task The_limit_counts_every_client_address_on_its_own()
+    {
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Api:AllowInsecureHttp", "true");
+            builder.ConfigureTestServices(s => s.AddSingleton<IStartupFilter, ClientAddressFilter>());
+        });
+        var feed = await CreateAsync(host.CreateSignedInClient(), "Shared", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var client = host.CreateClient();
+        var path = new Uri(feed.Url).PathAndQuery;
+
+        async Task<HttpStatusCode> GetAs(string ip)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Add("X-Test-Ip", ip);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        for (var i = 0; i < 30; i++) Assert.Equal(HttpStatusCode.OK, await GetAs("203.0.113.1"));
+        Assert.Equal(HttpStatusCode.TooManyRequests, await GetAs("203.0.113.1"));
+        Assert.Equal(HttpStatusCode.OK, await GetAs("203.0.113.2"));
     }
 
     private sealed class ListLoggerProvider(List<string> lines) : ILoggerProvider

@@ -72,7 +72,7 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
     public async Task<(string Name, string Ics)?> RenderAsync(string token, CancellationToken cancellationToken)
     {
         var feed = await db.CalendarFeeds.AsNoTracking().FirstOrDefaultAsync(f => f.Token == token, cancellationToken);
-        // The database compares the token as text; the check again in constant time keeps a match from depending on how many characters agree.
+        // The database may compare case-insensitively (collation); this exact, constant-time check makes sure only the precise token matches.
         if (feed is null || !CryptographicOperations.FixedTimeEquals(
                 System.Text.Encoding.UTF8.GetBytes(feed.Token), System.Text.Encoding.UTF8.GetBytes(token))) return null;
 

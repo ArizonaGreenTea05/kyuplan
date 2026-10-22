@@ -43,6 +43,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddSingleton<IOptions<SpondOptions>>(Options.Create(SpondSettings));
         services.AddSingleton<StatisticsService>();
         services.AddSingleton<SyncGate>();
+        services.AddSingleton<SyncStatusTracker>();
         services.AddDbContext<PlannerDbContext>(options => options.UseSqlite(_database.ConnectionString));
         services.AddScoped<SpondSync>();
         services.AddScoped<ExamService>();

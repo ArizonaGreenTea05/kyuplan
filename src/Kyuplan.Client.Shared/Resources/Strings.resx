@@ -3403,4 +3403,61 @@
   <data name="AuditAction_delete" xml:space="preserve">
     <value>Deleted</value>
   </data>
+  <data name="Nav_SyncStatus" xml:space="preserve">
+    <value>Sync status</value>
+  </data>
+  <data name="SyncStatus_Lede" xml:space="preserve">
+    <value>How the sync with Spond is doing: when it last worked, how long it takes and what went wrong.</value>
+  </data>
+  <data name="SyncStatus_Healthy" xml:space="preserve">
+    <value>The sync works.</value>
+  </data>
+  <data name="SyncStatus_Running" xml:space="preserve">
+    <value>A sync is running now.</value>
+  </data>
+  <data name="SyncStatus_NoRunYet" xml:space="preserve">
+    <value>No sync has finished yet.</value>
+  </data>
+  <data name="SyncStatus_Failing" xml:space="preserve">
+    <value>The last {0} sync(s) in a row failed.</value>
+  </data>
+  <data name="SyncStatus_Off" xml:space="preserve">
+    <value>The automatic sync is switched off.</value>
+  </data>
+  <data name="SyncStatus_Once" xml:space="preserve">
+    <value>Runs only once, when the API starts.</value>
+  </data>
+  <data name="SyncStatus_Every" xml:space="preserve">
+    <value>Runs every {0} min.</value>
+  </data>
+  <data name="SyncStatus_LastSuccess" xml:space="preserve">
+    <value>Last successful sync: {0} (took {1} s)</value>
+  </data>
+  <data name="SyncStatus_NeverSucceeded" xml:space="preserve">
+    <value>No sync has worked since the API started.</value>
+  </data>
+  <data name="SyncStatus_LastFailure" xml:space="preserve">
+    <value>Last error: {0}: {1}</value>
+  </data>
+  <data name="SyncStatus_RecentTitle" xml:space="preserve">
+    <value>Recent runs</value>
+  </data>
+  <data name="SyncStatus_RecentEmpty" xml:space="preserve">
+    <value>No run since the API started.</value>
+  </data>
+  <data name="SyncStatus_RunOk" xml:space="preserve">
+    <value>{0} · {1} s · succeeded</value>
+  </data>
+  <data name="SyncStatus_RunFailed" xml:space="preserve">
+    <value>{0} · {1} s · failed: {2}</value>
+  </data>
+  <data name="SyncStatus_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="PermissionGroup_sync" xml:space="preserve">
+    <value>Sync status</value>
+  </data>
+  <data name="Permission_sync_view" xml:space="preserve">
+    <value>See how the sync with Spond is doing</value>
+  </data>
 </root>

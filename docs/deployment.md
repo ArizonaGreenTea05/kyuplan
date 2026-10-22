@@ -272,6 +272,7 @@ because every user is only meant to see the guides that apply to them:
   passwords in it (`keys/`), the uploaded theme packs (`themes/`, small JSON files) and the logs (`logs/`, one file per day, the 31 newest kept; also on the console, i.e. `docker logs`).
 - **User**: not root (UID 1654, name `app`). A Docker-managed volume is writable for it. For a folder you mount yourself, give that UID the rights or run the container as the folder's owner (`--user 568:568`).
 - **Health check**: `GET /healthz` answers `200 ok` without a login while the database can be reached (`503` otherwise), also over plain HTTP from other machines, so load balancers and platform probes can use it. The image has a Docker `HEALTHCHECK` that uses it (see `docker ps`).
+- **Metrics and logs**: `GET /metrics` (Prometheus text format, OpenTelemetry; also without a login, so keep it off the public internet, `Metrics__Enabled=false` removes it) and JSON console logs with `Logging__Console__FormatterName=json`; the metrics and an alert example are in the [admin guide](admin-guide.md#day-to-day-operation).
 - **Settings**: everything in `appsettings.json` (see [Configuration](../README.md#configuration)) can be overridden by an environment
   variable: the key with `:` written as `__`, e.g. `Spond:Email` → `Spond__Email`, `Statistics:TimeZone` → `Statistics__TimeZone`, and the list
   `Api:AllowedOrigins` → `Api__AllowedOrigins__0`, `Api__AllowedOrigins__1`, … (ASP.NET Core's own convention). In Compose files,

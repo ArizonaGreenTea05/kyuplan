@@ -3304,4 +3304,61 @@
   <data name="AuditAction_delete" xml:space="preserve">
     <value>Gelöscht</value>
   </data>
+  <data name="Nav_SyncStatus" xml:space="preserve">
+    <value>Sync-Status</value>
+  </data>
+  <data name="SyncStatus_Lede" xml:space="preserve">
+    <value>Wie der Abgleich mit Spond läuft: wann er zuletzt geklappt hat, wie lange er dauert und was schiefging.</value>
+  </data>
+  <data name="SyncStatus_Healthy" xml:space="preserve">
+    <value>Der Abgleich funktioniert.</value>
+  </data>
+  <data name="SyncStatus_Running" xml:space="preserve">
+    <value>Ein Abgleich läuft gerade.</value>
+  </data>
+  <data name="SyncStatus_NoRunYet" xml:space="preserve">
+    <value>Noch kein Abgleich ist fertig geworden.</value>
+  </data>
+  <data name="SyncStatus_Failing" xml:space="preserve">
+    <value>Die letzten {0} Abgleiche in Folge sind fehlgeschlagen.</value>
+  </data>
+  <data name="SyncStatus_Off" xml:space="preserve">
+    <value>Der automatische Abgleich ist ausgeschaltet.</value>
+  </data>
+  <data name="SyncStatus_Once" xml:space="preserve">
+    <value>Läuft nur einmal, beim Start der API.</value>
+  </data>
+  <data name="SyncStatus_Every" xml:space="preserve">
+    <value>Läuft alle {0} Min.</value>
+  </data>
+  <data name="SyncStatus_LastSuccess" xml:space="preserve">
+    <value>Letzter erfolgreicher Abgleich: {0} (dauerte {1} s)</value>
+  </data>
+  <data name="SyncStatus_NeverSucceeded" xml:space="preserve">
+    <value>Seit dem Start der API hat noch kein Abgleich geklappt.</value>
+  </data>
+  <data name="SyncStatus_LastFailure" xml:space="preserve">
+    <value>Letzter Fehler: {0}: {1}</value>
+  </data>
+  <data name="SyncStatus_RecentTitle" xml:space="preserve">
+    <value>Letzte Läufe</value>
+  </data>
+  <data name="SyncStatus_RecentEmpty" xml:space="preserve">
+    <value>Seit dem Start der API gab es keinen Lauf.</value>
+  </data>
+  <data name="SyncStatus_RunOk" xml:space="preserve">
+    <value>{0} · {1} s · erfolgreich</value>
+  </data>
+  <data name="SyncStatus_RunFailed" xml:space="preserve">
+    <value>{0} · {1} s · fehlgeschlagen: {2}</value>
+  </data>
+  <data name="SyncStatus_Refresh" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="PermissionGroup_sync" xml:space="preserve">
+    <value>Sync-Status</value>
+  </data>
+  <data name="Permission_sync_view" xml:space="preserve">
+    <value>Sehen, wie der Abgleich mit Spond läuft</value>
+  </data>
 </root>

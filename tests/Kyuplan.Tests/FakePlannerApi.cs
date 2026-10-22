@@ -357,6 +357,15 @@ internal sealed class FakePlannerApi : IPlannerApi
             };
         });
 
+    public SyncStatusDto SyncStatus { get; set; } = new(true, 15, false, 0, null, null, []);
+
+    public Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.SyncView)) throw Forbidden();
+            return SyncStatus;
+        });
+
     public Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
         Run<IReadOnlyList<BackupTargetDto>>(() =>
         {

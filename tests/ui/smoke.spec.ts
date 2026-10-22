@@ -31,6 +31,7 @@ const pages: Page[] = [
     { address: '/branding', name: 'branding' },
     { address: '/calendar-feeds', name: 'calendar-feeds' },
     { address: '/backup', name: 'backup' },
+    { address: '/sync-status', name: 'sync-status' },
     { address: '/account', name: 'account' },
     { address: '/account/preferences', name: 'preferences', mobile: true },
 ];

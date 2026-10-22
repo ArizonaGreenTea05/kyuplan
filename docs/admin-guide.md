@@ -192,6 +192,10 @@ The server keeps its copy in line with Spond by itself: when it starts and then 
 A sync that cannot reach Spond is logged and skipped; the data stays as it is. Because Spond has an id per group, somebody who is in two
 groups is two members. Only events within the search window (12 months back, 6 ahead by default) are looked at.
 
+**Sync status.** *Administration → Sync status* (permission `sync.view`) shows whether the sync works: when it last succeeded and how long it
+took, how many runs in a row failed since, the error of the last failure, and the last 20 runs with their duration. The list lives in the
+server's memory, so it starts empty after a restart. The same figures are available to monitoring as [metrics](#logs-and-metrics).
+
 ## Settings page and configuration files
 
 Administrators with `settings.view` / `settings.edit` change the same values later on the **Settings** page. They are written to
@@ -263,6 +267,7 @@ The complete list of keys is in the [README's configuration table](../README.md#
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | audit | `audit.view` (read the [audit log](#audit-log)) |
+| sync | `sync.view` (read the [sync status](#the-automatic-sync)) |
 | settings | `settings.view`, `settings.edit` |
 
 `ratings.view` and `ratings.write` came with the star evaluations: the Leading Trainer and Trainer roles of a **new** installation have both, the Passive User only `ratings.view`; a role that already exists in your database has neither until you tick them on the Roles page. Until somebody may evaluate, no member has an evaluation and, with the standard minimum of 3 stars for exams, nobody is suggested for an exam: lower *Minimum average evaluation for exams* (0 switches it off) if that is not what you want yet.
@@ -565,6 +570,15 @@ Details and commands are in the [deployment guide](deployment.md#backup-restore-
 
 **Logs.** The server writes to the console (`docker logs kyuplan`) and to daily files `logs/kyuplan-<date>.log` (31 are kept). Failed
 logins are logged with user name and address, never the password. The log also tells which Spond account was skipped and why a sync failed.
+
+**Logs and metrics.** Log lines are structured (the message template's values such as `{GroupCount}` and `{DurationMs}` are kept as fields).
+For a log collector (Loki, Elastic, Azure Monitor, ...) switch the console to JSON, one object per line:
+`Logging__Console__FormatterName=json` (the daily files stay text). `GET /metrics` answers in the Prometheus text format (OpenTelemetry) without
+a login: `kyuplan_sync_runs_total{outcome}`, `kyuplan_sync_duration_seconds`, `kyuplan_sync_last_success_timestamp_seconds`,
+`kyuplan_sync_consecutive_failures`, plus the ASP.NET Core request and .NET runtime metrics. It holds counters only, no names or data, but like
+`/healthz` it has no login: do not publish it on the internet (let the monitoring system reach the container directly, or block `/metrics` in the
+reverse proxy). `Metrics:Enabled=false` removes it. A useful alert: `kyuplan_sync_consecutive_failures > 2`, or
+`time() - kyuplan_sync_last_success_timestamp_seconds > 3600`.
 
 **Health.** `GET /healthz` answers `200` without a login while the database is reachable (`503` otherwise). The Docker image uses it as
 its health check. Only **one** instance may run.

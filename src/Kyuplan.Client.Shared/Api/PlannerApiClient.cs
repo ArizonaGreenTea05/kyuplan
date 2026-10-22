@@ -83,6 +83,9 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.DeleteAsync($"api/themes/{Uri.EscapeDataString(id)}", cancellationToken),
             PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
 
+    public async Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/sync/status", PlannerJsonContext.Default.SyncStatusDto, cancellationToken);
+
     public async Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
         await GetAsync("api/backup/targets", PlannerJsonContext.Default.ListBackupTargetDto, cancellationToken);
 

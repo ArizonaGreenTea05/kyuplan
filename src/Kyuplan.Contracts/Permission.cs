@@ -86,6 +86,9 @@ public static class Permission
     /// <summary>Read the audit log: who changed exams, payments, belts, members, users and roles.</summary>
     public const string AuditView = "audit.view";
 
+    /// <summary>Read how the sync with Spond is doing: when it last ran, how long it took and what failed.</summary>
+    public const string SyncView = "sync.view";
+
     /// <summary>All permissions by domain, in the order the clients list them.</summary>
     public static IReadOnlyList<PermissionGroup> Groups { get; } =
     [
@@ -107,6 +110,7 @@ public static class Permission
         new("users", [UsersView, UsersEdit, UsersDelete, UsersGrant]),
         new("roles", [RolesView, RolesEdit]),
         new("audit", [AuditView]),
+        new("sync", [SyncView]),
     ];
 
     public static IReadOnlyList<string> All { get; } = [.. Groups.SelectMany(g => g.Permissions)];

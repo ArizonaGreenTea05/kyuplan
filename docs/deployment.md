@@ -180,9 +180,9 @@ git push origin v0.1
 - The version is `v<major>.<minor>` or `v<major>.<minor>.<patch>`, optionally with a prerelease suffix (`v2.0.0-beta.1`). The `v`
   belongs to the tag only, the version of the application is `0.1` or `1.2.3`. Anything else (`0.1`, `v1`, `v1.2.3+x`) makes the
   workflow fail at once. (Tags of the earlier per-app releases, `api/v...` and `wpf/v...`, no longer start a workflow.)
-- The workflow first runs the whole test suite (on Windows: it contains tests of the WPF client's encrypted login file), then
+- The workflow first audits the dependencies (see [Dependency and supply-chain checks](#dependency-and-supply-chain-checks)), then runs the whole test suite (on Windows: it contains tests of the WPF client's encrypted login file), then
   publishes and packs the WPF client into the installer (every client has such a job), and builds the documentation (see [The documentation](#the-documentation)). Only when they worked, the Docker image (which contains the installer) is built,
-  pushed and the release published.
+  scanned for vulnerabilities, pushed and the release published.
 - **The version of the tag is the version of everything**: it is passed to every build as `-p:Version=0.1`, so it becomes the assembly,
   file and informational version of the API, the clients and the installer. The API reports it (`GET /api/info`, shown in both clients);
   in the installer it is the version Windows lists under *Installed apps*, and it is the version the WPF client compares with the server's.
@@ -193,6 +193,7 @@ git push origin v0.1
   workflow updates and publishes that release instead of failing with *"tag_name already exists"*: title, notes and the
   installer are replaced. Nothing is deleted.
 - The release carries the installers and `Kyuplan-docs-<version>.zip`, the documentation of that version (every guide, the developer guide too).
+  It also carries `Kyuplan-sbom-<version>.cdx.json`, the software bill of materials of the Docker image (CycloneDX).
 - Docker image tags: the version without the `v` (`0.1`, `1.2.3`), and for a final version also `latest`, `1.2` (from `v1.2.3`) and
   `1` (from `v1.x`; there is none for 0.x, whose minor versions may break things).
 - To take a release back, delete the release and the tag (`git push origin :refs/tags/v0.1`) and the image version
@@ -200,6 +201,26 @@ git push origin v0.1
 
 The workflow is `.github/workflows/release.yml` (it reads the tag with `.github/actions/release-version` and publishes the release
 with `.github/actions/publish-release`).
+
+### Dependency and supply-chain checks
+
+- **Updates**: Dependabot (`.github/dependabot.yml`) opens one pull request a week per ecosystem for the NuGet packages
+  (`Directory.Packages.props`), the npm packages of `website/` and `tests/ui/`, the base images of the Dockerfile and the Compose
+  files in `deploy/` (the PostgreSQL image) and the GitHub Actions. A new `package.json`, Dockerfile, Compose folder or composite action needs an entry there (`SupplyChainConfigTests` fails otherwise).
+  Turn on *Dependabot security updates* under *Settings → Advanced Security* to get a pull request the moment an advisory is
+  published, whatever the schedule says.
+- **Audit**: `.github/actions/audit-dependencies` fails on a known vulnerability in a NuGet package (server and WPF client, `dotnet list package --vulnerable
+  --include-transitive`; it also fails when the vulnerability data cannot be loaded) or an npm package (`npm audit`, from severity *high*, through `npm-audit.mjs`). An advisory that has no fix and cannot be reached
+  (build tooling only) is accepted by its GHSA id with the reason above it in `website/.npm-audit-ignore`; the script warns when an accepted id is no
+  longer reported. Fix what has a fix: `npm audit fix`, or an `overrides` entry in `website/package.json` for a transitive package
+  (Dependabot does not update those, so remove an override once Docusaurus ships the fixed version itself). It runs on every pull request and weekly
+  (`.github/workflows/dependency-audit.yml`, because new advisories appear for unchanged dependencies) and first in the release,
+  which does not start without it.
+- **Image scan**: before the release pushes anything, the image is scanned with [Trivy](https://trivy.dev/) (base image packages and
+  .NET dependencies). A *high* or *critical* vulnerability that has a fix stops the release. Accept a finding that cannot be fixed by
+  adding its id to `.trivyignore` with the reason in a comment above it.
+- **SBOM**: the release attaches `Kyuplan-sbom-<version>.cdx.json` (CycloneDX) for the image, so you can check a deployed version
+  against newly published advisories without rebuilding anything.
 
 ### GitHub settings
 

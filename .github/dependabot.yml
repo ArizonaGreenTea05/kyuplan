@@ -1,0 +1,55 @@
+# Dependabot opens the update pull requests (version updates; security updates come on top of this, see Settings -> Advanced Security).
+# One group per ecosystem keeps it to a few PRs a week. A new package.json, Dockerfile or action folder needs an entry here:
+# SupplyChainConfigTests fails otherwise.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      nuget:
+        patterns: ['*']
+    labels: [dependencies]
+
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    groups:
+      npm-website:
+        patterns: ['*']
+    labels: [dependencies]
+
+  - package-ecosystem: npm
+    directory: /tests/ui
+    schedule:
+      interval: weekly
+    groups:
+      npm-ui-tests:
+        patterns: ['*']
+    labels: [dependencies]
+
+  - package-ecosystem: docker
+    directory: /src/Kyuplan.Api
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+
+  # The images of the Compose files (postgres, ...); the image of Kyuplan itself is tagged latest and is left alone.
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/*
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ['*']
+    labels: [dependencies]

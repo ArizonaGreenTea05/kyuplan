@@ -13,7 +13,8 @@ export default {
   baseUrl: `/docs/${audience}/`,
   trailingSlash: true, // every page is a folder with an index.html, which is what the API serves
   onBrokenLinks: 'warn',
-  future: { v4: true },
+  // The v4 behaviour, except the Rspack bundler (fasterByDefault) that 3.10 added to the shortcut and that needs @docusaurus/faster.
+  future: { v4: { removeLegacyPostBuildHeadAttribute: true, useCssCascadeLayers: true, siteStorageNamespacing: true, fasterByDefault: false, mdx1CompatDisabledByDefault: true } },
 
   // The pages are written for GitHub, where braces and angle brackets are text: plain Markdown, not MDX.
   markdown: { format: 'detect' },

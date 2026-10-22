@@ -3481,4 +3481,24 @@
   <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
     <value>The token needs at least {0} characters (at most 200) without spaces.</value>
   </data>
+  <data name="Shell_SkipToContent" xml:space="preserve">
+    <value>Skip to main content</value>
+    <comment>Keyboard users: first control of the page, jumps over the navigation.</comment>
+  </data>
+  <data name="Shell_Loading" xml:space="preserve">
+    <value>Loading</value>
+    <comment>Accessible name of the busy bar of a page.</comment>
+  </data>
+  <data name="Number_Increase" xml:space="preserve">
+    <value>Increase</value>
+    <comment>Accessible name of the up button of a number box.</comment>
+  </data>
+  <data name="Number_Decrease" xml:space="preserve">
+    <value>Decrease</value>
+    <comment>Accessible name of the down button of a number box.</comment>
+  </data>
+  <data name="Field_Clear" xml:space="preserve">
+    <value>Clear</value>
+    <comment>Accessible name of the button that empties a search/text box.</comment>
+  </data>
 </root>

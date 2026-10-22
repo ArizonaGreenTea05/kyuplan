@@ -71,7 +71,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+        <ProgressBar IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top"
                      Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

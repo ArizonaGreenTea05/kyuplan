@@ -279,11 +279,11 @@
                             <ctl:ResponsiveGrid MinItemWidth="188" Gap="16" Margin="0,0,0,2">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Stats_From}" Style="{StaticResource FieldLabelText}" />
-                                    <DatePicker x:Name="FromPicker" SelectedDateFormat="Short" SelectedDate="{Binding From, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DatePicker x:Name="FromPicker" AutomationProperties.Name="{loc:Loc Stats_From}" SelectedDateFormat="Short" SelectedDate="{Binding From, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Stats_To}" Style="{StaticResource FieldLabelText}" />
-                                    <DatePicker x:Name="ToPicker" SelectedDateFormat="Short" SelectedDate="{Binding To, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DatePicker x:Name="ToPicker" AutomationProperties.Name="{loc:Loc Stats_To}" SelectedDateFormat="Short" SelectedDate="{Binding To, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Stats_QuickRanges}" Style="{StaticResource FieldLabelText}" />
@@ -296,12 +296,12 @@
                                 </StackPanel>
                                 <StackPanel ToolTip="{loc:Loc Stats_NameContainsHint}">
                                     <TextBlock Text="{loc:Loc Stats_NameContains}" Style="{StaticResource FieldLabelText}" />
-                                    <ctl:HintedTextBox Hint="{loc:Loc Stats_NameContainsPlaceholder}"
+                                    <ctl:HintedTextBox Hint="{loc:Loc Stats_NameContainsPlaceholder}" AutomationProperties.Name="{loc:Loc Stats_NameContains}"
                                                        Text="{Binding EventNameContains, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                                 <StackPanel ToolTip="{loc:Loc Stats_NameExcludesHint}">
                                     <TextBlock Text="{loc:Loc Stats_NameExcludes}" Style="{StaticResource FieldLabelText}" />
-                                    <ctl:HintedTextBox Hint="{loc:Loc Stats_NameExcludesPlaceholder}"
+                                    <ctl:HintedTextBox Hint="{loc:Loc Stats_NameExcludesPlaceholder}" AutomationProperties.Name="{loc:Loc Stats_NameExcludes}"
                                                        Text="{Binding EventNameExcludes, UpdateSourceTrigger=PropertyChanged}" />
                                 </StackPanel>
                             </ctl:ResponsiveGrid>
@@ -576,7 +576,7 @@
                        Text="{loc:Loc Stats_NoResults}"
                        Visibility="{Binding HasNoResults, Converter={StaticResource BoolToVisibility}}" />
 
-            <ProgressBar Grid.RowSpan="5" IsIndeterminate="True" Height="3" VerticalAlignment="Top" Margin="-24,-6,-24,0"
+            <ProgressBar Grid.RowSpan="5" IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top" Margin="-24,-6,-24,0"
                          Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
         </Grid>
 

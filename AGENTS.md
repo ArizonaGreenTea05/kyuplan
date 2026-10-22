@@ -39,6 +39,7 @@ Logic goes in `Client.Shared` or `Api`, never duplicated in the UIs.
 - **Exam prices/payments**: `ExamPrices` (general fee = row without belt, surcharge per belt) + `ExamPayments` (paid + due snapshot per exam/member), `ExamPaymentService`, `PaymentEndpoints`, `ExamPricesViewModel` (page) and `PaymentRow` in `ExamDetailViewModel`; rules in `docs/exam-planning.md#prices-and-payments`. Amounts are `decimal`, validated by `PaymentRules`.
 - Domain rules are documented in `docs/` (`attendance-statistics.md`, `exam-planning.md`, `comments-and-tags.md`). Read the matching file before changing that logic, and update it with the code.
 - Tests use in-memory SQLite (`InMemoryDatabase.cs`). Add tests next to the closest existing `*Tests.cs`. Test hosts must set `Sync:Enabled=false` and `DefaultData:Enabled=false`, and must not depend on shipped `appsettings.json` values (that once broke every CI workflow).
+- **Accessibility**: every focusable control has an accessible name (WPF `AutomationProperties.Name` with the same `{loc:Loc}` key as its label, Blazor label/`aria-label`), nothing leaves the tab order, no `role="menu"`; `AccessibilityMarkupTests` enforces it, keyboard glue is `Client.Blazor/wwwroot/js/a11y.js`.
 - Both UIs must keep working: a change to a view model or contract may need Blazor and WPF edits.
 
 ## Tests and coverage

@@ -11,7 +11,7 @@
         <TextBlock Text="{loc:Loc ApiAddress_Lede}" Style="{StaticResource LedeText}" Margin="0,4,0,20" />
 
         <TextBlock Text="{loc:Loc ApiAddress_Label}" Style="{StaticResource FieldLabelText}" />
-        <TextBox x:Name="AddressBox" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" />
+        <TextBox x:Name="AddressBox" AutomationProperties.Name="{loc:Loc ApiAddress_Label}" Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}" />
         <TextBlock Text="{loc:Loc ApiAddress_Invalid}" Style="{StaticResource ProblemText}"
                    Visibility="{Binding HasProblem, Converter={StaticResource BoolToVisibility}}" />
 

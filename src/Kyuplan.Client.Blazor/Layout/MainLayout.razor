@@ -10,6 +10,9 @@
 @inject Microsoft.Extensions.Options.IOptions<Kyuplan.Client.Api.PlannerClientOptions> ClientOptions
 
 <div class="app">
+    @* First stop of the Tab key: jumps over the navigation to the page. A button, not a link: with <base href="/"> "#main" would be a navigation. *@
+    <button type="button" class="skip-link" @onclick="SkipToContent">@Strings.Shell_SkipToContent</button>
+
     <aside class="sidebar">
         @if (Shell.Brand.LogoUrl is { } logo)
         {
@@ -110,8 +113,8 @@
             @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView, Permission.BackupsView, Permission.CalendarFeeds, Permission.SyncView]))
             {
                 <div class="nav-group">
-                    <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="sliders" /><span>@Strings.Nav_Administration</span></button>
-                    <div class="flyout" role="menu">
+                    <button type="button" class="nav-item"><Icon Name="sliders" /><span>@Strings.Nav_Administration</span></button>
+                    <div class="flyout" role="group" aria-label="@Strings.Nav_Administration">
                     @if (Shell.Can(Permission.UsersView))
                     {
                         <NavLink class="nav-item" href="users">
@@ -158,15 +161,15 @@
                 </div>
             }
             <div class="nav-group">
-                <button type="button" class="nav-item" aria-haspopup="menu"><Icon Name="user" /><span>@Strings.Nav_Account</span></button>
-                <div class="flyout" role="menu">
+                <button type="button" class="nav-item"><Icon Name="user" /><span>@Strings.Nav_Account</span></button>
+                <div class="flyout" role="group" aria-label="@Strings.Nav_Account">
                     <NavLink class="nav-item" href="account" Match="NavLinkMatch.All" title="@(Shell.CurrentUser is { } me ? string.Format(Strings.Shell_SignedInAs, me.DisplayName) : null)">
                         <Icon Name="user" /><span>@Strings.Nav_Account</span>
                     </NavLink>
                     <NavLink class="nav-item" href="account/preferences">
                         <Icon Name="palette" /><span>@Strings.Nav_Preferences</span>
                     </NavLink>
-                    <button type="button" class="nav-item" role="menuitem" @onclick="SignOut"><Icon Name="logout" /><span>@Strings.Shell_SignOut</span></button>
+                    <button type="button" class="nav-item" @onclick="SignOut"><Icon Name="logout" /><span>@Strings.Shell_SignOut</span></button>
                 </div>
             </div>
         </nav>
@@ -230,9 +233,9 @@
 
         <ErrorBanner Message="@Shell.ErrorMessage" OnRetry="() => Shell.RetryCommand.ExecuteAsync(null)" />
 
-        <div class="content">
+        <main id="main" class="content" tabindex="-1">
             @Body
-        </div>
+        </main>
     </div>
 </div>
 
@@ -295,6 +298,9 @@
             ? Js.InvokeVoidAsync("ppTheme.setSkin", Themes.Effective).AsTask()
             : Js.InvokeVoidAsync("ppTheme.setSkin", pack.Id, pack.Scheme, pack.HighContrast, pack.Accent, new Dictionary<string, string>(pack.Colors)).AsTask();
     });
+
+    // js/a11y.js moves the focus to the page (the main landmark).
+    private void SkipToContent() => _ = Js.InvokeVoidAsync("ppA11y.focusMain");
 
     private void OnGroupChanged(ChangeEventArgs e) => Shell.SelectedGroupId = e.Value?.ToString() ?? "";
 

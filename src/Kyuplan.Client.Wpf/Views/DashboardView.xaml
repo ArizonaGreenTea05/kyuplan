@@ -53,7 +53,7 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Bottom">
                         <TextBlock Text="{loc:Loc Dashboard_Period}" Style="{StaticResource FieldLabelText}"
                                    VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13" />
-                        <ComboBox MinWidth="170" ItemsSource="{Binding PeriodOptions}" DisplayMemberPath="Label"
+                        <ComboBox MinWidth="170" AutomationProperties.Name="{loc:Loc Dashboard_Period}" ItemsSource="{Binding PeriodOptions}" DisplayMemberPath="Label"
                                   SelectedValuePath="Days" SelectedValue="{Binding SelectedDays}" />
                     </StackPanel>
                     <StackPanel>
@@ -174,7 +174,7 @@
         <TextBlock Style="{StaticResource NotAllowedText}" Text="{loc:Loc Page_NotAllowed}"
                    Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
 
-        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+        <ProgressBar IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top"
                      Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

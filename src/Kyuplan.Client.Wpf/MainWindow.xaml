@@ -244,7 +244,7 @@
                     <TextBlock DockPanel.Dock="Left" Text="{loc:Loc Shell_Group}" Style="{StaticResource FieldLabelText}"
                                VerticalAlignment="Center" Margin="0,0,10,0" FontSize="13"
                                Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}" />
-                    <ComboBox DockPanel.Dock="Left" MinWidth="300"
+                    <ComboBox DockPanel.Dock="Left" MinWidth="300" AutomationProperties.Name="{loc:Loc Shell_Group}"
                               ItemsSource="{Binding Shell.Groups}" SelectedValuePath="Id"
                               SelectedValue="{Binding Shell.SelectedGroupId}"
                               Visibility="{Binding Shell.UsesSpond, Converter={StaticResource BoolToVisibility}}">

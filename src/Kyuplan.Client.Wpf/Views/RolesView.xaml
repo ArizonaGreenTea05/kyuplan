@@ -109,7 +109,7 @@
 
                             <TextBlock Text="{loc:Loc Roles_FormPermissions}" Style="{StaticResource FieldLabelText}" Margin="0,16,0,0" />
                             <TextBlock Text="{loc:Loc Roles_FormPermissionsHint}" Style="{StaticResource MutedText}" Margin="0,0,0,8" />
-                            <ctl:PermissionPicker DataContext="{Binding Picker}" />
+                            <ctl:PermissionPicker DataContext="{Binding Picker}" AutomationProperties.Name="{loc:Loc Roles_FormPermissions}" />
 
                             <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                                 <Button Command="{Binding SaveCommand}" Style="{StaticResource AccentButtonStyle}" IsDefault="True">
@@ -208,7 +208,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+        <ProgressBar IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top"
                      Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

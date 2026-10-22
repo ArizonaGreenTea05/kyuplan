@@ -1,6 +1,7 @@
 <UserControl x:Class="Kyuplan.Client.WpfApp.Controls.NumberBox"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization"
                  x:Name="Root" IsTabStop="False">
 
     <!-- A whole-number field with spin buttons inside it, like WinUI's NumberBox: type a value, press Up/Down,
@@ -11,11 +12,11 @@
                  AutomationProperties.Name="{Binding (AutomationProperties.Name), ElementName=Root}"
                  PreviewKeyDown="OnKeyDown" MouseWheel="OnMouseWheel" LostFocus="OnLostFocus" TextChanged="OnTextChanged" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,3,0">
-            <RepeatButton Width="26" Height="24" Padding="0" Focusable="False" Click="OnUp"
+            <RepeatButton Width="26" Height="24" Padding="0" Focusable="False" Click="OnUp" AutomationProperties.Name="{loc:Loc Number_Increase}"
                           Style="{StaticResource DefaultRepeatButtonStyle}" Background="Transparent" BorderThickness="0">
                 <TextBlock Style="{StaticResource GlyphText}" FontSize="9" Text="&#xE70E;" />
             </RepeatButton>
-            <RepeatButton Width="26" Height="24" Padding="0" Focusable="False" Click="OnDown"
+            <RepeatButton Width="26" Height="24" Padding="0" Focusable="False" Click="OnDown" AutomationProperties.Name="{loc:Loc Number_Decrease}"
                           Style="{StaticResource DefaultRepeatButtonStyle}" Background="Transparent" BorderThickness="0">
                 <TextBlock Style="{StaticResource GlyphText}" FontSize="9" Text="&#xE70D;" />
             </RepeatButton>

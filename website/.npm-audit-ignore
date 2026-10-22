@@ -1,0 +1,7 @@
+# Advisories of `npm audit` for website/ that are accepted: one GHSA id per line, and above it why (not reachable, no fix yet, ...)
+# and when to look at it again. Read by .github/actions/audit-dependencies/npm-audit.mjs. Empty is the normal state.
+
+# braces (via micromatch/chokidar/fast-glob of Docusaurus): stack exhaustion on deeply nested brace patterns. No fixed version exists
+# (3.0.3 is the latest). Only used while the documentation is built, on glob patterns from our own config, never on user input and not
+# in the shipped image. Look again when braces or Docusaurus publish a fix.
+GHSA-vfj7-8cjw-p6xm

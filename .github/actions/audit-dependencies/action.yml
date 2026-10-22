@@ -40,7 +40,7 @@ runs:
       working-directory: website
       env:
         NPM_LEVEL: ${{ inputs.npm-level }}
-      run: npm audit --audit-level="$NPM_LEVEL"
+      run: node "$GITHUB_ACTION_PATH/npm-audit.mjs" "$NPM_LEVEL" .npm-audit-ignore
 
     # tests/ui has no lock file in the repository (CI uses npm install); a temporary one is enough for the audit.
     - name: npm packages (browser tests)
@@ -50,4 +50,4 @@ runs:
         NPM_LEVEL: ${{ inputs.npm-level }}
       run: |
         npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-        npm audit --audit-level="$NPM_LEVEL"
+        node "$GITHUB_ACTION_PATH/npm-audit.mjs" "$NPM_LEVEL" .npm-audit-ignore

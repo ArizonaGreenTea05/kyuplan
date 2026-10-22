@@ -125,7 +125,30 @@ public partial class SupplyChainConfigTests
         Assert.Contains("NU1900", action);
         Assert.Contains("working-directory: website", action);
         Assert.Contains("working-directory: tests/ui", action);
-        Assert.Equal(2, Regex.Matches(action, @"npm audit --audit-level").Count);
+        // both npm projects go through the script that applies the accept-list
+        Assert.Equal(2, Regex.Matches(action, @"npm-audit\.mjs""? ""\$NPM_LEVEL"" \.npm-audit-ignore").Count);
+        Assert.DoesNotContain("npm audit --audit-level", action);
+    }
+
+    [Fact]
+    public void The_npm_audit_script_fails_on_an_unreadable_report_and_on_advisories_outside_the_accept_list()
+    {
+        var script = Read(".github/actions/audit-dependencies/npm-audit.mjs");
+        Assert.Contains("'audit', '--json'", script);
+        Assert.Contains("npm audit gave no readable report", script);
+        Assert.Contains("process.exit(1)", script);
+        Assert.Contains("!accepted.has(id)", script);
+    }
+
+    [Fact]
+    public void Every_accepted_npm_advisory_has_a_reason_above_it()
+    {
+        var lines = Read("website/.npm-audit-ignore").Split('\n').Select(l => l.Trim()).ToList();
+        var ids = lines.Select((line, index) => (line, index)).Where(x => Regex.IsMatch(x.line, @"^GHSA(-[a-z0-9]{4}){3}$")).ToList();
+        Assert.Equal(ids.Count, ids.Select(x => x.line).Distinct().Count());
+        // the line above an id is a comment (the reason); nothing but ids and comments is allowed
+        Assert.All(ids, x => Assert.StartsWith("#", lines[x.index - 1]));
+        Assert.All(lines.Where(l => l.Length > 0 && !l.StartsWith('#')), l => Assert.Matches(@"^GHSA(-[a-z0-9]{4}){3}$", l));
     }
 
     [Theory]

@@ -9,16 +9,19 @@
     "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@docusaurus/core": "3.9.2",
-    "@docusaurus/preset-classic": "3.9.2",
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
     "@mdx-js/react": "^3.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "overrides": {
-    "webpack": "5.102.1"
-  },
   "engines": {
     "node": ">=20.0"
+  },
+  "overrides": {
+    "tinypool": "^2.2.0",
+    "serialize-javascript": "^7.1.2",
+    "uuid": "^14.0.3",
+    "postcss-selector-parser": "^7.1.7"
   }
 }

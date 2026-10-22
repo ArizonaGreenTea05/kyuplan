@@ -210,7 +210,10 @@ with `.github/actions/publish-release`).
   Turn on *Dependabot security updates* under *Settings → Advanced Security* to get a pull request the moment an advisory is
   published, whatever the schedule says.
 - **Audit**: `.github/actions/audit-dependencies` fails on a known vulnerability in a NuGet package (server and WPF client, `dotnet list package --vulnerable
-  --include-transitive`; it also fails when the vulnerability data cannot be loaded) or an npm package (`npm audit`, from severity *high*). It runs on every pull request and weekly
+  --include-transitive`; it also fails when the vulnerability data cannot be loaded) or an npm package (`npm audit`, from severity *high*, through `npm-audit.mjs`). An advisory that has no fix and cannot be reached
+  (build tooling only) is accepted by its GHSA id with the reason above it in `website/.npm-audit-ignore`; the script warns when an accepted id is no
+  longer reported. Fix what has a fix: `npm audit fix`, or an `overrides` entry in `website/package.json` for a transitive package
+  (Dependabot does not update those, so remove an override once Docusaurus ships the fixed version itself). It runs on every pull request and weekly
   (`.github/workflows/dependency-audit.yml`, because new advisories appear for unchanged dependencies) and first in the release,
   which does not start without it.
 - **Image scan**: before the release pushes anything, the image is scanned with [Trivy](https://trivy.dev/) (base image packages and

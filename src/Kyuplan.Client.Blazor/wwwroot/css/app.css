@@ -159,7 +159,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 }
 /* An invisible bridge, so the pointer can cross the gap between the entry and the menu. */
 .flyout::before { content: ""; position: absolute; right: 100%; top: 0; bottom: 0; width: 6px; }
-.nav-group:hover > .flyout, .nav-group > button:focus ~ .flyout, .nav-group:has(:focus-visible) > .flyout { display: flex; }
+.nav-group:hover > .flyout, .nav-group > button:focus ~ .flyout, .nav-group:has(:focus-visible) > .flyout, .nav-group[data-open] > .flyout { display: flex; }
 /* Escape closes the menu while the focus stays on its entry (js/a11y.js); pointing at it, clicking it or leaving the group opens it again. */
 .nav-group[data-dismissed] > .flyout { display: none !important; }
 

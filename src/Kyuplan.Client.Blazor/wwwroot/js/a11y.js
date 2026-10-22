@@ -47,12 +47,15 @@ window.ppA11y = {
         const group = ppA11y.groupOf(target);
         if (group && target.matches('.nav-group > button') && (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ')) {
             group.removeAttribute('data-dismissed');
+            // Moving the focus blurs the entry first, which would hide the menu (it shows on the entry's focus) before the link can take the focus:
+            // data-open keeps it shown until the focus leaves the group.
+            group.setAttribute('data-open', '');
             const first = group.querySelector('.flyout a, .flyout button');
             if (first) { first.focus(); e.preventDefault(); }
         }
     },
 
-    // Opening again (click or pointer) clears the "closed with Escape" state; so does leaving the group.
+    // Opening again (click or pointer) clears the "closed with Escape" state; so does leaving the group (which also ends the "opened with the keyboard" state).
     reopen: function (e) {
         const group = ppA11y.groupOf(e.target);
         if (group) group.removeAttribute('data-dismissed');
@@ -60,7 +63,7 @@ window.ppA11y = {
 
     leave: function (e) {
         const group = ppA11y.groupOf(e.target);
-        if (group && !group.contains(e.relatedTarget)) group.removeAttribute('data-dismissed');
+        if (group && !group.contains(e.relatedTarget)) { group.removeAttribute('data-dismissed'); group.removeAttribute('data-open'); }
     },
 
     start: function () {

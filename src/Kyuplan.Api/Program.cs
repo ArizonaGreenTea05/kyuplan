@@ -147,6 +147,16 @@ static async Task<WebApplication> BuildAsync(string[] args)
         cors.AddDefaultPolicy(policy => policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
     });
     builder.Services.AddCors();
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy(CalendarFeedEndpoints.RateLimitPolicy, context => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "", _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+            }));
+    });
 
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -240,6 +250,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     app.UseStaticFiles();
 
     app.UseCors();
+    app.UseRateLimiter();
     app.UseMiddleware<ApiKeyMiddleware>();
     app.UseAuthentication();
     app.UseAuthorization();

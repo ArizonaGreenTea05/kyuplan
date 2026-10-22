@@ -17,7 +17,6 @@ jobs:
       contents: read
       pull-requests: write
       issues: read
-      id-token: write
     env:
       CLAUDE_CODE_EFFORT_LEVEL: medium
     steps:
@@ -27,7 +26,13 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: --model claude-sonnet-5-5
+          # Own token: skips the Claude GitHub App token exchange, whose workflow validation
+          # requires this file to be identical on the default branch.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: >-
+            --model claude-sonnet-5-5
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh pr checks:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+          show_full_output: true
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}

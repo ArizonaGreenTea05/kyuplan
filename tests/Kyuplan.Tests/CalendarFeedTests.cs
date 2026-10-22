@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Persistence;
@@ -116,6 +118,110 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.Contains("(26)", ics);
         Assert.Contains("Leap\\, Anna", ics); // the comma is escaped
         Assert.DoesNotContain("No Birthday", ics);
+    }
+
+    [Fact]
+    public async Task Requests_beyond_the_limit_are_refused_and_reads_are_logged()
+    {
+        var log = new List<string>();
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+            builder.ConfigureLogging(logging => logging.AddProvider(new ListLoggerProvider(log))));
+        var feed = await CreateAsync(host.CreateSignedInClient(), "Logged", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var client = host.CreateClient();
+        var path = new Uri(feed.Url).PathAndQuery;
+
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(path)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/calendar-feeds/nope.ics")).StatusCode);
+        lock (log)
+        {
+            Assert.Contains(log, l => l.StartsWith("Kyuplan.Api.CalendarFeedAccess") && l.Contains("Logged"));
+            Assert.Contains(log, l => l.StartsWith("Kyuplan.Api.CalendarFeedAccess") && l.Contains("unknown token"));
+        }
+
+        HttpStatusCode last = default;
+        for (var i = 0; i < 30; i++) last = (await client.GetAsync(path)).StatusCode;
+        Assert.Equal(HttpStatusCode.TooManyRequests, last);
+    }
+
+    private sealed class ClientAddressFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                if (context.Request.Headers.TryGetValue("X-Test-Ip", out var ip)) context.Connection.RemoteIpAddress = IPAddress.Parse(ip.ToString());
+                return nextMiddleware();
+            });
+            next(app);
+        };
+    }
+
+    [Fact]
+    public async Task The_limit_counts_every_client_address_on_its_own()
+    {
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("Api:AllowInsecureHttp", "true");
+            builder.ConfigureTestServices(s => s.AddSingleton<IStartupFilter, ClientAddressFilter>());
+        });
+        var feed = await CreateAsync(host.CreateSignedInClient(), "Shared", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var client = host.CreateClient();
+        var path = new Uri(feed.Url).PathAndQuery;
+
+        async Task<HttpStatusCode> GetAs(string ip)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Add("X-Test-Ip", ip);
+            return (await client.SendAsync(request)).StatusCode;
+        }
+
+        for (var i = 0; i < 30; i++) Assert.Equal(HttpStatusCode.OK, await GetAs("203.0.113.1"));
+        Assert.Equal(HttpStatusCode.TooManyRequests, await GetAs("203.0.113.1"));
+        Assert.Equal(HttpStatusCode.OK, await GetAs("203.0.113.2"));
+    }
+
+    private sealed class ListLoggerProvider(List<string> lines) : ILoggerProvider
+    {
+        public ILogger CreateLogger(string categoryName) => new ListLogger(categoryName, lines);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class ListLogger(string category, List<string> lines) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            {
+                lock (lines) lines.Add($"{category} {formatter(state, exception)}");
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Tokens_are_long_unique_url_safe_and_only_the_exact_token_opens_a_feed()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var source = new CalendarSourceDto(CalendarSourceKinds.Events, Group);
+        var first = await CreateAsync(admin, "One", source);
+        var second = await CreateAsync(admin, "Two", source);
+
+        Assert.NotEqual(first.Token, second.Token);
+        Assert.All(new[] { first.Token, second.Token }, t =>
+        {
+            Assert.True(t.Length >= 43, "256 bits need 43 base64url characters");
+            Assert.Matches("^[A-Za-z0-9_-]+$", t);
+        });
+
+        var client = host.CreateClient();
+        var swapped = new string(first.Token.Select(c => char.IsUpper(c) ? char.ToLowerInvariant(c) : char.ToUpperInvariant(c)).ToArray());
+        foreach (var wrong in new[] { swapped, first.Token[..^1], first.Token + "x", " " + first.Token })
+            Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/calendar-feeds/{Uri.EscapeDataString(wrong)}.ics")).StatusCode);
+        await IcsAsync(client, first.Url);
     }
 
     [Fact]

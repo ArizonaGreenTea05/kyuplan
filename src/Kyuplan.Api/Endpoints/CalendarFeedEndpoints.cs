@@ -11,20 +11,29 @@ namespace Kyuplan.Api.Endpoints;
 public static class CalendarFeedEndpoints
 {
     public const string IcsRoute = "/calendar-feeds/{token}.ics";
+    public const string RateLimitPolicy = "calendar-feed";
 
     public static IEndpointRouteBuilder MapCalendarFeedEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet(IcsRoute, async (string token, CalendarFeedService service, HttpContext context, CancellationToken ct) =>
+        app.MapGet(IcsRoute, async (string token, CalendarFeedService service, HttpContext context, ILoggerFactory loggers, CancellationToken ct) =>
             {
-                var ics = await service.RenderAsync(token, ct);
-                if (ics is null) return Results.NotFound();
+                var log = loggers.CreateLogger("Kyuplan.Api.CalendarFeedAccess");
+                var ip = context.Connection.RemoteIpAddress;
+                var feed = await service.RenderAsync(token, ct);
+                if (feed is null)
+                {
+                    log.LogWarning("Calendar feed request with an unknown token from {Ip}.", ip);
+                    return Results.NotFound();
+                }
 
+                log.LogInformation("Calendar feed {Feed} read from {Ip} ({UserAgent}).", feed.Value.Name, ip, context.Request.Headers.UserAgent.ToString());
                 context.Response.Headers.CacheControl = "private, max-age=300";
-                return Results.Text(ics, "text/calendar", System.Text.Encoding.UTF8);
+                return Results.Text(feed.Value.Ics, "text/calendar", System.Text.Encoding.UTF8);
             })
             .WithTags("Calendar feeds")
             .WithSummary("The calendar of a feed as an ICS file, to subscribe to in a calendar app. No login: the token in the address is the key. Unknown token: 404.")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicy);
 
         var feeds = app.MapGroup("/api/calendar-feeds").WithTags("Calendar feeds").RequirePermission(Permission.CalendarFeeds);
 

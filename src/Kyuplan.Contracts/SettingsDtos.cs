@@ -21,6 +21,8 @@ namespace Kyuplan.Contracts;
 /// <param name="UnregisteredSubGroup">Name (or id) of the Spond subgroup of the people not registered in the club yet; empty = none.</param>
 /// <param name="DataSource">Where groups, members and events come from, one of <see cref="DataSourceKinds"/>; <see cref="UseDemoData"/> is the same as <see cref="DataSourceKinds.Demo"/>.</param>
 /// <param name="CustomScript">The JavaScript that reads the data when <paramref name="DataSource"/> is <see cref="DataSourceKinds.Custom"/> (see docs/admin-guide.md).</param>
+/// <param name="MetricsEnabled">Whether <c>GET /metrics</c> exists. Off unless an administrator switches it on.</param>
+/// <param name="HasMetricsToken">A metrics token is stored (the endpoint needs it as bearer token). The token itself is never sent back.</param>
 public sealed record SettingsDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -41,7 +43,9 @@ public sealed record SettingsDto(
     double ExamMinAverageStars = RatingRules.StandardExamMinAverageStars,
     string? UnregisteredSubGroup = null,
     string DataSource = DataSourceKinds.Spond,
-    string CustomScript = "");
+    string CustomScript = "",
+    bool MetricsEnabled = false,
+    bool HasMetricsToken = false);
 
 /// <summary>A backup Spond login as the settings show it; the password itself is never sent back.</summary>
 public sealed record SpondAccountDto(string? Email, string? PhoneNumber, bool HasPassword);
@@ -54,6 +58,8 @@ public sealed record SpondAccountInputDto(string? Email, string? PhoneNumber, st
 /// <param name="SpondPassword"><c>null</c> or empty = keep the stored password.</param>
 /// <param name="DataSource"><c>null</c> = an older client: <see cref="UseDemoData"/> chooses between demo and what is set now.</param>
 /// <param name="CustomScript"><c>null</c> = keep the stored script.</param>
+/// <param name="MetricsEnabled"><c>null</c> = an older client: keep what is set.</param>
+/// <param name="MetricsToken"><c>null</c> or empty = keep the stored token.</param>
 public sealed record SettingsInputDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -74,7 +80,9 @@ public sealed record SettingsInputDto(
     double? ExamMinAverageStars = null,
     string? UnregisteredSubGroup = null,
     string? DataSource = null,
-    string? CustomScript = null);
+    string? CustomScript = null,
+    bool? MetricsEnabled = null,
+    string? MetricsToken = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>
@@ -123,6 +131,13 @@ public static class SettingsRules
             host == AnyHost || (host.Length > 0 && !host.StartsWith("*.*") && host.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or ':' or '*' or '[' or ']')
                                 && (!host.Contains('*') || host.StartsWith("*.")) && !host.Skip(1).Contains('*'));
     }
+
+    public const int MinMetricsTokenLength = 16;
+    public const int MaxMetricsTokenLength = 200;
+
+    /// <summary>A token a scraper can send as a header: printable characters without spaces, long enough not to be guessed.</summary>
+    public static bool IsMetricsToken(string? token) =>
+        token is { Length: >= MinMetricsTokenLength and <= MaxMetricsTokenLength } && token.All(c => c > ' ' && c < 127);
 
     public static bool IsPercent(int value) => value is >= 0 and <= 100;
 

@@ -264,6 +264,27 @@
             <small>@Strings.Settings_AllowedHostsHint</small>
         }
     </label>
+
+    <label class="check">
+        <input type="checkbox" disabled="@Disabled" @bind="Form.MetricsEnabled" />
+        <span>@Strings.Settings_MetricsEnabled<small>@Strings.Settings_MetricsEnabledHint</small></span>
+    </label>
+
+    @if (Form.MetricsEnabled)
+    {
+        <label class="field">
+            <span>@Strings.Settings_MetricsToken</span>
+            <input type="password" autocomplete="new-password" spellcheck="false" disabled="@Disabled" @bind="Form.MetricsToken" @bind:event="oninput" />
+            @if (Form.MetricsTokenProblem is { } tokenProblem)
+            {
+                <p class="field-error" role="alert">@tokenProblem</p>
+            }
+            else
+            {
+                <small>@(Form.HasMetricsToken ? Strings.Settings_MetricsTokenStored : Strings.Settings_MetricsTokenHint)</small>
+            }
+        </label>
+    }
 </section>
 
 @code {

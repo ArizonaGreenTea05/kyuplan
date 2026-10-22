@@ -3361,4 +3361,25 @@
   <data name="Permission_sync_view" xml:space="preserve">
     <value>Sehen, wie der Abgleich mit Spond läuft</value>
   </data>
+  <data name="Settings_MetricsEnabled" xml:space="preserve">
+    <value>Metriken für die Überwachung bereitstellen</value>
+  </data>
+  <data name="Settings_MetricsEnabledHint" xml:space="preserve">
+    <value>Stellt GET /metrics (Prometheus-Format) für ein Überwachungssystem bereit. Standardmäßig aus; der Abrufer muss das Token unten als Bearer-Token senden. Gilt nach dem Neustart.</value>
+  </data>
+  <data name="Settings_MetricsToken" xml:space="preserve">
+    <value>Metrik-Token</value>
+  </data>
+  <data name="Settings_MetricsTokenHint" xml:space="preserve">
+    <value>Das Geheimnis, das das Überwachungssystem als „Authorization: Bearer ...“ sendet. Wird nach dem Speichern nicht mehr angezeigt.</value>
+  </data>
+  <data name="Settings_MetricsTokenStored" xml:space="preserve">
+    <value>Ein Token ist gespeichert. Ein neues eingeben, um es zu ersetzen.</value>
+  </data>
+  <data name="Settings_MetricsTokenMissing" xml:space="preserve">
+    <value>Die Metriken brauchen ein Token.</value>
+  </data>
+  <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
+    <value>Das Token braucht mindestens {0} Zeichen (höchstens 200) ohne Leerzeichen.</value>
+  </data>
 </root>

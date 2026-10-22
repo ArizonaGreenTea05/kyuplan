@@ -27,6 +27,7 @@ public sealed class SettingsService(
     IOptions<DataSourceOptions> dataSource,
     IOptions<StatisticsOptions> statistics,
     IOptions<SyncOptions> sync,
+    IOptions<MetricsOptions> metrics,
     IOptions<DefaultDataOptions> defaultData,
     SettingsFile file,
     IAppRestarter restarter,
@@ -61,7 +62,9 @@ public sealed class SettingsService(
             statistics.Value.ExamMinAverageStars,
             first.UnregisteredSubGroup ?? "",
             CurrentKind,
-            dataSource.Value.Script);
+            dataSource.Value.Script,
+            metrics.Value.Enabled,
+            !string.IsNullOrEmpty(metrics.Value.Token));
     }
 
     /// <summary>The data source the API runs with (the demo data included).</summary>
@@ -126,6 +129,11 @@ public sealed class SettingsService(
             else if (backups.Any(b => !IsEmpty(b) && SettingsRules.HasHalfCredentials(b.Email, b.PhoneNumber, !string.IsNullOrEmpty(b.Password) || StoredPassword(current, b) is not null)))
                 Fail("backupAccounts", "A backup Spond login needs the email (or phone number) and the password.");
         }
+
+        if (!string.IsNullOrEmpty(input.MetricsToken) && !SettingsRules.IsMetricsToken(input.MetricsToken))
+            Fail("metricsToken", $"metricsToken must be {SettingsRules.MinMetricsTokenLength} to {SettingsRules.MaxMetricsTokenLength} characters without spaces.");
+        else if ((input.MetricsEnabled ?? metrics.Value.Enabled) && string.IsNullOrEmpty(input.MetricsToken) && string.IsNullOrEmpty(metrics.Value.Token))
+            Fail("metricsToken", "The metrics need a token.");
 
         if (!SettingsRules.IsAllowedHosts(input.AllowedHosts)) Fail("allowedHosts", "allowedHosts must be host names separated by ';' (or *).");
         if (!IsTimeZone(input.TimeZone)) Fail("timeZone", "timeZone is not a time zone of this system.");
@@ -257,6 +265,9 @@ public sealed class SettingsService(
         Set("Sync:Interval", Interval(now.SyncIntervalMinutes), Interval(input.SyncIntervalMinutes));
         // An older client that does not know the field sends none: that keeps what is set.
         if (input.AllowedHosts is not null) Set(AllowedHostsKey, now.AllowedHosts ?? SettingsRules.AnyHost, input.AllowedHosts.Trim().Length == 0 ? SettingsRules.AnyHost : input.AllowedHosts.Trim());
+
+        if (input.MetricsEnabled is { } metricsOn) Set("Metrics:Enabled", Flag(now.MetricsEnabled), Flag(metricsOn));
+        if (!string.IsNullOrEmpty(input.MetricsToken) && input.MetricsToken != metrics.Value.Token) changes["Metrics:Token"] = input.MetricsToken;
 
         var backups = BackupAccountsOf(input);
         if (backups is not null && !SameAccounts(backups, spond.Value.Accounts))

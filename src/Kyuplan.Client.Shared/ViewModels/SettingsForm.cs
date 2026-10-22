@@ -84,6 +84,13 @@ public sealed partial class SettingsForm : ObservableObject
     [ObservableProperty] private int _syncIntervalMinutes;
     [ObservableProperty] private string _allowedHosts = SettingsRules.AnyHost;
 
+    [ObservableProperty] private bool _metricsEnabled;
+
+    /// <summary>Only filled in to set or change the token; the stored one is never sent back.</summary>
+    [ObservableProperty] private string _metricsToken = "";
+
+    [ObservableProperty] private bool _hasMetricsToken;
+
     /// <summary>The names of the subgroups the Spond groups have (the combobox's choices), plus the one that is set when Spond does not list it (any more).</summary>
     public IReadOnlyList<string> SubGroupChoices =>
         [.. AvailableSubGroups.Append(UnregisteredSubGroup.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase)];
@@ -111,6 +118,9 @@ public sealed partial class SettingsForm : ObservableObject
         SyncEnabled = settings.SyncEnabled;
         SyncIntervalMinutes = settings.SyncIntervalMinutes;
         AllowedHosts = string.IsNullOrWhiteSpace(settings.AllowedHosts) ? SettingsRules.AnyHost : settings.AllowedHosts;
+        MetricsEnabled = settings.MetricsEnabled;
+        MetricsToken = "";
+        HasMetricsToken = settings.HasMetricsToken;
         BackupAccounts.Clear();
         foreach (var account in settings.BackupAccounts ?? []) AddBackup(new BackupAccountForm(account));
         OnPropertyChanged(string.Empty);
@@ -121,7 +131,8 @@ public sealed partial class SettingsForm : ObservableObject
         SpondPassword.Length == 0 ? null : SpondPassword, IgnoreAdministrators, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
         [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
-        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScript);
+        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScript,
+        MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken);
 
     [RelayCommand]
     private void InsertScriptTemplate() => CustomScript = CustomScriptTemplate.Text;
@@ -146,7 +157,8 @@ public sealed partial class SettingsForm : ObservableObject
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
         DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
         UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&
-        SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) && BackupMatches(s.BackupAccounts ?? []);
+        SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) &&
+        MetricsEnabled == s.MetricsEnabled && MetricsToken.Length == 0 && BackupMatches(s.BackupAccounts ?? []);
 
     private bool BackupMatches(IReadOnlyList<SpondAccountDto> saved)
     {
@@ -190,9 +202,15 @@ public sealed partial class SettingsForm : ObservableObject
 
     public string? AllowedHostsProblem => SettingsRules.IsAllowedHosts(AllowedHosts) ? null : Strings.Settings_AllowedHostsInvalid;
 
+    /// <summary>The metrics need a token when they are on: a typed one, or the stored one.</summary>
+    public string? MetricsTokenProblem =>
+        MetricsToken.Length > 0 ? (SettingsRules.IsMetricsToken(MetricsToken) ? null : string.Format(Strings.Settings_MetricsTokenInvalid, SettingsRules.MinMetricsTokenLength))
+        : MetricsEnabled && !HasMetricsToken ? Strings.Settings_MetricsTokenMissing
+        : null;
+
     public bool IsValid =>
         DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && CustomScriptProblem is null && TimeZoneProblem is null &&
-        PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null;
+        PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null && MetricsTokenProblem is null;
 }
 
 /// <summary>One backup Spond login as it is typed: the password is only filled in to set or change it.</summary>

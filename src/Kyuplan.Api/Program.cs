@@ -118,8 +118,9 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddScoped<SpondSync>();
     builder.Services.AddHostedService<SpondSyncWorker>();
 
-    // Metrics for monitoring (GET /metrics, Prometheus format): the sync, the requests and the runtime. Metrics:Enabled = false leaves them out.
-    if (builder.Configuration.GetValue("Metrics:Enabled", true))
+    // Metrics for monitoring (GET /metrics, Prometheus format): the sync, the requests and the runtime. Off unless Metrics:Enabled (settings page).
+    builder.Services.Configure<MetricsOptions>(builder.Configuration.GetSection(MetricsOptions.Section));
+    if (builder.Configuration.GetValue("Metrics:Enabled", false))
     {
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService("kyuplan"))
@@ -277,9 +278,12 @@ static async Task<WebApplication> BuildAsync(string[] args)
             await db.Database.CanConnectAsync(cancellationToken) ? Results.Text("ok") : Results.StatusCode(StatusCodes.Status503ServiceUnavailable))
         .AllowAnonymous().ExcludeFromDescription();
 
-    // Like /healthz: no login, for the monitoring system. It holds counters only (no names, no data); keep it away from the internet (docs/deployment.md).
-    if (app.Configuration.GetValue("Metrics:Enabled", true))
+    // For the monitoring system: no user login, but the bearer token of Metrics:Token (MetricsTokenMiddleware). Off by default.
+    if (app.Configuration.GetValue("Metrics:Enabled", false))
+    {
+        app.UseWhen(c => c.Request.Path.StartsWithSegments("/metrics"), b => b.UseMiddleware<MetricsTokenMiddleware>());
         app.MapPrometheusScrapingEndpoint("/metrics").AllowAnonymous();
+    }
 
     app.MapBrandingEndpoints();
     app.MapThemeEndpoints();

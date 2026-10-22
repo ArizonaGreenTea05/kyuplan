@@ -193,6 +193,20 @@ public sealed class BackupOptions
     public string? TargetsFile { get; set; }
 }
 
+public sealed class MetricsOptions
+{
+    public const string Section = "Metrics";
+
+    /// <summary>Whether <c>GET /metrics</c> exists (Prometheus format). Off by default: an administrator switches it on in the settings.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// The secret a scraper sends as <c>Authorization: Bearer &lt;token&gt;</c>. With no token set the endpoint refuses everybody, so that
+    /// switching it on never publishes it by accident.
+    /// </summary>
+    public string? Token { get; set; }
+}
+
 public sealed class SyncOptions
 {
     public const string Section = "Sync";

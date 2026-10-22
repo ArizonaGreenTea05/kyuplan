@@ -573,11 +573,11 @@ logins are logged with user name and address, never the password. The log also t
 
 **Logs and metrics.** Log lines are structured (the message template's values such as `{GroupCount}` and `{DurationMs}` are kept as fields).
 For a log collector (Loki, Elastic, Azure Monitor, ...) switch the console to JSON, one object per line:
-`Logging__Console__FormatterName=json` (the daily files stay text). `GET /metrics` answers in the Prometheus text format (OpenTelemetry) without
-a login: `kyuplan_sync_runs_total{outcome}`, `kyuplan_sync_duration_seconds`, `kyuplan_sync_last_success_timestamp_seconds`,
-`kyuplan_sync_consecutive_failures`, plus the ASP.NET Core request and .NET runtime metrics. It holds counters only, no names or data, but like
-`/healthz` it has no login: do not publish it on the internet (let the monitoring system reach the container directly, or block `/metrics` in the
-reverse proxy). `Metrics:Enabled=false` removes it. A useful alert: `kyuplan_sync_consecutive_failures > 2`, or
+`Logging__Console__FormatterName=json` (the daily files stay text). `GET /metrics` answers in the Prometheus text format (OpenTelemetry), but only after an administrator
+switched it on (settings page, **Security**, or `Metrics__Enabled=true`) and set a token (`Metrics__Token`, at least 16 characters): the scraper sends
+it as `Authorization: Bearer <token>` (Prometheus: `authorization: { credentials: ... }`), every other request gets `401`. It is off by default. It offers: `kyuplan_sync_runs_total{outcome}`, `kyuplan_sync_duration_seconds`, `kyuplan_sync_last_success_timestamp_seconds`,
+`kyuplan_sync_consecutive_failures`, plus the ASP.NET Core request and .NET runtime metrics. It holds counters only, no names or data; still, let only the
+monitoring system reach it. A useful alert: `kyuplan_sync_consecutive_failures > 2`, or
 `time() - kyuplan_sync_last_success_timestamp_seconds > 3600`.
 
 **Health.** `GET /healthz` answers `200` without a login while the database is reachable (`503` otherwise). The Docker image uses it as

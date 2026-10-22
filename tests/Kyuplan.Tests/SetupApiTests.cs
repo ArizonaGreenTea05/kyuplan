@@ -334,6 +334,50 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
+    public async Task The_metrics_are_off_by_default_and_need_a_token_before_they_can_be_switched_on()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        var current = await SettingsOfAsync(admin);
+        Assert.False(current.MetricsEnabled);
+        Assert.False(current.HasMetricsToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { MetricsEnabled = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { MetricsEnabled = true, MetricsToken = "short" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { MetricsToken = "has a space in it 123456" })).StatusCode);
+
+        var good = await admin.PutAsJsonAsync("/api/settings", settings with { MetricsEnabled = true, MetricsToken = "scrape-token-0123456789" });
+        Assert.Equal(HttpStatusCode.OK, good.StatusCode);
+        var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!["Metrics"]!;
+        Assert.Equal("true", (string?)written["Enabled"]);
+        Assert.Equal("scrape-token-0123456789", Plain((string?)written["Token"])); // encrypted in the file
+        Assert.DoesNotContain("scrape-token-0123456789", File.ReadAllText(SettingsFile));
+    }
+
+    [Fact]
+    public async Task The_metrics_token_is_never_given_back()
+    {
+        using var host = CreateHost(withAdmin: true, configure: b =>
+        {
+            b.UseSetting("Metrics:Enabled", "true");
+            b.UseSetting("Metrics:Token", "scrape-token-0123456789");
+        });
+        var admin = host.CreateSignedInClient();
+
+        var raw = await (await admin.GetAsync("/api/settings")).Content.ReadAsStringAsync();
+        var settings = await SettingsOfAsync(admin);
+
+        Assert.DoesNotContain("scrape-token", raw);
+        Assert.True(settings.MetricsEnabled);
+        Assert.True(settings.HasMetricsToken);
+        // Saving without a token keeps the stored one (and switching off needs none); an older client that sends no field changes nothing.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", Unchanged(settings))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", Unchanged(settings) with { MetricsEnabled = false })).StatusCode);
+        Assert.False(File.Exists(SettingsFile) && JsonNode.Parse(File.ReadAllText(SettingsFile))!["Metrics"]!["Token"] is not null);
+    }
+
+    [Fact]
     public async Task The_first_start_can_set_the_allowed_hosts()
     {
         using var first = CreateHost();

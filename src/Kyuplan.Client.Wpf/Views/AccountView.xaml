@@ -96,18 +96,18 @@
                         <TextBlock Text="{loc:Loc Account_PasswordTitle}" Style="{StaticResource SectionTitleText}" />
 
                         <TextBlock Text="{loc:Loc Account_CurrentPassword}" Style="{StaticResource FieldLabelText}" />
-                        <ctl:RevealPasswordBox x:Name="CurrentBox" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
+                        <ctl:RevealPasswordBox x:Name="CurrentBox" AutomationProperties.Name="{loc:Loc Account_CurrentPassword}" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
                                      PasswordChanged="OnCurrentChanged" Margin="0,0,0,12" />
 
                         <TextBlock Text="{loc:Loc Account_NewPassword}" Style="{StaticResource FieldLabelText}" />
-                        <ctl:RevealPasswordBox x:Name="NewBox" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
+                        <ctl:RevealPasswordBox x:Name="NewBox" AutomationProperties.Name="{loc:Loc Account_NewPassword}" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
                                      PasswordChanged="OnNewChanged" />
                         <TextBlock Text="{Binding PasswordProblem}" Style="{StaticResource ProblemText}"
                                    Visibility="{Binding PasswordProblem, Converter={StaticResource StringToVisibility}}" />
                         <TextBlock Text="{Binding PasswordHint}" Style="{StaticResource MutedText}" Margin="0,4,0,12" />
 
                         <TextBlock Text="{loc:Loc Account_ConfirmPassword}" Style="{StaticResource FieldLabelText}" />
-                        <ctl:RevealPasswordBox x:Name="ConfirmBox" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
+                        <ctl:RevealPasswordBox x:Name="ConfirmBox" AutomationProperties.Name="{loc:Loc Account_ConfirmPassword}" MaxLength="{x:Static contracts:AccountRules.MaxPasswordLength}"
                                      PasswordChanged="OnConfirmChanged" />
                         <TextBlock Text="{Binding ConfirmProblem}" Style="{StaticResource ProblemText}"
                                    Visibility="{Binding ConfirmProblem, Converter={StaticResource StringToVisibility}}" />
@@ -211,7 +211,7 @@
             </StackPanel>
         </ScrollViewer>
 
-        <ProgressBar IsIndeterminate="True" Height="3" VerticalAlignment="Top"
+        <ProgressBar IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top"
                      Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </UserControl>

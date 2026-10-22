@@ -108,7 +108,7 @@
                                        PreviewKeyDown="OnSearchKeyDown"
                                        AutomationProperties.Name="{loc:Loc Stats_SearchEvents}" />
 
-                    <ListBox x:Name="List" Grid.Row="1" MaxHeight="336" Margin="0,8,0,0" BorderThickness="0" Background="Transparent"
+                    <ListBox x:Name="List" Grid.Row="1" AutomationProperties.Name="{loc:Loc Stats_ChooseEvent}" MaxHeight="336" Margin="0,8,0,0" BorderThickness="0" Background="Transparent"
                              HorizontalContentAlignment="Stretch" ItemTemplate="{StaticResource EventRow}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              PreviewMouseLeftButtonUp="OnListClick">

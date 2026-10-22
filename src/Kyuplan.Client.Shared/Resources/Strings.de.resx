@@ -3382,4 +3382,19 @@
   <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
     <value>Das Token braucht mindestens {0} Zeichen (höchstens 200) ohne Leerzeichen.</value>
   </data>
+  <data name="Shell_SkipToContent" xml:space="preserve">
+    <value>Zum Hauptinhalt springen</value>
+  </data>
+  <data name="Shell_Loading" xml:space="preserve">
+    <value>Wird geladen</value>
+  </data>
+  <data name="Number_Increase" xml:space="preserve">
+    <value>Erhöhen</value>
+  </data>
+  <data name="Number_Decrease" xml:space="preserve">
+    <value>Verringern</value>
+  </data>
+  <data name="Field_Clear" xml:space="preserve">
+    <value>Leeren</value>
+  </data>
 </root>

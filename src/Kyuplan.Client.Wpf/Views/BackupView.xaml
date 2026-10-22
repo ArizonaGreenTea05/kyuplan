@@ -52,7 +52,7 @@
                         <TextBlock Text="{loc:Loc Backup_FileHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
 
                         <TextBlock Text="{loc:Loc Backup_PassphraseLabel}" Style="{StaticResource FieldLabelText}" />
-                        <ctl:RevealPasswordBox MaxLength="{x:Static contracts:BackupRules.MaxPassphraseLength}" PasswordChanged="OnPassphraseChanged" Margin="0,0,0,4" />
+                        <ctl:RevealPasswordBox AutomationProperties.Name="{loc:Loc Backup_PassphraseLabel}" MaxLength="{x:Static contracts:BackupRules.MaxPassphraseLength}" PasswordChanged="OnPassphraseChanged" Margin="0,0,0,4" />
                         <TextBlock Text="{loc:Loc Backup_PassphraseHint}" Style="{StaticResource MutedText}" Margin="0,0,0,12" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding PassphraseProblem}" Foreground="{DynamicResource DataRiskTextBrush}" Margin="0,0,0,12" TextWrapping="Wrap" />
 

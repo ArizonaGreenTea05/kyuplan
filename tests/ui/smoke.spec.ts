@@ -103,3 +103,51 @@ test('event detail page @mobile', async ({ page }, testInfo) => {
     await shoot(page, testInfo, 'event-detail');
     expect(diagnostics.pageErrors, 'unhandled errors of the page').toEqual([]);
 });
+
+// Keyboard and screen-reader basics of the shell (the markup rules are checked by AccessibilityMarkupTests; this is the behaviour).
+test('keyboard: skip link, current page and fly-out menu', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-light', 'once is enough');
+
+    await openSignedIn(page, '/members');
+    await waitUntilShown(page);
+
+    // The skip link is the first control of the application (the page title has the focus after loading, so Tab would not start there),
+    // out of sight until it has the focus; Enter moves the focus to the page.
+    const skip = page.getByRole('button', { name: 'Skip to main content' });
+    expect(await page.evaluate(() => document.querySelector('.app')?.firstElementChild?.classList.contains('skip-link'))).toBe(true);
+    await expect(skip).not.toBeInViewport();
+    await skip.focus();
+    await expect(skip).toBeInViewport();
+    await skip.press('Enter');
+    await expect(page.locator('main#main')).toBeFocused();
+    await expect(page, 'the skip link is no navigation').toHaveURL(/\/members$/);
+
+    // One main landmark, and the open page is the current one.
+    await expect(page.getByRole('main')).toHaveCount(1);
+    await expect(page.locator('.sidebar a[aria-current="page"]')).toHaveCount(1);
+    await expect(page.locator('.sidebar a[aria-current="page"]')).toHaveAttribute('href', 'members');
+
+    // The Administration entry opens its fly-out on the keyboard focus and Escape closes it, the focus stays on the entry.
+    const entry = page.locator('.nav-group > button', { hasText: 'Administration' });
+    const flyout = page.getByRole('group', { name: 'Administration' });
+    await entry.focus();
+    await expect(flyout).toBeVisible();
+    await entry.press('Escape');
+    await expect(flyout).toBeHidden();
+    await expect(entry).toBeFocused();
+
+    // Arrow down opens it again and moves into it.
+    await entry.press('ArrowDown');
+    await expect(flyout).toBeVisible();
+    await expect(flyout.locator('a').first()).toBeFocused();
+});
+
+test('keyboard: the password reveal button is on the tab order', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop-light', 'once is enough');
+
+    await page.goto('/');
+    const password = page.locator('input[autocomplete="current-password"]');
+    await expect(async () => { await password.focus(); await expect(password).toBeFocused({ timeout: 1000 }); }).toPass({ timeout: 60_000 });
+    await password.press('Tab');
+    await expect(page.locator('.password-toggle')).toBeFocused();
+});

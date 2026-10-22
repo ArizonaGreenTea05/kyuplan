@@ -73,6 +73,14 @@ small { color: var(--muted); font-size: .8rem; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 /* Blazor moves focus to the page title after navigating; it is not a control, so it gets no ring. */
 h1:focus-visible { outline: none; }
+main:focus-visible { outline: none; } /* the skip link moves focus to the page; the page is not a control */
+
+/* The skip link: out of sight until the keyboard reaches it, then the first thing on the page. */
+.skip-link {
+    position: absolute; left: 8px; top: -64px; z-index: 100; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer;
+    color: var(--text); background: var(--sheet); border: 2px solid var(--accent); border-radius: var(--radius);
+}
+.skip-link:focus { top: 8px; }
 
 /* ---- Logo variants + plain-HTML language switch --------------------------------------------------------- */
 .logo { display: block; width: 100%; height: auto; }
@@ -151,7 +159,9 @@ nav { display: flex; flex-direction: column; gap: 2px; }
 }
 /* An invisible bridge, so the pointer can cross the gap between the entry and the menu. */
 .flyout::before { content: ""; position: absolute; right: 100%; top: 0; bottom: 0; width: 6px; }
-.nav-group:hover > .flyout, .nav-group > button:focus ~ .flyout, .nav-group:has(:focus-visible) > .flyout { display: flex; }
+.nav-group:hover > .flyout, .nav-group > button:focus ~ .flyout, .nav-group:has(:focus-visible) > .flyout, .nav-group[data-open] > .flyout { display: flex; }
+/* Escape closes the menu while the focus stays on its entry (js/a11y.js); pointing at it, clicking it or leaving the group opens it again. */
+.nav-group[data-dismissed] > .flyout { display: none !important; }
 
 .sidebar-foot { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 0 2px; }
 .sidebar-foot small { margin-left: auto; }

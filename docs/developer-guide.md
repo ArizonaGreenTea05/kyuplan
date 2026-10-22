@@ -208,20 +208,27 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
    Tests that must run on a real server (`PostgresApiTests`, marked `[PostgresFact]`) read its connection string from the environment
    variable `KYUPLAN_TEST_POSTGRES` (a user who may create databases; each test creates and drops a database of its own) and are skipped
    without it. CI runs them in the `postgres` job against a PostgreSQL container.
-3. **Both UIs must keep working.** A change to a view model or a contract may need edits in the Blazor page *and* the WPF view.
-4. **Contracts first.** When the API shape changes, change `Kyuplan.Contracts` first, then the API, `IPlannerApi`/`PlannerApiClient`, the view
+3. **Both UIs must be accessible.** Every control a user can focus has a name for assistive technology: in WPF `AutomationProperties.Name`
+   (same `{loc:Loc Key}` as the visible label; icon-only buttons, inputs, combo and date boxes, progress bars, `RevealPasswordBox`,
+   `NumberBox`, `PermissionPicker`), in Blazor a `<label>`, `aria-label` or visible text (an icon-only `<button>` needs `aria-label`;
+   `<Icon>` is `aria-hidden`). Nothing is taken out of the tab order (`tabindex="-1"` on a control is refused), the layout keeps the skip
+   link and the `<main id="main">` landmark, and the fly-out menus are groups of links, not ARIA menus (no `role="menu"`). Keyboard
+   details that markup cannot give live in `wwwroot/js/a11y.js` (skip link target, `aria-current`, Escape in the fly-outs, the error bar).
+   `AccessibilityMarkupTests` checks these rules on the markup; the browser smoke tests check them in a browser.
+4. **Both UIs must keep working.** A change to a view model or a contract may need edits in the Blazor page *and* the WPF view.
+5. **Contracts first.** When the API shape changes, change `Kyuplan.Contracts` first, then the API, `IPlannerApi`/`PlannerApiClient`, the view
    model, then both UIs. The JSON context (`PlannerJsonContext`) needs new DTOs registered.
-5. **Buttons are only enabled when pressing them would change something** (`CanExecute` against the real state), and a button for something a
+6. **Buttons are only enabled when pressing them would change something** (`CanExecute` against the real state), and a button for something a
    user may not do is hidden, not just disabled. Add a test.
-6. **Permissions.** A new feature gets its own permission (`Contracts/Permission.cs`, with the `.view` pairing logic), policies in
+7. **Permissions.** A new feature gets its own permission (`Contracts/Permission.cs`, with the `.view` pairing logic), policies in
    `PermissionAuthorization`, strings for it, and an entry in the docs table. Endpoints without a policy are open: check twice.
-7. **Package versions** live in `Directory.Packages.props` (central package management); csproj files carry none.
-8. **Line endings are LF.** Check with `git ls-files --eol` and keep edited files LF (the `.gitattributes`/editor must not convert).
-9. **Tests must not depend on shipped `appsettings.json` values** (that once broke every workflow). Test hosts set `Sync:Enabled=false`,
-   `DefaultData:Enabled=false` and `Setup:SettingsFile` to a missing file.
-10. **Deployment docs.** Anything that changes how the container is configured or deployed must be reflected in [deployment.md](deployment.md).
-11. **Logging and secrets.** Never log passwords. Spond credentials only via secrets/environment/settings (encrypted in the file).
-12. **One replica.** The sync worker, login throttle and Spond cache are in memory; do not design features that need several instances
+8. **Package versions** live in `Directory.Packages.props` (central package management); csproj files carry none.
+9. **Line endings are LF.** Check with `git ls-files --eol` and keep edited files LF (the `.gitattributes`/editor must not convert).
+10. **Tests must not depend on shipped `appsettings.json` values** (that once broke every workflow). Test hosts set `Sync:Enabled=false`,
+    `DefaultData:Enabled=false` and `Setup:SettingsFile` to a missing file.
+11. **Deployment docs.** Anything that changes how the container is configured or deployed must be reflected in [deployment.md](deployment.md).
+12. **Logging and secrets.** Never log passwords. Spond credentials only via secrets/environment/settings (encrypted in the file).
+13. **One replica.** The sync worker, login throttle and Spond cache are in memory; do not design features that need several instances
     without addressing that.
 
 ## Recipes
@@ -249,7 +256,7 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
 2. Texts for both languages (including the `Nav_*` entry).
 3. A Razor page in `Client.Blazor/Pages` (wrap in `PageGate`, add a navigation entry in `Layout`), and a view in
    `Client.Wpf/Views` (add a navigation entry in the shell's `MainViewModel`).
-4. A permission (see rule 6) and `MainViewModelTests`/view model tests.
+4. A permission (see rule 7) and `MainViewModelTests`/view model tests.
 
 ### Add a language
 

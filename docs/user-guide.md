@@ -89,6 +89,11 @@ Your administrator uses this to try things out.
 - Buttons for things you may not do are hidden.
 - **Event banner**: while an event of the selected group is going on (it has started and is not over, cancelled events do not count), a banner
   at the top of **every** page says so. Choosing it opens the event on the Calendar page. It checks every minute.
+- **Keyboard and screen readers.** Everything can be used without a mouse. In the browser, the first press of **Tab** shows *Skip to main
+  content*, which jumps over the navigation to the page. *Administration* and *Account* open when they have the focus (or on a click or
+  pointing at them); **Escape** closes the menu again, **Arrow down** (or **Enter**) opens it and moves into it. The page you are on is
+  announced as the current page. Every field, icon button and progress bar has a name that a screen reader reads out; the desktop app
+  offers the same names through Windows' UI Automation. Colours: *Account → Preferences* has high-contrast themes.
 - **Help** (navigation, in the desktop app at the bottom): opens this guide in the browser. You only see the guides that apply to you: administrators additionally get
   *Help for administrators* (and, if they may change the settings, *Help for installing*). The browser asks for your login if it does not know it yet.
 

@@ -70,7 +70,8 @@ window.ppA11y = {
         document.addEventListener('focusout', ppA11y.leave);
         ppA11y.syncCurrent();
         // The navigation is drawn by Blazor after this script ran, and the class changes with every navigation.
-        new MutationObserver(ppA11y.syncCurrent).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+        // The script is loaded in <head>, where document.body does not exist yet: observe the root element.
+        new MutationObserver(ppA11y.syncCurrent).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
     }
 };
 

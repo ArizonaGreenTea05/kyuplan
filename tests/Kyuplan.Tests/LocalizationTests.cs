@@ -2,6 +2,7 @@ using System.Collections;
 using System.Globalization;
 using System.Resources;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using Kyuplan.Client.Localization;
 using Kyuplan.Client.Resources;
 using Kyuplan.Client.ViewModels;
@@ -48,13 +49,55 @@ public class ResourceFileTests
                 $"{key}: English has {string.Join(" ", Placeholders(english))}, German has {string.Join(" ", Placeholders(German[key]))}");
     }
 
+    private static string SourceRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "src"))) dir = dir.Parent;
+        return Path.Combine(dir?.FullName ?? throw new InvalidOperationException("Repository root not found."), "src");
+    }
+
+    [Fact]
+    public void Every_key_is_used_somewhere_in_the_sources()
+    {
+        var files = Directory.EnumerateFiles(SourceRoot(), "*.*", SearchOption.AllDirectories)
+            .Where(f => f.EndsWith(".cs") || f.EndsWith(".razor") || f.EndsWith(".xaml"))
+            .Where(f => !Regex.IsMatch(f, @"[\\/](obj|bin|Migrations|PostgresMigrations)[\\/]"))
+            .Where(f => !f.EndsWith(".g.cs") && !f.EndsWith(".Designer.cs"));
+        var text = string.Join('\n', files.Select(File.ReadAllText));
+
+        var words = Regex.Matches(text, @"\w+").Select(m => m.Value).ToHashSet();
+        // Keys built at runtime ("PermissionGroup_" + name) are covered by their literal prefix.
+        var prefixes = Regex.Matches(text, "\"([A-Za-z]+_)\"").Select(m => m.Groups[1].Value).ToHashSet();
+
+        var unused = English.Keys
+            .Where(k => !words.Contains(k) && !prefixes.Any(k.StartsWith))
+            .Order().ToArray();
+
+        Assert.True(unused.Length == 0, "Unused keys, remove them from Strings.resx and Strings.de.resx: " + string.Join(", ", unused));
+    }
+
+    [Theory]
+    [InlineData("Strings.resx")]
+    [InlineData("Strings.de.resx")]
+    public void Keys_are_grouped_by_their_feature_prefix(string file)
+    {
+        var xml = XDocument.Load(Path.Combine(SourceRoot(), "Kyuplan.Client.Shared", "Resources", file));
+        var prefixes = xml.Root!.Elements("data").Select(d => ((string)d.Attribute("name")!).Split('_')[0]).ToList();
+
+        // A prefix is scattered when it starts a new run after another prefix came in between.
+        var scattered = prefixes.Where((p, i) => i > 0 && p != prefixes[i - 1]).GroupBy(p => p).Where(g => g.Count() > 1 || g.Key == prefixes[0])
+            .Select(g => g.Key).ToArray();
+
+        Assert.True(scattered.Length == 0, $"{file}: keys of these prefixes are not next to each other: " + string.Join(", ", scattered));
+    }
+
     [Fact]
     public void Every_text_is_actually_translated_apart_from_a_few_that_read_the_same()
     {
         var same = English.Where(e => e.Value == German[e.Key]).Select(e => e.Key).Order().ToArray();
 
         // Names, formats and loan words. A new entry here must be a conscious decision, not a forgotten translation.
-        Assert.Equal(["Col_Engagement", "Col_Form", "Col_Status", "Design_Aero", "Design_Windows10", "Design_Windows11", "Format_Month", "Format_MonthLong", "Manual_ColName", "Manual_Name", "Settings_DataSource_spond", "Settings_SpondTitle", "Setup_AdminTitle", "Shell_ApiVersion", "Shell_BrandAria", "Theme_CatppuccinLatte", "Theme_CatppuccinMocha", "Theme_Dracula", "Theme_LiquidGlass", "Users_StatusOnline"], same);
+        Assert.Equal(["Col_Engagement", "Col_Form", "Col_Status", "Design_Aero", "Design_Windows10", "Format_Month", "Format_MonthLong", "Manual_ColName", "Manual_Name", "Settings_DataSource_spond", "Setup_AdminTitle", "Shell_ApiVersion", "Shell_BrandAria", "Theme_CatppuccinLatte", "Theme_CatppuccinMocha", "Theme_Dracula", "Theme_LiquidGlass", "Users_StatusOnline"], same);
     }
 }
 

@@ -706,9 +706,9 @@ public class SavedFilterTests
         Assert.False(_vm.CanReset);
         Assert.False(_vm.ResetFiltersCommand.CanExecute(null));
 
-        _vm.SearchText = "Anna"; // the member view is reset too
+        _vm.Table.SearchText = "Anna"; // the member view is reset too
         Assert.True(_vm.CanReset);
-        _vm.SearchText = "";
+        _vm.Table.SearchText = "";
         Assert.False(_vm.CanReset);
 
         var changed = new List<string?>();
@@ -904,13 +904,13 @@ public class SavedFilterTests
             MemberStats("Emil", subGroups: ["Erwachsene", "Jugend"])));
         await ActivateAsync();
 
-        _vm.SortByCommand.Execute(MemberSortKey.SubGroups);
+        _vm.Table.SortByCommand.Execute(MemberSortKey.SubGroups);
 
-        Assert.False(_vm.SortDescending); // text columns start ascending, like the name
-        Assert.Equal(["Clara", "Emil", "Ben", "Anna", "Dora"], _vm.VisibleMembers.Select(m => m.Name));
+        Assert.False(_vm.Table.SortDescending); // text columns start ascending, like the name
+        Assert.Equal(["Clara", "Emil", "Ben", "Anna", "Dora"], _vm.Table.VisibleMembers.Select(m => m.Name));
 
-        _vm.SortByCommand.Execute(MemberSortKey.SubGroups);
-        Assert.Equal(["Anna", "Dora", "Ben", "Emil", "Clara"], _vm.VisibleMembers.Select(m => m.Name));
+        _vm.Table.SortByCommand.Execute(MemberSortKey.SubGroups);
+        Assert.Equal(["Anna", "Dora", "Ben", "Emil", "Clara"], _vm.Table.VisibleMembers.Select(m => m.Name));
     }
 }
 

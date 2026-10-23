@@ -20,8 +20,8 @@ public partial class AttendanceStatisticsView : UserControl
         if (e.OldValue is AttendanceStatisticsViewModel oldVm) oldVm.Shell.Language.Changed -= OnLanguageChanged;
         if (e.NewValue is AttendanceStatisticsViewModel newVm) newVm.Shell.Language.Changed += OnLanguageChanged;
 
-        if (e.OldValue is INotifyPropertyChanged old) old.PropertyChanged -= OnViewModelChanged;
-        if (e.NewValue is INotifyPropertyChanged current) current.PropertyChanged += OnViewModelChanged;
+        if (e.OldValue is AttendanceStatisticsViewModel { Table: var oldTable }) oldTable.PropertyChanged -= OnViewModelChanged;
+        if (e.NewValue is AttendanceStatisticsViewModel { Table: var currentTable }) currentTable.PropertyChanged += OnViewModelChanged;
         UpdateSortIndicator();
     }
 
@@ -37,8 +37,8 @@ public partial class AttendanceStatisticsView : UserControl
 
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(AttendanceStatisticsViewModel.SortKey) or nameof(AttendanceStatisticsViewModel.SortDescending)
-            or nameof(AttendanceStatisticsViewModel.VisibleMembers))
+        if (e.PropertyName is nameof(MemberTableViewModel.SortKey) or nameof(MemberTableViewModel.SortDescending)
+            or nameof(MemberTableViewModel.VisibleMembers))
         {
             UpdateSortIndicator();
         }
@@ -52,7 +52,7 @@ public partial class AttendanceStatisticsView : UserControl
     {
         e.Handled = true;
         if (ViewModel is { } vm && Enum.TryParse<MemberSortKey>(e.Column.SortMemberPath, out var key))
-            vm.SortByCommand.Execute(key);
+            vm.Table.SortByCommand.Execute(key);
     }
 
     private void UpdateSortIndicator()
@@ -61,8 +61,8 @@ public partial class AttendanceStatisticsView : UserControl
 
         foreach (var column in MembersGrid.Columns)
         {
-            column.SortDirection = column.SortMemberPath == vm.SortKey.ToString()
-                ? (vm.SortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending)
+            column.SortDirection = column.SortMemberPath == vm.Table.SortKey.ToString()
+                ? (vm.Table.SortDescending ? ListSortDirection.Descending : ListSortDirection.Ascending)
                 : null;
         }
     }

@@ -208,7 +208,7 @@
         @if (Vm.HasResults)
         {
             <div class="kpis dense">
-                @foreach (var kpi in Vm.Kpis)
+                @foreach (var kpi in Vm.Result.Kpis)
                 {
                     <KpiCard Kpi="kpi" />
                 }
@@ -218,11 +218,11 @@
                 <div class="card-head">
                     <div class="tabs" role="tablist">
                         <button type="button" role="tab" aria-selected="@(_tab == Tab.Members)" class="tab @(_tab == Tab.Members ? "on" : "")"
-                                @onclick="() => _tab = Tab.Members">@Strings.Tab_Members <span class="count">@Vm.VisibleMembers.Count</span></button>
+                                @onclick="() => _tab = Tab.Members">@Strings.Tab_Members <span class="count">@Vm.Table.VisibleMembers.Count</span></button>
                         <button type="button" role="tab" aria-selected="@(_tab == Tab.Insights)" class="tab @(_tab == Tab.Insights ? "on" : "")"
                                 @onclick="() => _tab = Tab.Insights">@Strings.Tab_Insights</button>
                         <button type="button" role="tab" aria-selected="@(_tab == Tab.Events)" class="tab @(_tab == Tab.Events ? "on" : "")"
-                                @onclick="() => _tab = Tab.Events">@Strings.Tab_Events <span class="count">@Vm.Events.Count</span></button>
+                                @onclick="() => _tab = Tab.Events">@Strings.Tab_Events <span class="count">@Vm.Result.Events.Count</span></button>
                     </div>
 
                     @if (_tab == Tab.Members)
@@ -231,15 +231,15 @@
                             <div class="segmented" role="group" aria-label="@Strings.Stats_Show">
                                 @foreach (var (filter, label) in StatusFilters)
                                 {
-                                    <button type="button" class="@(Vm.StatusFilter == filter ? "on" : "")"
-                                            aria-pressed="@(Vm.StatusFilter == filter)"
-                                            @onclick="() => Vm.StatusFilter = filter">@label</button>
+                                    <button type="button" class="@(Vm.Table.StatusFilter == filter ? "on" : "")"
+                                            aria-pressed="@(Vm.Table.StatusFilter == filter)"
+                                            @onclick="() => Vm.Table.StatusFilter = filter">@label</button>
                                 }
                             </div>
                             <label class="search">
                                 <Icon Name="search" Size="16" />
                                 <input type="search" placeholder="@Strings.Stats_FindMember" aria-label="@Strings.Stats_FindMember"
-                                       @bind="Vm.SearchText" @bind:event="oninput" />
+                                       @bind="Vm.Table.SearchText" @bind:event="oninput" />
                             </label>
                         </div>
                     }
@@ -254,23 +254,23 @@
                                 <caption class="sr-only">@Strings.Caption_Members</caption>
                                 <thead>
                                     <tr>
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.Name" Label="@Strings.Col_Member" />
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.SubGroups" Label="@Strings.Col_SubGroups" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.Name" Label="@Strings.Col_Member" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.SubGroups" Label="@Strings.Col_SubGroups" />
                                         <th scope="col">@Strings.Col_Status</th>
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.AttendanceRate" Label="@Strings.Col_Attendance" Class="att">
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.AttendanceRate" Label="@Strings.Col_Attendance" Class="att">
                                             <span class="req">@Vm.RequiredText</span>
                                         </SortHeader>
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.ResponseRate" Label="@Strings.Col_Answered" Class="num" />
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.CurrentStreak" Label="@Strings.Col_Streak" Class="num" />
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.DaysSinceLastAttended" Label="@Strings.Col_LastAttended" />
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.SessionsPerWeek" Label="@Strings.Col_PerWeek" Class="num" />
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.Stars" Label="@Strings.Rating_StarsHeader" Class="num" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.ResponseRate" Label="@Strings.Col_Answered" Class="num" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.CurrentStreak" Label="@Strings.Col_Streak" Class="num" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.DaysSinceLastAttended" Label="@Strings.Col_LastAttended" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.SessionsPerWeek" Label="@Strings.Col_PerWeek" Class="num" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.Stars" Label="@Strings.Rating_StarsHeader" Class="num" />
                                         <th scope="col" title="@Strings.Col_FormTip">@Strings.Col_Form</th>
-                                        <SortHeader Vm="Vm" Key="MemberSortKey.EngagementScore" Label="@Strings.Col_Engagement" />
+                                        <SortHeader Vm="Vm.Table" Key="MemberSortKey.EngagementScore" Label="@Strings.Col_Engagement" />
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var m in Vm.VisibleMembers)
+                                    @foreach (var m in Vm.Table.VisibleMembers)
                                     {
                                         <tr @key="m.Dto.MemberId">
                                             <th scope="row" class="name"><strong>@m.Name</strong></th>
@@ -300,7 +300,7 @@
                                     }
                                 </tbody>
                             </table>
-                            @if (Vm.VisibleMembers.Count == 0)
+                            @if (Vm.Table.VisibleMembers.Count == 0)
                             {
                                 <p class="empty-inline">@Strings.Stats_NoMemberMatches</p>
                             }
@@ -318,12 +318,12 @@
                         <div class="grid two inner">
                             <div>
                                 <h2>@Strings.Chart_DistributionTitle</h2>
-                                <BarChart Bars="Vm.Distribution" Label="@Strings.Chart_DistributionAria" Thresholded="true" />
+                                <BarChart Bars="Vm.Result.Distribution" Label="@Strings.Chart_DistributionAria" Thresholded="true" />
                                 <p class="note">@Strings.Chart_DistributionNote</p>
                             </div>
                             <div>
                                 <h2>@Strings.Chart_TrendTitle</h2>
-                                <BarChart Bars="Vm.Trend" Label="@Strings.Chart_TrendAria" />
+                                <BarChart Bars="Vm.Result.Trend" Label="@Strings.Chart_TrendAria" />
                                 <p class="note">@Strings.Chart_TrendNote</p>
                             </div>
                         </div>
@@ -344,7 +344,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var e in Vm.Events)
+                                    @foreach (var e in Vm.Result.Events)
                                     {
                                         <tr>
                                             <th scope="row" class="name"><strong>@e.Name</strong></th>
@@ -389,7 +389,7 @@
         (MemberStatusFilter.InsufficientData, Strings.Status_TooFew),
     ];
 
-    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell, Vm.SavedFilters];
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.Shell, Vm.SavedFilters, Vm.Table, Vm.Result];
 
     private SavedFiltersViewModel Saved => Vm.SavedFilters;
 

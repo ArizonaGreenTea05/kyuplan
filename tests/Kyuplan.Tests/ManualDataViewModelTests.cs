@@ -58,8 +58,8 @@ public sealed class ManualDataViewModelTests : IDisposable
 
         Assert.True(_vm.HasNoGroups);
         Assert.False(_vm.HasGroup);
-        Assert.False(_vm.BeginNewMemberCommand.CanExecute(null)); // nothing to put a member into
-        Assert.True(_vm.BeginNewGroupCommand.CanExecute(null));
+        Assert.False(_vm.MemberEditor.BeginNewCommand.CanExecute(null)); // nothing to put a member into
+        Assert.True(_vm.NameForm.BeginNewGroupCommand.CanExecute(null));
     }
 
     [Fact]
@@ -67,21 +67,21 @@ public sealed class ManualDataViewModelTests : IDisposable
     {
         await _vm.ActivateAsync();
 
-        _vm.BeginNewGroupCommand.Execute(null);
-        Assert.True(_vm.IsNameFormOpen);
-        Assert.False(_vm.SaveNameCommand.CanExecute(null)); // no name yet
-        _vm.NameFormText = "Dojo";
-        await _vm.SaveNameCommand.ExecuteAsync(null);
+        _vm.NameForm.BeginNewGroupCommand.Execute(null);
+        Assert.True(_vm.NameForm.IsOpen);
+        Assert.False(_vm.NameForm.SaveCommand.CanExecute(null)); // no name yet
+        _vm.NameForm.Text = "Dojo";
+        await _vm.NameForm.SaveCommand.ExecuteAsync(null);
 
-        Assert.False(_vm.IsNameFormOpen);
+        Assert.False(_vm.NameForm.IsOpen);
         Assert.Equal("Dojo", _vm.SelectedGroup?.Name);
         Assert.Equal(["create-group:Dojo"], _api.ManualCalls);
 
-        _vm.BeginRenameGroupCommand.Execute(null);
-        Assert.Equal("Dojo", _vm.NameFormText);
-        Assert.False(_vm.SaveNameCommand.CanExecute(null)); // the same name changes nothing
-        _vm.NameFormText = "Karate";
-        await _vm.SaveNameCommand.ExecuteAsync(null);
+        _vm.NameForm.BeginRenameGroupCommand.Execute(null);
+        Assert.Equal("Dojo", _vm.NameForm.Text);
+        Assert.False(_vm.NameForm.SaveCommand.CanExecute(null)); // the same name changes nothing
+        _vm.NameForm.Text = "Karate";
+        await _vm.NameForm.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal("Karate", _vm.SelectedGroup?.Name);
         Assert.Contains($"rename-group:{_vm.SelectedGroup!.Id}:Karate", _api.ManualCalls);
@@ -91,12 +91,12 @@ public sealed class ManualDataViewModelTests : IDisposable
     public async Task A_name_that_is_too_long_cannot_be_saved()
     {
         await _vm.ActivateAsync();
-        _vm.BeginNewGroupCommand.Execute(null);
+        _vm.NameForm.BeginNewGroupCommand.Execute(null);
 
-        _vm.NameFormText = new string('x', ManualDataRules.MaxNameLength + 1);
+        _vm.NameForm.Text = new string('x', ManualDataRules.MaxNameLength + 1);
 
-        Assert.NotNull(_vm.NameFormProblem);
-        Assert.False(_vm.SaveNameCommand.CanExecute(null));
+        Assert.NotNull(_vm.NameForm.Problem);
+        Assert.False(_vm.NameForm.SaveCommand.CanExecute(null));
     }
 
     [Fact]
@@ -105,15 +105,15 @@ public sealed class ManualDataViewModelTests : IDisposable
         await SeedGroupAsync();
 
         _vm.SectionIndex = ManualDataViewModel.SubGroupsSection;
-        _vm.BeginNewSubGroupCommand.Execute(null);
-        _vm.NameFormText = "Teens";
-        await _vm.SaveNameCommand.ExecuteAsync(null);
+        _vm.NameForm.BeginNewSubGroupCommand.Execute(null);
+        _vm.NameForm.Text = "Teens";
+        await _vm.NameForm.SaveCommand.ExecuteAsync(null);
 
         Assert.Equal(["Kids", "Teens"], _vm.SubGroups.Select(s => s.Name));
 
-        _vm.BeginNewMemberCommand.Execute(null);
-        Assert.Equal(["Kids", "Teens"], _vm.MemberSubGroups.Select(s => s.Name));
-        Assert.True(_vm.HasSubGroupChoices);
+        _vm.MemberEditor.BeginNewCommand.Execute(null);
+        Assert.Equal(["Kids", "Teens"], _vm.MemberEditor.SubGroups.Select(s => s.Name));
+        Assert.True(_vm.MemberEditor.HasSubGroupChoices);
     }
 
     [Fact]
@@ -121,15 +121,15 @@ public sealed class ManualDataViewModelTests : IDisposable
     {
         await SeedGroupAsync();
 
-        _vm.BeginNewMemberCommand.Execute(null);
-        Assert.False(_vm.SaveMemberCommand.CanExecute(null));
-        _vm.MemberName = "  Clara ";
-        _vm.MemberBirthDate = new DateTime(2012, 3, 4);
-        _vm.MemberSubGroups.Single().IsSelected = true;
-        Assert.True(_vm.SaveMemberCommand.CanExecute(null));
-        await _vm.SaveMemberCommand.ExecuteAsync(null);
+        _vm.MemberEditor.BeginNewCommand.Execute(null);
+        Assert.False(_vm.MemberEditor.SaveCommand.CanExecute(null));
+        _vm.MemberEditor.Name = "  Clara ";
+        _vm.MemberEditor.BirthDate = new DateTime(2012, 3, 4);
+        _vm.MemberEditor.SubGroups.Single().IsSelected = true;
+        Assert.True(_vm.MemberEditor.SaveCommand.CanExecute(null));
+        await _vm.MemberEditor.SaveCommand.ExecuteAsync(null);
 
-        Assert.False(_vm.IsMemberFormOpen);
+        Assert.False(_vm.MemberEditor.IsOpen);
         var input = _api.LastManualMemberInput!;
         Assert.Equal(("Clara", new DateOnly(2012, 3, 4)), (input.Name, input.BirthDate));
         Assert.Equal(["s1"], input.SubGroupIds);
@@ -141,18 +141,18 @@ public sealed class ManualDataViewModelTests : IDisposable
     {
         await SeedGroupAsync();
 
-        _vm.BeginEditMemberCommand.Execute(_vm.Members[0]);
-        Assert.Equal("Anna", _vm.MemberName);
-        Assert.True(_vm.MemberSubGroups.Single().IsSelected);
-        Assert.False(_vm.SaveMemberCommand.CanExecute(null));
+        _vm.MemberEditor.BeginEditCommand.Execute(_vm.Members[0]);
+        Assert.Equal("Anna", _vm.MemberEditor.Name);
+        Assert.True(_vm.MemberEditor.SubGroups.Single().IsSelected);
+        Assert.False(_vm.MemberEditor.SaveCommand.CanExecute(null));
 
-        _vm.MemberBirthDate = DateTime.Today.AddDays(10);
-        Assert.NotNull(_vm.MemberBirthProblem);
-        Assert.False(_vm.SaveMemberCommand.CanExecute(null));
+        _vm.MemberEditor.BirthDate = DateTime.Today.AddDays(10);
+        Assert.NotNull(_vm.MemberEditor.BirthProblem);
+        Assert.False(_vm.MemberEditor.SaveCommand.CanExecute(null));
 
-        _vm.ClearMemberBirthDateCommand.Execute(null);
-        Assert.True(_vm.SaveMemberCommand.CanExecute(null));
-        await _vm.SaveMemberCommand.ExecuteAsync(null);
+        _vm.MemberEditor.ClearBirthDateCommand.Execute(null);
+        Assert.True(_vm.MemberEditor.SaveCommand.CanExecute(null));
+        await _vm.MemberEditor.SaveCommand.ExecuteAsync(null);
 
         Assert.Null(_api.ManualMembers.Single(m => m.Id == "m1").BirthDate);
     }
@@ -164,25 +164,25 @@ public sealed class ManualDataViewModelTests : IDisposable
         _api.Info = _api.Info with { TimeZone = "Europe/Berlin" };
 
         _vm.SectionIndex = ManualDataViewModel.EventsSection;
-        await _vm.BeginNewEventCommand.ExecuteAsync(null);
-        Assert.True(_vm.IsEventFormOpen);
-        Assert.Equal(["Anna", "Ben"], _vm.Invitees.Select(i => i.Name));
-        Assert.False(_vm.SaveEventCommand.CanExecute(null)); // no name yet
+        await _vm.EventEditor.BeginNewCommand.ExecuteAsync(null);
+        Assert.True(_vm.EventEditor.IsOpen);
+        Assert.Equal(["Anna", "Ben"], _vm.EventEditor.Invitees.Select(i => i.Name));
+        Assert.False(_vm.EventEditor.SaveCommand.CanExecute(null)); // no name yet
 
-        _vm.EventName = "Training";
-        _vm.EventStartDate = new DateTime(2026, 10, 1);
-        _vm.EventStartTime = "18:00";
-        _vm.EventEndTime = "19:30";
-        _vm.InviteAllCommand.Execute(null);
-        _vm.AcceptAllCommand.Execute(null);
-        _vm.Invitees[1].Answer = ManualRsvpOption.All.Single(o => o.Value == ManualRsvp.Declined);
-        await _vm.SaveEventCommand.ExecuteAsync(null);
+        _vm.EventEditor.Name = "Training";
+        _vm.EventEditor.StartDate = new DateTime(2026, 10, 1);
+        _vm.EventEditor.StartTime = "18:00";
+        _vm.EventEditor.EndTime = "19:30";
+        _vm.EventEditor.InviteAllCommand.Execute(null);
+        _vm.EventEditor.AcceptAllCommand.Execute(null);
+        _vm.EventEditor.Invitees[1].Answer = ManualRsvpOption.All.Single(o => o.Value == ManualRsvp.Declined);
+        await _vm.EventEditor.SaveCommand.ExecuteAsync(null);
 
         var input = _api.LastManualEventInput!;
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 18, 0, 0, TimeSpan.FromHours(2)), input.Start);
         Assert.Equal(new DateTimeOffset(2026, 10, 1, 19, 30, 0, TimeSpan.FromHours(2)), input.End);
         Assert.Equal([new ManualInvitationDto("m1", ManualRsvp.Accepted), new ManualInvitationDto("m2", ManualRsvp.Declined)], input.Invitations);
-        Assert.False(_vm.IsEventFormOpen);
+        Assert.False(_vm.EventEditor.IsOpen);
         Assert.Single(_vm.Events);
     }
 
@@ -190,23 +190,23 @@ public sealed class ManualDataViewModelTests : IDisposable
     public async Task An_event_that_ends_before_it_starts_or_has_no_readable_time_cannot_be_saved()
     {
         await SeedGroupAsync();
-        await _vm.BeginNewEventCommand.ExecuteAsync(null);
-        _vm.EventName = "Training";
+        await _vm.EventEditor.BeginNewCommand.ExecuteAsync(null);
+        _vm.EventEditor.Name = "Training";
 
-        _vm.EventStartDate = new DateTime(2026, 10, 1);
-        _vm.EventStartTime = "18:00";
-        _vm.EventEndDate = new DateTime(2026, 10, 1);
-        _vm.EventEndTime = "17:00";
-        Assert.Equal("The end must not be before the start.", _vm.EventTimeProblem);
-        Assert.False(_vm.SaveEventCommand.CanExecute(null));
+        _vm.EventEditor.StartDate = new DateTime(2026, 10, 1);
+        _vm.EventEditor.StartTime = "18:00";
+        _vm.EventEditor.EndDate = new DateTime(2026, 10, 1);
+        _vm.EventEditor.EndTime = "17:00";
+        Assert.Equal("The end must not be before the start.", _vm.EventEditor.TimeProblem);
+        Assert.False(_vm.EventEditor.SaveCommand.CanExecute(null));
 
-        _vm.EventEndTime = "later";
-        Assert.NotNull(_vm.EventTimeProblem);
-        Assert.False(_vm.SaveEventCommand.CanExecute(null));
+        _vm.EventEditor.EndTime = "later";
+        Assert.NotNull(_vm.EventEditor.TimeProblem);
+        Assert.False(_vm.EventEditor.SaveCommand.CanExecute(null));
 
-        _vm.EventEndTime = "19:00";
-        Assert.Null(_vm.EventTimeProblem);
-        Assert.True(_vm.SaveEventCommand.CanExecute(null));
+        _vm.EventEditor.EndTime = "19:00";
+        Assert.Null(_vm.EventEditor.TimeProblem);
+        Assert.True(_vm.EventEditor.SaveCommand.CanExecute(null));
     }
 
     [Fact]
@@ -217,17 +217,17 @@ public sealed class ManualDataViewModelTests : IDisposable
             new DateTimeOffset(2026, 10, 1, 17, 0, 0, TimeSpan.Zero), false, [new ManualInvitationDto("m1", ManualRsvp.Accepted)]));
         await _vm.RetryCommand.ExecuteAsync(null);
 
-        await _vm.BeginEditEventCommand.ExecuteAsync(_vm.Events[0]);
+        await _vm.EventEditor.BeginEditCommand.ExecuteAsync(_vm.Events[0]);
 
-        Assert.Equal("Training", _vm.EventName);
-        Assert.True(_vm.Invitees[0].IsInvited);
-        Assert.Equal(ManualRsvp.Accepted, _vm.Invitees[0].Answer.Value);
-        Assert.False(_vm.Invitees[1].IsInvited);
-        Assert.False(_vm.SaveEventCommand.CanExecute(null));
+        Assert.Equal("Training", _vm.EventEditor.Name);
+        Assert.True(_vm.EventEditor.Invitees[0].IsInvited);
+        Assert.Equal(ManualRsvp.Accepted, _vm.EventEditor.Invitees[0].Answer.Value);
+        Assert.False(_vm.EventEditor.Invitees[1].IsInvited);
+        Assert.False(_vm.EventEditor.SaveCommand.CanExecute(null));
 
-        _vm.Invitees[0].IsInvited = false;
-        Assert.True(_vm.SaveEventCommand.CanExecute(null));
-        await _vm.SaveEventCommand.ExecuteAsync(null);
+        _vm.EventEditor.Invitees[0].IsInvited = false;
+        Assert.True(_vm.EventEditor.SaveCommand.CanExecute(null));
+        await _vm.EventEditor.SaveCommand.ExecuteAsync(null);
         Assert.Empty(_api.LastManualEventInput!.Invitations!);
     }
 
@@ -258,6 +258,82 @@ public sealed class ManualDataViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task Only_one_form_is_open_at_a_time()
+    {
+        await SeedGroupAsync();
+
+        _vm.NameForm.BeginNewGroupCommand.Execute(null);
+        Assert.True(_vm.NameForm.IsOpen);
+        Assert.True(_vm.IsAnyFormOpen);
+
+        _vm.MemberEditor.BeginNewCommand.Execute(null);
+        Assert.False(_vm.NameForm.IsOpen);
+        Assert.True(_vm.MemberEditor.IsOpen);
+
+        await _vm.EventEditor.BeginNewCommand.ExecuteAsync(null);
+        Assert.False(_vm.MemberEditor.IsOpen);
+        Assert.True(_vm.EventEditor.IsOpen);
+
+        _vm.NameForm.BeginRenameGroupCommand.Execute(null);
+        Assert.False(_vm.EventEditor.IsOpen);
+        Assert.True(_vm.NameForm.IsOpen);
+
+        _vm.NameForm.CancelCommand.Execute(null);
+        Assert.False(_vm.IsAnyFormOpen);
+    }
+
+    [Fact]
+    public async Task A_delete_question_closes_the_open_form_and_opening_a_form_withdraws_the_question()
+    {
+        await SeedGroupAsync();
+
+        _vm.MemberEditor.BeginEditCommand.Execute(_vm.Members[0]);
+        Assert.True(_vm.MemberEditor.IsOpen);
+
+        _vm.AskDeleteMemberCommand.Execute(_vm.Members[1]);
+        Assert.False(_vm.MemberEditor.IsOpen);
+        Assert.True(_vm.IsConfirming);
+
+        _vm.NameForm.BeginNewGroupCommand.Execute(null);
+        Assert.False(_vm.IsConfirming);
+        Assert.True(_vm.NameForm.IsOpen);
+    }
+
+    [Fact]
+    public async Task Changing_the_section_or_the_group_closes_the_open_form()
+    {
+        await SeedGroupAsync();
+        _api.ManualGroups.Add(new ManualGroupDto("g2", "Other", [], 0));
+        await _vm.ActivateAsync();
+
+        _vm.MemberEditor.BeginNewCommand.Execute(null);
+        _vm.SectionIndex = ManualDataViewModel.SubGroupsSection;
+        Assert.False(_vm.MemberEditor.IsOpen);
+
+        _vm.NameForm.BeginNewSubGroupCommand.Execute(null);
+        _vm.SelectedGroup = _vm.Groups.Single(g => g.Id == "g2");
+        Assert.False(_vm.NameForm.IsOpen);
+    }
+
+    [Fact]
+    public async Task Form_titles_and_problems_follow_the_language()
+    {
+        await SeedGroupAsync();
+        _vm.MemberEditor.BeginEditCommand.Execute(_vm.Members[0]);
+        _vm.MemberEditor.Name = new string('x', ManualDataRules.MaxNameLength + 1);
+        var english = _vm.MemberEditor.NameProblem;
+        var titles = new List<string?>();
+        _vm.MemberEditor.PropertyChanged += (_, e) => titles.Add(e.PropertyName);
+
+        _language.Select("de");
+
+        Assert.NotNull(english);
+        Assert.NotEqual(english, _vm.MemberEditor.NameProblem);
+        Assert.Contains(nameof(ManualMemberEditorViewModel.Title), titles);
+        Assert.Contains(nameof(ManualMemberEditorViewModel.NameProblem), titles);
+    }
+
+    [Fact]
     public async Task Somebody_without_the_permission_has_no_page()
     {
         _api.Account = TestAccounts.WithPermissions(2, "trainer", Permission.MembersView);
@@ -267,6 +343,6 @@ public sealed class ManualDataViewModelTests : IDisposable
 
         Assert.False(vm.CanView);
         Assert.Empty(_api.ManualCalls);
-        Assert.False(vm.BeginNewGroupCommand.CanExecute(null));
+        Assert.False(vm.NameForm.BeginNewGroupCommand.CanExecute(null));
     }
 }

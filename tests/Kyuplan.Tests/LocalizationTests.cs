@@ -181,8 +181,8 @@ public sealed class LocalizedViewModelTests : IDisposable
         var summaryChanged = false;
         vm.PropertyChanged += (_, e) => summaryChanged |= e.PropertyName == nameof(vm.SubGroupSummary);
         Assert.Equal("Everyone", vm.SubGroupSummary);
-        Assert.Equal("Meeting 70 %", vm.Kpis[0].Label);
-        Assert.Equal("1 of 3", vm.Kpis[0].Value);
+        Assert.Equal("Meeting 70 %", vm.Result.Kpis[0].Label);
+        Assert.Equal("1 of 3", vm.Result.Kpis[0].Value);
         Assert.Contains("between \"Gürtelprüfung\"", vm.FilterSummary);
         var event1 = vm.EventOptions[1];
         Assert.StartsWith("Gürtelprüfung · Sat, 28 Mar", event1.Label);
@@ -200,10 +200,10 @@ public sealed class LocalizedViewModelTests : IDisposable
         Assert.True(summaryChanged);
         Assert.Equal("Alle", vm.SubGroupSummary);
         Assert.Equal(["Kinder"], vm.SubGroupOptions.Select(o => o.Name)); // group data is not translated
-        Assert.Equal("70 % erreicht", vm.Kpis[0].Label);
-        Assert.Equal("1 von 3", vm.Kpis[0].Value);
+        Assert.Equal("70 % erreicht", vm.Result.Kpis[0].Label);
+        Assert.Equal("1 von 3", vm.Result.Kpis[0].Value);
         Assert.Equal("Anwesenheitsstatistik", vm.Title);
-        Assert.Equal("4 Mitglieder", vm.MembersCaption);
+        Assert.Equal("4 Mitglieder", vm.Table.MembersCaption);
         Assert.Single(_api.AttendanceRequests);
     }
 
@@ -261,13 +261,13 @@ public sealed class LocalizedViewModelTests : IDisposable
         var one = await LoadDistribution(members: 1);
         var many = await LoadDistribution(members: 3);
 
-        Assert.Equal("1 member attended 70–79 % of their invitations", one.Distribution.Single().Tooltip);
-        Assert.Equal("3 members attended 70–79 % of their invitations", many.Distribution.Single().Tooltip);
+        Assert.Equal("1 member attended 70–79 % of their invitations", one.Result.Distribution.Single().Tooltip);
+        Assert.Equal("3 members attended 70–79 % of their invitations", many.Result.Distribution.Single().Tooltip);
 
         _language.Select("de");
 
-        Assert.Equal("1 Mitglied war bei 70–79 % der Einladungen dabei", one.Distribution.Single().Tooltip);
-        Assert.Equal("3 Mitglieder waren bei 70–79 % der Einladungen dabei", many.Distribution.Single().Tooltip);
+        Assert.Equal("1 Mitglied war bei 70–79 % der Einladungen dabei", one.Result.Distribution.Single().Tooltip);
+        Assert.Equal("3 Mitglieder waren bei 70–79 % der Einladungen dabei", many.Result.Distribution.Single().Tooltip);
     }
 
     private async Task<AttendanceStatisticsViewModel> LoadDistribution(int members)
@@ -279,7 +279,7 @@ public sealed class LocalizedViewModelTests : IDisposable
 
         var vm = new AttendanceStatisticsViewModel(_shell, _api, TimeProvider.System);
         await vm.ActivateAsync();
-        await Eventually(() => !vm.IsBusy && vm.Distribution.Count == 1);
+        await Eventually(() => !vm.IsBusy && vm.Result.Distribution.Count == 1);
         return vm;
     }
 }

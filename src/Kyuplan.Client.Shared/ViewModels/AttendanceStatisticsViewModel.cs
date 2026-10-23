@@ -8,30 +8,6 @@ using Kyuplan.Contracts;
 
 namespace Kyuplan.Client.ViewModels;
 
-public enum MemberStatusFilter
-{
-    All,
-    Qualified,
-    BelowThreshold,
-    InsufficientData,
-}
-
-/// <summary>Columns of the member table the user can sort by.</summary>
-public enum MemberSortKey
-{
-    Name,
-    SubGroups,
-    Invited,
-    Attended,
-    AttendanceRate,
-    ResponseRate,
-    CurrentStreak,
-    DaysSinceLastAttended,
-    SessionsPerWeek,
-    Stars,
-    EngagementScore,
-}
-
 /// <summary>
 /// Who attended at least X % of the events they were invited to in a time span, plus the figures around it.
 /// <para>
@@ -55,7 +31,6 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
     private CancellationTokenSource? _pendingReload;
     private bool _suppressReload;
     private bool _serverDefaultsApplied;
-    private IReadOnlyList<MemberRowViewModel> _allMembers = [];
     private AttendanceStatisticsDto? _last;
 
     // The events to choose from and the span the server suggests. Fetched once per group and again after the
@@ -75,6 +50,12 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         _api = api;
         _time = time;
         _store = store ?? new InMemoryFilterSettingsStore();
+        Table = new MemberTableViewModel();
+        Result = new StatisticsResultViewModel();
+        Table.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MemberTableViewModel.IsUnfiltered)) OnFilterCardChanged();
+        };
         SavedFilters = new SavedFiltersViewModel(api, this);
         SavedFilters.PropertyChanged += (_, e) =>
         {
@@ -82,6 +63,12 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         };
         ResetFilters();
     }
+
+    /// <summary>The key figures, charts and event list of the result.</summary>
+    public StatisticsResultViewModel Result { get; }
+
+    /// <summary>The member table of the result: search, status filter and sort order.</summary>
+    public MemberTableViewModel Table { get; }
 
     /// <summary>The filters saved on the server for exams.</summary>
     public SavedFiltersViewModel SavedFilters { get; }
@@ -170,20 +157,6 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
     [ObservableProperty]
     private bool _showAdvanced;
 
-    // --- Local view of the loaded result ---------------------------------------------------------------
-
-    [ObservableProperty]
-    private string _searchText = "";
-
-    [ObservableProperty]
-    private MemberStatusFilter _statusFilter = MemberStatusFilter.All;
-
-    [ObservableProperty]
-    private MemberSortKey _sortKey = MemberSortKey.AttendanceRate;
-
-    [ObservableProperty]
-    private bool _sortDescending = true;
-
     // --- Results -------------------------------------------------------------------------------------
 
     [ObservableProperty]
@@ -192,27 +165,6 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
 
     [ObservableProperty]
     private string? _filterError;
-
-    [ObservableProperty]
-    private IReadOnlyList<KpiViewModel> _kpis = [];
-
-    [ObservableProperty]
-    private IReadOnlyList<MemberRowViewModel> _visibleMembers = [];
-
-    [ObservableProperty]
-    private string _membersCaption = "";
-
-    [ObservableProperty]
-    private IReadOnlyList<BarViewModel> _distribution = [];
-
-    [ObservableProperty]
-    private IReadOnlyList<BarViewModel> _trend = [];
-
-    [ObservableProperty]
-    private IReadOnlyList<EventRowViewModel> _events = [];
-
-    [ObservableProperty]
-    private string _resultTitle = "";
 
     /// <summary>True when a load finished without any held event in the selected span and filters.</summary>
     public bool HasNoResults => !HasResults && !IsBusy && !HasError && Shell.SelectedGroup is not null && _loadedOnce;
@@ -307,8 +259,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             ClearSubGroups();
             EventNameContains = "";
             EventNameExcludes = "";
-            SearchText = "";
-            StatusFilter = MemberStatusFilter.All;
+            Table.ClearFilter();
             ApplyDefaultSpan();
             SavedFilters.ClearSelection();
         }
@@ -368,24 +319,8 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         || !IsEveryoneSelected
         || EventNameContains.Length > 0
         || EventNameExcludes.Length > 0
-        || SearchText.Length > 0
-        || StatusFilter != MemberStatusFilter.All
+        || !Table.IsUnfiltered
         || !HasDefaultSpan;
-
-    /// <summary>Sorts by <paramref name="key"/>; choosing the active column again flips the direction.</summary>
-    [RelayCommand]
-    private void SortBy(MemberSortKey key)
-    {
-        if (SortKey == key)
-        {
-            SortDescending = !SortDescending;
-        }
-        else
-        {
-            SortKey = key;
-            SortDescending = key is not MemberSortKey.Name and not MemberSortKey.SubGroups and not MemberSortKey.DaysSinceLastAttended;
-        }
-    }
 
     // --- Reacting to changes -------------------------------------------------------------------------
 
@@ -432,9 +367,6 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
             case nameof(MinAverageStars):
                 OnPropertyChanged(nameof(MinAverageStarsText));
                 break;
-            case nameof(SearchText) or nameof(StatusFilter) or nameof(SortKey) or nameof(SortDescending):
-                RebuildVisibleMembers();
-                break;
             case nameof(IsBusy) or nameof(ErrorMessage):
                 OnPropertyChanged(nameof(HasNoResults));
                 break;
@@ -442,7 +374,7 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
 
         if (e.PropertyName is nameof(FromEventId) or nameof(ToEventId) or nameof(SpanByEvents) or nameof(From) or nameof(To)
             or nameof(MinAttendancePercent) or nameof(MinInvitedEvents) or nameof(MinAverageStars) or nameof(EventNameContains) or nameof(EventNameExcludes)
-            or nameof(SubGroupOptions) or nameof(EventOptions) or nameof(SearchText) or nameof(StatusFilter))
+            or nameof(SubGroupOptions) or nameof(EventOptions))
         {
             OnFilterCardChanged();
         }
@@ -770,34 +702,13 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         var s = result.Summary;
         _last = result;
         _loadedOnce = true;
-        ResultTitle = $"{result.GroupName} · {Display.Period(filter.From, filter.To)}";
+        Result.Show(result);
 
         // The date fields of the advanced filters show the days the chosen events resolved to.
         if (SpanByEvents) ShowResolvedDays(filter);
 
-        var assessed = s.MemberCount - s.InsufficientDataCount;
-        Kpis =
-        [
-            new(string.Format(Strings.Kpi_Meeting, filter.MinAttendancePercent),
-                string.Format(Strings.Kpi_OfAssessed, s.QualifiedCount, assessed),
-                string.Format(Strings.Kpi_MeetingStatsHint, filter.MinAttendancePercent),
-                KpiTone.Success),
-            new(Strings.Kpi_BelowTarget, s.BelowThresholdCount.ToString(), Strings.Kpi_BelowTargetHint),
-            new(Strings.Kpi_TooFew, s.InsufficientDataCount.ToString(), string.Format(Strings.Kpi_TooFewHint, filter.MinInvitedEvents)),
-            new(Strings.Kpi_EventsAnalysed, s.EventCount.ToString(), Strings.Kpi_EventsAnalysedHint),
-            new(Strings.Kpi_Attendance, Display.Percent(s.OverallAttendanceRate), Strings.Kpi_AttendanceOverallHint),
-            new(Strings.Kpi_ResponseRate, Display.Percent(s.AverageResponseRate), Strings.Kpi_ResponseRateHint),
-            new(Strings.Kpi_AverageAttendees, Display.Number(s.AverageAttendeesPerEvent), Strings.Kpi_AverageAttendeesHint),
-            new(Strings.Kpi_Stars, s.AverageStars is { } stars ? Display.Stars(stars) : Display.None, Strings.Kpi_StarsHint),
-            new(Strings.Kpi_AtRisk, s.AtRiskCount.ToString(), Strings.Kpi_AtRiskHint, s.AtRiskCount > 0 ? KpiTone.Warning : KpiTone.Neutral),
-        ];
-
-        _allMembers = result.Members.Select(m => new MemberRowViewModel(m)).ToList();
-        Events = result.Events.Select(e => new EventRowViewModel(e)).ToList();
-        Distribution = ChartData.Distribution(result.Distribution, filter.MinAttendancePercent);
-        Trend = ChartData.MonthlyTrend(result.MonthlyTrend);
         HasResults = s.EventCount > 0;
-        RebuildVisibleMembers();
+        Table.Load(result.Members);
     }
 
     private void ShowResolvedDays(AttendanceFilter filter)
@@ -812,51 +723,5 @@ public sealed partial class AttendanceStatisticsViewModel : PageViewModel, IFilt
         {
             _suppressReload = false;
         }
-    }
-
-    private void RebuildVisibleMembers()
-    {
-        IEnumerable<MemberRowViewModel> rows = _allMembers;
-
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var term = SearchText.Trim();
-            rows = rows.Where(m => m.Name.Contains(term, StringComparison.CurrentCultureIgnoreCase));
-        }
-
-        rows = StatusFilter switch
-        {
-            MemberStatusFilter.Qualified => rows.Where(m => m.Status == QualificationStatus.Qualified),
-            MemberStatusFilter.BelowThreshold => rows.Where(m => m.Status == QualificationStatus.BelowThreshold),
-            MemberStatusFilter.InsufficientData => rows.Where(m => m.Status == QualificationStatus.InsufficientData),
-            _ => rows,
-        };
-
-        VisibleMembers = Sort(rows).ToList();
-        MembersCaption = VisibleMembers.Count == _allMembers.Count
-            ? string.Format(Strings.Stats_MembersCount, _allMembers.Count)
-            : string.Format(Strings.Stats_MembersCountOf, VisibleMembers.Count, _allMembers.Count);
-    }
-
-    private IEnumerable<MemberRowViewModel> Sort(IEnumerable<MemberRowViewModel> rows)
-    {
-        Func<MemberRowViewModel, IComparable> key = SortKey switch
-        {
-            MemberSortKey.Name => m => m.Name.ToUpperInvariant(),
-            MemberSortKey.SubGroups => m => m.SubGroupsText.ToUpperInvariant(),
-            MemberSortKey.Invited => m => m.Invited,
-            MemberSortKey.Attended => m => m.Attended,
-            MemberSortKey.ResponseRate => m => m.ResponseRate,
-            MemberSortKey.CurrentStreak => m => m.CurrentStreak,
-            MemberSortKey.DaysSinceLastAttended => m => m.DaysSinceLastAttended,
-            MemberSortKey.SessionsPerWeek => m => m.SessionsPerWeek,
-            MemberSortKey.Stars => m => m.Stars,
-            MemberSortKey.EngagementScore => m => m.EngagementScore,
-            _ => m => m.AttendanceRate,
-        };
-
-        // Ties keep a stable, readable order: by name.
-        var ordered = SortDescending ? rows.OrderByDescending(key) : rows.OrderBy(key);
-        return ordered.ThenBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase);
     }
 }

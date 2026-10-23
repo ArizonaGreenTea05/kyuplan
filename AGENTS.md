@@ -1,6 +1,6 @@
 # AGENTS.md
 
-kyuplan: karate-club exam planner on Spond data. .NET 10 (SDK pinned in `global.json`), C# latest, nullable on.
+kyuplan: karate-club exam planner on pluggable data sources (Spond is one of several, see `IDataSource`). .NET 10 (SDK pinned in `global.json`), C# latest, nullable on.
 Read this instead of exploring. Open `docs/reference.md` (config keys, API, tables) only for the section you need (`grep -n '^#' docs/reference.md`); `README.md` is just an overview.
 
 ## Layout (`src/`)

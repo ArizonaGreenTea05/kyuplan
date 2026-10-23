@@ -187,7 +187,7 @@ The server keeps its copy in line with Spond by itself: when it starts and then 
   entries and results),
 - sets a member's **start day** to the day of the first event they attended, while none is set,
 - takes over a member's **birth date** from Spond while none is set,
-- keeps the **invitations** of every exam equal to the Spond event,
+- keeps the **invitations** of every exam equal to the event in the data source,
 - **never** touches belts, belt days, comments, who was saved for an exam, or recorded results.
 
 A sync that cannot reach Spond is logged and skipped; the data stays as it is. Because Spond has an id per group, somebody who is in two
@@ -364,7 +364,7 @@ The Exams page can only judge members for whom the data exists. An administrator
    members hold it, other belts require it, or it was handed out at an exam. Colours are `#RRGGBB`; the stripe is optional.
 2. **Members** page: for each member set the **belt**, the **day they got it** and (if Spond has none) the **birth date**. The *start
    day* is worked out by the sync. Members without these show up as *Needs data* in exam suggestions.
-3. **Exams** page: add the Spond events that are belt exams. For past exams, record who received which belt, **newest exam first**, or set
+3. **Exams** page: add the events that are belt exams. For past exams, record who received which belt, **newest exam first**, or set
    the members' belt days first (see [exam-planning.md](exam-planning.md#a-past-exam-who-attended-and-who-received-which-belt)).
 4. **Attendance Statistics** page: define and save the filters you want to use for exam suggestions.
 5. **Tags**: create a few topics for comments, if useful.

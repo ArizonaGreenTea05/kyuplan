@@ -126,13 +126,13 @@
     <value>Demo data</value>
   </data>
   <data name="Shell_DemoDataHint" xml:space="preserve">
-    <value>The API serves generated sample data, not your Spond groups.</value>
+    <value>The API serves generated sample data, not your real groups.</value>
   </data>
   <data name="Shell_Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
   <data name="Shell_RefreshHint" xml:space="preserve">
-    <value>Fetch fresh data from Spond</value>
+    <value>Fetch fresh data from the data source</value>
   </data>
   <data name="Shell_Theme" xml:space="preserve">
     <value>Theme</value>
@@ -1240,7 +1240,7 @@
     <value>There are no belts yet.</value>
   </data>
   <data name="MemberPage_Lede" xml:space="preserve">
-    <value>Which belt each member holds and since when they train. The names come from Spond and are kept up to date automatically.</value>
+    <value>Which belt each member holds and since when they train. The names come from the data source and are kept up to date automatically.</value>
   </data>
   <data name="MemberPage_OnlyWithoutBelt" xml:space="preserve">
     <value>Only members without a belt</value>
@@ -1300,7 +1300,7 @@
     <value>Belt since</value>
   </data>
   <data name="MemberPage_FormBirthHint" xml:space="preserve">
-    <value>Taken over from Spond when Spond has it. A day you set here is kept. Needed for the minimum age of a belt.</value>
+    <value>Taken over from the data source when it has one. A day you set here is kept. Needed for the minimum age of a belt.</value>
   </data>
   <data name="MemberPage_FormBeltSinceHint" xml:space="preserve">
     <value>The day the member got this belt; the waiting time for the next belt counts from it. Recording a belt at an exam sets it.</value>
@@ -1331,7 +1331,7 @@
     <value>The Spond subgroup that holds the people who are not registered in the club yet. Its members are marked as not registered. Empty = everybody counts as registered.</value>
   </data>
   <data name="Settings_Lede" xml:space="preserve">
-    <value>Where the data is kept, how Spond is reached and how the statistics read the calendar. Changes are saved on the server and kept across restarts; the API restarts itself to apply them.</value>
+    <value>Where the data is kept, how the data source is reached and how the statistics read the calendar. Changes are saved on the server and kept across restarts; the API restarts itself to apply them.</value>
   </data>
   <data name="Settings_Save" xml:space="preserve">
     <value>Save</value>
@@ -1367,7 +1367,7 @@
     <value>The two databases must be different files.</value>
   </data>
   <data name="Settings_UseDemoDataHint" xml:space="preserve">
-    <value>Generated sample data, to try the planner out. Spond is not asked.</value>
+    <value>Generated sample data, to try the planner out. No real data source is asked.</value>
   </data>
   <data name="Settings_SpondEmail" xml:space="preserve">
     <value>Spond email</value>
@@ -1553,10 +1553,10 @@
     <value>Make an event an exam</value>
   </data>
   <data name="Exams_AddEvent" xml:space="preserve">
-    <value>Spond event</value>
+    <value>Event</value>
   </data>
   <data name="Exams_AddHint" xml:space="preserve">
-    <value>Choose the event that is the exam. Its name and day follow it on Spond.</value>
+    <value>Choose the event that is the exam. Its name and day follow it in the data source.</value>
   </data>
   <data name="Exams_AddSubGroups" xml:space="preserve">
     <value>Subgroups for the suggestions</value>
@@ -1568,7 +1568,7 @@
     <value>Add</value>
   </data>
   <data name="Exams_None" xml:space="preserve">
-    <value>There are no exams yet. Add the Spond event of a belt exam to plan it.</value>
+    <value>There are no exams yet. Add the event of a belt exam to plan it.</value>
   </data>
   <data name="Exams_ColDate" xml:space="preserve">
     <value>Date</value>
@@ -1616,7 +1616,7 @@
     <value>Delete exam</value>
   </data>
   <data name="Exams_DeleteAsk" xml:space="preserve">
-    <value>Delete {0}? The filters saved for it, the members saved for it and the belts recorded at it are deleted with it. The event on Spond and the belts the members hold stay.</value>
+    <value>Delete {0}? The filters saved for it, the members saved for it and the belts recorded at it are deleted with it. The event in the data source and the belts the members hold stay.</value>
   </data>
   <data name="Plan_Title" xml:space="preserve">
     <value>Who is fit for this exam</value>
@@ -1709,7 +1709,7 @@
     <value>Verdict</value>
   </data>
   <data name="Plan_ColSpond" xml:space="preserve">
-    <value>On Spond</value>
+    <value>Answer</value>
   </data>
   <data name="Plan_ColSave" xml:space="preserve">
     <value>Save</value>
@@ -1787,7 +1787,7 @@
     <value>{0} selected</value>
   </data>
   <data name="Plan_SavedNotInvited" xml:space="preserve">
-    <value>{0} saved members are not invited on Spond yet.</value>
+    <value>{0} saved members are not invited yet.</value>
   </data>
   <data name="Plan_Saved" xml:space="preserve">
     <value>{0} members saved for {1}.</value>
@@ -1805,7 +1805,7 @@
     <value>Save selection</value>
   </data>
   <data name="Plan_SaveHint" xml:space="preserve">
-    <value>Saving only keeps the list in the planner. Nobody is invited on Spond; invite them there when you are ready.</value>
+    <value>Saving only keeps the list in the planner. Nobody is invited; invite them in the data source when you are ready.</value>
   </data>
   <data name="Plan_SelectRow" xml:space="preserve">
     <value>Save {0} for the exam</value>
@@ -2512,13 +2512,13 @@
     <value>Read the audit log (who changed what)</value>
   </data>
   <data name="Permission_sync_view" xml:space="preserve">
-    <value>See how the sync with Spond is doing</value>
+    <value>See how the sync with the data source is doing</value>
   </data>
   <data name="Setup_Title" xml:space="preserve">
     <value>Set up</value>
   </data>
   <data name="Setup_Lede" xml:space="preserve">
-    <value>This installation has no user yet. Say where the data is kept and how Spond is reached, and create the first administrator. You can change everything later on the settings page.</value>
+    <value>This installation has no user yet. Say where the data is kept and how the data source is reached, and create the first administrator. You can change everything later on the settings page.</value>
   </data>
   <data name="Setup_Checking" xml:space="preserve">
     <value>Asking the server …</value>
@@ -2704,7 +2704,7 @@
     <value>Add comment</value>
   </data>
   <data name="Calendar_NotSynced" xml:space="preserve">
-    <value>Not known to the planner yet: comments need the next sync with Spond.</value>
+    <value>Not known to the planner yet: comments need the next sync with the data source.</value>
   </data>
   <data name="Calendar_TagNote" xml:space="preserve">
     <value>Comments written here are tagged with this event automatically.</value>
@@ -3430,7 +3430,7 @@
     <value>Deleted</value>
   </data>
   <data name="SyncStatus_Lede" xml:space="preserve">
-    <value>How the sync with Spond is doing: when it last worked, how long it takes and what went wrong.</value>
+    <value>How the sync with the data source is doing: when it last worked, how long it takes and what went wrong.</value>
   </data>
   <data name="SyncStatus_Healthy" xml:space="preserve">
     <value>The sync works.</value>

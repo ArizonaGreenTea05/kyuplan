@@ -1,7 +1,7 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-white.svg"><img src="assets/branding/logo-black.svg" alt="kyuplan" height="72"></picture></p>
 
 <p align="center">
-  <b>Plan your karate club's belt exams on the data you already keep in Spond.</b><br>
+  <b>Plan your karate club's belt exams on the member and event data you already keep.</b><br>
   Open source, self-hosted, one Docker container.
 </p>
 
@@ -11,23 +11,23 @@
 
 <p align="center"><a href="docs/deployment.md">Self-hosting guide</a> · <a href="docs/user-guide.md">User guide</a> · <a href="https://ko-fi.com/idkeverygoodnameistaken">☕ Sponsor on Ko-fi</a></p>
 
-kyuplan reads the groups and events of your club's [Spond](https://spond.com) account and turns them into an **exam planner**:
+kyuplan reads the groups, members and events of your club from a **data source** and turns them into an **exam planner**. Built in are [Spond](https://spond.com), entering the data by hand and a custom script for any other service; more sources can be added.
 
 - **Suggests who is fit for the next exam** from belt, the day the belt was received, age and training attendance, and lets you save the members you put forward.
 - **Shows what happened at past exams**: who attended and who received which belt.
 - **Attendance statistics** with filters, comments and tags, exam prices and payments, calendar feeds (ICS), backups.
 - **Web and Windows desktop client**, both in **English and German**, with themes and your own club branding.
-- **Your data stays with you**: SQLite or PostgreSQL, accounts with roles and permissions, no cloud service besides Spond.
+- **Your data stays with you**: SQLite or PostgreSQL, accounts with roles and permissions, no cloud service besides the data source you choose.
 
 ## Self-host it in two minutes
 
-You need a machine with Docker (a server, a NAS, a VM, a Raspberry Pi: the image is built for amd64 and arm64). Try it first with generated demo data, no Spond account needed:
+You need a machine with Docker (a server, a NAS, a VM, a Raspberry Pi: the image is built for amd64 and arm64). Try it first with generated demo data, no account needed:
 
 ```bash
 docker run -d --name kyuplan -p 8080:8080 -v kyuplan-data:/data -e Spond__UseDemoData=true ghcr.io/arizonagreentea05/kyuplan:latest
 ```
 
-Open <http://localhost:8080/>: on first start a setup screen asks for the Spond login (or keeps the demo data) and creates the first administrator.
+Open <http://localhost:8080/>: on first start a setup screen asks for the data source and its login (or keeps the demo data) and creates the first administrator.
 
 ### For real use
 

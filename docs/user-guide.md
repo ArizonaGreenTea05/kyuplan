@@ -1,7 +1,7 @@
 # User guide
 
 This guide is for the people who **use** kyuplan every day: trainers, exam organisers and anybody who looks things up. It explains
-what each page shows and how to do the common jobs. Everything an administrator sets up (users, roles, Spond login, branding) is in the
+what each page shows and how to do the common jobs. Everything an administrator sets up (users, roles, data source, branding) is in the
 [admin guide](admin-guide.md).
 
 - [What kyuplan is](#what-kyuplan-is)
@@ -19,7 +19,7 @@ what each page shows and how to do the common jobs. Everything an administrator 
 
 ## What kyuplan is
 
-kyuplan is the planner for the club's belt exams. It reads the club's [Spond](https://spond.com) groups and answers three questions:
+kyuplan is the planner for the club's belt exams. It reads the club's groups, members and events from a data source (for example [Spond](https://spond.com)) and answers three questions:
 
 1. **Who is fit for the next exam?** From a member's belt, the day they got it, their age and their attendance, kyuplan tells who may
    take the next belt, and who is missing what.
@@ -29,7 +29,7 @@ kyuplan is the planner for the club's belt exams. It reads the club's [Spond](ht
 
 It is used in a **web browser** and, on Windows, as an **installed desktop app**. Both show the same pages and work the same way.
 
-> **What "attended" means.** Spond records *answers to invitations*, not who actually stood in the hall. kyuplan counts a member as
+> **What "attended" means.** The data source records *answers to invitations*, not who actually stood in the hall. kyuplan counts a member as
 > having **attended** an event when they **accepted** the invitation. Somebody who accepted and stayed at home counts as present;
 > somebody who came without answering does not. Keep this in mind when you read the figures.
 
@@ -72,17 +72,17 @@ record who was invited and who came).
 
 ### Demo data
 
-If the page shows a **Demo data** marker, the server serves generated sample data for a fictional club, not your real Spond groups.
+If the page shows a **Demo data** marker, the server serves generated sample data for a fictional club, not your real groups.
 Your administrator uses this to try things out.
 
 ## Finding your way around
 
 - **Navigation** (left): the pages you may use. The pages are: Exams, Dashboard, Attendance Statistics, Calendar, Members, Belts, Tags, and
   your Account. Administrators additionally see Users, Roles, Settings and Branding.
-- **Group**: the club's Spond group whose data you look at. Choosing another group reloads the page. (Most clubs have one group, with
+- **Group**: the club's group whose data you look at. Choosing another group reloads the page. (Most clubs have one group, with
   subgroups such as children and adults.)
-- **Refresh**: kyuplan keeps the Spond data for about 15 minutes. **Refresh** throws that away and asks Spond again. Use it after
-  you changed an event or a member on Spond and want to see it now.
+- **Refresh**: kyuplan keeps the data for about 15 minutes. **Refresh** throws that away and asks the data source again. Use it after
+  you changed an event or a member there and want to see it now.
 - **Buttons are only active when they would change something.** *Save* is grey until you changed something valid, *Select the fit* is
   grey when everybody fit is already ticked, and so on. If a button is grey, it has nothing to do (the tooltip often says why).
 - **Dangerous actions ask first.** Deleting an exam, a filter, a belt, a tag or a comment always asks for confirmation.
@@ -100,14 +100,14 @@ Your administrator uses this to try things out.
 ## Calendar
 
 The **Calendar** page shows the events of the selected group as in any calendar app: **Day**, **Week** (Monday to Sunday) or **Month**, with
-*Previous*, *Next* and *Today*. Cancelled events are struck through. The calendar only knows the events kyuplan reads from Spond (about the
+*Previous*, *Next* and *Today*. Cancelled events are struck through. The calendar only knows the events kyuplan reads from the data source (about the
 last year and the next six months).
 
 Choosing an event opens its **detail**: when it takes place, how many accepted, declined or did not answer, and **everybody invited** with their
 answer. Below each member you see the comments written about them **for this event** and, if you may write comments, a box to add one. A
 comment written there is **tagged automatically** with the event: kyuplan uses the tag that is connected to the event, and creates one
 (named after the event and its day) if there is none yet. The comment is an ordinary comment on the member; you find it on the Members page, and
-the tag on the Tags page. A member who kyuplan does not know yet (they were invited since the last synchronisation with Spond) cannot be
+the tag on the Tags page. A member who kyuplan does not know yet (they were invited since the last synchronisation with the data source) cannot be
 commented on until the next synchronisation.
 
 ### Evaluating members
@@ -184,10 +184,10 @@ the top and selected when you open the page), then the past ones.
 
 ### Adding an exam
 
-An exam is an **event on Spond**, not something you type in. Press **Add exam** and choose the event (type part of its name or date to
+An exam is an **event of the data source**, not something you type in. Press **Add exam** and choose the event (type part of its name or date to
 find it). If the group has subgroups you are also asked *for which subgroups the suggestions are* (nothing ticked = everybody); this can
-only be chosen now. The exam's name and date follow the event if it is renamed or moved on Spond. **Delete exam** removes the exam, its
-saved filters, the members saved for it and the belts recorded at it. Nothing changes on Spond, and the belts members hold stay as they
+only be chosen now. The exam's name and date follow the event if it is renamed or moved there. **Delete exam** removes the exam, its
+saved filters, the members saved for it and the belts recorded at it. Nothing changes in the data source, and the belts members hold stay as they
 are.
 
 ### An exam that is still to come: who is fit?
@@ -219,8 +219,8 @@ Fit members are listed first, then those who need data, then those who are not f
   added. The page says in one sentence what was used. The link *Define a filter on the Attendance Statistics page* takes you there.
 
 **Putting members forward.** Tick the members you want to propose (or press **Select the fit**), then **Save selection**. The selection
-is stored **in kyuplan only**: **kyuplan cannot invite anybody on Spond.** Invite the saved members on Spond yourself. After that, the
-*On Spond* column shows their answer and the page counts how many of your saved members are **not invited yet**, so you can invite all
+is stored **in kyuplan only**: **kyuplan cannot invite anybody.** Invite the saved members in the data source yourself. After that, the
+*Answer* column shows their answer and the page counts how many of your saved members are **not invited yet**, so you can invite all
 of them in one go. *Discard changes* drops the ticks you have not saved; *Clear selection* unticks everybody.
 
 ### A past exam: who attended, who received which belt
@@ -244,14 +244,14 @@ The exact rules are in [exam-planning.md](exam-planning.md).
 The members of the selected group, with their **belt**, the **day they got it**, the **day they started training** and their **birth
 date**. You can search by name and show only members who hold no belt yet.
 
-Who is a member is decided by **Spond**: names come from there and members cannot be added or removed in kyuplan. The list is as fresh
-as the last automatic sync with Spond (every 15 minutes by default). A member who leaves Spond is removed, together with their belt
+Who is a member is decided by **the data source**: names come from there and members cannot be added or removed in kyuplan. The list is as fresh
+as the last automatic sync (every 15 minutes by default). A member who leaves the data source is removed, together with their belt
 data, comments and exam invitations.
 
-What Spond does not know, you enter here, because the Exams page needs it:
+What the data source does not know, you enter here, because the Exams page needs it:
 
 - **Edit** sets the belt (or none), the day they got it (only possible with a belt), the day they train since, and the birth date.
-- The **birth date** is taken from Spond when Spond has one. A value that is there is never overwritten.
+- The **birth date** is taken from the data source when it has one. A value that is there is never overwritten.
 - The **day they train since** is worked out automatically as the day of the first event the member attended; press **Clear the day**
   to let kyuplan work it out again. A day you set yourself is never changed by the sync.
 - Members with no belt, no belt day or no birth date will show up as **Needs data** on the Exams page.
@@ -295,7 +295,7 @@ them is ordinary editing.
 ## Tags
 
 Tags are topics that comments can be about, for example *Belt exam September*. On the **Tags** page you create, rename and delete them.
-A tag can be connected to **one Spond event or to none** (one event can have many tags). Names are unique regardless of case.
+A tag can be connected to **one event or to none** (one event can have many tags). Names are unique regardless of case.
 Deleting a tag asks first and says on how many comments it is: it is taken off them, **the comments stay**.
 
 ## Your account
@@ -320,7 +320,7 @@ browser still holds the old login and asks for the new one at the next click: th
 Your own settings are on the page **Account > Personal settings**. They are kept with your account, so they are the same on every computer.
 
 - **Language**: English or German. Until you pick one, the apps follow the language of your browser or Windows. The choice also decides
-  how numbers and dates are written. The web client reloads when you switch. Names and events come from Spond and are shown as they are.
+  how numbers and dates are written. The web client reloads when you switch. Names and events come from the data source and are shown as they are.
 - **Theme**: light or dark; the app starts in your system's theme. The button is off in the themes that have only one (Dracula,
   Catppuccin, Windows Vista / 7, native WPF and the theme packs).
 - **Appearance**: the look of the program. Both apps offer **Dracula**, **Catppuccin Latte** (light),
@@ -338,7 +338,7 @@ Your own settings are on the page **Account > Personal settings**. They are kept
 
 ## Frequently asked questions
 
-**A member is missing from the list.** Members come from Spond and are synced every 15 minutes. Check that they are in the Spond group,
+**A member is missing from the list.** Members come from the data source and are synced every 15 minutes. Check that they are in the group there,
 then press **Refresh** and wait for the next sync. A member of two groups appears once per group.
 
 **Everybody says "Needs data" on the Exams page.** Belts are club-specific: create the belts (Belts page), then give members their belt,
@@ -350,9 +350,9 @@ the day they got it and their birth date (Members page).
 **Why is an attendance number different from what I count by hand?** Cancelled events, events that are not over yet, events outside the time span,
 and events excluded by the name filters do not count; and "attended" means "accepted". See [attendance-statistics.md](attendance-statistics.md).
 
-**I saved members for an exam. Why did nobody get an invitation?** kyuplan cannot invite on Spond. Saved members are the planner's own list; invite them on Spond.
+**I saved members for an exam. Why did nobody get an invitation?** kyuplan cannot invite anybody. Saved members are the planner's own list; invite them in the data source.
 
-**The data is old.** Press **Refresh**. If the whole server lost its connection to Spond, ask your administrator to look at the log.
+**The data is old.** Press **Refresh**. If the whole server lost its connection to the data source, ask your administrator to look at the log.
 
 **I can't see a page or a button.** You don't have the permission. Ask your administrator which role fits your job.
 

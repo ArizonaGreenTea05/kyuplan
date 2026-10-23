@@ -65,6 +65,14 @@ public sealed class BackupFolderTests : IDisposable
     }
 
     [Fact]
+    public void A_NUL_character_in_the_folder_is_refused_not_a_server_error()
+    {
+        Assert.Throws<InvalidInputException>(() => Resolve(Path.Combine(Data, "a\0b")));
+        Assert.Throws<InvalidInputException>(() => Resolve(Path.Combine(Data, "ok"), "web\0root"));
+        Assert.Throws<InvalidInputException>(() => BackupFolder.Resolve(Path.Combine(Data, "ok"), Path.Combine(Data, "set\0tings.json"), Content, null));
+    }
+
+    [Fact]
     public void The_data_folder_itself_and_its_parents_are_refused()
     {
         Assert.Throws<InvalidInputException>(() => Resolve(Data));

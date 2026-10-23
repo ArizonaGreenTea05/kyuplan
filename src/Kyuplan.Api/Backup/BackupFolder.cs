@@ -20,15 +20,15 @@ internal static class BackupFolder
     /// <param name="webRootPath">The folder the web server serves files from (besides <c>wwwroot</c> of the content root); nothing in or below it is allowed.</param>
     public static string Resolve(string location, string settingsFilePath, string contentRoot, string? webRootPath)
     {
-        var data = RealPath(Path.GetDirectoryName(Path.GetFullPath(settingsFilePath, contentRoot))!);
-        var folder = RealPath(Path.GetFullPath(location, contentRoot));
+        var data = RealPath(Path.GetDirectoryName(FullPath(settingsFilePath, contentRoot))!);
+        var folder = RealPath(FullPath(location, contentRoot));
 
         if (!IsBelow(folder, data, orSame: false))
             throw new InvalidInputException($"The folder must be below the folder of the settings file ({data}).");
 
         foreach (var web in new[] { Path.Combine(contentRoot, "wwwroot"), webRootPath }.Where(w => !string.IsNullOrWhiteSpace(w)))
         {
-            if (IsBelow(folder, RealPath(Path.GetFullPath(web!, contentRoot)), orSame: true))
+            if (IsBelow(folder, RealPath(FullPath(web!, contentRoot)), orSame: true))
                 throw new InvalidInputException("The folder must not be one the web server serves files from.");
         }
 
@@ -37,6 +37,19 @@ internal static class BackupFolder
 
     /// <summary>A full path with every link on the way replaced by its target, to compare it with a folder from <see cref="Resolve"/>.</summary>
     public static string Real(string full) => RealPath(full);
+
+    /// <summary><see cref="Path.GetFullPath(string, string)"/>, but a path the OS cannot take (a colon in a name on Windows, a NUL character) is invalid input, not a server error.</summary>
+    private static string FullPath(string path, string basePath)
+    {
+        try
+        {
+            return Path.GetFullPath(path, basePath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            throw new InvalidInputException("The folder is not a valid path.");
+        }
+    }
 
     private static bool IsBelow(string path, string root, bool orSame)
     {

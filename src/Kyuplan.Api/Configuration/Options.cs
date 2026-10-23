@@ -225,6 +225,14 @@ public sealed class SyncOptions
     /// mostly reads the same data again. Zero or less = only once, when the API starts.
     /// </summary>
     public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// The largest share (0 to 1) of the stored members that one sync may remove, counted over all members and over each group. A member
+    /// that disappears from the data source takes the belts, payments, comments and results with it, so an answer that drops more
+    /// (an empty list from a broken script, a group the account lost) is refused as a failed run until it is confirmed with
+    /// <c>POST /api/sync/run?confirmRemoval=true</c>. 1 or more = no limit.
+    /// </summary>
+    public double MaxRemovedShare { get; set; } = 0.5;
 }
 
 public sealed class DefaultDataOptions

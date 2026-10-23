@@ -438,7 +438,7 @@ public sealed class ExamPlanningTests : IDisposable
     {
         var w = await BuildAsync();
         Spond.SetGroups(Group(Dojo, SubGroups, Person("a", "Anna", null, "sg1")), Group("g-team", Person("t", "Tim")));
-        await _club.SyncAsync();
+        await _club.SyncConfirmedAsync();
         var tim = (await _club.MembersAsync()).Single(m => m.SpondId == "t").Id;
 
         var unknown = await Assert.ThrowsAsync<InvalidInputException>(() => SaveFor(w.Next.Id, [w.Members["a"], 9999]));
@@ -473,7 +473,7 @@ public sealed class ExamPlanningTests : IDisposable
         await Planning(s => s.SetResultAsync(w.Past.Id, w.Members["b"], w.Yellow, CancellationToken.None));
 
         Spond.SetGroups(Group(Dojo, SubGroups, Person("a", "Anna", null, "sg1")));
-        await _club.SyncAsync();
+        await _club.SyncConfirmedAsync();
 
         Assert.Equal(0, await Db(db => db.ExamCandidates.CountAsync()));
         Assert.Equal(0, await Db(db => db.ExamResults.CountAsync()));
@@ -588,7 +588,7 @@ public sealed class ExamPlanningTests : IDisposable
     {
         var w = await BuildAsync();
         Spond.SetGroups(Group(Dojo, SubGroups, Person("a", "Anna", null, "sg1")), Group("g-team", Person("t", "Tim")));
-        await _club.SyncAsync();
+        await _club.SyncConfirmedAsync();
         var tim = (await _club.MembersAsync()).Single(m => m.SpondId == "t").Id;
 
         await Assert.ThrowsAsync<ExamNotFoundException>(() => Planning(s => s.SetResultAsync(9999, w.Members["a"], w.Yellow, CancellationToken.None)));

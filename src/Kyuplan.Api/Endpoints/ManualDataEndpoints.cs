@@ -90,14 +90,14 @@ public static class ManualDataEndpoints
         if (errors is not null) return Results.ValidationProblem(errors);
 
         var result = await change();
-        await sync.SyncAllAsync(cancellationToken);
+        await sync.SyncAllAsync(cancellationToken, confirmRemoval: true); // the user just did this by hand
         return Results.Ok(result);
     }
 
     private static async Task<IResult> Delete(Func<Task> delete, SpondSync sync, CancellationToken cancellationToken)
     {
         await delete();
-        await sync.SyncAllAsync(cancellationToken);
+        await sync.SyncAllAsync(cancellationToken, confirmRemoval: true); // the user just did this by hand
         return Results.NoContent();
     }
 }

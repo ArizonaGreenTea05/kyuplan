@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Kyuplan.Api.Domain;
+using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using static Kyuplan.Tests.SyncTestClub;
@@ -122,6 +123,183 @@ public sealed class SpondSyncTests : IDisposable
 
         var member = Assert.Single(await _club.MembersAsync());
         Assert.Equal(("g-two", "m-ben"), (member.GroupId, member.SpondId));
+    }
+
+    // --- The removal guard: a successful but wrong answer must not wipe the members and what hangs off them ---------
+
+    private static readonly MemberInfo Emil = Person("m-emil", "Emil Rau");
+
+    private async Task<int> GiveAnnaABeltAsync()
+    {
+        var orange = await _club.AddBeltAsync("Orange");
+        await _club.EditMemberAsync(Anna.Id, m => m.BeltId = orange);
+        return orange;
+    }
+
+    [Fact]
+    public async Task An_empty_list_of_groups_is_refused_and_nothing_is_removed()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+        var orange = await GiveAnnaABeltAsync();
+
+        Spond.SetGroups();
+        var refused = await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+
+        Assert.Contains("2 of the 2", refused.Message);
+        Assert.Contains("confirmRemoval=true", refused.Message);
+        var members = await _club.MembersAsync();
+        Assert.Equal(2, members.Count);
+        Assert.Equal(orange, members.Single(m => m.SpondId == Anna.Id).BeltId);
+    }
+
+    [Fact]
+    public async Task A_refused_run_is_a_failed_run_in_the_sync_status()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+        Spond.SetGroups();
+
+        await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+
+        var status = await _club.QueryAsync(sp => Task.FromResult(sp.GetRequiredService<SyncStatusTracker>().Snapshot(true, TimeSpan.Zero)));
+        Assert.Equal(1, status.ConsecutiveFailures);
+        Assert.Contains("Sync:MaxRemovedShare", status.LastFailure!.Error);
+    }
+
+    [Fact]
+    public async Task More_than_half_of_the_members_missing_is_refused_but_exactly_half_is_applied()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben, Cara, Dora));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group(Dojo, Anna));
+        await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+        Assert.Equal(4, (await _club.MembersAsync()).Count);
+
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+        Assert.Equal(2, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task A_group_that_loses_most_of_its_members_is_refused_even_when_the_club_as_a_whole_loses_little()
+    {
+        var big = Enumerable.Range(0, 10).Select(i => Person($"big-{i}", $"Big {i}")).ToArray();
+        Spond.SetGroups(Group("g-small", Anna, Ben, Cara), Group("g-big", big));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group("g-small", Anna), Group("g-big", big)); // 2 of 13 overall, 2 of 3 in one group
+        var refused = await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+
+        Assert.Contains("Group g-small", refused.Message);
+        Assert.Equal(13, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task A_group_that_disappears_beside_a_big_one_is_applied_while_it_stays_under_the_limit()
+    {
+        var big = Enumerable.Range(0, 10).Select(i => Person($"big-{i}", $"Big {i}")).ToArray();
+        Spond.SetGroups(Group("g-small", Anna, Ben), Group("g-big", big));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group("g-big", big));
+        await _club.SyncAsync();
+
+        Assert.Equal(10, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task A_confirmed_run_applies_what_would_be_refused()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+        Spond.SetGroups();
+        await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+
+        await _club.SyncConfirmedAsync();
+
+        Assert.Empty(await _club.MembersAsync());
+    }
+
+    [Theory]
+    [InlineData(1.0, true)]
+    [InlineData(2.0, true)]
+    [InlineData(0.0, false)]
+    [InlineData(-1.0, false)]
+    public async Task The_share_can_be_raised_to_switch_the_guard_off_or_lowered_to_refuse_any_removal(double share, bool applied)
+    {
+        _club.SyncSettings.MaxRemovedShare = share;
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group(Dojo, Anna)); // one of two
+        if (share < 0.5) await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
+        else await _club.SyncAsync();
+
+        Assert.Equal(applied ? 1 : 2, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task Members_that_are_added_while_others_go_count_against_the_stored_ones_only()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group(Dojo, Anna, Cara, Dora, Emil)); // Ben gone (1 of 2), four listed
+        await _club.SyncAsync();
+
+        Assert.Equal(4, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task A_first_sync_into_an_empty_database_and_an_empty_source_never_refuse()
+    {
+        await _club.SyncAsync();
+        Assert.Empty(await _club.MembersAsync());
+
+        Spond.SetGroups(Group(Dojo, Anna));
+        await _club.SyncAsync();
+        Assert.Single(await _club.MembersAsync());
+    }
+
+    [Fact]
+    public async Task A_group_listed_twice_does_not_break_the_guard()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben), Group(Dojo, Anna, Ben));
+
+        await _club.SyncAsync();
+
+        Assert.Equal(2, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task Creating_an_exam_does_not_remove_members_the_source_suddenly_lacks_and_the_exam_is_still_created()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben, Cara));
+        Spond.SetEvents(Dojo, _club.Event("exam", Day(14), (Anna.Id, Rsvp.Accepted)));
+        await _club.SyncAsync();
+
+        Spond.SetGroups(Group(Dojo, Anna)); // two of three missing
+        var exam = await _club.CreateExamAsync("exam");
+
+        Assert.NotEqual(0, exam.Id);
+        Assert.Equal(3, (await _club.MembersAsync()).Count);
+    }
+
+    [Fact]
+    public async Task Syncing_one_exam_refuses_a_group_that_lost_most_of_its_members()
+    {
+        Spond.SetGroups(Group(Dojo, Anna, Ben, Cara));
+        Spond.SetEvents(Dojo, _club.Event("exam", Day(14), (Anna.Id, Rsvp.Accepted)));
+        var exam = await _club.CreateExamAsync("exam");
+        Spond.SetGroups(Group(Dojo, Anna));
+
+        var stored = await _club.QueryAsync(sp => sp.GetRequiredService<PlannerDbContext>().Exams.SingleAsync(e => e.Id == exam.Id));
+        await Assert.ThrowsAsync<SyncRefusedException>(() =>
+            _club.RunAsync(sp => sp.GetRequiredService<SpondSync>().SyncExamAsync(stored, CancellationToken.None)));
+
+        Assert.Equal(3, (await _club.MembersAsync()).Count);
     }
 
     [Fact]

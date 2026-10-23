@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Configuration;
@@ -8,6 +9,9 @@ using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Persistence;
+
+/// <summary>A sync was not applied because it would remove too many members (see <see cref="SyncOptions.MaxRemovedShare"/>); nothing was changed.</summary>
+public sealed class SyncRefusedException(string message) : Exception(message);
 
 /// <summary>Lets one <see cref="SpondSync"/> run at a time: two of them would both add the same member or invitation.</summary>
 public sealed class SyncGate
@@ -35,12 +39,18 @@ public sealed class SpondSync(
     TimeProvider time,
     SyncGate gate,
     IOptions<SpondOptions> spondOptions,
+    IOptions<SyncOptions> syncOptions,
     ILogger<SpondSync> logger,
     SyncStatusTracker? tracker = null)
 {
-    /// <summary>Syncs every group and every exam.</summary>
+    /// <summary>
+    /// Syncs every group and every exam. A member that is gone from the data source takes the belts, payments, comments and results
+    /// with it, so an answer that would remove more than <see cref="SyncOptions.MaxRemovedShare"/> of the stored members (of all of
+    /// them, or of one group) is refused before anything is changed, unless <paramref name="confirmRemoval"/> says it is right.
+    /// </summary>
     /// <exception cref="SpondUnavailableException">Spond cannot be read at all; nothing was changed.</exception>
-    public async Task SyncAllAsync(CancellationToken cancellationToken)
+    /// <exception cref="SyncRefusedException">The answer looks wrong and was not confirmed; nothing was changed.</exception>
+    public async Task SyncAllAsync(CancellationToken cancellationToken, bool confirmRemoval = false)
     {
         await gate.WaitAsync(cancellationToken);
         var run = tracker?.Begin();
@@ -48,6 +58,7 @@ public sealed class SpondSync(
         try
         {
             var groups = await source.GetGroupsAsync(cancellationToken);
+            if (!confirmRemoval) await EnsureRemovalsAreFewAsync(groups, cancellationToken);
 
             // A group the account does not see any more has no members in Spond either.
             var groupIds = groups.Select(g => g.Id).ToList();
@@ -57,7 +68,7 @@ public sealed class SpondSync(
             foreach (var group in groups)
             {
                 var exams = await db.Exams.Where(e => e.GroupId == group.Id).ToListAsync(cancellationToken);
-                await SyncGroupAsync(group, exams, cancellationToken);
+                await SyncGroupAsync(group, exams, guardRemovals: false, cancellationToken);
             }
 
             run?.Succeed();
@@ -90,7 +101,7 @@ public sealed class SpondSync(
         {
             var groups = await source.GetGroupsAsync(cancellationToken);
             if (groups.FirstOrDefault(g => g.Id == exam.GroupId) is { } group)
-                await SyncGroupAsync(group, [exam], cancellationToken);
+                await SyncGroupAsync(group, [exam], guardRemovals: true, cancellationToken);
         }
         finally
         {
@@ -98,9 +109,32 @@ public sealed class SpondSync(
         }
     }
 
-    private async Task SyncGroupAsync(GroupInfo group, IReadOnlyList<Exam> exams, CancellationToken cancellationToken)
+    /// <summary>Refuses the answer when it drops too many of the stored members: all of them, or those of one group.</summary>
+    private async Task EnsureRemovalsAreFewAsync(IReadOnlyList<GroupInfo> groups, CancellationToken cancellationToken)
     {
-        var members = await SyncMembersAsync(group, cancellationToken);
+        var stored = await db.Members.AsNoTracking().Select(m => new { m.GroupId, m.SpondId }).ToListAsync(cancellationToken);
+        var listed = groups.DistinctBy(g => g.Id).ToDictionary(g => g.Id, g => g.Members.Select(m => m.Id).ToHashSet());
+
+        var gone = stored.Where(m => !listed.TryGetValue(m.GroupId, out var ids) || !ids.Contains(m.SpondId)).ToList();
+        EnsureFew("all groups", gone.Count, stored.Count);
+
+        foreach (var group in groups.DistinctBy(g => g.Id))
+            EnsureFew($"group '{group.Name}'", gone.Count(m => m.GroupId == group.Id), stored.Count(m => m.GroupId == group.Id));
+    }
+
+    private void EnsureFew(string what, int removed, int stored)
+    {
+        var maxShare = syncOptions.Value.MaxRemovedShare;
+        if (removed == 0 || removed <= stored * maxShare) return;
+
+        throw new SyncRefusedException(
+            string.Create(CultureInfo.InvariantCulture, $"The data source no longer lists {removed} of the {stored} stored members of {what} (more than the {maxShare * 100:0.#} % that Sync:MaxRemovedShare allows). ") +
+            "Nothing was changed. If this is right, run the sync once with POST /api/sync/run?confirmRemoval=true; otherwise fix the data source (a custom script must throw on errors, not return an empty list).");
+    }
+
+    private async Task SyncGroupAsync(GroupInfo group, IReadOnlyList<Exam> exams, bool guardRemovals, CancellationToken cancellationToken)
+    {
+        var members = await SyncMembersAsync(group, guardRemovals, cancellationToken);
 
         IReadOnlyList<EventInfo> events;
         try
@@ -127,9 +161,10 @@ public sealed class SpondSync(
 
     /// <summary>Adds the members of the group that are new, renames the ones that were renamed and removes the ones that are gone. Saves.</summary>
     /// <returns>The members of the group as they are now, by Spond id.</returns>
-    private async Task<Dictionary<string, Member>> SyncMembersAsync(GroupInfo group, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, Member>> SyncMembersAsync(GroupInfo group, bool guardRemovals, CancellationToken cancellationToken)
     {
         var stored = await db.Members.Where(m => m.GroupId == group.Id).ToDictionaryAsync(m => m.SpondId, cancellationToken);
+        var storedCount = stored.Count;
         var members = new Dictionary<string, Member>();
         var now = time.GetUtcNow();
         var added = 0;
@@ -162,6 +197,7 @@ public sealed class SpondSync(
         }
 
         // What is left was not in Spond's list; the exams they were invited to forget them (cascade).
+        if (guardRemovals) EnsureFew($"group '{group.Name}'", stored.Count, storedCount);
         db.Members.RemoveRange(stored.Values);
         await db.SaveChangesAsync(cancellationToken);
 

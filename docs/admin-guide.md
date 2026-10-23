@@ -139,6 +139,10 @@ Rules to know:
   Try a change on a copy first, e.g. with `DataSource__Script` in the environment of a test container.
 - The members of a group are identified by the `id` you return. Keep ids stable, or members are seen as new people (belts and comments are lost
   with the old ones at the next sync).
+- **Throw on errors, never return `[]`.** A member the script no longer returns is deleted at the next sync, with belts, payments, comments,
+  ratings and results. An expired token answered with an empty body, a paging bug or a `catch` that returns an empty list would look like
+  "everybody left". The server therefore refuses a sync that [removes too many members](#the-automatic-sync), but a script that throws is the
+  only way to say "I could not read the data".
 
 ### Manual data
 
@@ -190,7 +194,17 @@ The server keeps its copy in line with Spond by itself: when it starts and then 
 - keeps the **invitations** of every exam equal to the event in the data source,
 - **never** touches belts, belt days, comments, who was saved for an exam, or recorded results.
 
-A sync that cannot reach Spond is logged and skipped; the data stays as it is. Because Spond has an id per group, somebody who is in two
+A sync that cannot reach Spond is logged and skipped; the data stays as it is.
+
+**Protection against a wrong answer.** A member that disappears from the data source is deleted with everything that hangs off them
+(belt history, exam results, payments, comments, ratings), and that cannot be undone. A source can answer "successfully" and still be wrong
+(an empty list from a broken script, a group the Spond account lost access to). So a sync that would remove **more than half** of the stored
+members (`Sync:MaxRemovedShare`, `0.5`), counted over all groups and over each group, is **refused before anything is changed**. It
+appears as a failed run on the sync status page (and in the metrics) with the numbers. If the removal is right, apply it once with
+`POST /api/sync/run?confirmRemoval=true` (permission `settings.edit`, see `/scalar`); a plain `POST /api/sync/run` runs a normal sync.
+`Sync:MaxRemovedShare=1` turns the check off. Changes made by hand in the [manual data](#manual-data) are not refused: they are the confirmation.
+
+Because Spond has an id per group, somebody who is in two
 groups is two members. Only events within the search window (12 months back, 6 ahead by default) are looked at.
 
 **Sync status.** *Administration → Sync status* (permission `sync.view`) shows whether the sync works: when it last succeeded and how long it

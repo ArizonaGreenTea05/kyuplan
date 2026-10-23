@@ -81,6 +81,19 @@ public sealed class SyncStatusApiTests(WebApplicationFactory<Program> factory) :
     }
 
     [Fact]
+    public async Task A_sync_can_be_run_by_hand_and_needs_a_login()
+    {
+        using var host = CreateHost();
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await host.CreateClient().PostAsync("/api/sync/run", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await host.CreateSignedInClient().PostAsync("/api/sync/run", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await host.CreateSignedInClient().PostAsync("/api/sync/run?confirmRemoval=true", null)).StatusCode);
+
+        var status = await host.CreateSignedInClient().GetFromJsonAsync<SyncStatusDto>("/api/sync/status");
+        Assert.Equal(2, status!.Recent.Count(r => r.Succeeded));
+    }
+
+    [Fact]
     public async Task The_metrics_are_readable_with_the_token_in_the_prometheus_format()
     {
         using var host = CreateHost();

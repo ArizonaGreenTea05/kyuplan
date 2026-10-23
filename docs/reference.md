@@ -130,6 +130,7 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | `DefaultData:Enabled` | `true` | Whether a database that is **created** by this start gets the standard belts and roles (see [Run it](#run-it)). Databases that exist are never filled, whatever the setting. |
 | `Sync:Enabled` | `true` | Whether the API keeps the members and the exams' invitations in its database in line with Spond by itself (see [Belts, members and exam invitations](#belts-members-and-exam-invitations)). |
 | `Sync:Interval` | `00:15:00` | How long to wait between two syncs; it runs once when the API starts, too. Spond data is cached for `Spond:CacheDuration`, so a much shorter wait reads the same data again. Zero or less = only at start. |
+| `Sync:MaxRemovedShare` | `0.5` | The largest share (0 to 1) of the stored members one sync may remove, counted over all members and over each group. More is refused as a failed run (nothing is changed) until `POST /api/sync/run?confirmRemoval=true` confirms it. `1` or more = no limit. |
 | `Accounts:ConnectionString` | `Data Source=data/accounts.db` | Database of the user accounts, of the system `Database:Provider` names, **separate** from the one above (with PostgreSQL it may be the same server database: the tables do not clash) and resolved the same way. Back it up and protect it on its own: it holds the password hashes. |
 | `Accounts:InitialAdminUserName` | `admin` | User name of the administrator that is created when the accounts database has no user. |
 | `Accounts:InitialAdminPassword` | empty | Its password (12 to 128 characters). Empty = no administrator is created: the web client's setup screen asks for one (see [Run it](#run-it)). Only used while there is no user; it can be removed from the configuration afterwards. |
@@ -295,7 +296,9 @@ created or pointed at another event is synced at once. A sync that cannot reach 
 is. What it does:
 
 - **Members**: a member Spond has and the database has not is added; a renamed one is renamed; one Spond no longer lists is removed
-  (and with it from the invitations of exams), as are all members of a group the account no longer sees. The belt and the start day
+  (and with it from the invitations of exams), as are all members of a group the account no longer sees; a run that would remove more
+  than `Sync:MaxRemovedShare` of the members (all, or of one group) is refused with `SyncRefusedException` (409 on `POST /api/sync/run`)
+  unless confirmed, and changes made through the manual data endpoints are always confirmed. The belt and the start day
   are never touched, nor are the exams' saved members and results. The birth date is taken over from Spond (`DateOfBirth`) while it is not known, and never changed once it is there. Spond has an id per group, so a person who is in two groups is two members.
 - **Start day**: while `StartedAt` is null, it is set to the day of the first event the member **attended**: not cancelled, already over,
   and accepted. Only the events of the search window are looked at (`Statistics:EventSearchMonthsBack`, 12 months by default, at most

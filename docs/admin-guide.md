@@ -129,7 +129,8 @@ The button **Insert example script** puts a complete example into the box. Insid
 Rules to know:
 
 - The script runs in a fresh, sandboxed engine for every call, one call at a time, and is stopped after `DataSource:ScriptTimeout` (60 seconds), at
-  128 MB of memory or at 300 nested calls. A script that fails (an exception, a result that is not as described above) makes the pages show the
+  128 MB of memory, after `DataSource:ScriptMaxStatements` statements (10 million, `0` = no limit) or at 300 nested calls. Every run is logged with
+  its outcome and duration. A script that fails (an exception, a result that is not as described above) makes the pages show the
   error message and the server log the details; the rest of kyuplan keeps working with what it has.
 - **Treat the script like code of the server.** Whoever may save the settings (`settings.edit`) can make the server send requests to any address it
   can reach, including addresses inside your network. Keep that permission to people you trust. Tokens in the script are stored in `settings.json`

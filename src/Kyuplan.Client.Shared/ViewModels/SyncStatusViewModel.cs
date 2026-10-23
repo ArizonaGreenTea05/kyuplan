@@ -32,10 +32,13 @@ public sealed partial class SyncStatusViewModel(ShellViewModel shell, IPlannerAp
     protected override bool ReloadsOnActivation => true;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasLoaded), nameof(IsFailing), nameof(Headline), nameof(IntervalText), nameof(LastSuccessText), nameof(LastFailureText), nameof(Runs), nameof(HasRuns))]
+    [NotifyPropertyChangedFor(nameof(HasLoaded), nameof(IsFailing), nameof(Headline), nameof(IntervalText), nameof(LastSuccessText), nameof(LastFailureText), nameof(Runs), nameof(HasRuns), nameof(CanConfirmRemoval))]
     private SyncStatusDto? _status;
 
     public bool HasLoaded => Status is not null;
+
+    /// <summary>Whether the last run was refused because it would remove too many members and the user may apply it anyway.</summary>
+    public bool CanConfirmRemoval => Status is { RemovalRefused: true } && Shell.Can(Permission.SettingsEdit);
 
     public bool IsFailing => Status is { ConsecutiveFailures: > 0 };
 
@@ -79,6 +82,7 @@ public sealed partial class SyncStatusViewModel(ShellViewModel shell, IPlannerAp
     protected override void OnPermissionsChanged()
     {
         if (!CanView) Status = null;
+        if (!CanConfirmRemoval) IsConfirmingRemoval = false;
 
         base.OnPermissionsChanged();
     }
@@ -88,6 +92,49 @@ public sealed partial class SyncStatusViewModel(ShellViewModel shell, IPlannerAp
         base.OnLanguageChanged();
         OnPropertyChanged(string.Empty);
     }
+
+    [ObservableProperty]
+    private bool _isConfirmingRemoval;
+
+    /// <summary>Whether the notice that the refused run was applied shows.</summary>
+    [ObservableProperty]
+    private bool _hasNotice;
+
+    public string NoticeText => Strings.SyncStatus_ConfirmDone;
+
+    private bool CanAskRemoval() => CanConfirmRemoval;
+
+    /// <summary>Asks "really?" before the refused run is applied: it hides the members the data source no longer lists.</summary>
+    [RelayCommand(CanExecute = nameof(CanAskRemoval))]
+    private void AskRemoval()
+    {
+        if (!CanAskRemoval()) return;
+
+        HasNotice = false;
+        IsConfirmingRemoval = true;
+    }
+
+    [RelayCommand]
+    private void CancelRemoval() => IsConfirmingRemoval = false;
+
+    /// <summary>Runs the sync again with the confirmation, then reads the status.</summary>
+    [RelayCommand]
+    private async Task ConfirmRemovalAsync()
+    {
+        if (!IsConfirmingRemoval || !CanConfirmRemoval) return;
+
+        IsConfirmingRemoval = false;
+        var done = false;
+        await LoadAsync(async ct =>
+        {
+            await api.RunSyncAsync(confirmRemoval: true, ct);
+            done = true;
+            Status = await api.GetSyncStatusAsync(ct);
+        });
+        HasNotice = done;
+    }
+
+    partial void OnStatusChanged(SyncStatusDto? value) => AskRemovalCommand.NotifyCanExecuteChanged();
 
     /// <summary>Asks the API again, e.g. after a failed load or to see a run that just ended.</summary>
     [RelayCommand]

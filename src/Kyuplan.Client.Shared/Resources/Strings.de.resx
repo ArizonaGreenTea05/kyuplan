@@ -3376,6 +3376,24 @@
   <data name="SyncStatus_Refresh" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
+  <data name="SyncStatus_Refused" xml:space="preserve">
+    <value>Die letzte Synchronisierung wurde nicht übernommen: Sie würde zu viele Mitglieder entfernen. Es wurde nichts geändert.</value>
+  </data>
+  <data name="SyncStatus_Confirm" xml:space="preserve">
+    <value>Trotzdem übernehmen</value>
+  </data>
+  <data name="SyncStatus_ConfirmQuestion" xml:space="preserve">
+    <value>Die Mitglieder, die die Datenquelle nicht mehr liefert, samt Gürteln, Zahlungen, Kommentaren und Ergebnissen ausblenden? Nach der Aufbewahrungszeit (Sync:RemovedMemberRetention) werden sie endgültig gelöscht, ohne Aufbewahrungszeit sofort.</value>
+  </data>
+  <data name="SyncStatus_ConfirmYes" xml:space="preserve">
+    <value>Ja, übernehmen</value>
+  </data>
+  <data name="SyncStatus_ConfirmCancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="SyncStatus_ConfirmDone" xml:space="preserve">
+    <value>Die Synchronisierung wurde übernommen.</value>
+  </data>
   <data name="Number_Increase" xml:space="preserve">
     <value>Erhöhen</value>
   </data>

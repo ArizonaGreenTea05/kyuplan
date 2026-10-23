@@ -6,6 +6,7 @@ using Kyuplan.Contracts;
 
 namespace Kyuplan.Tests;
 
+[Collection(DisplayStateCollection.Name)]
 public class BrandingViewModelTests
 {
     private readonly FakePlannerApi _api = new();

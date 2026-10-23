@@ -247,6 +247,13 @@ public sealed class Member
     public DateTimeOffset CreatedAt { get; set; }
 
     /// <summary>
+    /// When <see cref="SpondSync"/> found the member gone from the data source; null for a member that is there. A removed member is hidden
+    /// everywhere (a query filter, see <c>PlannerDbContext</c>) but keeps their belts, payments, comments and results for
+    /// <c>Sync:RemovedMemberRetention</c>, so a wrong answer of the data source can be undone: when it lists them again they are back.
+    /// </summary>
+    public DateTimeOffset? RemovedAt { get; set; }
+
+    /// <summary>
     /// The user (accounts database id, so no foreign key) who is this member; an administrator links them. A user may be several members (one per
     /// Spond group), a member is at most one user. What is written about a member is hidden from their user unless they have the "own" permission.
     /// </summary>

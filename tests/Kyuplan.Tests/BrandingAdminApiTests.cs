@@ -726,6 +726,7 @@ public sealed class BrandingImageFormatsTests
 }
 
 /// <summary>What a name and a colour must look like: the same rules the API and the page apply.</summary>
+[Collection(DisplayStateCollection.Name)]
 public sealed class BrandingRulesTests
 {
     [Theory]

@@ -3477,6 +3477,24 @@
   <data name="SyncStatus_Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="SyncStatus_Refused" xml:space="preserve">
+    <value>The last sync was not applied: it would remove too many members. Nothing was changed.</value>
+  </data>
+  <data name="SyncStatus_Confirm" xml:space="preserve">
+    <value>Apply anyway</value>
+  </data>
+  <data name="SyncStatus_ConfirmQuestion" xml:space="preserve">
+    <value>Hide the members the data source no longer lists, with their belts, payments, comments and results? They are deleted for good after the retention time (Sync:RemovedMemberRetention), or at once if none is set.</value>
+  </data>
+  <data name="SyncStatus_ConfirmYes" xml:space="preserve">
+    <value>Yes, apply</value>
+  </data>
+  <data name="SyncStatus_ConfirmCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="SyncStatus_ConfirmDone" xml:space="preserve">
+    <value>The sync was applied.</value>
+  </data>
   <data name="Number_Increase" xml:space="preserve">
     <value>Increase</value>
     <comment>Accessible name of the up button of a number box.</comment>

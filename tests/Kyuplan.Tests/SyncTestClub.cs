@@ -41,6 +41,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddSingleton<IDataSource>(Spond);
         services.AddSingleton<IOptions<StatisticsOptions>>(Options.Create(new StatisticsOptions { ExamMinAverageStars = 0 })); // stars have tests of their own
         services.AddSingleton<IOptions<SpondOptions>>(Options.Create(SpondSettings));
+        services.AddSingleton<IOptions<SyncOptions>>(Options.Create(SyncSettings));
         services.AddSingleton<StatisticsService>();
         services.AddSingleton<SyncGate>();
         services.AddSingleton<SyncStatusTracker>();
@@ -59,6 +60,9 @@ internal sealed class SyncTestClub : IDisposable
 
     /// <summary>The Spond options the sync reads; change them before syncing.</summary>
     public SpondOptions SpondSettings { get; } = new();
+
+    /// <summary>The sync options the sync reads; change them before syncing.</summary>
+    public SyncOptions SyncSettings { get; } = new();
 
     public FakeSpondDataSource Spond { get; } = new();
 
@@ -102,6 +106,9 @@ internal sealed class SyncTestClub : IDisposable
     }
 
     public Task SyncAsync() => RunAsync(sp => sp.GetRequiredService<SpondSync>().SyncAllAsync(CancellationToken.None));
+
+    /// <summary>A sync that is allowed to remove as many members as the source lacks (a test that sets up a club by shrinking it).</summary>
+    public Task SyncConfirmedAsync() => RunAsync(sp => sp.GetRequiredService<SpondSync>().SyncAllAsync(CancellationToken.None, confirmRemoval: true));
 
     /// <summary>The members in the database, by name.</summary>
     public Task<List<Member>> MembersAsync() => QueryAsync(sp =>

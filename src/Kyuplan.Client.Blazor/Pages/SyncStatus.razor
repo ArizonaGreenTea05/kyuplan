@@ -29,6 +29,14 @@
                 <span>@Vm.Headline</span>
             </div>
 
+            @if (Vm.HasNotice)
+            {
+                <div class="banner ok" role="status" id="sync-notice">
+                    <Icon Name="check" />
+                    <span>@Vm.NoticeText</span>
+                </div>
+            }
+
             <section class="card card-form" aria-labelledby="sync-summary">
                 <div>
                     <h2 id="sync-summary">@Vm.IntervalText</h2>
@@ -38,6 +46,30 @@
                         <p class="note">@Vm.LastFailureText</p>
                     }
                 </div>
+                @if (Vm.CanConfirmRemoval)
+                {
+                    <div>
+                        <p class="note">@Strings.SyncStatus_Refused</p>
+                        @if (Vm.IsConfirmingRemoval)
+                        {
+                            <div class="confirm" role="alertdialog" aria-label="@Strings.SyncStatus_ConfirmQuestion">
+                                <span>@Strings.SyncStatus_ConfirmQuestion</span>
+                                <button type="button" class="btn danger" id="sync-confirm-yes" @onclick="() => Vm.ConfirmRemovalCommand.ExecuteAsync(null)">
+                                    <span>@Strings.SyncStatus_ConfirmYes</span>
+                                </button>
+                                <button type="button" class="btn ghost" @onclick="() => Vm.CancelRemovalCommand.Execute(null)">
+                                    <span>@Strings.SyncStatus_ConfirmCancel</span>
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn" id="sync-confirm" disabled="@(!Vm.AskRemovalCommand.CanExecute(null))" @onclick="() => Vm.AskRemovalCommand.Execute(null)">
+                                <span>@Strings.SyncStatus_Confirm</span>
+                            </button>
+                        }
+                    </div>
+                }
             </section>
 
             <section class="card card-form" aria-labelledby="sync-recent">

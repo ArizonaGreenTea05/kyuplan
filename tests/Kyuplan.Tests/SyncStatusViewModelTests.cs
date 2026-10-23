@@ -154,4 +154,125 @@ public sealed class SyncStatusViewModelTests : IDisposable
 
         Assert.True(vm.HasError);
     }
+
+    private static SyncStatusDto Refused() =>
+        new(true, 15, false, 1, null, new SyncRunDto(Start, 0.2, false, "Sync refused", true), [new SyncRunDto(Start, 0.2, false, "Sync refused", true)], true);
+
+    [Fact]
+    public async Task A_refused_run_offers_to_apply_it_to_somebody_who_may_edit_the_settings()
+    {
+        var vm = await ShownAsync(Refused());
+
+        Assert.True(vm.CanConfirmRemoval);
+        Assert.True(vm.AskRemovalCommand.CanExecute(null));
+        Assert.False(vm.IsConfirmingRemoval);
+    }
+
+    [Fact]
+    public async Task Nothing_is_offered_while_the_last_run_was_not_refused()
+    {
+        var vm = await ShownAsync(new(true, 15, false, 1, null, Failed(), [Failed()]));
+
+        Assert.False(vm.CanConfirmRemoval);
+        Assert.False(vm.AskRemovalCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Somebody_who_may_only_look_at_the_sync_cannot_apply_a_refused_run()
+    {
+        _api.Account = Nobody(2, "viewer") with { EffectivePermissions = [Permission.SyncView] };
+
+        var vm = await ShownAsync(Refused());
+        vm.AskRemovalCommand.Execute(null);
+        await vm.ConfirmRemovalCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasLoaded);
+        Assert.False(vm.CanConfirmRemoval);
+        Assert.False(vm.IsConfirmingRemoval);
+        Assert.Empty(_api.SyncRuns);
+    }
+
+    [Fact]
+    public async Task Asking_does_not_run_anything_and_cancelling_closes_the_question()
+    {
+        var vm = await ShownAsync(Refused());
+
+        vm.AskRemovalCommand.Execute(null);
+        Assert.True(vm.IsConfirmingRemoval);
+        Assert.Empty(_api.SyncRuns);
+
+        vm.CancelRemovalCommand.Execute(null);
+        Assert.False(vm.IsConfirmingRemoval);
+        Assert.Empty(_api.SyncRuns);
+    }
+
+    [Fact]
+    public async Task Confirming_without_asking_first_does_nothing()
+    {
+        var vm = await ShownAsync(Refused());
+
+        await vm.ConfirmRemovalCommand.ExecuteAsync(null);
+
+        Assert.Empty(_api.SyncRuns);
+        Assert.True(vm.CanConfirmRemoval);
+    }
+
+    [Fact]
+    public async Task Confirming_runs_the_sync_with_the_confirmation_reads_the_status_again_and_says_so()
+    {
+        var vm = await ShownAsync(Refused());
+
+        vm.AskRemovalCommand.Execute(null);
+        await vm.ConfirmRemovalCommand.ExecuteAsync(null);
+
+        Assert.Equal([true], _api.SyncRuns);
+        Assert.False(vm.IsConfirmingRemoval);
+        Assert.False(vm.CanConfirmRemoval);
+        Assert.False(vm.IsFailing);
+        Assert.True(vm.HasNotice);
+        Assert.Equal("The sync was applied.", vm.NoticeText);
+        Assert.False(vm.HasError);
+    }
+
+    [Fact]
+    public async Task The_notice_is_gone_when_the_question_is_asked_again_and_it_is_in_the_language_of_the_user()
+    {
+        var vm = await ShownAsync(Refused());
+        vm.AskRemovalCommand.Execute(null);
+        await vm.ConfirmRemovalCommand.ExecuteAsync(null);
+        _language.Select("de");
+        Assert.Equal("Die Synchronisierung wurde übernommen.", vm.NoticeText);
+
+        _api.SyncStatus = Refused();
+        await vm.RetryCommand.ExecuteAsync(null);
+        vm.AskRemovalCommand.Execute(null);
+
+        Assert.False(vm.HasNotice);
+        Assert.True(vm.IsConfirmingRemoval);
+    }
+
+    [Fact]
+    public async Task A_refusal_while_applying_is_shown_as_an_error_and_no_notice()
+    {
+        var vm = await ShownAsync(Refused());
+        vm.AskRemovalCommand.Execute(null);
+        _api.SyncRunError = new InvalidOperationException("Sync refused");
+
+        await vm.ConfirmRemovalCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasError);
+        Assert.False(vm.HasNotice);
+    }
+
+    [Fact]
+    public async Task Losing_the_permission_closes_the_question()
+    {
+        var vm = await ShownAsync(Refused());
+        vm.AskRemovalCommand.Execute(null);
+        Assert.True(vm.IsConfirmingRemoval);
+
+        _shell.Session.User = Nobody(2, "viewer") with { EffectivePermissions = [Permission.SyncView] };
+
+        Assert.False(vm.IsConfirmingRemoval);
+    }
 }

@@ -46,6 +46,10 @@ public sealed class SpondSyncWorker(
         {
             logger.LogWarning("Could not sync the members and exams with Spond: {Message}", ex.Message);
         }
+        catch (SyncRefusedException ex)
+        {
+            logger.LogError("Sync with Spond refused: {Message}", ex.Message);
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Syncing the members and exams with Spond failed.");

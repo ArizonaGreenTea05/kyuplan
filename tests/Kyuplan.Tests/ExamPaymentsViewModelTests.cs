@@ -8,6 +8,7 @@ using Kyuplan.Contracts;
 namespace Kyuplan.Tests;
 
 /// <summary>The price list page, and the payments of the exam on the exams page. "Now" is 30 June 2026: the exam of 28 March is past.</summary>
+[Collection(DisplayStateCollection.Name)]
 public sealed class ExamPaymentsViewModelTests : IDisposable
 {
     private readonly FakePlannerApi _api = new();

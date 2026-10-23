@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Contracts;
 
@@ -90,6 +91,10 @@ public class PlannerDbContext : DbContext
 
     public DbSet<CustomBrandingImage> CustomBrandingImages => Set<CustomBrandingImage>();
 
+    // The member filters reach what belongs to a member through a required navigation; EF warns about the parents of these rows (a reply's parent comment, the exam) that have none.
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+        optionsBuilder.ConfigureWarnings(w => w.Ignore(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning));
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         var postgres = Database.IsNpgsql();
@@ -178,6 +183,19 @@ public class PlannerDbContext : DbContext
             // A belt that somebody holds cannot be deleted.
             member.HasOne(m => m.Belt).WithMany().HasForeignKey(m => m.BeltId).OnDelete(DeleteBehavior.Restrict);
         });
+
+        // A member that is gone from the data source is hidden, with everything about them, until the retention is over (SpondSync;
+        // it and the backup see them with IgnoreQueryFilters). The filters of the rows that belong to a member say the same, so that no
+        // payment, comment or result of a hidden member turns up without the member.
+        modelBuilder.Entity<Member>().HasQueryFilter(m => m.RemovedAt == null);
+        modelBuilder.Entity<ExamParticipant>().HasQueryFilter(p => p.Member.RemovedAt == null);
+        modelBuilder.Entity<ExamCandidate>().HasQueryFilter(c => c.Member.RemovedAt == null);
+        modelBuilder.Entity<ExamResult>().HasQueryFilter(r => r.Member.RemovedAt == null);
+        modelBuilder.Entity<ExamPayment>().HasQueryFilter(p => p.Member.RemovedAt == null);
+        modelBuilder.Entity<Comment>().HasQueryFilter(c => c.Member.RemovedAt == null);
+        modelBuilder.Entity<MemberRating>().HasQueryFilter(r => r.Member.RemovedAt == null);
+        modelBuilder.Entity<CommentEdit>().HasQueryFilter(e => e.Comment.Member.RemovedAt == null);
+        modelBuilder.Entity<CommentTag>().HasQueryFilter(t => t.Comment.Member.RemovedAt == null);
 
         modelBuilder.Entity<ManualGroup>(group =>
         {

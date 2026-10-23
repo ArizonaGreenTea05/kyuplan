@@ -366,6 +366,22 @@ internal sealed class FakePlannerApi : IPlannerApi
             return SyncStatus;
         });
 
+    /// <summary>What running the sync fails with, e.g. the API refusing it (409).</summary>
+    public Exception? SyncRunError { get; set; }
+
+    /// <summary>The confirmation values the sync was run with, in order.</summary>
+    public List<bool> SyncRuns { get; } = [];
+
+    public Task RunSyncAsync(bool confirmRemoval = false, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.SettingsEdit)) throw Forbidden();
+            if (SyncRunError is { } error) throw error;
+            SyncRuns.Add(confirmRemoval);
+            if (confirmRemoval) SyncStatus = SyncStatus with { RemovalRefused = false, ConsecutiveFailures = 0 };
+            return 0;
+        });
+
     public Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
         Run<IReadOnlyList<BackupTargetDto>>(() =>
         {

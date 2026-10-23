@@ -225,6 +225,32 @@ public sealed class SyncOptions
     /// mostly reads the same data again. Zero or less = only once, when the API starts.
     /// </summary>
     public TimeSpan Interval { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// The largest share (0 to 1) of the stored members that one sync may remove, counted over all members and over each group. A member
+    /// that disappears from the data source takes the belts, payments, comments and results with it, so an answer that drops more
+    /// (an empty list from a broken script, a group the account lost) is refused as a failed run until it is confirmed with
+    /// <c>POST /api/sync/run?confirmRemoval=true</c>. 1 or more = no limit by share.
+    /// </summary>
+    public double MaxRemovedShare { get; set; } = 0.5;
+
+    /// <summary>
+    /// The most members one sync may remove, however small the share (a club of 500 that loses 60 members at once is suspicious although it is
+    /// only 12 %). More is refused like <see cref="MaxRemovedShare"/>. 0 or less = no limit.
+    /// </summary>
+    public int MaxRemovedMembers { get; set; } = 25;
+
+    /// <summary>
+    /// How many members one sync always removes without asking, whatever the share: a person who leaves a group of one is not a
+    /// wrong answer. Only <see cref="MaxRemovedMembers"/> still limits it.
+    /// </summary>
+    public int ToleratedRemovedMembers { get; set; } = 1;
+
+    /// <summary>
+    /// How long a member that is gone from the data source is kept, hidden, with their belts, payments, comments and results before it all is deleted
+    /// for good; if the data source lists them again meanwhile, they are back as they were. Zero or less = delete at once.
+    /// </summary>
+    public TimeSpan RemovedMemberRetention { get; set; } = TimeSpan.FromDays(30);
 }
 
 public sealed class DefaultDataOptions

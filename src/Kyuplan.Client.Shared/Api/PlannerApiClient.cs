@@ -86,6 +86,9 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public async Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
         await GetAsync("api/sync/status", PlannerJsonContext.Default.SyncStatusDto, cancellationToken);
 
+    public Task RunSyncAsync(bool confirmRemoval = false, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.PostAsync(confirmRemoval ? "api/sync/run?confirmRemoval=true" : "api/sync/run", null, cancellationToken), cancellationToken);
+
     public async Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default) =>
         await GetAsync("api/backup/targets", PlannerJsonContext.Default.ListBackupTargetDto, cancellationToken);
 

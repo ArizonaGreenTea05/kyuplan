@@ -19,8 +19,20 @@ public sealed class CustomScriptDataSourceTests
 {
     private static readonly ClubClock Clock = new(new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero)), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin"));
 
-    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true) =>
-        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal }), Clock, NullLogger<CustomScriptDataSource>.Instance);
+    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null) =>
+        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, ScriptMaxStatements = maxStatements ?? 10_000_000 }), Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
+
+    private sealed class ListLogger : ILogger<CustomScriptDataSource>
+    {
+        public List<string> Messages { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Messages.Add(formatter(state, exception));
+    }
 
     private const string StaticScript = """
         function getGroups() {
@@ -128,9 +140,92 @@ public sealed class CustomScriptDataSourceTests
     [Fact]
     public async Task A_script_that_runs_forever_is_stopped()
     {
-        using var source = Source("function getGroups() { while (true) { } }", TimeSpan.FromMilliseconds(300));
+        using var source = Source("function getGroups() { while (true) { } }", TimeSpan.FromMilliseconds(300), maxStatements: 0);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("took longer", ex.Message);
+    }
+
+    [Fact]
+    public async Task A_script_that_runs_too_many_statements_is_stopped_before_the_timeout()
+    {
+        using var source = Source("function getGroups() { var i = 0; while (true) { i++; } }", maxStatements: 10_000);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.IsType<Jint.Runtime.StatementsCountOverflowException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task A_script_that_allocates_too_much_is_stopped()
+    {
+        using var source = Source("function getGroups() { var s = 'xxxxxxxxxxxxxxxx'; while (true) { s = s + s; } }", maxStatements: 0);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.IsType<Jint.Runtime.MemoryLimitExceededException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task A_script_that_allocates_arrays_without_end_is_stopped()
+    {
+        using var source = Source("function getGroups() { var a = []; while (true) { a.push(new Array(100000).fill(1)); } }", maxStatements: 0);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.IsType<Jint.Runtime.MemoryLimitExceededException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task A_script_that_recurses_without_end_is_stopped()
+    {
+        using var source = Source("function f(n) { return f(n + 1) + 1; } function getGroups() { return f(0); }");
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.IsType<Jint.Runtime.RecursionDepthOverflowException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task A_stopped_script_does_not_poison_the_next_call()
+    {
+        using var source = Source("function getGroups() { while (true) { } }", maxStatements: 10_000);
 
         await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        // The gate is released and the engine is fresh: the second call is stopped the same way instead of hanging.
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("function getGroups() { return [{ id: 'x', name: String(System.Environment.MachineName) }]; }")]
+    [InlineData("function getGroups() { return [{ id: 'x', name: String(importNamespace('System')) }]; }")]
+    [InlineData("function getGroups() { return [{ id: 'x', name: Function('return System')().IO.Path.GetTempPath() }]; }")]
+    [InlineData("function getGroups() { return [{ id: 'x', name: (function () {}).constructor.constructor('return process')().cwd() }]; }")]
+    public async Task A_script_cannot_call_into_the_clr(string script)
+    {
+        using var source = Source(script);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.IsType<Jint.Runtime.JavaScriptException>(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task Every_run_is_logged_with_its_duration()
+    {
+        var logger = new ListLogger();
+        using var ok = Source(StaticScript, logger: logger);
+        using var bad = Source("function getGroups() { throw new Error('boom'); }", logger: logger);
+        using var slow = Source("function getGroups() { while (true) { } }", TimeSpan.FromMilliseconds(200), maxStatements: 0, logger: logger);
+
+        await ok.GetGroupsAsync(CancellationToken.None);
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => bad.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => slow.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Single(logger.Messages, m => m.StartsWith("The custom data script succeeded after ") && m.EndsWith(" ms."));
+        Assert.Single(logger.Messages, m => m.StartsWith("The custom data script failed after "));
+        Assert.Single(logger.Messages, m => m.StartsWith("The custom data script timed out after "));
     }
 
     [Fact]

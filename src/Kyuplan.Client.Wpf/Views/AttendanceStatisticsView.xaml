@@ -311,7 +311,7 @@
             </Expander>
 
             <!-- Key figures -->
-            <ItemsControl Grid.Row="3" Margin="0,14,0,0" ItemsSource="{Binding Kpis}" ItemTemplate="{StaticResource KpiCompactTemplate}"
+            <ItemsControl Grid.Row="3" Margin="0,14,0,0" ItemsSource="{Binding Result.Kpis}" ItemTemplate="{StaticResource KpiCompactTemplate}"
                           IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBooleanConverter}}"
                           Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
                 <ItemsControl.ItemsPanel>
@@ -332,7 +332,7 @@
                         <TabItem.Header>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{loc:Loc Tab_Members}" />
-                                <TextBlock Text="{Binding VisibleMembers.Count}" Margin="6,0,0,0"
+                                <TextBlock Text="{Binding Table.VisibleMembers.Count}" Margin="6,0,0,0"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </TabItem.Header>
@@ -346,22 +346,22 @@
                             <DockPanel Margin="16,12">
                                 <ctl:HintedTextBox DockPanel.Dock="Right" Width="250" Glyph="&#xE721;"
                                                    Hint="{loc:Loc Stats_FindMember}"
-                                                   Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                                   Text="{Binding Table.SearchText, UpdateSourceTrigger=PropertyChanged}"
                                                    AutomationProperties.Name="{loc:Loc Stats_FindMember}" />
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left"
                                             AutomationProperties.Name="{loc:Loc Stats_Show}">
                                     <RadioButton Content="{loc:Loc Stats_Everyone}" GroupName="status" Style="{StaticResource SegmentButton}"
-                                                 IsChecked="{Binding StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.All}}" />
+                                                 IsChecked="{Binding Table.StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.All}}" />
                                     <RadioButton Content="{loc:Loc Status_Qualified}" GroupName="status" Style="{StaticResource SegmentButton}"
-                                                 IsChecked="{Binding StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.Qualified}}" />
+                                                 IsChecked="{Binding Table.StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.Qualified}}" />
                                     <RadioButton Content="{loc:Loc Filter_Below}" GroupName="status" Style="{StaticResource SegmentButton}"
-                                                 IsChecked="{Binding StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.BelowThreshold}}" />
+                                                 IsChecked="{Binding Table.StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.BelowThreshold}}" />
                                     <RadioButton Content="{loc:Loc Status_TooFew}" GroupName="status" Style="{StaticResource SegmentButton}"
-                                                 IsChecked="{Binding StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.InsufficientData}}" />
+                                                 IsChecked="{Binding Table.StatusFilter, Converter={StaticResource EnumToBoolean}, ConverterParameter={x:Static vm:MemberStatusFilter.InsufficientData}}" />
                                 </StackPanel>
                             </DockPanel>
 
-                            <DataGrid x:Name="MembersGrid" Grid.Row="1" ItemsSource="{Binding VisibleMembers}"
+                            <DataGrid x:Name="MembersGrid" Grid.Row="1" ItemsSource="{Binding Table.VisibleMembers}"
                                       AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
                                       CanUserReorderColumns="False" CanUserResizeRows="False" HeadersVisibility="Column"
                                       GridLinesVisibility="Horizontal" RowHeaderWidth="0" RowHeight="56" FontSize="13"
@@ -503,13 +503,13 @@
                             <ctl:ResponsiveGrid MinItemWidth="420" Gap="36" Margin="22,22">
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Chart_DistributionTitle}" Style="{StaticResource SectionTitleText}" />
-                                    <ctl:ColumnChart Bars="{Binding Distribution}" Style="{StaticResource ThresholdColumnChart}"
+                                    <ctl:ColumnChart Bars="{Binding Result.Distribution}" Style="{StaticResource ThresholdColumnChart}"
                                                      AutomationProperties.Name="{loc:Loc Chart_DistributionAria}" />
                                     <TextBlock Style="{StaticResource MutedText}" Margin="0,10,0,0" Text="{loc:Loc Chart_DistributionNote}" />
                                 </StackPanel>
                                 <StackPanel>
                                     <TextBlock Text="{loc:Loc Chart_TrendTitle}" Style="{StaticResource SectionTitleText}" />
-                                    <ctl:ColumnChart Bars="{Binding Trend}" Style="{StaticResource AttendanceColumnChart}"
+                                    <ctl:ColumnChart Bars="{Binding Result.Trend}" Style="{StaticResource AttendanceColumnChart}"
                                                      AutomationProperties.Name="{loc:Loc Chart_TrendAria}" />
                                     <TextBlock Style="{StaticResource MutedText}" Margin="0,10,0,0" Text="{loc:Loc Chart_TrendNote}" />
                                 </StackPanel>
@@ -522,11 +522,11 @@
                         <TabItem.Header>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{loc:Loc Tab_Events}" />
-                                <TextBlock Text="{Binding Events.Count}" Margin="6,0,0,0"
+                                <TextBlock Text="{Binding Result.Events.Count}" Margin="6,0,0,0"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             </StackPanel>
                         </TabItem.Header>
-                        <DataGrid ItemsSource="{Binding Events}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
+                        <DataGrid ItemsSource="{Binding Result.Events}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False"
                                   CanUserSortColumns="False" CanUserReorderColumns="False" HeadersVisibility="Column"
                                   GridLinesVisibility="Horizontal" RowHeight="52" FontSize="13" SelectionMode="Single" RowHeaderWidth="0"
                                   ColumnHeaderStyle="{StaticResource GridHeader}"

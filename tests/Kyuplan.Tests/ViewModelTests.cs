@@ -44,9 +44,9 @@ public class AttendanceStatisticsViewModelTests
         Assert.Equal("g1", request.GroupId);
         Assert.Equal(70, request.MinAttendancePercent);   // from the server, not the VM's built-in 75
         Assert.Equal(4, request.MinInvitedEvents);
-        Assert.Equal(4, _vm.VisibleMembers.Count);
-        Assert.Equal("Meeting 70 %", _vm.Kpis[0].Label);
-        Assert.Equal("1 of 3", _vm.Kpis[0].Value); // Clara has no verdict and is not part of "assessed"
+        Assert.Equal(4, _vm.Table.VisibleMembers.Count);
+        Assert.Equal("Meeting 70 %", _vm.Result.Kpis[0].Label);
+        Assert.Equal("1 of 3", _vm.Result.Kpis[0].Value); // Clara has no verdict and is not part of "assessed"
         Assert.True(_vm.HasResults);
         Assert.False(_vm.HasNoResults);
     }
@@ -326,21 +326,21 @@ public class AttendanceStatisticsViewModelTests
     {
         await ActivateAsync();
 
-        Assert.Equal(["Clara", "Anna", "Dora", "Ben"], _vm.VisibleMembers.Select(m => m.Name)); // by rate, descending
+        Assert.Equal(["Clara", "Anna", "Dora", "Ben"], _vm.Table.VisibleMembers.Select(m => m.Name)); // by rate, descending
 
-        _vm.SearchText = "ann";
-        Assert.Equal(["Anna"], _vm.VisibleMembers.Select(m => m.Name));
-        Assert.Equal("1 of 4 members", _vm.MembersCaption);
+        _vm.Table.SearchText = "ann";
+        Assert.Equal(["Anna"], _vm.Table.VisibleMembers.Select(m => m.Name));
+        Assert.Equal("1 of 4 members", _vm.Table.MembersCaption);
 
-        _vm.SearchText = "";
-        _vm.StatusFilter = MemberStatusFilter.BelowThreshold;
-        Assert.Equal(["Dora", "Ben"], _vm.VisibleMembers.Select(m => m.Name));
+        _vm.Table.SearchText = "";
+        _vm.Table.StatusFilter = MemberStatusFilter.BelowThreshold;
+        Assert.Equal(["Dora", "Ben"], _vm.Table.VisibleMembers.Select(m => m.Name));
 
-        _vm.StatusFilter = MemberStatusFilter.All;
-        _vm.SortByCommand.Execute(MemberSortKey.Name);
-        Assert.Equal(["Anna", "Ben", "Clara", "Dora"], _vm.VisibleMembers.Select(m => m.Name));
-        _vm.SortByCommand.Execute(MemberSortKey.Name); // same column again flips the direction
-        Assert.Equal(["Dora", "Clara", "Ben", "Anna"], _vm.VisibleMembers.Select(m => m.Name));
+        _vm.Table.StatusFilter = MemberStatusFilter.All;
+        _vm.Table.SortByCommand.Execute(MemberSortKey.Name);
+        Assert.Equal(["Anna", "Ben", "Clara", "Dora"], _vm.Table.VisibleMembers.Select(m => m.Name));
+        _vm.Table.SortByCommand.Execute(MemberSortKey.Name); // same column again flips the direction
+        Assert.Equal(["Dora", "Clara", "Ben", "Anna"], _vm.Table.VisibleMembers.Select(m => m.Name));
 
         _time.Advance(TimeSpan.FromSeconds(5));
         await Task.Delay(50);
@@ -424,7 +424,7 @@ public class AttendanceStatisticsViewModelTests
         await ActivateAsync();
         _vm.MinAttendancePercent = 95;
         _vm.EventNameContains = "x";
-        _vm.SearchText = "zz";
+        _vm.Table.SearchText = "zz";
         _time.Advance(DebounceWindow);
         await Eventually(() => _api.AttendanceRequests.Count == 2);
 
@@ -434,7 +434,7 @@ public class AttendanceStatisticsViewModelTests
         var request = _api.AttendanceRequests[^1];
         Assert.Equal(70, request.MinAttendancePercent);
         Assert.Null(request.EventNameContains);
-        Assert.Equal("", _vm.SearchText);
+        Assert.Equal("", _vm.Table.SearchText);
     }
 
     [Fact]
@@ -481,7 +481,7 @@ public class AttendanceStatisticsViewModelTests
         _api.AttendanceHandler = (filter, _) => Task.FromResult(FakePlannerApi.Statistics(filter));
         _vm.Deactivate();
         await _vm.ActivateAsync();
-        await Eventually(() => !_vm.HasError && _vm.VisibleMembers.Count == 4);
+        await Eventually(() => !_vm.HasError && _vm.Table.VisibleMembers.Count == 4);
     }
 
     [Fact]
@@ -495,7 +495,7 @@ public class AttendanceStatisticsViewModelTests
 
         _api.FailWith = null;
         await _vm.ActivateAsync();
-        await Eventually(() => _api.AttendanceRequests.Count == 1 && _vm.VisibleMembers.Count == 4);
+        await Eventually(() => _api.AttendanceRequests.Count == 1 && _vm.Table.VisibleMembers.Count == 4);
         Assert.Null(_shell.ErrorMessage);
     }
 
@@ -512,11 +512,11 @@ public class AttendanceStatisticsViewModelTests
         await Eventually(() => calls == 2);
 
         second.SetResult(FakePlannerApi.Statistics(_api.AttendanceRequests[1], MemberStats("Newer")));
-        await Eventually(() => _vm.VisibleMembers.Count == 1);
+        await Eventually(() => _vm.Table.VisibleMembers.Count == 1);
         first.SetResult(FakePlannerApi.Statistics(_api.AttendanceRequests[0], MemberStats("Older")));
         await Task.Delay(50);
 
-        Assert.Equal(["Newer"], _vm.VisibleMembers.Select(m => m.Name));
+        Assert.Equal(["Newer"], _vm.Table.VisibleMembers.Select(m => m.Name));
         Assert.False(_vm.IsBusy);
     }
 
@@ -525,12 +525,12 @@ public class AttendanceStatisticsViewModelTests
     {
         await ActivateAsync();
 
-        Assert.Equal(10, _vm.Distribution.Count);
+        Assert.Equal(10, _vm.Result.Distribution.Count);
         Assert.Equal([false, false, false, false, false, false, false, true, true, true],
-            _vm.Distribution.Select(b => b.IsHighlighted)); // target 70 %
-        Assert.Equal("70–79", _vm.Distribution[7].Label);
-        Assert.Equal("90–100", _vm.Distribution[9].Label);
-        Assert.Equal(1.0, _vm.Distribution[5].Fraction); // tallest bar
+            _vm.Result.Distribution.Select(b => b.IsHighlighted)); // target 70 %
+        Assert.Equal("70–79", _vm.Result.Distribution[7].Label);
+        Assert.Equal("90–100", _vm.Result.Distribution[9].Label);
+        Assert.Equal(1.0, _vm.Result.Distribution[5].Fraction); // tallest bar
     }
 
     [Fact]

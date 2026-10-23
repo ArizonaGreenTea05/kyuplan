@@ -1,4 +1,5 @@
 @page "/manual-data"
+@using System.ComponentModel
 @inherits ViewModelComponent<ManualDataViewModel>
 
 <BrandedTitle Title="@Vm.Title" />
@@ -47,12 +48,12 @@
                     </label>
                 }
                 <div class="form-actions">
-                    <button type="button" class="btn" disabled="@(!Vm.BeginNewGroupCommand.CanExecute(null))" @onclick="() => Vm.BeginNewGroupCommand.Execute(null)">
+                    <button type="button" class="btn" disabled="@(!Vm.NameForm.BeginNewGroupCommand.CanExecute(null))" @onclick="() => Vm.NameForm.BeginNewGroupCommand.Execute(null)">
                         <Icon Name="plus" /><span>@Strings.Manual_NewGroup</span>
                     </button>
                     @if (Vm.HasGroup)
                     {
-                        <button type="button" class="btn ghost" disabled="@(!Vm.BeginRenameGroupCommand.CanExecute(null))" @onclick="() => Vm.BeginRenameGroupCommand.Execute(null)">
+                        <button type="button" class="btn ghost" disabled="@(!Vm.NameForm.BeginRenameGroupCommand.CanExecute(null))" @onclick="() => Vm.NameForm.BeginRenameGroupCommand.Execute(null)">
                             <Icon Name="edit" /><span>@Strings.Manual_RenameGroup</span>
                         </button>
                         <button type="button" class="btn ghost danger" disabled="@(!Vm.AskDeleteGroupCommand.CanExecute(null))" @onclick="() => Vm.AskDeleteGroupCommand.Execute(null)">
@@ -63,22 +64,22 @@
             </div>
         </article>
 
-        @if (Vm.IsNameFormOpen)
+        @if (Vm.NameForm.IsOpen)
         {
             <article class="card card-form">
-                <form @onsubmit="() => Vm.SaveNameCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
-                    <h3>@Vm.NameFormTitle</h3>
+                <form @onsubmit="() => Vm.NameForm.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                    <h3>@Vm.NameForm.Title</h3>
                     <label class="field">
                         <span>@Strings.Manual_Name</span>
-                        <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.NameFormText" @bind:event="oninput" />
-                        @if (Vm.NameFormProblem is { } nameProblem)
+                        <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.NameForm.Text" @bind:event="oninput" />
+                        @if (Vm.NameForm.Problem is { } nameProblem)
                         {
                             <p class="field-error" role="alert">@nameProblem</p>
                         }
                     </label>
                     <div class="form-actions">
-                        <button type="submit" class="btn" disabled="@(!Vm.SaveNameCommand.CanExecute(null))">@Strings.Manual_Save</button>
-                        <button type="button" class="btn ghost" @onclick="() => Vm.CancelNameCommand.Execute(null)">@Strings.Manual_Cancel</button>
+                        <button type="submit" class="btn" disabled="@(!Vm.NameForm.SaveCommand.CanExecute(null))">@Strings.Manual_Save</button>
+                        <button type="button" class="btn ghost" @onclick="() => Vm.NameForm.CancelCommand.Execute(null)">@Strings.Manual_Cancel</button>
                     </div>
                 </form>
             </article>
@@ -111,21 +112,21 @@
         @if (Vm.HasGroup && Vm.IsMembersSection)
         {
             <div class="form-actions">
-                <button type="button" class="btn" disabled="@(!Vm.BeginNewMemberCommand.CanExecute(null))" @onclick="() => Vm.BeginNewMemberCommand.Execute(null)">
+                <button type="button" class="btn" disabled="@(!Vm.MemberEditor.BeginNewCommand.CanExecute(null))" @onclick="() => Vm.MemberEditor.BeginNewCommand.Execute(null)">
                     <Icon Name="plus" /><span>@Strings.Manual_NewMember</span>
                 </button>
             </div>
 
-            @if (Vm.IsMemberFormOpen)
+            @if (Vm.MemberEditor.IsOpen)
             {
                 <article class="card card-form">
-                    <form @onsubmit="() => Vm.SaveMemberCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
-                        <h3>@Vm.MemberFormTitle</h3>
+                    <form @onsubmit="() => Vm.MemberEditor.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                        <h3>@Vm.MemberEditor.Title</h3>
                         <div class="grid two">
                             <label class="field">
                                 <span>@Strings.Manual_Name</span>
-                                <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.MemberName" @bind:event="oninput" />
-                                @if (Vm.MemberNameProblem is { } memberNameProblem)
+                                <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.MemberEditor.Name" @bind:event="oninput" />
+                                @if (Vm.MemberEditor.NameProblem is { } memberNameProblem)
                                 {
                                     <p class="field-error" role="alert">@memberNameProblem</p>
                                 }
@@ -134,11 +135,11 @@
                             <div class="field">
                                 <label for="manual-birth">@Strings.Manual_BirthDate</label>
                                 <div class="color-row">
-                                    <input id="manual-birth" type="date" min="@MemberRules.EarliestBirth.ToString("yyyy-MM-dd")" @bind="Vm.MemberBirthDate" @bind:event="onchange" />
-                                    <button type="button" class="btn ghost" disabled="@(!Vm.ClearMemberBirthDateCommand.CanExecute(null))"
-                                            @onclick="() => Vm.ClearMemberBirthDateCommand.Execute(null)">@Strings.Manual_ClearBirth</button>
+                                    <input id="manual-birth" type="date" min="@MemberRules.EarliestBirth.ToString("yyyy-MM-dd")" @bind="Vm.MemberEditor.BirthDate" @bind:event="onchange" />
+                                    <button type="button" class="btn ghost" disabled="@(!Vm.MemberEditor.ClearBirthDateCommand.CanExecute(null))"
+                                            @onclick="() => Vm.MemberEditor.ClearBirthDateCommand.Execute(null)">@Strings.Manual_ClearBirth</button>
                                 </div>
-                                @if (Vm.MemberBirthProblem is { } birthProblem)
+                                @if (Vm.MemberEditor.BirthProblem is { } birthProblem)
                                 {
                                     <p class="field-error" role="alert">@birthProblem</p>
                                 }
@@ -147,10 +148,10 @@
 
                         <fieldset class="field">
                             <legend>@Strings.Manual_SubGroups</legend>
-                            @if (Vm.HasSubGroupChoices)
+                            @if (Vm.MemberEditor.HasSubGroupChoices)
                             {
                                 <div class="check-scroll">
-                                    @foreach (var choice in Vm.MemberSubGroups)
+                                    @foreach (var choice in Vm.MemberEditor.SubGroups)
                                     {
                                         <label class="check">
                                             <input type="checkbox" checked="@choice.IsSelected" @onchange="e => choice.IsSelected = (bool)(e.Value ?? false)" />
@@ -166,8 +167,8 @@
                         </fieldset>
 
                         <div class="form-actions">
-                            <button type="submit" class="btn" disabled="@(!Vm.SaveMemberCommand.CanExecute(null))">@Strings.Manual_Save</button>
-                            <button type="button" class="btn ghost" @onclick="() => Vm.CancelMemberCommand.Execute(null)">@Strings.Manual_Cancel</button>
+                            <button type="submit" class="btn" disabled="@(!Vm.MemberEditor.SaveCommand.CanExecute(null))">@Strings.Manual_Save</button>
+                            <button type="button" class="btn ghost" @onclick="() => Vm.MemberEditor.CancelCommand.Execute(null)">@Strings.Manual_Cancel</button>
                         </div>
                     </form>
                 </article>
@@ -199,7 +200,7 @@
                                         <td>@member.SubGroupsText</td>
                                         <td class="row-actions">
                                             <button type="button" class="btn ghost" aria-label="@($"{Strings.Manual_Edit}: {member.Name}")"
-                                                    disabled="@(!Vm.BeginEditMemberCommand.CanExecute(member))" @onclick="() => Vm.BeginEditMemberCommand.Execute(member)">
+                                                    disabled="@(!Vm.MemberEditor.BeginEditCommand.CanExecute(member))" @onclick="() => Vm.MemberEditor.BeginEditCommand.Execute(member)">
                                                 <Icon Name="edit" /><span>@Strings.Manual_Edit</span>
                                             </button>
                                             <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Manual_Delete}: {member.Name}")"
@@ -220,7 +221,7 @@
         @if (Vm.HasGroup && Vm.IsSubGroupsSection)
         {
             <div class="form-actions">
-                <button type="button" class="btn" disabled="@(!Vm.BeginNewSubGroupCommand.CanExecute(null))" @onclick="() => Vm.BeginNewSubGroupCommand.Execute(null)">
+                <button type="button" class="btn" disabled="@(!Vm.NameForm.BeginNewSubGroupCommand.CanExecute(null))" @onclick="() => Vm.NameForm.BeginNewSubGroupCommand.Execute(null)">
                     <Icon Name="plus" /><span>@Strings.Manual_NewSubGroup</span>
                 </button>
             </div>
@@ -249,7 +250,7 @@
                                         <td>@subGroup.CountText</td>
                                         <td class="row-actions">
                                             <button type="button" class="btn ghost" aria-label="@($"{Strings.Manual_Rename}: {subGroup.Name}")"
-                                                    disabled="@(!Vm.BeginRenameSubGroupCommand.CanExecute(subGroup))" @onclick="() => Vm.BeginRenameSubGroupCommand.Execute(subGroup)">
+                                                    disabled="@(!Vm.NameForm.BeginRenameSubGroupCommand.CanExecute(subGroup))" @onclick="() => Vm.NameForm.BeginRenameSubGroupCommand.Execute(subGroup)">
                                                 <Icon Name="edit" /><span>@Strings.Manual_Rename</span>
                                             </button>
                                             <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Manual_Delete}: {subGroup.Name}")"
@@ -270,20 +271,20 @@
         @if (Vm.HasGroup && Vm.IsEventsSection)
         {
             <div class="form-actions">
-                <button type="button" class="btn" disabled="@(!Vm.BeginNewEventCommand.CanExecute(null))" @onclick="() => Vm.BeginNewEventCommand.ExecuteAsync(null)">
+                <button type="button" class="btn" disabled="@(!Vm.EventEditor.BeginNewCommand.CanExecute(null))" @onclick="() => Vm.EventEditor.BeginNewCommand.ExecuteAsync(null)">
                     <Icon Name="plus" /><span>@Strings.Manual_NewEvent</span>
                 </button>
             </div>
 
-            @if (Vm.IsEventFormOpen)
+            @if (Vm.EventEditor.IsOpen)
             {
                 <article class="card card-form">
-                    <form @onsubmit="() => Vm.SaveEventCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
-                        <h3>@Vm.EventFormTitle</h3>
+                    <form @onsubmit="() => Vm.EventEditor.SaveCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                        <h3>@Vm.EventEditor.Title</h3>
                         <label class="field">
                             <span>@Strings.Manual_Name</span>
-                            <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.EventName" @bind:event="oninput" />
-                            @if (Vm.EventNameProblem is { } eventNameProblem)
+                            <input type="text" maxlength="@ManualDataRules.MaxNameLength" autocomplete="off" @bind="Vm.EventEditor.Name" @bind:event="oninput" />
+                            @if (Vm.EventEditor.NameProblem is { } eventNameProblem)
                             {
                                 <p class="field-error" role="alert">@eventNameProblem</p>
                             }
@@ -293,35 +294,35 @@
                             <div class="field">
                                 <label for="manual-start">@Strings.Manual_Start</label>
                                 <div class="color-row">
-                                    <input id="manual-start" type="date" @bind="Vm.EventStartDate" @bind:event="onchange" />
-                                    <input type="time" aria-label="@Strings.Manual_TimeHint" value="@Vm.EventStartTime" @oninput="e => Vm.EventStartTime = e.Value?.ToString() ?? string.Empty" />
+                                    <input id="manual-start" type="date" @bind="Vm.EventEditor.StartDate" @bind:event="onchange" />
+                                    <input type="time" aria-label="@Strings.Manual_TimeHint" value="@Vm.EventEditor.StartTime" @oninput="e => Vm.EventEditor.StartTime = e.Value?.ToString() ?? string.Empty" />
                                 </div>
                             </div>
                             <div class="field">
                                 <label for="manual-end">@Strings.Manual_End</label>
                                 <div class="color-row">
-                                    <input id="manual-end" type="date" @bind="Vm.EventEndDate" @bind:event="onchange" />
-                                    <input type="time" aria-label="@Strings.Manual_TimeHint" value="@Vm.EventEndTime" @oninput="e => Vm.EventEndTime = e.Value?.ToString() ?? string.Empty" />
+                                    <input id="manual-end" type="date" @bind="Vm.EventEditor.EndDate" @bind:event="onchange" />
+                                    <input type="time" aria-label="@Strings.Manual_TimeHint" value="@Vm.EventEditor.EndTime" @oninput="e => Vm.EventEditor.EndTime = e.Value?.ToString() ?? string.Empty" />
                                 </div>
                             </div>
                         </div>
-                        @if (Vm.EventTimeProblem is { } timeProblem)
+                        @if (Vm.EventEditor.TimeProblem is { } timeProblem)
                         {
                             <p class="field-error" role="alert">@timeProblem</p>
                         }
 
                         <label class="check">
-                            <input type="checkbox" checked="@Vm.EventCancelled" @onchange="e => Vm.EventCancelled = (bool)(e.Value ?? false)" />
+                            <input type="checkbox" checked="@Vm.EventEditor.Cancelled" @onchange="e => Vm.EventEditor.Cancelled = (bool)(e.Value ?? false)" />
                             <span>@Strings.Manual_Cancelled</span>
                         </label>
 
                         <h4>@Strings.Manual_Invitations</h4>
-                        @if (Vm.HasInvitees)
+                        @if (Vm.EventEditor.HasInvitees)
                         {
                             <div class="form-actions">
-                                <button type="button" class="btn ghost" disabled="@(!Vm.InviteAllCommand.CanExecute(null))" @onclick="() => Vm.InviteAllCommand.Execute(null)">@Strings.Manual_InviteAll</button>
-                                <button type="button" class="btn ghost" disabled="@(!Vm.InviteNoneCommand.CanExecute(null))" @onclick="() => Vm.InviteNoneCommand.Execute(null)">@Strings.Manual_InviteNone</button>
-                                <button type="button" class="btn ghost" disabled="@(!Vm.AcceptAllCommand.CanExecute(null))" @onclick="() => Vm.AcceptAllCommand.Execute(null)">@Strings.Manual_AcceptAll</button>
+                                <button type="button" class="btn ghost" disabled="@(!Vm.EventEditor.InviteAllCommand.CanExecute(null))" @onclick="() => Vm.EventEditor.InviteAllCommand.Execute(null)">@Strings.Manual_InviteAll</button>
+                                <button type="button" class="btn ghost" disabled="@(!Vm.EventEditor.InviteNoneCommand.CanExecute(null))" @onclick="() => Vm.EventEditor.InviteNoneCommand.Execute(null)">@Strings.Manual_InviteNone</button>
+                                <button type="button" class="btn ghost" disabled="@(!Vm.EventEditor.AcceptAllCommand.CanExecute(null))" @onclick="() => Vm.EventEditor.AcceptAllCommand.Execute(null)">@Strings.Manual_AcceptAll</button>
                             </div>
 
                             <div class="table-wrap">
@@ -334,15 +335,15 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var invitee in Vm.Invitees)
+                                        @foreach (var invitee in Vm.EventEditor.Invitees)
                                         {
                                             <tr @key="invitee.MemberId">
                                                 <td><input type="checkbox" aria-label="@invitee.Name" checked="@invitee.IsInvited" @onchange="e => invitee.IsInvited = (bool)(e.Value ?? false)" /></td>
                                                 <td>@invitee.Name</td>
                                                 <td>
                                                     <select aria-label="@($"{Strings.Manual_ColAnswer}: {invitee.Name}")" disabled="@(!invitee.IsInvited)" value="@invitee.Answer.Value"
-                                                            @onchange="e => invitee.Answer = Vm.RsvpOptions.First(o => o.Value == e.Value?.ToString())">
-                                                        @foreach (var option in Vm.RsvpOptions)
+                                                            @onchange="e => invitee.Answer = Vm.EventEditor.RsvpOptions.First(o => o.Value == e.Value?.ToString())">
+                                                        @foreach (var option in Vm.EventEditor.RsvpOptions)
                                                         {
                                                             <option value="@option.Value">@option.Text</option>
                                                         }
@@ -360,8 +361,8 @@
                         }
 
                         <div class="form-actions">
-                            <button type="submit" class="btn" disabled="@(!Vm.SaveEventCommand.CanExecute(null))">@Strings.Manual_Save</button>
-                            <button type="button" class="btn ghost" @onclick="() => Vm.CancelEventCommand.Execute(null)">@Strings.Manual_Cancel</button>
+                            <button type="submit" class="btn" disabled="@(!Vm.EventEditor.SaveCommand.CanExecute(null))">@Strings.Manual_Save</button>
+                            <button type="button" class="btn ghost" @onclick="() => Vm.EventEditor.CancelCommand.Execute(null)">@Strings.Manual_Cancel</button>
                         </div>
                     </form>
                 </article>
@@ -393,7 +394,7 @@
                                         <td>@manualEvent.InvitedText</td>
                                         <td class="row-actions">
                                             <button type="button" class="btn ghost" aria-label="@($"{Strings.Manual_Edit}: {manualEvent.Event.Name}")"
-                                                    disabled="@(!Vm.BeginEditEventCommand.CanExecute(manualEvent))" @onclick="() => Vm.BeginEditEventCommand.ExecuteAsync(manualEvent)">
+                                                    disabled="@(!Vm.EventEditor.BeginEditCommand.CanExecute(manualEvent))" @onclick="() => Vm.EventEditor.BeginEditCommand.ExecuteAsync(manualEvent)">
                                                 <Icon Name="edit" /><span>@Strings.Manual_Edit</span>
                                             </button>
                                             <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Manual_Delete}: {manualEvent.Event.Name}")"
@@ -413,6 +414,8 @@
 </section>
 
 @code {
+    protected override IEnumerable<INotifyPropertyChanged> ObservedSources => [Vm, Vm.NameForm, Vm.MemberEditor, Vm.EventEditor];
+
     protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
 
     private void OnGroupChosen(ChangeEventArgs e) =>

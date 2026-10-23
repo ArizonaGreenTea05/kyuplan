@@ -1,36 +1,46 @@
-# kyuplan
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/logo-white.svg"><img src="assets/branding/logo-black.svg" alt="kyuplan" height="72"></picture></p>
 
-Planner for the karate club's belt exams, built on the club's [Spond](https://spond.com) groups. Its heart is the list of **exams**:
-for an exam that is still to come it **suggests who is fit for it** (from their belt, the day they got it, their age and their
-attendance) and lets you **save the members you want to put forward**; for an exam that took place it shows **who attended and who
-received which belt**. Underneath is the attendance analysis the planner started as.
+<p align="center">
+  <b>Plan your karate club's belt exams on the data you already keep in Spond.</b><br>
+  Open source, self-hosted, one Docker container.
+</p>
 
-A backend API reads Spond; a **Blazor WebAssembly** client and a **WPF** client show the same pages using the same view models. Both
-clients speak **English and German**.
+<p align="center">
+<a href="https://github.com/ArizonaGreenTea05/kyuplan/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/ArizonaGreenTea05/kyuplan?include_prereleases&sort=semver"></a> <a href="https://github.com/ArizonaGreenTea05/kyuplan/pkgs/container/kyuplan"><img alt="Docker image" src="https://img.shields.io/badge/ghcr.io-kyuplan-blue?logo=docker"></a> <a href="https://github.com/ArizonaGreenTea05/kyuplan/issues"><img alt="Open issues" src="https://img.shields.io/github/issues/ArizonaGreenTea05/kyuplan"></a> <a href="https://github.com/ArizonaGreenTea05/kyuplan/pulls"><img alt="Open pull requests" src="https://img.shields.io/github/issues-pr/ArizonaGreenTea05/kyuplan"></a> <a href="https://github.com/ArizonaGreenTea05/kyuplan/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/ArizonaGreenTea05/kyuplan"></a> <a href="https://github.com/ArizonaGreenTea05/kyuplan/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/ArizonaGreenTea05/kyuplan?style=flat"></a> <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/github/license/ArizonaGreenTea05/kyuplan"></a> <a href="https://ko-fi.com/idkeverygoodnameistaken"><img alt="Sponsor on Ko-fi" src="https://img.shields.io/badge/Ko--fi-sponsor-ff5e5b?logo=ko-fi&logoColor=white"></a>
+</p>
 
-## Try it
+<p align="center"><a href="docs/deployment.md">Self-hosting guide</a> · <a href="docs/user-guide.md">User guide</a> · <a href="https://ko-fi.com/idkeverygoodnameistaken">☕ Sponsor on Ko-fi</a></p>
 
-Requires the **.NET 10 SDK** (the WPF client needs Windows). The API starts in demo mode in `Development`, with generated data and no
-Spond credentials:
+kyuplan reads the groups and events of your club's [Spond](https://spond.com) account and turns them into an **exam planner**:
+
+- **Suggests who is fit for the next exam** from belt, the day the belt was received, age and training attendance, and lets you save the members you put forward.
+- **Shows what happened at past exams**: who attended and who received which belt.
+- **Attendance statistics** with filters, comments and tags, exam prices and payments, calendar feeds (ICS), backups.
+- **Web and Windows desktop client**, both in **English and German**, with themes and your own club branding.
+- **Your data stays with you**: SQLite or PostgreSQL, accounts with roles and permissions, no cloud service besides Spond.
+
+## Self-host it in two minutes
+
+You need a machine with Docker (a server, a NAS, a VM, a Raspberry Pi: the image is built for amd64 and arm64). Try it first with generated demo data, no Spond account needed:
 
 ```bash
-dotnet run --project src/Kyuplan.Api --launch-profile http   # http://localhost:5100: web client, API below /api, docs at /scalar
-dotnet run --project src/Kyuplan.Client.Wpf                  # Windows desktop app
+docker run -d --name kyuplan -p 8080:8080 -v kyuplan-data:/data -e Spond__UseDemoData=true ghcr.io/arizonagreentea05/kyuplan:latest
 ```
 
-A new installation shows a setup screen in the web client (settings and the first administrator); see
-[the reference](docs/reference.md#run-it).
+Open <http://localhost:8080/>: on first start a setup screen asks for the Spond login (or keeps the demo data) and creates the first administrator.
 
-## Solution layout
+### For real use
 
-| Project | What it is |
-| --- | --- |
-| `src/Kyuplan.Contracts` | DTOs shared by the API and the clients (the wire format) and shared rules. |
-| `src/Kyuplan.Api` | ASP.NET Core minimal API: Spond access, statistics, SQLite/PostgreSQL persistence, accounts. |
-| `src/Kyuplan.Client.Shared` | The typed API client, **all view models** and **every UI text** (`Resources/Strings*.resx`). |
-| `src/Kyuplan.Client.Blazor` / `src/Kyuplan.Client.Wpf` | The two UIs: markup only, bound to the shared view models. |
-| `tests/Kyuplan.Tests` | xUnit tests for everything above except the markup. |
-| `docs/`, `website/` | The documentation and the Docusaurus sites built from it. |
+```bash
+git clone https://github.com/ArizonaGreenTea05/kyuplan.git && cd kyuplan/deploy
+cp .env.example .env          # pin KYUPLAN_IMAGE to a version tag, e.g. ghcr.io/arizonagreentea05/kyuplan:0.1
+docker compose up -d          # SQLite in the volume "kyuplan-data"; docker-compose.postgres.yml for PostgreSQL
+```
+
+- **Put HTTPS in front of it.** The login is HTTP Basic, so serve the site through a reverse proxy such as Caddy; the guide has a ready-made setup.
+- **Back up the `kyuplan-data` volume** (or use the built-in backup page). Update with `docker compose pull && docker compose up -d`.
+
+Step-by-step instructions, PostgreSQL, TrueNAS, Azure, Kubernetes, troubleshooting and every setting are in the [deployment guide](docs/deployment.md).
 
 ## Documentation
 
@@ -40,16 +50,27 @@ A new installation shows a setup screen in the web client (settings and the firs
 | **install** it (Docker, NAS, cloud) | [Deployment guide](docs/deployment.md) |
 | **manage** an instance | [Administrator guide](docs/admin-guide.md) |
 | **change the code** | [Developer guide](docs/developer-guide.md) |
-| look up a configuration key, an API endpoint or a database table | [Reference](docs/reference.md) |
+| look up a setting, an API endpoint or a table | [Reference](docs/reference.md) |
 | understand the rules behind the figures | [Statistics](docs/attendance-statistics.md), [exam planning](docs/exam-planning.md), [comments and tags](docs/comments-and-tags.md) |
 
-The full index is [docs/README.md](docs/README.md). Release engineering (`installer`, `deploy`, `.github`) is described in the
-[deployment guide](docs/deployment.md); notes for coding agents are in [AGENTS.md](AGENTS.md).
+A running instance serves the same documentation for its users, and the API reference at `/scalar` in demo mode. The full index is [docs/README.md](docs/README.md).
 
-## Release
+## Develop
 
-Pushing one tag `v<version>` builds the Docker image (API, web client and the desktop installers in one container) and a GitHub release:
+Needs the **.NET 10 SDK** (the WPF client needs Windows). The API starts in demo mode in `Development`:
 
 ```bash
-docker run -d -p 8080:8080 -v kyuplan-data:/data ghcr.io/<owner>/kyuplan:latest   # SQLite; open http://localhost:8080/
+dotnet run --project src/Kyuplan.Api --launch-profile http   # http://localhost:5100: web client, API below /api
+dotnet test tests/Kyuplan.Tests
 ```
+
+Layout, conventions and how to contribute are in the [developer guide](docs/developer-guide.md). Bug reports and ideas are welcome as [issues](https://github.com/ArizonaGreenTea05/kyuplan/issues).
+
+## Support the project
+
+kyuplan is free and developed in spare time. If it saves your club some evenings of spreadsheet work, you can
+**[buy me a coffee on Ko-fi](https://ko-fi.com/idkeverygoodnameistaken)** ☕. Starring the repository and telling other clubs helps just as much.
+
+## Licence
+
+[MIT](LICENSE) © ArizonaGreenTea05

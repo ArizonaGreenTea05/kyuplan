@@ -72,7 +72,7 @@ dotnet run --project src/Kyuplan.Api --launch-profile http -- --Spond:UseDemoDat
   dotnet user-secrets set "Accounts:InitialAdminPassword" "a-long-dev-password" --project src/Kyuplan.Api
   ```
   The user name is `admin`. Every call needs HTTP Basic credentials.
-- Databases and settings land in `src/Kyuplan.Api/data/` (`kyuplan.db`, `accounts.db`, `settings.json`; git-ignored).
+- Databases and settings land in the `data/` folder of `src/Kyuplan.Api` (`kyuplan.db`, `accounts.db`, `settings.json`; git-ignored).
 - The WPF client: `dotnet run --project src/Kyuplan.Client.Wpf` (Windows). It asks for the API address on first start (`http://localhost:5100/`).
 - Hot reload for the web client alone: `dotnet run --project src/Kyuplan.Client.Blazor --launch-profile http` serves it on
   <http://localhost:5200>; then set `PlannerApi:BaseAddress` in its `wwwroot/appsettings.json` to `http://localhost:5100/` and

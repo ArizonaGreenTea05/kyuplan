@@ -89,7 +89,7 @@ public sealed class MemberService(PlannerDbContext db)
 
     /// <summary>A user is gone: they are no longer any member.</summary>
     public Task ReleaseUserAsync(int userId, CancellationToken cancellationToken) =>
-        db.Members.Where(m => m.UserId == userId).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, (int?)null), cancellationToken);
+        db.Members.IgnoreQueryFilters().Where(m => m.UserId == userId).ExecuteUpdateAsync(s => s.SetProperty(m => m.UserId, (int?)null), cancellationToken);
 
     private static MemberDto ToDto(Member m, int commentCount) =>
         new(m.Id, m.GroupId, m.Name, m.BeltId, m.StartedAt, m.BirthDate, m.BeltSince, commentCount, m.Registered);

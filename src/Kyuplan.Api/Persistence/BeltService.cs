@@ -67,14 +67,15 @@ public sealed class BeltService(PlannerDbContext db)
         var belts = await LoadBeltsAsync(cancellationToken);
         var belt = belts.FirstOrDefault(b => b.Id == beltId) ?? throw new BeltNotFoundException(beltId);
 
-        if (await db.Members.CountAsync(m => m.BeltId == beltId, cancellationToken) is var holders and > 0)
+        // Members that are hidden (gone from the data source) hold their belt, too: the foreign key stops the delete.
+        if (await db.Members.IgnoreQueryFilters().CountAsync(m => m.BeltId == beltId, cancellationToken) is var holders and > 0)
             throw new BeltInUseException($"The belt '{belt.Name}' is held by {holders} member(s); give them another belt first.");
 
         var requiredBy = belts.Where(b => b.Prerequisites.Any(p => p.RequiredBeltId == beltId)).Select(b => $"'{b.Name}'").ToList();
         if (requiredBy.Count > 0)
             throw new BeltInUseException($"The belt '{belt.Name}' is required for {string.Join(", ", requiredBy)}; change that first.");
 
-        if (await db.ExamResults.CountAsync(r => r.BeltId == beltId, cancellationToken) is var awarded and > 0)
+        if (await db.ExamResults.IgnoreQueryFilters().CountAsync(r => r.BeltId == beltId, cancellationToken) is var awarded and > 0)
             throw new BeltInUseException($"The belt '{belt.Name}' was handed out {awarded} time(s) at exams; it is part of their results.");
 
         db.Belts.Remove(belt);

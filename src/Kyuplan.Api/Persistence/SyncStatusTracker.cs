@@ -23,6 +23,7 @@ public sealed class SyncStatusTracker : IDisposable
     private SyncRunDto? _lastSuccess;
     private SyncRunDto? _lastFailure;
     private int _consecutiveFailures;
+    private bool _removalRefused;
     private int _running;
 
     public SyncStatusTracker(TimeProvider time)
@@ -57,7 +58,7 @@ public sealed class SyncStatusTracker : IDisposable
     {
         lock (_lock)
             return new SyncStatusDto(enabled, interval > TimeSpan.Zero ? (int)Math.Ceiling(interval.TotalMinutes) : 0, _running > 0,
-                _consecutiveFailures, _lastSuccess, _lastFailure, [.. _recent]);
+                _consecutiveFailures, _lastSuccess, _lastFailure, [.. _recent], _removalRefused);
     }
 
     public void Dispose() => _meter.Dispose();
@@ -70,6 +71,7 @@ public sealed class SyncStatusTracker : IDisposable
             if (run is null) return;
 
             _recent.AddFirst(run);
+            _removalRefused = run.RemovalRefused; // a run after the refused one (it worked, or failed otherwise) settles it
             if (_recent.Count > KeptRuns) _recent.RemoveLast();
 
             if (run.Succeeded)
@@ -109,7 +111,7 @@ public sealed class SyncStatusTracker : IDisposable
         public void Fail(Exception error)
         {
             var text = error.Message.Length > MaxErrorLength ? error.Message[..MaxErrorLength] : error.Message;
-            End(text.Length == 0 ? error.GetType().Name : text);
+            End(text.Length == 0 ? error.GetType().Name : text, error is SyncRefusedException);
         }
 
         /// <summary>The run was cancelled (the API stops): it is neither a success nor a failure.</summary>
@@ -120,12 +122,12 @@ public sealed class SyncStatusTracker : IDisposable
             _owner.Finish(null);
         }
 
-        private void End(string? error)
+        private void End(string? error, bool refused = false)
         {
             if (_done) return;
             _done = true;
             var seconds = _owner._time.GetElapsedTime(_startTimestamp).TotalSeconds;
-            _owner.Finish(new SyncRunDto(_startedAt, Math.Round(seconds, 3), error is null, error));
+            _owner.Finish(new SyncRunDto(_startedAt, Math.Round(seconds, 3), error is null, error, refused));
         }
     }
 }

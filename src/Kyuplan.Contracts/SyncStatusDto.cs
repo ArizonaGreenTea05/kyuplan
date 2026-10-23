@@ -5,7 +5,8 @@ namespace Kyuplan.Contracts;
 /// <param name="DurationSeconds">How long it took.</param>
 /// <param name="Succeeded">Whether it finished without an error.</param>
 /// <param name="Error">What went wrong; <c>null</c> for a run that succeeded.</param>
-public sealed record SyncRunDto(DateTimeOffset StartedAt, double DurationSeconds, bool Succeeded, string? Error);
+/// <param name="RemovalRefused">Whether the run was refused because it would have removed too many members (nothing was changed); it can be confirmed.</param>
+public sealed record SyncRunDto(DateTimeOffset StartedAt, double DurationSeconds, bool Succeeded, string? Error, bool RemovalRefused = false);
 
 /// <summary>How the sync with the data source is doing: the last runs, when it last worked and what failed since.</summary>
 /// <param name="Enabled">Whether the API syncs by itself (<c>Sync:Enabled</c>); when not, only changes in the manual data start a run.</param>
@@ -15,6 +16,7 @@ public sealed record SyncRunDto(DateTimeOffset StartedAt, double DurationSeconds
 /// <param name="LastSuccess">The last run that worked; <c>null</c> if none did since the API started.</param>
 /// <param name="LastFailure">The last run that failed; <c>null</c> if none did since the API started.</param>
 /// <param name="Recent">The latest runs, newest first. Kept in memory: an API restart starts the list anew.</param>
+/// <param name="RemovalRefused">Whether the last run was refused because it would have removed too many members; an administrator can confirm it (<c>POST /api/sync/run?confirmRemoval=true</c>).</param>
 public sealed record SyncStatusDto(
     bool Enabled,
     int IntervalMinutes,
@@ -22,4 +24,5 @@ public sealed record SyncStatusDto(
     int ConsecutiveFailures,
     SyncRunDto? LastSuccess,
     SyncRunDto? LastFailure,
-    IReadOnlyList<SyncRunDto> Recent);
+    IReadOnlyList<SyncRunDto> Recent,
+    bool RemovalRefused = false);

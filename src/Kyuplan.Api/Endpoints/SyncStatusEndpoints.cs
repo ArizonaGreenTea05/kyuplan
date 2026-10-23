@@ -25,7 +25,7 @@ public static class SyncStatusEndpoints
             })
             .WithTags("Sync")
             .Produces(StatusCodes.Status204NoContent)
-            .WithSummary("Run the sync with the data source now. A run that would remove more than Sync:MaxRemovedShare of the members is refused (409); confirmRemoval=true applies it anyway, which also deletes their belts, payments, comments and results.")
+            .WithSummary("Run the sync with the data source now. A run that would remove more than Sync:MaxRemovedShare (or Sync:MaxRemovedMembers) of the members is refused (409); confirmRemoval=true applies it anyway: they are hidden, and deleted with their belts, payments, comments and results after Sync:RemovedMemberRetention.")
             .RequirePermission(Permission.SettingsEdit);
 
         return app;

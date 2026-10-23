@@ -128,10 +128,10 @@ internal static class DatabaseCopier
         : SetByType.MakeGenericMethod(type.ClrType).Invoke(db, null)!);
 
     private static async Task<List<object>> LoadAsync<T>(IQueryable query, CancellationToken cancellationToken) where T : class =>
-        [.. await ((IQueryable<T>)query).AsNoTracking().ToListAsync(cancellationToken)];
+        [.. await ((IQueryable<T>)query).IgnoreQueryFilters().AsNoTracking().ToListAsync(cancellationToken)]; // hidden members belong to the backup, too
 
     private static Task DeleteAsync<T>(IQueryable query, CancellationToken cancellationToken) where T : class =>
-        ((IQueryable<T>)query).ExecuteDeleteAsync(cancellationToken);
+        ((IQueryable<T>)query).IgnoreQueryFilters().ExecuteDeleteAsync(cancellationToken);
 
     /// <summary>
     /// PostgreSQL does not move an identity column's counter when a row is inserted with an id of its own: the next new row would get

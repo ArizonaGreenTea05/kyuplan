@@ -207,6 +207,32 @@ public class PlannerApiClientTests
         Assert.Equal("Spond rejected the login.", ex.Message);
     }
 
+    [Theory]
+    [InlineData(false, "/api/sync/run")]
+    [InlineData(true, "/api/sync/run?confirmRemoval=true")]
+    public async Task Running_the_sync_posts_to_api_sync_run_and_says_whether_the_removal_is_confirmed(bool confirm, string expected)
+    {
+        var (api, handler) = Create(_ => new HttpResponseMessage(HttpStatusCode.NoContent));
+
+        await api.RunSyncAsync(confirm);
+
+        var request = handler.Requests.Single();
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal(expected, request.RequestUri!.PathAndQuery);
+    }
+
+    [Fact]
+    public async Task A_refused_sync_run_surfaces_the_reason_the_api_gives()
+    {
+        var (api, _) = Create(_ => Json(HttpStatusCode.Conflict,
+            """{"title":"Sync refused","status":409,"detail":"The data source no longer lists 2 of the 2 stored members of all groups."}"""));
+
+        var ex = await Assert.ThrowsAsync<PlannerApiException>(() => api.RunSyncAsync());
+
+        Assert.Equal(HttpStatusCode.Conflict, ex.StatusCode);
+        Assert.Contains("2 of the 2", ex.Message);
+    }
+
     [Fact]
     public async Task A_refusal_for_a_user_without_the_rights_is_explained_even_though_the_api_sends_no_body()
     {

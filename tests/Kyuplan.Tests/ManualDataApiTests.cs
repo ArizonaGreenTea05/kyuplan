@@ -124,9 +124,11 @@ public sealed class ManualDataApiTests(WebApplicationFactory<Program> factory) :
         Assert.Equal(HttpStatusCode.Conflict, refused.StatusCode);
         Assert.Contains("confirmRemoval=true", await refused.Content.ReadAsStringAsync());
         Assert.Equal(3, (await admin.GetFromJsonAsync<List<MemberDto>>($"/api/members?groupId={group.Id}"))!.Count);
+        Assert.True((await admin.GetFromJsonAsync<SyncStatusDto>("/api/sync/status"))!.RemovalRefused);
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync("/api/sync/run?confirmRemoval=true", null)).StatusCode);
         Assert.Equal(anna.Name, Assert.Single((await admin.GetFromJsonAsync<List<MemberDto>>($"/api/members?groupId={group.Id}"))!).Name);
+        Assert.False((await admin.GetFromJsonAsync<SyncStatusDto>("/api/sync/status"))!.RemovalRefused);
     }
 
     [Fact]

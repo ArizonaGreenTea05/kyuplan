@@ -18,7 +18,7 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "citext");
@@ -691,6 +691,9 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
 
                     b.Property<bool>("Registered")
                         .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SpondId")
                         .IsRequired()

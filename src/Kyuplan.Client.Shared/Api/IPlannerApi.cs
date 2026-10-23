@@ -61,6 +61,12 @@ public interface IPlannerApi
     /// <summary>How the sync with the data source is doing. Needs <c>sync.view</c>.</summary>
     Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Runs the sync with the data source now. With <paramref name="confirmRemoval"/> a run that the API refused because it would remove too many
+    /// members is applied anyway. Needs <c>settings.edit</c>; a refused run is an <see cref="ApiException"/> (409).
+    /// </summary>
+    Task RunSyncAsync(bool confirmRemoval = false, CancellationToken cancellationToken = default);
+
     /// <summary>The backup databases and how their last run went. Needs <c>backups.view</c>.</summary>
     Task<IReadOnlyList<BackupTargetDto>> GetBackupTargetsAsync(CancellationToken cancellationToken = default);
 

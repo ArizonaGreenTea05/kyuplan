@@ -230,6 +230,7 @@ public sealed class SpondSyncTests : IDisposable
     public async Task The_share_can_be_raised_to_switch_the_guard_off_or_lowered_to_refuse_any_removal(double share, bool applied)
     {
         _club.SyncSettings.MaxRemovedShare = share;
+        _club.SyncSettings.ToleratedRemovedMembers = 0; // one of two is a removal the share decides about
         Spond.SetGroups(Group(Dojo, Anna, Ben));
         await _club.SyncAsync();
 

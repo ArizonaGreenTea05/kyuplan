@@ -38,7 +38,7 @@ login and administrator are entered in the browser. (For PostgreSQL use `docker-
 ### 2. Put HTTPS in front
 
 The login is HTTP Basic, so the site **must** be served over HTTPS (except for a try-out on the machine itself). The simplest way is Caddy in the same
-Compose project. Create `deploy/Caddyfile`:
+Compose project. Create a file named `Caddyfile` next to the Compose file:
 
 ```
 kyuplan.example.org {
@@ -121,7 +121,7 @@ the address and give them the [user guide](user-guide.md).
 | `Themes__Directory` | Folder of the uploaded theme packs (default: `themes` next to `settings.json`, i.e. `/data/themes`) |
 | `DefaultData__Enabled=false` | Start new databases without default belts and roles |
 
-The full list is the configuration table of the [README](../README.md#configuration); a value set as an environment variable wins over the Settings page.
+The full list is the configuration table of the [reference](reference.md#configuration); a value set as an environment variable wins over the Settings page.
 
 ---
 
@@ -245,7 +245,7 @@ folder or a PostgreSQL database that survives a restart.** The last column says 
 | **AWS** (ECS/Fargate, App Runner, Lightsail, EC2), **Google Cloud** (Cloud Run, GKE, GCE), **Hetzner, DigitalOcean, Fly.io, Railway, ...** | the same | PostgreSQL of the provider (RDS, Cloud SQL, managed PostgreSQL), or SQLite on a **block** disk | stateless platforms (Cloud Run, App Runner) need PostgreSQL *and* all settings as environment variables; see [Other clouds](#other-clouds-and-platforms) |
 | **Kubernetes / k3s** | an existing cluster | PostgreSQL (operator or managed), or SQLite on a `ReadWriteOnce` volume | one replica, `strategy: Recreate`; see [Kubernetes](#kubernetes) |
 | **Podman**, **Docker on Windows or macOS**, a **Raspberry Pi** | home, lab | SQLite or PostgreSQL | the image also exists for `arm64`; with Podman use `podman compose` or `podman run` with the same variables |
-| **Without Docker** (`dotnet run` / `dotnet publish`) | development | SQLite or PostgreSQL | the .NET 10 SDK or runtime; see the README |
+| **Without Docker** (`dotnet run` / `dotnet publish`) | development | SQLite or PostgreSQL | the .NET 10 SDK or runtime; see the [reference](reference.md#run-it) |
 
 Whatever you choose:
 
@@ -258,7 +258,7 @@ Whatever you choose:
 
 ## The documentation
 
-The documentation is the Markdown in `docs/` (and the repository's `README.md`), published with [Docusaurus](https://docusaurus.io) (`website/`). It is built **once per audience**,
+The documentation is the Markdown in `docs/`, published with [Docusaurus](https://docusaurus.io) (`website/`). It is built **once per audience**,
 because every user is only meant to see the guides that apply to them:
 
 | Guide | Address | Who may read it (a permission of the list is enough) |
@@ -266,7 +266,7 @@ because every user is only meant to see the guides that apply to them:
 | User guide (with the rules behind statistics, exams and comments) | `/docs/user/` | every signed-in user |
 | Administrator guide | `/docs/admin/` | `settings.view`, `users.view`, `roles.view`, `branding.edit` |
 | Deployment guide | `/docs/deployment/` | `settings.edit` |
-| Developer guide, README reference | none (not served) | only in the release archive |
+| Developer guide, Reference | none (not served) | only in the release archive |
 
 - The image carries the first three in `/app/docs/<audience>` (the Dockerfile builds them in its own `docs` stage). The API serves them (`GET /docs/<audience>/...`) **only with a login and
   only to users who have one of the permissions above** (403 otherwise, 404 for anything that is not a guide). The files are never reachable without that check.
@@ -294,7 +294,7 @@ because every user is only meant to see the guides that apply to them:
 - **User**: not root (UID 1654, name `app`). A Docker-managed volume is writable for it. For a folder you mount yourself, give that UID the rights or run the container as the folder's owner (`--user 568:568`).
 - **Health check**: `GET /healthz` answers `200 ok` without a login while the database can be reached (`503` otherwise), also over plain HTTP from other machines, so load balancers and platform probes can use it. The image has a Docker `HEALTHCHECK` that uses it (see `docker ps`).
 - **Metrics and logs**: `GET /metrics` (Prometheus text format, OpenTelemetry; off by default, `Metrics__Enabled=true` or the settings page switches it on, and it then needs `Metrics__Token` as bearer token) and JSON console logs with `Logging__Console__FormatterName=json`; the metrics and an alert example are in the [admin guide](admin-guide.md#day-to-day-operation).
-- **Settings**: everything in `appsettings.json` (see [Configuration](../README.md#configuration)) can be overridden by an environment
+- **Settings**: everything in `appsettings.json` (see [Configuration](reference.md#configuration)) can be overridden by an environment
   variable: the key with `:` written as `__`, e.g. `Spond:Email` → `Spond__Email`, `Statistics:TimeZone` → `Statistics__TimeZone`, and the list
   `Api:AllowedOrigins` → `Api__AllowedOrigins__0`, `Api__AllowedOrigins__1`, … (ASP.NET Core's own convention). In Compose files,
   Kubernetes, Azure and so on these are the "environment variables" of the container. Secrets (`Spond__Password`, database passwords) belong in the
@@ -311,7 +311,7 @@ because every user is only meant to see the guides that apply to them:
   `/data/settings.json` and the application restarts itself *inside* the container to apply them (the container keeps running);
   administrators change them later on the Settings page. Environment variables win over that file, so a value you set as one cannot be changed on the page.
   Set `Accounts__InitialAdminPassword` to create the administrator `admin` without the screen. A new database also starts with the standard
-  belts and the roles Leading Trainer, Trainer and Passive User (see [Run it](../README.md#run-it)); `DefaultData__Enabled=false` starts it empty.
+  belts and the roles Leading Trainer, Trainer and Passive User (see [Run it](reference.md#run-it)); `DefaultData__Enabled=false` starts it empty.
   They are only added when a database is created, so an existing database is never touched.
 - **Allowed host name**: the setup page proposes the address you opened as `AllowedHosts`; requests with another `Host` header are then refused. Change it when the address changes (a new domain!), or the site answers `400`.
 - **Branding** (name, accent colour, logos): the image carries the placeholders of `appsettings.json` (the name "My Club", a blue accent, a

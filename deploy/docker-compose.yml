@@ -7,7 +7,7 @@
 #   -> open http://<host>:8080/ ; the first visit asks for the Spond login and the first administrator.
 #
 # Every setting of the application can be set as an environment variable: the name of the setting with ":" written as "__"
-# (Spond:Email -> Spond__Email). The settings are listed in the README ("Configuration") and in docs/deployment.md.
+# (Spond:Email -> Spond__Email). The settings are listed in docs/reference.md ("Configuration") and in docs/deployment.md.
 
 name: kyuplan
 

@@ -23,7 +23,7 @@ A member has any number of comments. Each is written by a signed-in user and sho
   selected, or takes them off again when the text has the style already) and shows a live preview. Nothing is ever rendered as HTML: the
   clients turn the markup into styled text themselves, so nothing a user types can inject anything.
 - **Tags.** A comment can carry any number (up to 20) of tags, to say what topic it is about.
-- **Who may do what** is up to the user's permissions (see *Permissions and roles* in the README), one for each thing: `comments.view` to
+- **Who may do what** is up to the user's permissions (see *Permissions and roles* in the [reference](reference.md#permissions-and-roles)), one for each thing: `comments.view` to
   read the comments on a member (and to see how many there are: without it the member list says 0, so whoever may only view members does
   not learn that there are comments; **not** the comments about oneself, see below), `comments.write` to write a comment or a reply, `comments.edit` to **change any comment**,
   `comments.delete` to delete **one's own** comments and `comments.deleteAny` to delete everybody's (403 otherwise; the button is hidden
@@ -65,7 +65,7 @@ Saving without a change records nothing. Taking a tag off by deleting the tag is
 A tag is a topic comments can be about, e.g. *Belt exam September*.
 
 - **Names** are unique regardless of case, 1 to 50 characters.
-- **Events.** A tag is connected to **one Spond event or to none**; one event can have **many tags**. The events offered are those of the
+- **Events.** A tag is connected to **one event or to none**; one event can have **many tags**. The events offered are those of the
   selected group's search window (as for exams); a tag keeps the event's name and start, and follows the event when it is renamed or moved
   on Spond. A tag whose event has left the search window keeps what it knew, and can still be renamed or disconnected.
 - **Making and changing.** On the Tags page, or from the comment being written (**New tag**, and the pencil next to every tag): the same

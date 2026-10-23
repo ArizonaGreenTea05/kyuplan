@@ -72,7 +72,7 @@ dotnet run --project src/Kyuplan.Api --launch-profile http -- --Spond:UseDemoDat
   dotnet user-secrets set "Accounts:InitialAdminPassword" "a-long-dev-password" --project src/Kyuplan.Api
   ```
   The user name is `admin`. Every call needs HTTP Basic credentials.
-- Databases and settings land in `src/Kyuplan.Api/data/` (`kyuplan.db`, `accounts.db`, `settings.json`; git-ignored).
+- Databases and settings land in the `data/` folder of `src/Kyuplan.Api` (`kyuplan.db`, `accounts.db`, `settings.json`; git-ignored).
 - The WPF client: `dotnet run --project src/Kyuplan.Client.Wpf` (Windows). It asks for the API address on first start (`http://localhost:5100/`).
 - Hot reload for the web client alone: `dotnet run --project src/Kyuplan.Client.Blazor --launch-profile http` serves it on
   <http://localhost:5200>; then set `PlannerApi:BaseAddress` in its `wwwroot/appsettings.json` to `http://localhost:5100/` and
@@ -180,8 +180,8 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
   when the language changes (WPF switches live; Blazor reloads).
 - **Blazor**: `Pages/*.razor` bind to the view models through `ViewModelComponent`; `PageGate` hides pages the user has no permission for.
   Login is the in-page login screen (`LoginScreen`, `LoginViewModel`); the login stays in `LoginSession` in memory only (`SessionOnlyLoginStore` remembers nothing, `BrowserNoCredentialsHandler` keeps the browser dialog out), sign out reloads the page.
-- **WPF**: `Views/*.xaml` with `{loc:Loc Key}` bindings; `ThemeService` loads the design the user picked (`Themes/Design.*.xaml`, see the
-  README's WPF section) and applies the accent colour from the API to it;
+- **WPF**: `Views/*.xaml` with `{loc:Loc Key}` bindings; `ThemeService` loads the design the user picked (`Themes/Design.*.xaml`, see
+  the WPF part of [Look](reference.md#look) in the reference) and applies the accent colour from the API to it;
   `DpapiLoginStore` keeps the remembered login encrypted for the Windows user; `IClientUpdater` implementation runs the installer for self-update.
 
 ## The rules that bite
@@ -235,7 +235,7 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
 
 ### Add a setting
 
-1. Add the property to the options class (`Api/Configuration/Options.cs`) with a default; document it in the README's configuration table.
+1. Add the property to the options class (`Api/Configuration/Options.cs`) with a default; document it in the configuration table of the [reference](reference.md#configuration).
 2. If it should be editable on the Settings page: add it to the settings DTOs (`Contracts/SettingsDtos.cs`), `Infrastructure/SettingsService.cs`,
    `SettingsForm`/`SettingsViewModel`, and the shared Blazor component `SettingsFields.razor` plus the WPF settings fields; add texts.
 3. If it needs a restart to apply, make sure `SettingsService` reports it (the loop in `Program.cs` restarts the host).
@@ -248,7 +248,7 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
 3. A route in the matching `Endpoints/*.cs`, with the permission policy.
 4. `IPlannerApi` + `PlannerApiClient` + `FakePlannerApi` (tests).
 5. Tests next to the closest existing `*ApiTests.cs`, including a `403` test in `PermissionApiTests`.
-6. Update the endpoint table in the README.
+6. Update the endpoint table in [the reference](reference.md#api).
 
 ### Add a page
 
@@ -371,7 +371,7 @@ git tag v0.1 && git push origin v0.1
    - [ ] Buttons enabled only when they would change something
    - [ ] Tests added; full suite green
    - [ ] LF line endings; no secrets; no personal data in fixtures
-   - [ ] Docs updated (rules document, README tables, deployment guide)
+   - [ ] Docs updated (rules document, reference tables, deployment guide)
 
 Security issues: do not open a public issue with details; contact the maintainer privately.
 
@@ -379,7 +379,7 @@ Security issues: do not open a public issue with details; contact the maintainer
 
 | Topic | Document |
 | --- | --- |
-| Every setting, endpoint and table | [README](../README.md) |
+| Every setting, endpoint and table | [Reference](reference.md) |
 | What end users do | [user-guide.md](user-guide.md) |
 | Running and managing an instance | [admin-guide.md](admin-guide.md), [deployment.md](deployment.md) |
 | Attendance rules | [attendance-statistics.md](attendance-statistics.md) |

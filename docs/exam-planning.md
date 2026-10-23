@@ -7,12 +7,12 @@ implemented by [`ExamSuggestionCalculator`](../src/Kyuplan.Api/Statistics/ExamSu
 
 ## Exams
 
-An exam is a Spond event that somebody made an exam (see the README). The page lists the exams of the selected group: the ones **to
+An exam is an event of the data source that somebody made an exam (see [the reference](reference.md#exams-and-saved-filters)). The page lists the exams of the selected group: the ones **to
 come** first (the next one at the top, and chosen when the page opens), then the ones that **took place**, the latest first. An exam
 is *to come* from the day it is on (inclusive) and *past* the day after. The exam **of today** counts as both: it can be planned and
 belts can already be recorded for it.
 
-- **Add exam** takes the Spond event that is the exam. The events offered are those of the search window
+- **Add exam** takes the event that is the exam. The events offered are those of the search window
   (`Statistics:EventSearchMonthsBack` / `…Ahead`) that are not exams yet; type a part of the name or the date to find one. If the group
   has subgroups, the form also asks **which subgroups the suggestions are for** (tick any number; none ticked = everyone). They become the
   subgroups of the exam's *default* filter (see below). They can only be chosen when the exam is added.
@@ -45,7 +45,7 @@ Every member of the group is judged for **the belt after the one they hold**, **
 
 ### The next belt
 
-The belt a member would take is a belt that lists the belt they hold among its previous belts (see *Belts* in the README), together with
+The belt a member would take is a belt that lists the belt they hold among its previous belts (see [the reference](reference.md#belts-members-and-exam-invitations)), together with
 what that belt asks for **coming from the belt they hold**: a minimum age and a minimum waiting time. When several belts ask for the belt
 held, the **highest** one in the order of the belts that the member is fit for is taken (somebody who is fit for both blue-brown and
 the 1st brown is put forward for brown), otherwise the nearest one, i.e. the first in that order. A member whose belt no
@@ -107,7 +107,7 @@ future the span ends with the events that have taken place.
 
 The ticks in the list are the user's: tick the members to put forward (or *Select the fit*), then **Save selection**. The members are saved **in
 the planner's own database only**: nobody is invited on Spond. Once somebody invites them there (the Spond API this planner uses has no
-way to add recipients to an event), the sync shows their answer in the *On Spond* column, and the page counts the saved members who are
+way to add recipients to an event), the sync shows their answer in the *Answer* column, and the page counts the saved members who are
 **not invited yet**: those are the ones left to invite, all at once.
 
 - Saving sends what **changed** (who was ticked and is not saved, who was saved and is not ticked); members the list does not show

@@ -125,13 +125,13 @@
     <value>Demodaten</value>
   </data>
   <data name="Shell_DemoDataHint" xml:space="preserve">
-    <value>Die API liefert erzeugte Beispieldaten, nicht die echten Spond-Gruppen.</value>
+    <value>Die API liefert erzeugte Beispieldaten, nicht die echten Gruppen.</value>
   </data>
   <data name="Shell_Refresh" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
   <data name="Shell_RefreshHint" xml:space="preserve">
-    <value>Aktuelle Daten von Spond laden</value>
+    <value>Aktuelle Daten aus der Datenquelle laden</value>
   </data>
   <data name="Shell_Theme" xml:space="preserve">
     <value>Design</value>
@@ -1166,7 +1166,7 @@
     <value>Es gibt noch keine Gürtel.</value>
   </data>
   <data name="MemberPage_Lede" xml:space="preserve">
-    <value>Welchen Gürtel jedes Mitglied trägt und seit wann es trainiert. Die Namen kommen von Spond und werden automatisch aktuell gehalten.</value>
+    <value>Welchen Gürtel jedes Mitglied trägt und seit wann es trainiert. Die Namen kommen aus der Datenquelle und werden automatisch aktuell gehalten.</value>
   </data>
   <data name="MemberPage_OnlyWithoutBelt" xml:space="preserve">
     <value>Nur Mitglieder ohne Gürtel</value>
@@ -1223,7 +1223,7 @@
     <value>Gürtel seit</value>
   </data>
   <data name="MemberPage_FormBirthHint" xml:space="preserve">
-    <value>Wird aus Spond übernommen, wenn dort eines steht. Ein hier gesetzter Tag bleibt erhalten. Wird für das Mindestalter eines Gürtels gebraucht.</value>
+    <value>Wird aus der Datenquelle übernommen, wenn dort eines steht. Ein hier gesetzter Tag bleibt erhalten. Wird für das Mindestalter eines Gürtels gebraucht.</value>
   </data>
   <data name="MemberPage_FormBeltSinceHint" xml:space="preserve">
     <value>Der Tag, an dem das Mitglied diesen Gürtel bekommen hat; die Wartezeit auf den nächsten Gürtel zählt ab dann. Wird ein Gürtel bei einer Prüfung eingetragen, setzt das den Tag.</value>
@@ -1253,7 +1253,7 @@
     <value>Die Spond-Untergruppe mit den Personen, die noch nicht im Verein angemeldet sind. Ihre Mitglieder werden als nicht angemeldet markiert. Leer = alle gelten als angemeldet.</value>
   </data>
   <data name="Settings_Lede" xml:space="preserve">
-    <value>Wo die Daten liegen, wie Spond erreicht wird und wie die Statistik den Kalender liest. Änderungen werden auf dem Server gespeichert und bleiben nach einem Neustart erhalten; die API startet sich selbst neu, um sie anzuwenden.</value>
+    <value>Wo die Daten liegen, wie die Datenquelle erreicht wird und wie die Statistik den Kalender liest. Änderungen werden auf dem Server gespeichert und bleiben nach einem Neustart erhalten; die API startet sich selbst neu, um sie anzuwenden.</value>
   </data>
   <data name="Settings_Save" xml:space="preserve">
     <value>Speichern</value>
@@ -1289,7 +1289,7 @@
     <value>Die beiden Datenbanken müssen verschiedene Dateien sein.</value>
   </data>
   <data name="Settings_UseDemoDataHint" xml:space="preserve">
-    <value>Erzeugte Beispieldaten zum Ausprobieren. Spond wird nicht gefragt.</value>
+    <value>Erzeugte Beispieldaten zum Ausprobieren. Keine echte Datenquelle wird gefragt.</value>
   </data>
   <data name="Settings_SpondEmail" xml:space="preserve">
     <value>Spond-E-Mail</value>
@@ -1475,10 +1475,10 @@
     <value>Einen Termin zur Prüfung machen</value>
   </data>
   <data name="Exams_AddEvent" xml:space="preserve">
-    <value>Spond-Termin</value>
+    <value>Termin</value>
   </data>
   <data name="Exams_AddHint" xml:space="preserve">
-    <value>Wähle den Termin, der die Prüfung ist. Name und Tag folgen dem Termin in Spond.</value>
+    <value>Wähle den Termin, der die Prüfung ist. Name und Tag folgen dem Termin in der Datenquelle.</value>
   </data>
   <data name="Exams_AddSubGroups" xml:space="preserve">
     <value>Untergruppen für die Vorschläge</value>
@@ -1490,7 +1490,7 @@
     <value>Hinzufügen</value>
   </data>
   <data name="Exams_None" xml:space="preserve">
-    <value>Es gibt noch keine Prüfungen. Füge den Spond-Termin einer Gürtelprüfung hinzu, um sie zu planen.</value>
+    <value>Es gibt noch keine Prüfungen. Füge den Termin einer Gürtelprüfung hinzu, um sie zu planen.</value>
   </data>
   <data name="Exams_ColDate" xml:space="preserve">
     <value>Datum</value>
@@ -1538,7 +1538,7 @@
     <value>Prüfung löschen</value>
   </data>
   <data name="Exams_DeleteAsk" xml:space="preserve">
-    <value>{0} löschen? Die dafür gespeicherten Filter, die dafür gemerkten Mitglieder und die dort eingetragenen Gürtel werden mit gelöscht. Der Termin in Spond und die Gürtel, die die Mitglieder tragen, bleiben.</value>
+    <value>{0} löschen? Die dafür gespeicherten Filter, die dafür gemerkten Mitglieder und die dort eingetragenen Gürtel werden mit gelöscht. Der Termin in der Datenquelle und die Gürtel, die die Mitglieder tragen, bleiben.</value>
   </data>
   <data name="Plan_Title" xml:space="preserve">
     <value>Wer für diese Prüfung geeignet ist</value>
@@ -1631,7 +1631,7 @@
     <value>Urteil</value>
   </data>
   <data name="Plan_ColSpond" xml:space="preserve">
-    <value>In Spond</value>
+    <value>Antwort</value>
   </data>
   <data name="Plan_ColSave" xml:space="preserve">
     <value>Merken</value>
@@ -1709,7 +1709,7 @@
     <value>{0} ausgewählt</value>
   </data>
   <data name="Plan_SavedNotInvited" xml:space="preserve">
-    <value>{0} gemerkte Mitglieder sind in Spond noch nicht eingeladen.</value>
+    <value>{0} gemerkte Mitglieder sind noch nicht eingeladen.</value>
   </data>
   <data name="Plan_Saved" xml:space="preserve">
     <value>{0} Mitglieder für {1} gemerkt.</value>
@@ -1727,7 +1727,7 @@
     <value>Auswahl speichern</value>
   </data>
   <data name="Plan_SaveHint" xml:space="preserve">
-    <value>Das Speichern merkt die Liste nur im Planer vor. Niemand wird in Spond eingeladen; lade die Mitglieder dort ein, wenn es so weit ist.</value>
+    <value>Das Speichern merkt die Liste nur im Planer vor. Niemand wird eingeladen; lade die Mitglieder in der Datenquelle ein, wenn es so weit ist.</value>
   </data>
   <data name="Plan_SelectRow" xml:space="preserve">
     <value>{0} für die Prüfung merken</value>
@@ -2411,13 +2411,13 @@
     <value>Das Änderungsprotokoll lesen (wer was geändert hat)</value>
   </data>
   <data name="Permission_sync_view" xml:space="preserve">
-    <value>Sehen, wie der Abgleich mit Spond läuft</value>
+    <value>Sehen, wie der Abgleich mit der Datenquelle läuft</value>
   </data>
   <data name="Setup_Title" xml:space="preserve">
     <value>Einrichtung</value>
   </data>
   <data name="Setup_Lede" xml:space="preserve">
-    <value>Diese Installation hat noch keinen Benutzer. Lege fest, wo die Daten liegen und wie Spond erreicht wird, und erstelle den ersten Administrator. Alles lässt sich später auf der Einstellungs-Seite ändern.</value>
+    <value>Diese Installation hat noch keinen Benutzer. Lege fest, wo die Daten liegen und wie die Datenquelle erreicht wird, und erstelle den ersten Administrator. Alles lässt sich später auf der Einstellungs-Seite ändern.</value>
   </data>
   <data name="Setup_Checking" xml:space="preserve">
     <value>Der Server wird gefragt …</value>
@@ -2603,7 +2603,7 @@
     <value>Kommentar hinzufügen</value>
   </data>
   <data name="Calendar_NotSynced" xml:space="preserve">
-    <value>Dem Planer noch nicht bekannt: Kommentare brauchen den nächsten Abgleich mit Spond.</value>
+    <value>Dem Planer noch nicht bekannt: Kommentare brauchen den nächsten Abgleich mit der Datenquelle.</value>
   </data>
   <data name="Calendar_TagNote" xml:space="preserve">
     <value>Kommentare, die hier geschrieben werden, erhalten automatisch das Tag dieses Termins.</value>
@@ -3329,7 +3329,7 @@
     <value>Gelöscht</value>
   </data>
   <data name="SyncStatus_Lede" xml:space="preserve">
-    <value>Wie der Abgleich mit Spond läuft: wann er zuletzt geklappt hat, wie lange er dauert und was schiefging.</value>
+    <value>Wie der Abgleich mit der Datenquelle läuft: wann er zuletzt geklappt hat, wie lange er dauert und was schiefging.</value>
   </data>
   <data name="SyncStatus_Healthy" xml:space="preserve">
     <value>Der Abgleich funktioniert.</value>

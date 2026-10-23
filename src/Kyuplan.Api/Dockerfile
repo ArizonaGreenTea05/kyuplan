@@ -21,7 +21,6 @@ COPY website/package.json website/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY website ./
 COPY docs ../docs
-COPY README.md ../README.md
 # The tag (or branch) that links from the documentation into the repository point at.
 ARG DOCS_REPO_REF=main
 RUN DOCS_REPO_REF=${DOCS_REPO_REF} node scripts/build-all.mjs user admin deployment

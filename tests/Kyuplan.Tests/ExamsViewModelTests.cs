@@ -495,7 +495,7 @@ public sealed class ExamsViewModelTests : IDisposable
 
         Assert.Equal(1, Detail.SavedNotInvitedCount);
         Assert.True(Detail.HasSavedNotInvited);
-        Assert.Equal("1 saved members are not invited on Spond yet.", Detail.SavedNotInvitedText);
+        Assert.Equal("1 saved members are not invited yet.", Detail.SavedNotInvitedText);
         Assert.Equal(["No answer yet", "Not invited", "Not invited"], Detail.Suggestions.Select(r => r.InvitationText));
     }
 

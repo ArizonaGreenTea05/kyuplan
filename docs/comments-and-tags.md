@@ -23,7 +23,7 @@ A member has any number of comments. Each is written by a signed-in user and sho
   selected, or takes them off again when the text has the style already) and shows a live preview. Nothing is ever rendered as HTML: the
   clients turn the markup into styled text themselves, so nothing a user types can inject anything.
 - **Tags.** A comment can carry any number (up to 20) of tags, to say what topic it is about.
-- **Who may do what** is up to the user's permissions (see *Permissions and roles* in the README), one for each thing: `comments.view` to
+- **Who may do what** is up to the user's permissions (see *Permissions and roles* in the [reference](reference.md#permissions-and-roles)), one for each thing: `comments.view` to
   read the comments on a member (and to see how many there are: without it the member list says 0, so whoever may only view members does
   not learn that there are comments; **not** the comments about oneself, see below), `comments.write` to write a comment or a reply, `comments.edit` to **change any comment**,
   `comments.delete` to delete **one's own** comments and `comments.deleteAny` to delete everybody's (403 otherwise; the button is hidden

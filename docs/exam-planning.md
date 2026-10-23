@@ -7,7 +7,7 @@ implemented by [`ExamSuggestionCalculator`](../src/Kyuplan.Api/Statistics/ExamSu
 
 ## Exams
 
-An exam is a Spond event that somebody made an exam (see the README). The page lists the exams of the selected group: the ones **to
+An exam is a Spond event that somebody made an exam (see [the reference](reference.md#exams-and-saved-filters)). The page lists the exams of the selected group: the ones **to
 come** first (the next one at the top, and chosen when the page opens), then the ones that **took place**, the latest first. An exam
 is *to come* from the day it is on (inclusive) and *past* the day after. The exam **of today** counts as both: it can be planned and
 belts can already be recorded for it.
@@ -45,7 +45,7 @@ Every member of the group is judged for **the belt after the one they hold**, **
 
 ### The next belt
 
-The belt a member would take is a belt that lists the belt they hold among its previous belts (see *Belts* in the README), together with
+The belt a member would take is a belt that lists the belt they hold among its previous belts (see [the reference](reference.md#belts-members-and-exam-invitations)), together with
 what that belt asks for **coming from the belt they hold**: a minimum age and a minimum waiting time. When several belts ask for the belt
 held, the **highest** one in the order of the belts that the member is fit for is taken (somebody who is fit for both blue-brown and
 the 1st brown is put forward for brown), otherwise the nearest one, i.e. the first in that order. A member whose belt no

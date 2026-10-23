@@ -11,7 +11,7 @@ Background and reference:
 
 | Document | Contents |
 | --- | --- |
-| [README](../README.md) | Overview, every configuration key, every API endpoint, every database table |
+| [reference.md](reference.md) | Every configuration key, every API endpoint, every database table |
 | [attendance-statistics.md](attendance-statistics.md) | Definition of every statistic figure |
 | [exam-planning.md](exam-planning.md) | The rules behind "who is fit for an exam" and recording belts |
 | [comments-and-tags.md](comments-and-tags.md) | Comments, replies, formatting, edit history, tags |

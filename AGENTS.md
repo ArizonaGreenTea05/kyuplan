@@ -1,7 +1,7 @@
 # AGENTS.md
 
 kyuplan: karate-club exam planner on Spond data. .NET 10 (SDK pinned in `global.json`), C# latest, nullable on.
-Read this instead of exploring. Open `README.md` only for the section you need (`grep -n '^#' README.md`).
+Read this instead of exploring. Open `docs/reference.md` (config keys, API, tables) only for the section you need (`grep -n '^#' docs/reference.md`); `README.md` is just an overview.
 
 ## Layout (`src/`)
 - `Contracts`: wire DTOs and shared rules (`*Rules.cs`). Change here first when the API shape changes.
@@ -36,6 +36,7 @@ Big pages are split into sub-view-models the page exposes (statistics: `Table` =
 - **Data sources** (`Spond/IDataSource.cs` + `Sources/`): every source implements `IDataSource` (Spond, demo, `CustomScriptDataSource` = admin JavaScript run in Jint, `ManualDataSource` = rows of the `Manual*` tables); `DataSource:Kind` (+ `Spond:UseDemoData`, which wins) picks one at start in `Program.cs`, the settings page changes it and restarts. Manual data: `ManualDataService` + `ManualDataEndpoints` (`/api/manual`, permission `manualdata.edit`, syncs members/exams after every write), `ManualDataViewModel` (Client.Shared; its forms are the sub-view-models `NameForm`, `MemberEditor`, `EventEditor`, talking to the page through `IManualPageHost`), `ManualData.razor`, `ManualDataView.xaml`. Script contract and limits: `docs/admin-guide.md#custom-data-source`. A new schema/table needs the usual two migrations.
 - **Calendar feeds** (`Persistence/CalendarFeedService.cs` + `IcsWriter.cs`, `Endpoints/CalendarFeedEndpoints.cs`, `Contracts/CalendarFeedDtos.cs`): admin-defined ICS calendars, sources stored as JSON in `CalendarFeeds.SourcesJson`; `GET /calendar-feeds/{token}.ics` is anonymous on purpose (the token is the key, outside `/api` so the API key middleware does not apply); permission `calendar.feeds`; docs in `docs/admin-guide.md#calendar-feeds`. Page: `CalendarFeedsViewModel` + `CalendarFeedEditorViewModel` (Client.Shared), `CalendarFeeds.razor`, `CalendarFeedsView.xaml` (Administration).
 - **Backups** (`Api/Backup/`, `Endpoints/BackupEndpoints.cs`): a `.kyubackup` zip holds both databases as JSON rows per table (`DatabaseCopier` works on the EF model, so SQLite and PostgreSQL are interchangeable; a table with a shadow property makes `DatabaseCopier.Tables` throw, `BackupApiTests` catches it). Mirror databases (`BackupTargetStore`, JSON file, not in the DB) are refreshed by `BackupWorker`; a restore restarts the app. A new table needs nothing extra; a new schema needs the usual migrations. Page: `BackupViewModel` + `Backup.razor` + `BackupView.xaml`; options in `docs/admin-guide.md#backups`.
+- **Docs**: config keys, API and tables live only in `docs/reference.md` (README is a short overview, keep it under 80 lines). `DocsDriftTests` fails on a `Section:Key` in any doc that no options class/`appsettings.json` has, on broken relative links/anchors, on missing repo paths and on a `docs/*.md` missing from `audiences.mjs`.
 - Package versions live in `Directory.Packages.props` (central); csproj files carry no versions.
 - **Dependencies/supply chain**: `.github/dependabot.yml` (a new `package.json`, Dockerfile, Compose folder or composite action needs an entry), `.github/actions/audit-dependencies` (`dotnet list package --vulnerable` + `npm audit`; run by `dependency-audit.yml` and first in the release), Trivy scan + SBOM in `release.yml`, accepted findings in `.trivyignore`; `SupplyChainConfigTests` guards it; docs in `docs/deployment.md#dependency-and-supply-chain-checks`.
 - **Exam prices/payments**: `ExamPrices` (general fee = row without belt, surcharge per belt) + `ExamPayments` (paid + due snapshot per exam/member), `ExamPaymentService`, `PaymentEndpoints`, `ExamPricesViewModel` (page) and `PaymentRow` in `ExamDetailViewModel`; rules in `docs/exam-planning.md#prices-and-payments`. Amounts are `decimal`, validated by `PaymentRules`.
@@ -53,7 +54,7 @@ Big pages are split into sub-view-models the page exposes (statistics: `Table` =
 
 ## Token savers
 - Don't read `Migrations/*`, `*.Designer.cs`, `wwwroot/`, `assets/`, `installer/`, `deploy/`, `bin/`, `obj/`, `logs/`, `.github/` (read `.github/` and `deploy/` only when changing releases). Irrelevant to almost every task.
-- Use `grep`/Glob to locate a symbol, then read only that range (offset/limit). Don't read whole files or the whole README.
+- Use `grep`/Glob to locate a symbol, then read only that range (offset/limit). Don't read whole files or all of `docs/reference.md`.
 - Don't re-run the full test suite after each edit; run the filtered test, then the full suite once at the end.
 - Keep final reports to a few lines: what changed, where, test result.
 

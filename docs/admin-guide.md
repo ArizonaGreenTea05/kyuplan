@@ -195,7 +195,7 @@ groups is two members. Only events within the search window (12 months back, 6 a
 
 **Sync status.** *Administration → Sync status* (permission `sync.view`) shows whether the sync works: when it last succeeded and how long it
 took, how many runs in a row failed since, the error of the last failure, and the last 20 runs with their duration. The list lives in the
-server's memory, so it starts empty after a restart. The same figures are available to monitoring as [metrics](#logs-and-metrics).
+server's memory, so it starts empty after a restart. The same figures are available to monitoring as [metrics](#day-to-day-operation).
 
 ## Settings page and configuration files
 
@@ -231,7 +231,7 @@ running); a save that changes nothing does not. A file that is not valid JSON is
 | `Api:ApiKey` | empty | Optional extra header `X-Api-Key` on all `/api` calls. Only an extra layer: anyone who can open the web client can read it from there. |
 | `Api:AllowedOrigins` | `[]` | Only for a web client hosted at another origin (development). Not needed with the integrated one. |
 
-The complete list of keys is in the [README's configuration table](../README.md#configuration).
+The complete list of keys is in the [configuration table of the reference](reference.md#configuration).
 
 ## Users, roles and permissions
 

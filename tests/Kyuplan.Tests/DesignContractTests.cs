@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Kyuplan.Tests;
 
 /// <summary>
-/// The designs of the WPF client (Themes/Design.*.xaml, see the README). The pages are the same XAML in every design and ask the design for
+/// The designs of the WPF client (Themes/Design.*.xaml, see docs/reference.md, "Look"). The pages are the same XAML in every design and ask the design for
 /// names (Fluent's: <c>TextFillColorPrimaryBrush</c>, <c>AccentButtonStyle</c>, ...), so a name a page uses that one design lacks only
 /// shows when somebody picks that design and opens that page. These tests read the XAML as text and catch it on Linux, too.
 /// </summary>

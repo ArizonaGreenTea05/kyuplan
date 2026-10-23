@@ -23,7 +23,7 @@ export const audiences = {
     title: 'Developer guide',
     files: [
       { source: 'docs/developer-guide.md', page: 'developer-guide' },
-      { source: 'README.md', page: 'reference' },
+      { source: 'docs/reference.md', page: 'reference' },
     ],
   },
 };

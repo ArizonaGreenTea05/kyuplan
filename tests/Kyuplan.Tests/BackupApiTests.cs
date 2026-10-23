@@ -214,6 +214,109 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Equal(["White"], await BeltNamesAsync(anna));
     }
 
+    /// <summary>The backup with one entry replaced by <paramref name="edit"/>'s result (<c>null</c> = the entry is left out).</summary>
+    private static byte[] Rewrite(byte[] file, string entryName, Func<string, string?> edit)
+    {
+        using var result = new MemoryStream();
+        var found = false;
+        using (var source = new System.IO.Compression.ZipArchive(new MemoryStream(file)))
+        using (var zip = new System.IO.Compression.ZipArchive(result, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                using var reader = new StreamReader(entry.Open());
+                var text = reader.ReadToEnd();
+                if (entry.FullName == entryName)
+                {
+                    found = true;
+                    if (edit(text) is not { } edited) continue;
+                    text = edited;
+                }
+
+                using var writer = new StreamWriter(zip.CreateEntry(entry.FullName).Open());
+                writer.Write(text);
+            }
+        }
+
+        Assert.True(found, $"{entryName} is not in the backup");
+        return result.ToArray();
+    }
+
+    private static string WithoutAdministratorRole(string rolesJson)
+    {
+        var roles = System.Text.Json.Nodes.JsonNode.Parse(rolesJson)!.AsArray();
+        foreach (var role in roles) role!["IsSystem"] = false;
+        return roles.ToJsonString();
+    }
+
+    /// <summary>The rows of a table with <paramref name="column"/> set to <paramref name="id"/> in every row.</summary>
+    private static string WithColumn(string tableJson, string column, int id)
+    {
+        var rows = System.Text.Json.Nodes.JsonNode.Parse(tableJson)!.AsArray();
+        foreach (var row in rows) row![column] = id;
+        return rows.ToJsonString();
+    }
+
+    [Theory]
+    [InlineData("empty Users")]
+    [InlineData("missing Users")]
+    [InlineData("no administrator role")]
+    [InlineData("no administrator link")]
+    [InlineData("link to a missing user")]
+    [InlineData("link to a missing role")]
+    public async Task A_backup_without_an_administrator_is_refused_and_the_setup_stays_closed(string variant)
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        await ReadAsync<BeltDto>(await admin.PostAsJsonAsync("/api/belts", Belt("White")));
+        var file = await DownloadAsync(admin);
+        await ReadAsync<BeltDto>(await admin.PostAsJsonAsync("/api/belts", Belt("Green"))); // after the backup
+
+        var broken = variant switch
+        {
+            "empty Users" => Rewrite(file, "accounts/UserAccount.json", _ => "[]"),
+            "missing Users" => Rewrite(file, "accounts/UserAccount.json", _ => null),
+            "no administrator role" => Rewrite(file, "accounts/Role.json", WithoutAdministratorRole),
+            "no administrator link" => Rewrite(file, "accounts/UserRoles.json", _ => "[]"),
+            "link to a missing user" => Rewrite(file, "accounts/UserRoles.json", text => WithColumn(text, "UsersId", 99)),
+            _ => Rewrite(file, "accounts/UserRoles.json", text => WithColumn(text, "RolesId", 99)),
+        };
+        Assert.NotEqual(file, broken);
+
+        var response = await UploadAsync(admin, broken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Nothing was changed", await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, _restarter.Requests);
+        Assert.Equal(["Green", "White"], await BeltNamesAsync(admin));
+        Assert.Equal(HttpStatusCode.OK, (await host.CreateSignedInClient().GetAsync("/api/account")).StatusCode);
+        var setup = await ReadAsync<SetupStatusDto>(await host.CreateClient().GetAsync("/api/setup"));
+        Assert.False(setup.NeedsSetup);
+    }
+
+    [Fact]
+    public async Task The_initial_data_of_a_new_instance_may_hold_no_users_and_the_instance_is_then_set_up()
+    {
+        byte[] file;
+        using (var source = CreateHost())
+        {
+            var admin = source.CreateSignedInClient();
+            await ReadAsync<BeltDto>(await admin.PostAsJsonAsync("/api/belts", Belt("White")));
+            file = await DownloadAsync(admin);
+            foreach (var table in new[] { "UserAccount", "UserAlias", "AccountName", "UserRoles" }) file = Rewrite(file, $"accounts/{table}.json", _ => "[]");
+        }
+
+        var path = Path.Combine(_folder, "no-users.kyubackup");
+        await File.WriteAllBytesAsync(path, file);
+        using var newPlanner = new InMemoryDatabase();
+        using var newAccounts = new InMemoryDatabase();
+
+        using var fresh = CreateHost(newPlanner, newAccounts, builder => builder.UseSetting("Backup:InitialDataFile", path));
+
+        // The administrator comes from the configuration, the planner data from the file.
+        Assert.Equal(["White"], await BeltNamesAsync(fresh.CreateSignedInClient()));
+    }
+
     // --- Backup databases --------------------------------------------------------------------------------------------
 
     [Fact]

@@ -40,7 +40,8 @@ public sealed class BackupService(
     IOptions<DatabaseOptions> database,
     IOptions<AccountsOptions> accountsOptions,
     IOptions<BackupOptions> options,
-    IHostEnvironment environment,
+    IWebHostEnvironment environment,
+    SettingsFile settings,
     BackupGate gate,
     SyncGate sync,
     TimeProvider time,
@@ -356,7 +357,7 @@ public sealed class BackupService(
         var root = environment.ContentRootPath;
         if (target.Kind == BackupTargetKind.Sqlite)
         {
-            var folder = Path.GetFullPath(target.Location, root);
+            var folder = BackupFolder.Resolve(target.Location, settings.Path, root, environment.WebRootPath);
             var plannerFile = Path.Combine(folder, "planner.db");
             var accountsFile = Path.Combine(folder, "accounts.db");
             foreach (var live in new[] { database.Value.Provider == DatabaseProvider.Sqlite ? database.Value.ConnectionString : null, accountsOptions.Value.ConnectionString })
@@ -364,7 +365,11 @@ public sealed class BackupService(
                 if (live is null) continue;
 
                 var file = new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(live).DataSource;
-                if (file.Length > 0 && (SamePath(Path.GetFullPath(file, root), plannerFile) || SamePath(Path.GetFullPath(file, root), accountsFile)))
+                if (file.Length == 0) continue;
+
+                // The folder is resolved through links, so the live file has to be as well (a data folder that is a link or mount would hide the clash).
+                var liveFile = BackupFolder.Real(Path.GetFullPath(file, root));
+                if (SamePath(liveFile, plannerFile) || SamePath(liveFile, accountsFile))
                     throw new InvalidInputException("This folder holds the live database: a backup database must be a different one.");
             }
 

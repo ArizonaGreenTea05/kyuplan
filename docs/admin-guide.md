@@ -284,7 +284,7 @@ The complete list of keys is in the [configuration table of the reference](refer
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | themes | `themes.edit` (install and delete theme packs) |
-| backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
+| backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases: it makes the server copy **all data**, password hashes included, into a folder or a PostgreSQL database of the holder's choice, so it exposes as much as `backups.download`; grant both only to administrators), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
 | audit | `audit.view` (read the [audit log](#audit-log)) |
@@ -543,10 +543,12 @@ A *backup database* is a **second database** that the server keeps a complete co
 
 | Kind | Location | What it holds |
 | --- | --- | --- |
-| SQLite files in a folder | a folder on the server (relative to the program folder, or absolute; created if missing) | `planner.db` and `accounts.db` |
+| SQLite files in a folder | a folder on the server **below the folder of the settings file** (in a container: on the data volume), absolute or relative to the program folder; created if missing | `planner.db` and `accounts.db` |
 | PostgreSQL database | a connection string, e.g. `Host=backup-db;Database=kyuplan_backup;Username=kyuplan;Password=...` | the tables of both databases (they do not clash) |
 
 - **Never choose the live database.** The server refuses a folder that holds its own SQLite files or its own PostgreSQL database. Pick a different disk, share or server so that a failure of the first does not take the copy with it.
+- **A SQLite folder is confined.** The copy holds every password hash, so the server writes it only below the folder of the settings file (links are followed, so a link out of that folder does not help), never into a folder the web server serves files from (`wwwroot`), and never into the settings folder itself. Anything else is refused when you save it; a definition that no longer fits (older versions had no limit) fails its run with the same reason. To put a mirror on another disk or share, mount it below the data folder, or use a PostgreSQL database.
+- A **PostgreSQL** backup database makes the server connect to the host in the connection string and push all data there; that is the purpose, and the reason `backups.edit` is as sensitive as a download.
 - The kinds are independent of the live database's system: a SQLite server can mirror into PostgreSQL and the other way round.
 - **Restore test.** After every update (scheduled or *Update now*) the server reads the whole backup database back, as a restore would, and compares it table by table with what it wrote. A mismatch or an unreadable database makes the run **fail** with the reason, so a mirror that could not be restored shows up in the list instead of on the day you need it.
 - **Update now** runs one at once. The list shows when each one was last updated and, for a failed run, the reason (database unreachable, wrong password, folder not writable). A failed run is tried again at the next interval; a switched-off backup database is not updated.

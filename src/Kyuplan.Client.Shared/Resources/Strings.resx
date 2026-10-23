@@ -2854,7 +2854,7 @@
     <value>Connection string</value>
   </data>
   <data name="Backup_LocationHintSqlite" xml:space="preserve">
-    <value>The folder gets the files planner.db and accounts.db; it is created when missing.</value>
+    <value>The folder gets the files planner.db and accounts.db; it is created when missing and must be below the folder of the settings file.</value>
   </data>
   <data name="Backup_LocationHintPostgres" xml:space="preserve">
     <value>For example Host=db;Database=kyuplan_backup;Username=kyuplan;Password=…; the tables of both databases go into it.</value>

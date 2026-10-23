@@ -11,7 +11,7 @@ namespace Kyuplan.Api.Backup;
 /// The backup databases administrators defined (<see cref="BackupTargetDto"/>), in a file of their own (<see cref="BackupOptions.TargetsFile"/>):
 /// they say where the data goes, so they are not part of the data and a backup does not carry them. The location is encrypted in the file (it may hold a database password).
 /// </summary>
-public sealed class BackupTargetStore(SettingsFile settings, IOptions<BackupOptions> options, TimeProvider time)
+public sealed class BackupTargetStore(SettingsFile settings, IOptions<BackupOptions> options, TimeProvider time, IWebHostEnvironment environment)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
@@ -138,9 +138,12 @@ public sealed class BackupTargetStore(SettingsFile settings, IOptions<BackupOpti
         return [.. List().Where(t => t.Enabled && (t.LastRunUtc is null || t.NextRunUtc <= now))];
     }
 
-    private static void Check(BackupTargetInputDto input)
+    /// <summary>The input's own rules, and for a SQLite folder where it may be (<see cref="BackupFolder"/>): the error shows when saving, not at the first run.</summary>
+    private void Check(BackupTargetInputDto input)
     {
         if (BackupRules.Check(input) is { } problem) throw new InvalidInputException(problem);
+
+        if (input.Kind == BackupTargetKind.Sqlite) BackupFolder.Resolve(input.Location.Trim(), settings.Path, environment.ContentRootPath, environment.WebRootPath);
     }
 
     private static void CheckName(List<Stored> all, BackupTargetInputDto input, int? ownId)

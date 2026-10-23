@@ -68,6 +68,57 @@
     <value>Main</value>
     <comment>Accessible name of the navigation landmark.</comment>
   </data>
+  <data name="Nav_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Nav_Preferences" xml:space="preserve">
+    <value>Personal settings</value>
+  </data>
+  <data name="Nav_Administration" xml:space="preserve">
+    <value>Administration</value>
+  </data>
+  <data name="Nav_Users" xml:space="preserve">
+    <value>Users</value>
+  </data>
+  <data name="Nav_Belts" xml:space="preserve">
+    <value>Belts</value>
+  </data>
+  <data name="Nav_Members" xml:space="preserve">
+    <value>Members</value>
+  </data>
+  <data name="Nav_Exams" xml:space="preserve">
+    <value>Exams</value>
+  </data>
+  <data name="Nav_Branding" xml:space="preserve">
+    <value>Branding</value>
+  </data>
+  <data name="Nav_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Nav_Roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_Calendar" xml:space="preserve">
+    <value>Calendar</value>
+  </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Nav_Prices" xml:space="preserve">
+    <value>Exam prices</value>
+  </data>
+  <data name="Nav_CalendarFeeds" xml:space="preserve">
+    <value>Calendar feeds</value>
+  </data>
+  <data name="Nav_ManualData" xml:space="preserve">
+    <value>Manual data</value>
+  </data>
+  <data name="Nav_SyncStatus" xml:space="preserve">
+    <value>Sync status</value>
+  </data>
   <data name="Shell_Group" xml:space="preserve">
     <value>Group</value>
   </data>
@@ -98,18 +149,6 @@
   <data name="Shell_DesignRestart" xml:space="preserve">
     <value>The program has to restart to change its appearance. Unsaved input is lost. Restart now?</value>
   </data>
-  <data name="Design_Windows11" xml:space="preserve">
-    <value>Windows 11</value>
-  </data>
-  <data name="Design_Windows10" xml:space="preserve">
-    <value>Windows 10</value>
-  </data>
-  <data name="Design_Aero" xml:space="preserve">
-    <value>Vista / 7 (Aero)</value>
-  </data>
-  <data name="Design_Native" xml:space="preserve">
-    <value>Native WPF</value>
-  </data>
   <data name="Shell_Language" xml:space="preserve">
     <value>Language</value>
   </data>
@@ -119,22 +158,6 @@
   <data name="Shell_ApiVersion" xml:space="preserve">
     <value>API v{0}</value>
     <comment>{0} = version number of the API.</comment>
-  </data>
-  <data name="Update_Button" xml:space="preserve">
-    <value>Update to {0}</value>
-    <comment>{0} = the new version.</comment>
-  </data>
-  <data name="Update_Hint" xml:space="preserve">
-    <value>This program is version {0}; the server offers {1}. The program closes, installs the update and starts again.</value>
-    <comment>{0} = installed version, {1} = new version.</comment>
-  </data>
-  <data name="Download_Button" xml:space="preserve">
-    <value>Download for {0}</value>
-    <comment>{0} = name of the operating system (Windows, macOS, Linux).</comment>
-  </data>
-  <data name="Download_Hint" xml:space="preserve">
-    <value>Installer of the {0} app, version {1}. It tells you about updates by itself.</value>
-    <comment>{0} = name of the operating system, {1} = version of the installer.</comment>
   </data>
   <data name="Shell_TryAgain" xml:space="preserve">
     <value>Try again</value>
@@ -162,6 +185,39 @@
   <data name="Shell_SignOutHint" xml:space="preserve">
     <value>Sign out and forget the login saved on this computer</value>
   </data>
+  <data name="Shell_SkipToContent" xml:space="preserve">
+    <value>Skip to main content</value>
+    <comment>Keyboard users: first control of the page, jumps over the navigation.</comment>
+  </data>
+  <data name="Shell_Loading" xml:space="preserve">
+    <value>Loading</value>
+    <comment>Accessible name of the busy bar of a page.</comment>
+  </data>
+  <data name="Design_Windows10" xml:space="preserve">
+    <value>Windows 10</value>
+  </data>
+  <data name="Design_Aero" xml:space="preserve">
+    <value>Vista / 7 (Aero)</value>
+  </data>
+  <data name="Design_Native" xml:space="preserve">
+    <value>Native WPF</value>
+  </data>
+  <data name="Update_Button" xml:space="preserve">
+    <value>Update to {0}</value>
+    <comment>{0} = the new version.</comment>
+  </data>
+  <data name="Update_Hint" xml:space="preserve">
+    <value>This program is version {0}; the server offers {1}. The program closes, installs the update and starts again.</value>
+    <comment>{0} = installed version, {1} = new version.</comment>
+  </data>
+  <data name="Download_Button" xml:space="preserve">
+    <value>Download for {0}</value>
+    <comment>{0} = name of the operating system (Windows, macOS, Linux).</comment>
+  </data>
+  <data name="Download_Hint" xml:space="preserve">
+    <value>Installer of the {0} app, version {1}. It tells you about updates by itself.</value>
+    <comment>{0} = name of the operating system, {1} = version of the installer.</comment>
+  </data>
   <data name="Error_Unexpected" xml:space="preserve">
     <value>Unexpected error: {0}</value>
   </data>
@@ -185,6 +241,9 @@
     <value>The API answered {0} {1}.</value>
     <comment>{0} = HTTP status code, {1} = reason phrase.</comment>
   </data>
+  <data name="Api_Forbidden" xml:space="preserve">
+    <value>The API refused the request: your user is not allowed to do this.</value>
+  </data>
   <data name="Format_Date" xml:space="preserve">
     <value>d MMM yyyy</value>
     <comment>Custom date format, e.g. 14 Oct 2026.</comment>
@@ -201,23 +260,18 @@
     <value>MMM yy</value>
     <comment>Custom date format for the month labels of the charts.</comment>
   </data>
+  <data name="Format_Moment" xml:space="preserve">
+    <value>d MMM yyyy, HH:mm</value>
+    <comment>Custom date format for a moment, e.g. when a comment was written: 15 Oct 2026, 09:12.</comment>
+  </data>
+  <data name="Format_MonthLong" xml:space="preserve">
+    <value>MMMM yyyy</value>
+  </data>
   <data name="Dashboard_Lede" xml:space="preserve">
     <value>How active is the group right now?</value>
   </data>
   <data name="Dashboard_Period" xml:space="preserve">
     <value>Period</value>
-  </data>
-  <data name="Period_30Days" xml:space="preserve">
-    <value>Last 30 days</value>
-  </data>
-  <data name="Period_90Days" xml:space="preserve">
-    <value>Last 90 days</value>
-  </data>
-  <data name="Period_6Months" xml:space="preserve">
-    <value>Last 6 months</value>
-  </data>
-  <data name="Period_12Months" xml:space="preserve">
-    <value>Last 12 months</value>
   </data>
   <data name="Dashboard_Upcoming" xml:space="preserve">
     <value>Upcoming events</value>
@@ -242,6 +296,18 @@
   </data>
   <data name="Dashboard_Empty" xml:space="preserve">
     <value>No events were held in this period.</value>
+  </data>
+  <data name="Period_30Days" xml:space="preserve">
+    <value>Last 30 days</value>
+  </data>
+  <data name="Period_90Days" xml:space="preserve">
+    <value>Last 90 days</value>
+  </data>
+  <data name="Period_6Months" xml:space="preserve">
+    <value>Last 6 months</value>
+  </data>
+  <data name="Period_12Months" xml:space="preserve">
+    <value>Last 12 months</value>
   </data>
   <data name="Upcoming_Coming" xml:space="preserve">
     <value>{0} of {1} coming</value>
@@ -339,6 +405,12 @@
   <data name="Kpi_AverageAttendeesHint" xml:space="preserve">
     <value>Accepted invitations per event</value>
   </data>
+  <data name="Kpi_Stars" xml:space="preserve">
+    <value>Average evaluation</value>
+  </data>
+  <data name="Kpi_StarsHint" xml:space="preserve">
+    <value>Stars, 0 to 5, over the events members attended or were evaluated at</value>
+  </data>
   <data name="Stats_Filters" xml:space="preserve">
     <value>Filters</value>
   </data>
@@ -350,18 +422,6 @@
   </data>
   <data name="Stats_QuickRanges" xml:space="preserve">
     <value>Quick range</value>
-  </data>
-  <data name="Range_3Months" xml:space="preserve">
-    <value>3 months</value>
-  </data>
-  <data name="Range_6Months" xml:space="preserve">
-    <value>6 months</value>
-  </data>
-  <data name="Range_12Months" xml:space="preserve">
-    <value>12 months</value>
-  </data>
-  <data name="Range_ThisYear" xml:space="preserve">
-    <value>This year</value>
   </data>
   <data name="Stats_Members" xml:space="preserve">
     <value>Members</value>
@@ -483,6 +543,18 @@
   <data name="Stats_MembersCountOf" xml:space="preserve">
     <value>{0} of {1} members</value>
   </data>
+  <data name="Range_3Months" xml:space="preserve">
+    <value>3 months</value>
+  </data>
+  <data name="Range_6Months" xml:space="preserve">
+    <value>6 months</value>
+  </data>
+  <data name="Range_12Months" xml:space="preserve">
+    <value>12 months</value>
+  </data>
+  <data name="Range_ThisYear" xml:space="preserve">
+    <value>This year</value>
+  </data>
   <data name="Filter_Below" xml:space="preserve">
     <value>Below</value>
     <comment>Short label of the status filter 'below the required attendance'.</comment>
@@ -543,6 +615,9 @@
   </data>
   <data name="Col_EngagementTip" xml:space="preserve">
     <value>Engagement score: 60 % attendance, 25 % recent form, 15 % responsiveness</value>
+  </data>
+  <data name="Col_SubGroups" xml:space="preserve">
+    <value>Subgroups</value>
   </data>
   <data name="Caption_Members" xml:space="preserve">
     <value>Attendance per member</value>
@@ -696,9 +771,6 @@
     <value>{0} members attended {1}–{2} % of their invitations</value>
     <comment>{0} = number of members (not 1). Plural form.</comment>
   </data>
-  <data name="Col_SubGroups" xml:space="preserve">
-    <value>Subgroups</value>
-  </data>
   <data name="Saved_Title" xml:space="preserve">
     <value>Saved filters</value>
   </data>
@@ -812,6 +884,12 @@
   <data name="Login_SavedRejected" xml:space="preserve">
     <value>The saved login no longer works. Please sign in again.</value>
   </data>
+  <data name="Login_Server" xml:space="preserve">
+    <value>Server address</value>
+  </data>
+  <data name="Login_ChangeServer" xml:space="preserve">
+    <value>Change …</value>
+  </data>
   <data name="ApiAddress_Title" xml:space="preserve">
     <value>Server address</value>
   </data>
@@ -830,32 +908,11 @@
   <data name="ApiAddress_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="Login_Server" xml:space="preserve">
-    <value>Server address</value>
-  </data>
-  <data name="Login_ChangeServer" xml:space="preserve">
-    <value>Change …</value>
-  </data>
-  <data name="Nav_Account" xml:space="preserve">
-    <value>Account</value>
-  </data>
-  <data name="Nav_Preferences" xml:space="preserve">
-    <value>Personal settings</value>
-  </data>
   <data name="Preferences_Lede" xml:space="preserve">
     <value>How the program looks and speaks for you. These choices are kept with your account and follow you to every computer.</value>
   </data>
   <data name="Preferences_LanguageTitle" xml:space="preserve">
     <value>Language</value>
-  </data>
-  <data name="Nav_Administration" xml:space="preserve">
-    <value>Administration</value>
-  </data>
-  <data name="Nav_Users" xml:space="preserve">
-    <value>Users</value>
-  </data>
-  <data name="Api_Forbidden" xml:space="preserve">
-    <value>The API refused the request: your user is not allowed to do this.</value>
   </data>
   <data name="Account_Lede" xml:space="preserve">
     <value>Change your names (user name, display name, aliases) or your password. Your roles and permissions are set by whoever manages users.</value>
@@ -1029,11 +1086,29 @@
     <value>User “{0}” deleted.</value>
     <comment>{0} = user name.</comment>
   </data>
-  <data name="Nav_Belts" xml:space="preserve">
-    <value>Belts</value>
+  <data name="Users_FormRoles" xml:space="preserve">
+    <value>Roles</value>
   </data>
-  <data name="Nav_Members" xml:space="preserve">
-    <value>Members</value>
+  <data name="Users_FormRolesHint" xml:space="preserve">
+    <value>A user may do everything their roles allow, plus the permissions below.</value>
+  </data>
+  <data name="Users_FormPermissions" xml:space="preserve">
+    <value>Own permissions</value>
+  </data>
+  <data name="Users_FormPermissionsHint" xml:space="preserve">
+    <value>Only for this user. What many users share belongs in a role.</value>
+  </data>
+  <data name="Users_ColMembers" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="Users_FormMembers" xml:space="preserve">
+    <value>Member</value>
+  </data>
+  <data name="Users_FormMembersHint" xml:space="preserve">
+    <value>Which members of the club this user is. What is written about them (comments, evaluations) is then hidden from the user unless they may read what is written about themselves.</value>
+  </data>
+  <data name="Users_FormMembersFilter" xml:space="preserve">
+    <value>Find a member</value>
   </data>
   <data name="Belts_Lede" xml:space="preserve">
     <value>The belts of the club and what it takes to be allowed to take each one: the belt a member comes from and, depending on that belt, a minimum age and a waiting time.</value>
@@ -1157,6 +1232,13 @@
     <value>Belt “{0}” deleted.</value>
     <comment>{0} = belt name.</comment>
   </data>
+  <data name="Belts_NumberInvalid" xml:space="preserve">
+    <value>Enter a whole number from 0 to {0}.</value>
+    <comment>{0} = the largest allowed number.</comment>
+  </data>
+  <data name="Belts_EmptyView" xml:space="preserve">
+    <value>There are no belts yet.</value>
+  </data>
   <data name="MemberPage_Lede" xml:space="preserve">
     <value>Which belt each member holds and since when they train. The names come from Spond and are kept up to date automatically.</value>
   </data>
@@ -1174,15 +1256,6 @@
   </data>
   <data name="MemberPage_NotRegistered" xml:space="preserve">
     <value>not registered yet</value>
-  </data>
-  <data name="Settings_UnregisteredSubGroup" xml:space="preserve">
-    <value>Subgroup of members not registered yet</value>
-  </data>
-  <data name="Settings_NoSubGroup" xml:space="preserve">
-    <value>none</value>
-  </data>
-  <data name="Settings_UnregisteredSubGroupHint" xml:space="preserve">
-    <value>The Spond subgroup that holds the people who are not registered in the club yet. Its members are marked as not registered. Empty = everybody counts as registered.</value>
   </data>
   <data name="MemberPage_ColStarted" xml:space="preserve">
     <value>Training since</value>
@@ -1220,12 +1293,255 @@
     <value>{0} saved.</value>
     <comment>{0} = member name.</comment>
   </data>
-  <data name="Belts_NumberInvalid" xml:space="preserve">
-    <value>Enter a whole number from 0 to {0}.</value>
-    <comment>{0} = the largest allowed number.</comment>
+  <data name="MemberPage_ColBirth" xml:space="preserve">
+    <value>Birth date</value>
   </data>
-  <data name="Nav_Exams" xml:space="preserve">
-    <value>Exams</value>
+  <data name="MemberPage_ColBeltSince" xml:space="preserve">
+    <value>Belt since</value>
+  </data>
+  <data name="MemberPage_FormBirthHint" xml:space="preserve">
+    <value>Taken over from Spond when Spond has it. A day you set here is kept. Needed for the minimum age of a belt.</value>
+  </data>
+  <data name="MemberPage_FormBeltSinceHint" xml:space="preserve">
+    <value>The day the member got this belt; the waiting time for the next belt counts from it. Recording a belt at an exam sets it.</value>
+  </data>
+  <data name="MemberPage_ClearBirth" xml:space="preserve">
+    <value>Clear the date</value>
+  </data>
+  <data name="MemberPage_BirthInvalid" xml:space="preserve">
+    <value>The date must be between {0} and today.</value>
+  </data>
+  <data name="MemberPage_BeltSinceNeedsBelt" xml:space="preserve">
+    <value>Choose a belt first.</value>
+  </data>
+  <data name="MemberPage_Comments" xml:space="preserve">
+    <value>Comments</value>
+  </data>
+  <data name="MemberPage_CommentsCount" xml:space="preserve">
+    <value>Comments ({0})</value>
+    <comment>{0} = how many comments there are on the member.</comment>
+  </data>
+  <data name="Settings_UnregisteredSubGroup" xml:space="preserve">
+    <value>Subgroup of members not registered yet</value>
+  </data>
+  <data name="Settings_NoSubGroup" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="Settings_UnregisteredSubGroupHint" xml:space="preserve">
+    <value>The Spond subgroup that holds the people who are not registered in the club yet. Its members are marked as not registered. Empty = everybody counts as registered.</value>
+  </data>
+  <data name="Settings_Lede" xml:space="preserve">
+    <value>Where the data is kept, how Spond is reached and how the statistics read the calendar. Changes are saved on the server and kept across restarts; the API restarts itself to apply them.</value>
+  </data>
+  <data name="Settings_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Settings_NothingChanged" xml:space="preserve">
+    <value>Nothing changed.</value>
+  </data>
+  <data name="Settings_SavedRestarting" xml:space="preserve">
+    <value>Saved. The API is restarting to apply the changes …</value>
+  </data>
+  <data name="Settings_Restarted" xml:space="preserve">
+    <value>Saved. The API restarted with the new settings.</value>
+  </data>
+  <data name="Settings_DatabasesTitle" xml:space="preserve">
+    <value>Databases</value>
+  </data>
+  <data name="Settings_DatabasePath" xml:space="preserve">
+    <value>Planner database</value>
+  </data>
+  <data name="Settings_DatabasePathHint" xml:space="preserve">
+    <value>SQLite file with exams, members, belts and comments. A relative path starts in the API's program folder. A file that exists is used as it is; a new path starts an empty database (nothing is moved).</value>
+  </data>
+  <data name="Settings_AccountsDatabasePath" xml:space="preserve">
+    <value>Accounts database</value>
+  </data>
+  <data name="Settings_AccountsDatabasePathHint" xml:space="preserve">
+    <value>SQLite file with the users and roles. Keep it apart from the planner database, so that the logins can be backed up separately.</value>
+  </data>
+  <data name="Settings_PathInvalid" xml:space="preserve">
+    <value>Enter a file path.</value>
+  </data>
+  <data name="Settings_DatabasesSame" xml:space="preserve">
+    <value>The two databases must be different files.</value>
+  </data>
+  <data name="Settings_UseDemoDataHint" xml:space="preserve">
+    <value>Generated sample data, to try the planner out. Spond is not asked.</value>
+  </data>
+  <data name="Settings_SpondEmail" xml:space="preserve">
+    <value>Spond email</value>
+  </data>
+  <data name="Settings_SpondPhone" xml:space="preserve">
+    <value>Spond phone number (instead of the email)</value>
+  </data>
+  <data name="Settings_SpondPassword" xml:space="preserve">
+    <value>Spond password</value>
+  </data>
+  <data name="Settings_SpondPasswordStored" xml:space="preserve">
+    <value>A password is stored. Leave this empty to keep it.</value>
+  </data>
+  <data name="Settings_SpondPasswordMissing" xml:space="preserve">
+    <value>Without a Spond login the planner has no data; you can add it later.</value>
+  </data>
+  <data name="Settings_SpondIncomplete" xml:space="preserve">
+    <value>A Spond login needs the email (or phone number) and the password.</value>
+  </data>
+  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
+    <value>Ignore group administrators</value>
+  </data>
+  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
+    <value>Leave members who administer their Spond group (usually the login account) out of the statistics, members and exams.</value>
+  </data>
+  <data name="Settings_StatisticsTitle" xml:space="preserve">
+    <value>Statistics and exams</value>
+  </data>
+  <data name="Settings_TimeZone" xml:space="preserve">
+    <value>Time zone</value>
+  </data>
+  <data name="Settings_TimeZoneHint" xml:space="preserve">
+    <value>Days and weekdays are read in this time zone, e.g. Europe/Berlin.</value>
+  </data>
+  <data name="Settings_TimeZoneInvalid" xml:space="preserve">
+    <value>Enter a time zone.</value>
+  </data>
+  <data name="Settings_ExamKeyword" xml:space="preserve">
+    <value>Exam keyword</value>
+  </data>
+  <data name="Settings_ExamKeywordHint" xml:space="preserve">
+    <value>Events whose name contains this word are exams.</value>
+  </data>
+  <data name="Settings_MinAttendance" xml:space="preserve">
+    <value>Default minimum attendance (%)</value>
+  </data>
+  <data name="Settings_MinInvited" xml:space="preserve">
+    <value>Default minimum invited events</value>
+  </data>
+  <data name="Settings_PercentInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 100.</value>
+  </data>
+  <data name="Settings_InvitedInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 1000.</value>
+  </data>
+  <data name="Settings_SyncTitle" xml:space="preserve">
+    <value>Synchronisation</value>
+  </data>
+  <data name="Settings_SyncEnabled" xml:space="preserve">
+    <value>Sync with the data source automatically</value>
+  </data>
+  <data name="Settings_SyncEnabledHint" xml:space="preserve">
+    <value>Keeps the members and the invitations of the exams in line with the data source.</value>
+  </data>
+  <data name="Settings_SyncInterval" xml:space="preserve">
+    <value>Minutes between two syncs</value>
+  </data>
+  <data name="Settings_SyncIntervalHint" xml:space="preserve">
+    <value>0 = only when the API starts.</value>
+  </data>
+  <data name="Settings_SyncIntervalInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to {0}.</value>
+  </data>
+  <data name="Settings_BackupAccounts" xml:space="preserve">
+    <value>Backup Spond accounts</value>
+  </data>
+  <data name="Settings_BackupAccountsHint" xml:space="preserve">
+    <value>Asked in this order when the first account yields nothing (Spond sometimes answers an account that sent too many requests with nothing at all). All accounts must see the same groups.</value>
+  </data>
+  <data name="Settings_BackupAdd" xml:space="preserve">
+    <value>Add backup account</value>
+  </data>
+  <data name="Settings_BackupRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Settings_BackupIncomplete" xml:space="preserve">
+    <value>A backup Spond login needs the email (or phone number) and the password.</value>
+  </data>
+  <data name="Settings_SecurityTitle" xml:space="preserve">
+    <value>Security</value>
+  </data>
+  <data name="Settings_AllowedHosts" xml:space="preserve">
+    <value>Allowed host names</value>
+  </data>
+  <data name="Settings_AllowedHostsHint" xml:space="preserve">
+    <value>The address(es) this server answers to, separated by ";" (for example kyuplan.example.com). Requests for any other name are refused. "*" allows every name. Applies after the restart; if you lock yourself out, change AllowedHosts in the settings file.</value>
+  </data>
+  <data name="Settings_AllowedHostsInvalid" xml:space="preserve">
+    <value>Enter host names separated by ";", e.g. kyuplan.example.com or *.example.com, or just *.</value>
+  </data>
+  <data name="Settings_DefaultEventStars" xml:space="preserve">
+    <value>Stars an event counts without evaluation</value>
+  </data>
+  <data name="Settings_DefaultEventStarsHint" xml:space="preserve">
+    <value>What an event counts for a member who attended it when no user evaluated them (0 to 5).</value>
+  </data>
+  <data name="Settings_ExamMinStars" xml:space="preserve">
+    <value>Minimum average evaluation for exams</value>
+  </data>
+  <data name="Settings_ExamMinStarsHint" xml:space="preserve">
+    <value>A member needs at least this average (0 to 5 stars) to be suggested for an exam; 0 = not asked.</value>
+  </data>
+  <data name="Settings_StarsInvalid" xml:space="preserve">
+    <value>Enter a number from 0 to 5.</value>
+  </data>
+  <data name="Settings_DataSource" xml:space="preserve">
+    <value>Data source</value>
+  </data>
+  <data name="Settings_DataSource_spond" xml:space="preserve">
+    <value>Spond</value>
+  </data>
+  <data name="Settings_DataSource_custom" xml:space="preserve">
+    <value>Custom (script)</value>
+  </data>
+  <data name="Settings_DataSource_manual" xml:space="preserve">
+    <value>Manual (entered by hand)</value>
+  </data>
+  <data name="Settings_DataSource_demo" xml:space="preserve">
+    <value>Demo data</value>
+  </data>
+  <data name="Settings_DataSourceHint_spond" xml:space="preserve">
+    <value>Groups, members and events are read from Spond.</value>
+  </data>
+  <data name="Settings_DataSourceHint_custom" xml:space="preserve">
+    <value>A JavaScript you write reads them from any service (see the administrator guide).</value>
+  </data>
+  <data name="Settings_DataSourceHint_manual" xml:space="preserve">
+    <value>Users with the permission enter groups, members and events on the Manual data page.</value>
+  </data>
+  <data name="Settings_CustomScript" xml:space="preserve">
+    <value>Script</value>
+  </data>
+  <data name="Settings_CustomScriptHint" xml:space="preserve">
+    <value>Define getGroups() and getEvents(groupId, from, to); the script can call other services with http.get and http.post. The API checks it for errors when you save.</value>
+  </data>
+  <data name="Settings_ScriptTemplate" xml:space="preserve">
+    <value>Insert example script</value>
+  </data>
+  <data name="Settings_ScriptEmpty" xml:space="preserve">
+    <value>The custom data source needs a script.</value>
+  </data>
+  <data name="Settings_ScriptTooLong" xml:space="preserve">
+    <value>The script is too long (at most {0} characters).</value>
+  </data>
+  <data name="Settings_MetricsEnabled" xml:space="preserve">
+    <value>Publish metrics for monitoring</value>
+  </data>
+  <data name="Settings_MetricsEnabledHint" xml:space="preserve">
+    <value>Makes GET /metrics (Prometheus format) available to a monitoring system. Off by default; the scraper must send the token below as a bearer token. Applies after the restart.</value>
+  </data>
+  <data name="Settings_MetricsToken" xml:space="preserve">
+    <value>Metrics token</value>
+  </data>
+  <data name="Settings_MetricsTokenHint" xml:space="preserve">
+    <value>The secret the monitoring system sends as "Authorization: Bearer ...". Not shown again after saving.</value>
+  </data>
+  <data name="Settings_MetricsTokenStored" xml:space="preserve">
+    <value>A token is stored. Type a new one to replace it.</value>
+  </data>
+  <data name="Settings_MetricsTokenMissing" xml:space="preserve">
+    <value>The metrics need a token.</value>
+  </data>
+  <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
+    <value>The token needs at least {0} characters (at most 200) without spaces.</value>
   </data>
   <data name="Exams_Lede" xml:space="preserve">
     <value>Belt exams: who is fit for the next one, and who attended the past ones and received which belt.</value>
@@ -1494,6 +1810,15 @@
   <data name="Plan_SelectRow" xml:space="preserve">
     <value>Save {0} for the exam</value>
   </data>
+  <data name="Plan_ColStars" xml:space="preserve">
+    <value>Stars</value>
+  </data>
+  <data name="Plan_ReasonStars" xml:space="preserve">
+    <value>Average evaluation {0} of 5, {1} needed.</value>
+  </data>
+  <data name="Plan_ReasonNoStars" xml:space="preserve">
+    <value>No evaluation to average, {0} stars needed.</value>
+  </data>
   <data name="Res_Title" xml:space="preserve">
     <value>Who attended</value>
   </data>
@@ -1535,30 +1860,6 @@
   </data>
   <data name="Res_Cleared" xml:space="preserve">
     <value>Result of {0} removed. The belt the member holds is unchanged; correct it on the Members page if needed.</value>
-  </data>
-  <data name="MemberPage_ColBirth" xml:space="preserve">
-    <value>Birth date</value>
-  </data>
-  <data name="MemberPage_ColBeltSince" xml:space="preserve">
-    <value>Belt since</value>
-  </data>
-  <data name="MemberPage_FormBirthHint" xml:space="preserve">
-    <value>Taken over from Spond when Spond has it. A day you set here is kept. Needed for the minimum age of a belt.</value>
-  </data>
-  <data name="MemberPage_FormBeltSinceHint" xml:space="preserve">
-    <value>The day the member got this belt; the waiting time for the next belt counts from it. Recording a belt at an exam sets it.</value>
-  </data>
-  <data name="MemberPage_ClearBirth" xml:space="preserve">
-    <value>Clear the date</value>
-  </data>
-  <data name="MemberPage_BirthInvalid" xml:space="preserve">
-    <value>The date must be between {0} and today.</value>
-  </data>
-  <data name="MemberPage_BeltSinceNeedsBelt" xml:space="preserve">
-    <value>Choose a belt first.</value>
-  </data>
-  <data name="Nav_Branding" xml:space="preserve">
-    <value>Branding</value>
   </data>
   <data name="Branding_Lede" xml:space="preserve">
     <value>The name, the accent colour, the logos and the tab icon that both clients show. What is saved here applies instead of the settings of the API, until it is reset to them. A change reaches the clients that are open by itself, within about half a minute; no reload or restart is needed.</value>
@@ -1701,19 +2002,17 @@
   <data name="Branding_ResetDone" xml:space="preserve">
     <value>The settings of the API apply again.</value>
   </data>
-  <data name="Nav_Tags" xml:space="preserve">
-    <value>Tags</value>
+  <data name="Branding_ThemesTitle" xml:space="preserve">
+    <value>Default themes</value>
   </data>
-  <data name="Format_Moment" xml:space="preserve">
-    <value>d MMM yyyy, HH:mm</value>
-    <comment>Custom date format for a moment, e.g. when a comment was written: 15 Oct 2026, 09:12.</comment>
+  <data name="Branding_ThemesLede" xml:space="preserve">
+    <value>The theme each client shows to users who have not picked one themselves. Every user can choose their own in the navigation.</value>
   </data>
-  <data name="MemberPage_Comments" xml:space="preserve">
-    <value>Comments</value>
+  <data name="Branding_DefaultWebTheme" xml:space="preserve">
+    <value>Web client</value>
   </data>
-  <data name="MemberPage_CommentsCount" xml:space="preserve">
-    <value>Comments ({0})</value>
-    <comment>{0} = how many comments there are on the member.</comment>
+  <data name="Branding_DefaultWindowsTheme" xml:space="preserve">
+    <value>Windows client</value>
   </data>
   <data name="Comments_Title" xml:space="preserve">
     <value>Comments on “{0}”</value>
@@ -1930,26 +2229,14 @@
   <data name="Tags_ConfirmYes" xml:space="preserve">
     <value>Yes, delete</value>
   </data>
-  <data name="Nav_Roles" xml:space="preserve">
-    <value>Roles</value>
+  <data name="Tags_EmptyView" xml:space="preserve">
+    <value>There are no tags yet.</value>
   </data>
   <data name="Role_None" xml:space="preserve">
     <value>No role</value>
   </data>
   <data name="Page_NotAllowed" xml:space="preserve">
     <value>Your user is not allowed to use this page.</value>
-  </data>
-  <data name="Users_FormRoles" xml:space="preserve">
-    <value>Roles</value>
-  </data>
-  <data name="Users_FormRolesHint" xml:space="preserve">
-    <value>A user may do everything their roles allow, plus the permissions below.</value>
-  </data>
-  <data name="Users_FormPermissions" xml:space="preserve">
-    <value>Own permissions</value>
-  </data>
-  <data name="Users_FormPermissionsHint" xml:space="preserve">
-    <value>Only for this user. What many users share belongs in a role.</value>
   </data>
   <data name="Roles_Lede" xml:space="preserve">
     <value>Roles bundle permissions so that they can be given to many users at once. The administrator role has every permission.</value>
@@ -2065,6 +2352,33 @@
   <data name="PermissionGroup_roles" xml:space="preserve">
     <value>Roles</value>
   </data>
+  <data name="PermissionGroup_settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="PermissionGroup_themes" xml:space="preserve">
+    <value>Themes</value>
+  </data>
+  <data name="PermissionGroup_calendar" xml:space="preserve">
+    <value>Calendar</value>
+  </data>
+  <data name="PermissionGroup_ratings" xml:space="preserve">
+    <value>Evaluations</value>
+  </data>
+  <data name="PermissionGroup_backups" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="PermissionGroup_payments" xml:space="preserve">
+    <value>Payments and prices</value>
+  </data>
+  <data name="PermissionGroup_manualdata" xml:space="preserve">
+    <value>Manual data</value>
+  </data>
+  <data name="PermissionGroup_audit" xml:space="preserve">
+    <value>Audit log</value>
+  </data>
+  <data name="PermissionGroup_sync" xml:space="preserve">
+    <value>Sync status</value>
+  </data>
   <data name="Permission_dashboard_view" xml:space="preserve">
     <value>See the dashboard</value>
   </data>
@@ -2143,140 +2457,62 @@
   <data name="Permission_roles_edit" xml:space="preserve">
     <value>Create, change and delete roles</value>
   </data>
-  <data name="Belts_EmptyView" xml:space="preserve">
-    <value>There are no belts yet.</value>
-  </data>
-  <data name="Tags_EmptyView" xml:space="preserve">
-    <value>There are no tags yet.</value>
-  </data>
-  <data name="Nav_Settings" xml:space="preserve">
-    <value>Settings</value>
-  </data>
-  <data name="PermissionGroup_settings" xml:space="preserve">
-    <value>Settings</value>
-  </data>
   <data name="Permission_settings_view" xml:space="preserve">
     <value>See the settings</value>
   </data>
   <data name="Permission_settings_edit" xml:space="preserve">
     <value>Change the settings</value>
   </data>
-  <data name="Settings_Lede" xml:space="preserve">
-    <value>Where the data is kept, how Spond is reached and how the statistics read the calendar. Changes are saved on the server and kept across restarts; the API restarts itself to apply them.</value>
+  <data name="Permission_themes_edit" xml:space="preserve">
+    <value>Install and delete theme packs</value>
   </data>
-  <data name="Settings_Save" xml:space="preserve">
-    <value>Save</value>
+  <data name="Permission_calendar_view" xml:space="preserve">
+    <value>See the calendar and its events</value>
   </data>
-  <data name="Settings_NothingChanged" xml:space="preserve">
-    <value>Nothing changed.</value>
+  <data name="Permission_calendar_feeds" xml:space="preserve">
+    <value>Define calendar feeds (addresses for calendar apps)</value>
   </data>
-  <data name="Settings_SavedRestarting" xml:space="preserve">
-    <value>Saved. The API is restarting to apply the changes …</value>
+  <data name="Permission_ratings_view" xml:space="preserve">
+    <value>Read the evaluations of members</value>
   </data>
-  <data name="Settings_Restarted" xml:space="preserve">
-    <value>Saved. The API restarted with the new settings.</value>
+  <data name="Permission_ratings_write" xml:space="preserve">
+    <value>Evaluate members and take back one’s own evaluations</value>
   </data>
-  <data name="Settings_DatabasesTitle" xml:space="preserve">
-    <value>Databases</value>
+  <data name="Permission_comments_viewOwn" xml:space="preserve">
+    <value>Read the comments about themselves (the members they are)</value>
   </data>
-  <data name="Settings_DatabasePath" xml:space="preserve">
-    <value>Planner database</value>
+  <data name="Permission_ratings_viewOwn" xml:space="preserve">
+    <value>Read the evaluations of themselves (the members they are)</value>
   </data>
-  <data name="Settings_DatabasePathHint" xml:space="preserve">
-    <value>SQLite file with exams, members, belts and comments. A relative path starts in the API's program folder. A file that exists is used as it is; a new path starts an empty database (nothing is moved).</value>
+  <data name="Permission_backups_view" xml:space="preserve">
+    <value>See the backup databases</value>
   </data>
-  <data name="Settings_AccountsDatabasePath" xml:space="preserve">
-    <value>Accounts database</value>
+  <data name="Permission_backups_edit" xml:space="preserve">
+    <value>Define and run backup databases</value>
   </data>
-  <data name="Settings_AccountsDatabasePathHint" xml:space="preserve">
-    <value>SQLite file with the users and roles. Keep it apart from the planner database, so that the logins can be backed up separately.</value>
+  <data name="Permission_backups_download" xml:space="preserve">
+    <value>Download a backup file (holds every password hash)</value>
   </data>
-  <data name="Settings_PathInvalid" xml:space="preserve">
-    <value>Enter a file path.</value>
+  <data name="Permission_backups_restore" xml:space="preserve">
+    <value>Replace all data with a backup file</value>
   </data>
-  <data name="Settings_DatabasesSame" xml:space="preserve">
-    <value>The two databases must be different files.</value>
+  <data name="Permission_payments_view" xml:space="preserve">
+    <value>See the exam prices and who paid</value>
   </data>
-  <data name="Settings_SpondTitle" xml:space="preserve">
-    <value>Spond</value>
+  <data name="Permission_payments_edit" xml:space="preserve">
+    <value>Record what members paid for an exam</value>
   </data>
-  <data name="Settings_UseDemoData" xml:space="preserve">
-    <value>Use demo data instead of Spond</value>
+  <data name="Permission_prices_edit" xml:space="preserve">
+    <value>Change the exam prices</value>
   </data>
-  <data name="Settings_UseDemoDataHint" xml:space="preserve">
-    <value>Generated sample data, to try the planner out. Spond is not asked.</value>
+  <data name="Permission_manualdata_edit" xml:space="preserve">
+    <value>Enter groups, members and events by hand</value>
   </data>
-  <data name="Settings_SpondEmail" xml:space="preserve">
-    <value>Spond email</value>
+  <data name="Permission_audit_view" xml:space="preserve">
+    <value>Read the audit log (who changed what)</value>
   </data>
-  <data name="Settings_SpondPhone" xml:space="preserve">
-    <value>Spond phone number (instead of the email)</value>
-  </data>
-  <data name="Settings_SpondPassword" xml:space="preserve">
-    <value>Spond password</value>
-  </data>
-  <data name="Settings_SpondPasswordStored" xml:space="preserve">
-    <value>A password is stored. Leave this empty to keep it.</value>
-  </data>
-  <data name="Settings_SpondPasswordMissing" xml:space="preserve">
-    <value>Without a Spond login the planner has no data; you can add it later.</value>
-  </data>
-  <data name="Settings_SpondIncomplete" xml:space="preserve">
-    <value>A Spond login needs the email (or phone number) and the password.</value>
-  </data>
-  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
-    <value>Ignore group administrators</value>
-  </data>
-  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
-    <value>Leave members who administer their Spond group (usually the login account) out of the statistics, members and exams.</value>
-  </data>
-  <data name="Settings_StatisticsTitle" xml:space="preserve">
-    <value>Statistics and exams</value>
-  </data>
-  <data name="Settings_TimeZone" xml:space="preserve">
-    <value>Time zone</value>
-  </data>
-  <data name="Settings_TimeZoneHint" xml:space="preserve">
-    <value>Days and weekdays are read in this time zone, e.g. Europe/Berlin.</value>
-  </data>
-  <data name="Settings_TimeZoneInvalid" xml:space="preserve">
-    <value>Enter a time zone.</value>
-  </data>
-  <data name="Settings_ExamKeyword" xml:space="preserve">
-    <value>Exam keyword</value>
-  </data>
-  <data name="Settings_ExamKeywordHint" xml:space="preserve">
-    <value>Events whose name contains this word are exams.</value>
-  </data>
-  <data name="Settings_MinAttendance" xml:space="preserve">
-    <value>Default minimum attendance (%)</value>
-  </data>
-  <data name="Settings_MinInvited" xml:space="preserve">
-    <value>Default minimum invited events</value>
-  </data>
-  <data name="Settings_PercentInvalid" xml:space="preserve">
-    <value>Enter a number from 0 to 100.</value>
-  </data>
-  <data name="Settings_InvitedInvalid" xml:space="preserve">
-    <value>Enter a number from 0 to 1000.</value>
-  </data>
-  <data name="Settings_SyncTitle" xml:space="preserve">
-    <value>Synchronisation</value>
-  </data>
-  <data name="Settings_SyncEnabled" xml:space="preserve">
-    <value>Sync with the data source automatically</value>
-  </data>
-  <data name="Settings_SyncEnabledHint" xml:space="preserve">
-    <value>Keeps the members and the invitations of the exams in line with the data source.</value>
-  </data>
-  <data name="Settings_SyncInterval" xml:space="preserve">
-    <value>Minutes between two syncs</value>
-  </data>
-  <data name="Settings_SyncIntervalHint" xml:space="preserve">
-    <value>0 = only when the API starts.</value>
-  </data>
-  <data name="Settings_SyncIntervalInvalid" xml:space="preserve">
-    <value>Enter a number from 0 to {0}.</value>
+  <data name="Permission_sync_view" xml:space="preserve">
+    <value>See how the sync with Spond is doing</value>
   </data>
   <data name="Setup_Title" xml:space="preserve">
     <value>Set up</value>
@@ -2320,21 +2556,6 @@
   <data name="Setup_NotBack" xml:space="preserve">
     <value>The API did not come back within a minute. Check that it is running, then reload this page.</value>
   </data>
-  <data name="Settings_BackupAccounts" xml:space="preserve">
-    <value>Backup Spond accounts</value>
-  </data>
-  <data name="Settings_BackupAccountsHint" xml:space="preserve">
-    <value>Asked in this order when the first account yields nothing (Spond sometimes answers an account that sent too many requests with nothing at all). All accounts must see the same groups.</value>
-  </data>
-  <data name="Settings_BackupAdd" xml:space="preserve">
-    <value>Add backup account</value>
-  </data>
-  <data name="Settings_BackupRemove" xml:space="preserve">
-    <value>Remove</value>
-  </data>
-  <data name="Settings_BackupIncomplete" xml:space="preserve">
-    <value>A backup Spond login needs the email (or phone number) and the password.</value>
-  </data>
   <data name="Setup_SettingsFileTitle" xml:space="preserve">
     <value>Settings file</value>
   </data>
@@ -2346,18 +2567,6 @@
   </data>
   <data name="Setup_SettingsFileLocked" xml:space="preserve">
     <value>The location is fixed by the API's configuration (Setup:SettingsFile or an environment variable) and cannot be changed here.</value>
-  </data>
-  <data name="Settings_SecurityTitle" xml:space="preserve">
-    <value>Security</value>
-  </data>
-  <data name="Settings_AllowedHosts" xml:space="preserve">
-    <value>Allowed host names</value>
-  </data>
-  <data name="Settings_AllowedHostsHint" xml:space="preserve">
-    <value>The address(es) this server answers to, separated by ";" (for example kyuplan.example.com). Requests for any other name are refused. "*" allows every name. Applies after the restart; if you lock yourself out, change AllowedHosts in the settings file.</value>
-  </data>
-  <data name="Settings_AllowedHostsInvalid" xml:space="preserve">
-    <value>Enter host names separated by ";", e.g. kyuplan.example.com or *.example.com, or just *.</value>
   </data>
   <data name="Help_User" xml:space="preserve">
     <value>Help</value>
@@ -2395,24 +2604,6 @@
   <data name="Theme_ServerDefault" xml:space="preserve">
     <value>Server default ({0})</value>
   </data>
-  <data name="Branding_ThemesTitle" xml:space="preserve">
-    <value>Default themes</value>
-  </data>
-  <data name="Branding_ThemesLede" xml:space="preserve">
-    <value>The theme each client shows to users who have not picked one themselves. Every user can choose their own in the navigation.</value>
-  </data>
-  <data name="Branding_DefaultWebTheme" xml:space="preserve">
-    <value>Web client</value>
-  </data>
-  <data name="Branding_DefaultWindowsTheme" xml:space="preserve">
-    <value>Windows client</value>
-  </data>
-  <data name="PermissionGroup_themes" xml:space="preserve">
-    <value>Themes</value>
-  </data>
-  <data name="Permission_themes_edit" xml:space="preserve">
-    <value>Install and delete theme packs</value>
-  </data>
   <data name="Themes_Title" xml:space="preserve">
     <value>Theme packs</value>
   </data>
@@ -2445,9 +2636,6 @@
   </data>
   <data name="Themes_TooLarge" xml:space="preserve">
     <value>The file is larger than {0} KB, so it is no theme pack.</value>
-  </data>
-  <data name="Nav_Calendar" xml:space="preserve">
-    <value>Calendar</value>
   </data>
   <data name="Calendar_Lede" xml:space="preserve">
     <value>Trainings, exams and other events of the selected group, by day, week or month.</value>
@@ -2494,9 +2682,6 @@
   <data name="Calendar_Back" xml:space="preserve">
     <value>Back to the calendar</value>
   </data>
-  <data name="Calendar_OpenEvent" xml:space="preserve">
-    <value>Open event</value>
-  </data>
   <data name="Calendar_Attendees" xml:space="preserve">
     <value>Invited members</value>
   </data>
@@ -2524,24 +2709,6 @@
   <data name="Calendar_TagNote" xml:space="preserve">
     <value>Comments written here are tagged with this event automatically.</value>
   </data>
-  <data name="Banner_InProgress" xml:space="preserve">
-    <value>{0} is in progress until {1}</value>
-  </data>
-  <data name="Banner_Open" xml:space="preserve">
-    <value>Show event</value>
-  </data>
-  <data name="Format_MonthLong" xml:space="preserve">
-    <value>MMMM yyyy</value>
-  </data>
-  <data name="PermissionGroup_calendar" xml:space="preserve">
-    <value>Calendar</value>
-  </data>
-  <data name="Permission_calendar_view" xml:space="preserve">
-    <value>See the calendar and its events</value>
-  </data>
-  <data name="Permission_calendar_feeds" xml:space="preserve">
-    <value>Define calendar feeds (addresses for calendar apps)</value>
-  </data>
   <data name="Calendar_FilterAll" xml:space="preserve">
     <value>Everybody</value>
   </data>
@@ -2550,6 +2717,12 @@
   </data>
   <data name="Calendar_NoMatch" xml:space="preserve">
     <value>Nobody has this answer.</value>
+  </data>
+  <data name="Banner_InProgress" xml:space="preserve">
+    <value>{0} is in progress until {1}</value>
+  </data>
+  <data name="Banner_Open" xml:space="preserve">
+    <value>Show event</value>
   </data>
   <data name="Rating_Label" xml:space="preserve">
     <value>Evaluation</value>
@@ -2590,63 +2763,6 @@
   <data name="Rating_StarsEvents" xml:space="preserve">
     <value>{0} of {1} events evaluated</value>
   </data>
-  <data name="Kpi_Stars" xml:space="preserve">
-    <value>Average evaluation</value>
-  </data>
-  <data name="Kpi_StarsHint" xml:space="preserve">
-    <value>Stars, 0 to 5, over the events members attended or were evaluated at</value>
-  </data>
-  <data name="Plan_ColStars" xml:space="preserve">
-    <value>Stars</value>
-  </data>
-  <data name="Plan_ReasonStars" xml:space="preserve">
-    <value>Average evaluation {0} of 5, {1} needed.</value>
-  </data>
-  <data name="Plan_ReasonNoStars" xml:space="preserve">
-    <value>No evaluation to average, {0} stars needed.</value>
-  </data>
-  <data name="Settings_DefaultEventStars" xml:space="preserve">
-    <value>Stars an event counts without evaluation</value>
-  </data>
-  <data name="Settings_DefaultEventStarsHint" xml:space="preserve">
-    <value>What an event counts for a member who attended it when no user evaluated them (0 to 5).</value>
-  </data>
-  <data name="Settings_ExamMinStars" xml:space="preserve">
-    <value>Minimum average evaluation for exams</value>
-  </data>
-  <data name="Settings_ExamMinStarsHint" xml:space="preserve">
-    <value>A member needs at least this average (0 to 5 stars) to be suggested for an exam; 0 = not asked.</value>
-  </data>
-  <data name="Settings_StarsInvalid" xml:space="preserve">
-    <value>Enter a number from 0 to 5.</value>
-  </data>
-  <data name="PermissionGroup_ratings" xml:space="preserve">
-    <value>Evaluations</value>
-  </data>
-  <data name="Permission_ratings_view" xml:space="preserve">
-    <value>Read the evaluations of members</value>
-  </data>
-  <data name="Permission_ratings_write" xml:space="preserve">
-    <value>Evaluate members and take back one’s own evaluations</value>
-  </data>
-  <data name="Permission_comments_viewOwn" xml:space="preserve">
-    <value>Read the comments about themselves (the members they are)</value>
-  </data>
-  <data name="Permission_ratings_viewOwn" xml:space="preserve">
-    <value>Read the evaluations of themselves (the members they are)</value>
-  </data>
-  <data name="Users_ColMembers" xml:space="preserve">
-    <value>Member</value>
-  </data>
-  <data name="Users_FormMembers" xml:space="preserve">
-    <value>Member</value>
-  </data>
-  <data name="Users_FormMembersHint" xml:space="preserve">
-    <value>Which members of the club this user is. What is written about them (comments, evaluations) is then hidden from the user unless they may read what is written about themselves.</value>
-  </data>
-  <data name="Users_FormMembersFilter" xml:space="preserve">
-    <value>Find a member</value>
-  </data>
   <data name="AboutMe_Title" xml:space="preserve">
     <value>About you</value>
   </data>
@@ -2658,24 +2774,6 @@
   </data>
   <data name="AboutMe_RatingsTitle" xml:space="preserve">
     <value>Evaluations of you</value>
-  </data>
-  <data name="Nav_Backup" xml:space="preserve">
-    <value>Backup</value>
-  </data>
-  <data name="PermissionGroup_backups" xml:space="preserve">
-    <value>Backup</value>
-  </data>
-  <data name="Permission_backups_view" xml:space="preserve">
-    <value>See the backup databases</value>
-  </data>
-  <data name="Permission_backups_edit" xml:space="preserve">
-    <value>Define and run backup databases</value>
-  </data>
-  <data name="Permission_backups_download" xml:space="preserve">
-    <value>Download a backup file (holds every password hash)</value>
-  </data>
-  <data name="Permission_backups_restore" xml:space="preserve">
-    <value>Replace all data with a backup file</value>
   </data>
   <data name="Backup_Lede" xml:space="preserve">
     <value>Keep a copy of all data safe: in backup databases that are updated by themselves, and as a file that you download or restore.</value>
@@ -2821,20 +2919,17 @@
   <data name="Backup_RunFailed" xml:space="preserve">
     <value>Updating “{0}” failed: {1}</value>
   </data>
-  <data name="Nav_Prices" xml:space="preserve">
-    <value>Exam prices</value>
+  <data name="Backup_PassphraseLabel" xml:space="preserve">
+    <value>Passphrase (optional)</value>
   </data>
-  <data name="PermissionGroup_payments" xml:space="preserve">
-    <value>Payments and prices</value>
+  <data name="Backup_PassphraseHint" xml:space="preserve">
+    <value>With a passphrase the downloaded file is encrypted; the same passphrase is needed to restore it. There is no way to recover a lost passphrase. Leave it empty for a plain file.</value>
   </data>
-  <data name="Permission_payments_view" xml:space="preserve">
-    <value>See the exam prices and who paid</value>
+  <data name="Backup_PassphraseShort" xml:space="preserve">
+    <value>The passphrase must be at least {0} characters long.</value>
   </data>
-  <data name="Permission_payments_edit" xml:space="preserve">
-    <value>Record what members paid for an exam</value>
-  </data>
-  <data name="Permission_prices_edit" xml:space="preserve">
-    <value>Change the exam prices</value>
+  <data name="Backup_DownloadedEncrypted" xml:space="preserve">
+    <value>The encrypted backup file was downloaded.</value>
   </data>
   <data name="Prices_Intro" xml:space="preserve">
     <value>Every member pays the general fee for an exam, plus the fee for the exam stamp (Prüfungsmarke) and the price of the belt they will receive. A member who got the belt elsewhere does not pay for the belt.</value>
@@ -2865,6 +2960,12 @@
   </data>
   <data name="Prices_Note" xml:space="preserve">
     <value>Payments that were recorded keep the amount due they were saved with; saving a payment again uses the current prices.</value>
+  </data>
+  <data name="Prices_StampFee" xml:space="preserve">
+    <value>Exam stamp</value>
+  </data>
+  <data name="Prices_BeltPrice" xml:space="preserve">
+    <value>Belt</value>
   </data>
   <data name="Pay_Title" xml:space="preserve">
     <value>Payments</value>
@@ -2920,12 +3021,6 @@
   <data name="Pay_Invalid" xml:space="preserve">
     <value>Enter an amount of at least 0 with at most two decimals.</value>
   </data>
-  <data name="Prices_StampFee" xml:space="preserve">
-    <value>Exam stamp</value>
-  </data>
-  <data name="Prices_BeltPrice" xml:space="preserve">
-    <value>Belt</value>
-  </data>
   <data name="Pay_General" xml:space="preserve">
     <value>General fee</value>
   </data>
@@ -2940,9 +3035,6 @@
   </data>
   <data name="Pay_OwnBeltHint" xml:space="preserve">
     <value>The member got the belt elsewhere (e.g. from a sibling), so its price is not charged.</value>
-  </data>
-  <data name="Nav_CalendarFeeds" xml:space="preserve">
-    <value>Calendar feeds</value>
   </data>
   <data name="CalendarFeeds_Lede" xml:space="preserve">
     <value>Calendars that calendar apps subscribe to by an address. Each one collects events of a group (narrowed by who is invited), birthdays and anniversaries of members.</value>
@@ -3087,15 +3179,6 @@
   </data>
   <data name="CalendarFeeds_Invitation_Only" xml:space="preserve">
     <value>Only they are invited (nobody else)</value>
-  </data>
-  <data name="Nav_ManualData" xml:space="preserve">
-    <value>Manual data</value>
-  </data>
-  <data name="PermissionGroup_manualdata" xml:space="preserve">
-    <value>Manual data</value>
-  </data>
-  <data name="Permission_manualdata_edit" xml:space="preserve">
-    <value>Enter groups, members and events by hand</value>
   </data>
   <data name="Manual_WrongSource" xml:space="preserve">
     <value>The data source is not “Manual”, so what you enter here is not used. An administrator can switch it in the settings.</value>
@@ -3298,57 +3381,6 @@
   <data name="Manual_Deleted" xml:space="preserve">
     <value>“{0}” deleted.</value>
   </data>
-  <data name="Settings_DataSource" xml:space="preserve">
-    <value>Data source</value>
-  </data>
-  <data name="Settings_DataSource_spond" xml:space="preserve">
-    <value>Spond</value>
-  </data>
-  <data name="Settings_DataSource_custom" xml:space="preserve">
-    <value>Custom (script)</value>
-  </data>
-  <data name="Settings_DataSource_manual" xml:space="preserve">
-    <value>Manual (entered by hand)</value>
-  </data>
-  <data name="Settings_DataSource_demo" xml:space="preserve">
-    <value>Demo data</value>
-  </data>
-  <data name="Settings_DataSourceHint_spond" xml:space="preserve">
-    <value>Groups, members and events are read from Spond.</value>
-  </data>
-  <data name="Settings_DataSourceHint_custom" xml:space="preserve">
-    <value>A JavaScript you write reads them from any service (see the administrator guide).</value>
-  </data>
-  <data name="Settings_DataSourceHint_manual" xml:space="preserve">
-    <value>Users with the permission enter groups, members and events on the Manual data page.</value>
-  </data>
-  <data name="Settings_CustomScript" xml:space="preserve">
-    <value>Script</value>
-  </data>
-  <data name="Settings_CustomScriptHint" xml:space="preserve">
-    <value>Define getGroups() and getEvents(groupId, from, to); the script can call other services with http.get and http.post. The API checks it for errors when you save.</value>
-  </data>
-  <data name="Settings_ScriptTemplate" xml:space="preserve">
-    <value>Insert example script</value>
-  </data>
-  <data name="Settings_ScriptEmpty" xml:space="preserve">
-    <value>The custom data source needs a script.</value>
-  </data>
-  <data name="Settings_ScriptTooLong" xml:space="preserve">
-    <value>The script is too long (at most {0} characters).</value>
-  </data>
-  <data name="Backup_PassphraseLabel" xml:space="preserve">
-    <value>Passphrase (optional)</value>
-  </data>
-  <data name="Backup_PassphraseHint" xml:space="preserve">
-    <value>With a passphrase the downloaded file is encrypted; the same passphrase is needed to restore it. There is no way to recover a lost passphrase. Leave it empty for a plain file.</value>
-  </data>
-  <data name="Backup_PassphraseShort" xml:space="preserve">
-    <value>The passphrase must be at least {0} characters long.</value>
-  </data>
-  <data name="Backup_DownloadedEncrypted" xml:space="preserve">
-    <value>The encrypted backup file was downloaded.</value>
-  </data>
   <data name="Export_Title" xml:space="preserve">
     <value>Export</value>
   </data>
@@ -3369,12 +3401,6 @@
   </data>
   <data name="Export_FileExcel" xml:space="preserve">
     <value>Excel workbook</value>
-  </data>
-  <data name="PermissionGroup_audit" xml:space="preserve">
-    <value>Audit log</value>
-  </data>
-  <data name="Permission_audit_view" xml:space="preserve">
-    <value>Read the audit log (who changed what)</value>
   </data>
   <data name="AuditArea_exams" xml:space="preserve">
     <value>Exams</value>
@@ -3402,9 +3428,6 @@
   </data>
   <data name="AuditAction_delete" xml:space="preserve">
     <value>Deleted</value>
-  </data>
-  <data name="Nav_SyncStatus" xml:space="preserve">
-    <value>Sync status</value>
   </data>
   <data name="SyncStatus_Lede" xml:space="preserve">
     <value>How the sync with Spond is doing: when it last worked, how long it takes and what went wrong.</value>
@@ -3453,41 +3476,6 @@
   </data>
   <data name="SyncStatus_Refresh" xml:space="preserve">
     <value>Refresh</value>
-  </data>
-  <data name="PermissionGroup_sync" xml:space="preserve">
-    <value>Sync status</value>
-  </data>
-  <data name="Permission_sync_view" xml:space="preserve">
-    <value>See how the sync with Spond is doing</value>
-  </data>
-  <data name="Settings_MetricsEnabled" xml:space="preserve">
-    <value>Publish metrics for monitoring</value>
-  </data>
-  <data name="Settings_MetricsEnabledHint" xml:space="preserve">
-    <value>Makes GET /metrics (Prometheus format) available to a monitoring system. Off by default; the scraper must send the token below as a bearer token. Applies after the restart.</value>
-  </data>
-  <data name="Settings_MetricsToken" xml:space="preserve">
-    <value>Metrics token</value>
-  </data>
-  <data name="Settings_MetricsTokenHint" xml:space="preserve">
-    <value>The secret the monitoring system sends as "Authorization: Bearer ...". Not shown again after saving.</value>
-  </data>
-  <data name="Settings_MetricsTokenStored" xml:space="preserve">
-    <value>A token is stored. Type a new one to replace it.</value>
-  </data>
-  <data name="Settings_MetricsTokenMissing" xml:space="preserve">
-    <value>The metrics need a token.</value>
-  </data>
-  <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
-    <value>The token needs at least {0} characters (at most 200) without spaces.</value>
-  </data>
-  <data name="Shell_SkipToContent" xml:space="preserve">
-    <value>Skip to main content</value>
-    <comment>Keyboard users: first control of the page, jumps over the navigation.</comment>
-  </data>
-  <data name="Shell_Loading" xml:space="preserve">
-    <value>Loading</value>
-    <comment>Accessible name of the busy bar of a page.</comment>
   </data>
   <data name="Number_Increase" xml:space="preserve">
     <value>Increase</value>

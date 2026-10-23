@@ -90,11 +90,14 @@ public sealed class BackupService(
 
     /// <summary>
     /// Replaces everything in both databases with the backup file's data. Throws <see cref="InvalidInputException"/> before anything is changed when the
-    /// file is no backup this program can read; a failure while writing undoes everything (one transaction per database).
+    /// file is no backup this program can read or none of its users is an administrator (the API would otherwise start in setup mode, open to
+    /// whoever comes first, and the administrators of the running instance are gone); a failure while writing undoes everything (one transaction per database).
     /// </summary>
-    public async Task<BackupRestoredDto> RestoreAsync(Stream file, string? passphrase, CancellationToken cancellationToken)
+    /// <param name="requireAdministrator">Whether the backup must hold an administrator; only the initial data of a new instance, which is set up afterwards anyway, may do without.</param>
+    public async Task<BackupRestoredDto> RestoreAsync(Stream file, string? passphrase, CancellationToken cancellationToken, bool requireAdministrator = true)
     {
         var (manifest, content) = Read(await DecryptAsync(file, passphrase, cancellationToken));
+        if (requireAdministrator) CheckHasAdministrator(content.Accounts);
 
         await gate.WaitAsync(cancellationToken);
         await sync.WaitAsync(cancellationToken);
@@ -150,9 +153,30 @@ public sealed class BackupService(
         }
 
         await using var file = File.OpenRead(path);
-        await RestoreAsync(file, options.Value.InitialDataPassphrase, cancellationToken);
+        await RestoreAsync(file, options.Value.InitialDataPassphrase, cancellationToken, requireAdministrator: false);
         return true;
     }
+
+    /// <summary>
+    /// A backup without a user who holds the administrator role would leave the restored instance in setup mode (open to the first visitor) and lock the
+    /// current administrators out. Missing tables count as empty, as <see cref="DatabaseCopier.ReplaceAsync"/> empties them.
+    /// </summary>
+    private static void CheckHasAdministrator(Dictionary<string, List<JsonObject>> accounts)
+    {
+        List<JsonObject> Rows(string table) => accounts.GetValueOrDefault(table) ?? [];
+
+        var users = Rows("UserAccount").Select(u => IntOf(u["Id"])).OfType<int>().ToHashSet();
+        if (users.Count == 0) throw new InvalidInputException("This backup holds no users: restoring it would leave nobody who could sign in. Nothing was changed.");
+
+        var administratorRoles = Rows("Role").Where(r => r["IsSystem"] is JsonValue flag && flag.TryGetValue<bool>(out var system) && system)
+            .Select(r => IntOf(r["Id"])).OfType<int>().ToHashSet();
+        if (administratorRoles.Count == 0) throw new InvalidInputException("This backup has no administrator role. Nothing was changed.");
+
+        if (!Rows("UserRoles").Any(link => IntOf(link["RolesId"]) is { } role && administratorRoles.Contains(role) && IntOf(link["UsersId"]) is { } user && users.Contains(user)))
+            throw new InvalidInputException("In this backup no user is an administrator: restoring it would lock everybody out of the settings. Nothing was changed.");
+    }
+
+    private static int? IntOf(JsonNode? node) => node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
 
     /// <summary>The file as a plain zip: an encrypted one is decrypted (in memory, it is at most the upload limit), a plain one is passed on.</summary>
     private static async Task<Stream> DecryptAsync(Stream file, string? passphrase, CancellationToken cancellationToken)

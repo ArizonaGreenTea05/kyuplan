@@ -529,6 +529,7 @@ The file is independent of the database system: a backup of a SQLite server rest
 *Restore from file…* (`backups.restore`) **replaces all data on the running server** with the content of a backup file. The page asks you to confirm first; nothing happens before that. Then:
 
 - the file is checked completely before anything is changed: a file that is no backup, is damaged, or was made by a **newer** version of the program than this server is refused and nothing changes;
+- a file in which **no user holds the administrator role** (no users at all, no administrator role, or nobody with it) is refused too: the server would otherwise restart into the setup screen, open to whoever reaches it first. (This does not apply to `Backup:InitialDataFile` on a new server, which is set up afterwards anyway.)
 - both databases are replaced, each in one transaction (if writing fails, that database keeps its old data);
 - the server restarts by itself (a few seconds) so that it starts from the new data; the page waits for it to come back.
 

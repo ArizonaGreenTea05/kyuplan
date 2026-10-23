@@ -24,7 +24,7 @@ namespace Kyuplan.Api.Sources;
 /// <c>from</c> and <c>to</c> are ISO 8601 strings; <c>start</c> and <c>end</c> may be ISO 8601 strings (without an offset: UTC), Date objects or epoch
 /// milliseconds; an answer is <c>accepted</c>, <c>declined</c>, <c>unanswered</c> or <c>other</c>; the members in <c>responses</c> are the invited ones.
 /// The script gets <c>http.get/post/put/delete(url, [body,] headers)</c> (answering <c>{ status, ok, text, json() }</c>) and <c>console.log</c>, nothing else:
-/// no file system, no .NET. It runs in a fresh engine for every call, one call at a time, with a time, memory and recursion limit. What it returns is cached
+/// no file system, no .NET. It runs in a fresh engine for every call, one call at a time, with a time, memory, statement and recursion limit; every run is logged with its duration. What it returns is cached
 /// for <see cref="DataSourceOptions.CacheDuration"/>.
 /// </summary>
 public sealed class CustomScriptDataSource(
@@ -101,26 +101,38 @@ public sealed class CustomScriptDataSource(
         return Task.Run(async () =>
         {
             await _gate.WaitAsync(cancellationToken);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var outcome = "failed";
+            // The time limit also ends a request that is waiting for an answer, which Jint's own timeout cannot interrupt.
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             try
             {
-                // The time limit also ends a request that is waiting for an answer, which Jint's own timeout cannot interrupt.
-                using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 limit.CancelAfter(options.Value.ScriptTimeout);
                 var engine = CreateEngine(limit.Token);
                 engine.Execute(script);
-                return work(engine);
+                var result = work(engine);
+                outcome = "succeeded";
+                return result;
             }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (ex is TimeoutException || (limit.IsCancellationRequested && !cancellationToken.IsCancellationRequested))
             {
+                // Jint reports its own timeout and a cancelled token with exceptions of its own, so they are told apart by the token, not by the type.
+                outcome = "timed out";
                 throw new SpondUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.");
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException)
+            {
+                outcome = "cancelled";
+                throw;
+            }
+            catch (Exception ex)
             {
                 logger.LogWarning(ex, "The custom data script failed.");
                 throw new SpondUnavailableException($"The custom data script failed: {ex.Message}", ex);
             }
             finally
             {
+                logger.LogInformation("The custom data script {Outcome} after {DurationMs} ms.", outcome, watch.ElapsedMilliseconds);
                 _gate.Release();
             }
         }, cancellationToken);
@@ -130,6 +142,7 @@ public sealed class CustomScriptDataSource(
     {
         var engine = new Engine(o => o
             .TimeoutInterval(options.Value.ScriptTimeout)
+            .MaxStatements(options.Value.ScriptMaxStatements)
             .LimitMemory(MaxMemoryBytes)
             .LimitRecursion(MaxRecursion)
             .CancellationToken(cancellationToken));

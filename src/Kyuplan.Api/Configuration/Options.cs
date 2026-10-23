@@ -21,6 +21,9 @@ public sealed class DataSourceOptions
     /// <summary>How long one call of the script may run, waiting for other services included.</summary>
     public TimeSpan ScriptTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
+    /// <summary>How many statements one call of the script may execute (0 = no limit); stops endless loops long before the timeout.</summary>
+    public int ScriptMaxStatements { get; set; } = 10_000_000;
+
     /// <summary>How long what the script returned is reused before it is asked again.</summary>
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(15);
 

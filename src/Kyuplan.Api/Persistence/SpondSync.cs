@@ -206,6 +206,14 @@ public sealed class SpondSync(
     {
         var stored = await db.Members.IgnoreQueryFilters().Where(m => m.GroupId == group.Id).ToDictionaryAsync(m => m.SpondId, cancellationToken);
         var storedCount = stored.Values.Count(m => m.RemovedAt is null);
+
+        // Refused before anything is touched: the context may live on (an exam is saved after a refused invitation sync) and must not carry half a sync.
+        if (guardRemovals)
+        {
+            var listed = group.Members.Select(m => m.Id).ToHashSet();
+            EnsureFew($"group '{group.Name}'", stored.Values.Count(m => m.RemovedAt is null && !listed.Contains(m.SpondId)), storedCount);
+        }
+
         var restored = 0;
         var members = new Dictionary<string, Member>();
         var now = time.GetUtcNow();
@@ -245,7 +253,6 @@ public sealed class SpondSync(
 
         // What is left was not in Spond's list (the ones that are hidden already stay as they are); the exams they were invited to do not show them.
         var gone = stored.Values.Where(m => m.RemovedAt is null).ToList();
-        if (guardRemovals) EnsureFew($"group '{group.Name}'", gone.Count, storedCount);
         RemoveMembers(gone);
         await db.SaveChangesAsync(cancellationToken);
 

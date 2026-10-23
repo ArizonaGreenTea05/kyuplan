@@ -222,6 +222,28 @@ public sealed class SpondSyncRemovalTests : IDisposable
     }
 
     [Fact]
+    public async Task A_refused_single_exam_sync_leaves_nothing_behind_in_the_context_that_is_saved_later()
+    {
+        _club.SyncSettings.ToleratedRemovedMembers = 0;
+        _club.SyncSettings.MaxRemovedShare = 0.4;
+        Spond.SetGroups(Group(Dojo, Anna, Ben));
+        Spond.SetEvents(Dojo, _club.Event("exam", Day(14), (Anna.Id, Rsvp.Accepted)));
+        var exam = await _club.CreateExamAsync("exam");
+
+        // Ben is gone (1 of 2 is more than 40 %), Anna is renamed and Cara is new: none of it may be saved by the refused sync.
+        Spond.SetGroups(Group(Dojo, Person("m-anna", "Anna Renamed"), Cara));
+        await _club.RunAsync(async sp =>
+        {
+            var db = sp.GetRequiredService<PlannerDbContext>();
+            var stored = await db.Exams.SingleAsync(e => e.Id == exam.Id);
+            await Assert.ThrowsAsync<SyncRefusedException>(() => sp.GetRequiredService<SpondSync>().SyncExamAsync(stored, CancellationToken.None));
+            await db.SaveChangesAsync();
+        });
+
+        Assert.Equal(["Anna Beck", "Ben Koch"], (await _club.MembersAsync()).Select(m => m.Name).Order());
+    }
+
+    [Fact]
     public async Task A_belt_that_a_hidden_member_holds_cannot_be_deleted()
     {
         Spond.SetGroups(Group(Dojo, Anna, Ben));

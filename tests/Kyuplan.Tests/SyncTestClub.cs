@@ -50,6 +50,7 @@ internal sealed class SyncTestClub : IDisposable
         services.AddScoped<ExamService>();
         services.AddScoped<ExamPlanningService>();
         services.AddScoped<BeltService>();
+        services.AddScoped<MemberService>();
         Services = services.BuildServiceProvider();
 
         using var scope = Services.CreateScope();

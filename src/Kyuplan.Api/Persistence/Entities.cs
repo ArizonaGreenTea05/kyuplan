@@ -254,6 +254,14 @@ public sealed class Member
     public DateTimeOffset? RemovedAt { get; set; }
 
     /// <summary>
+    /// Hidden by a user (<c>members.edit</c>): the member is ignored by every statistic and shown nowhere, like a removed one (the same
+    /// query filter, see <c>PlannerDbContext</c>), but stays in the data source and keeps everything the planner knows about them. Only the
+    /// list of hidden members on the members page (<c>members.hidden</c>) shows them again and makes them visible. <see cref="SpondSync"/>
+    /// keeps them up to date and never changes this.
+    /// </summary>
+    public bool Hidden { get; set; }
+
+    /// <summary>
     /// The user (accounts database id, so no foreign key) who is this member; an administrator links them. A user may be several members (one per
     /// Spond group), a member is at most one user. What is written about a member is hidden from their user unless they have the "own" permission.
     /// </summary>

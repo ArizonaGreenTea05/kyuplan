@@ -30,6 +30,11 @@ public static class Permission
 
     public const string MembersView = "members.view";
     public const string MembersEdit = "members.edit";
+    /// <summary>
+    /// Open the list of hidden members on the members page and make them visible again. Hiding a member only takes <see cref="MembersEdit"/>; this is
+    /// the only way back, so it is a permission of its own.
+    /// </summary>
+    public const string MembersHidden = "members.hidden";
 
     public const string BeltsView = "belts.view";
     public const string BeltsEdit = "belts.edit";
@@ -96,7 +101,7 @@ public static class Permission
         new("statistics", [StatisticsView]),
         new("calendar", [CalendarView, CalendarFeeds]),
         new("exams", [ExamsView, ExamsEdit, ExamsFilters, ExamsCandidates, ExamsResults]),
-        new("members", [MembersView, MembersEdit]),
+        new("members", [MembersView, MembersEdit, MembersHidden]),
         new("belts", [BeltsView, BeltsEdit]),
         new("payments", [PaymentsView, PaymentsEdit, PricesEdit]),
         new("comments", [CommentsView, CommentsViewOwn, CommentsWrite, CommentsEdit, CommentsDelete, CommentsDeleteAny]),

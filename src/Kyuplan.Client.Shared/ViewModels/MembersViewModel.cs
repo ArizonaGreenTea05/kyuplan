@@ -112,6 +112,9 @@ public sealed partial class MembersViewModel : PageViewModel
     /// <summary>Whether the user may set a member's belt and days; without it the page only shows them.</summary>
     public bool CanEdit => Shell.Can(Permission.MembersEdit);
 
+    /// <summary>Whether the user may open the list of hidden members and make them visible again (<c>members.hidden</c>).</summary>
+    public bool CanViewHidden => Shell.Can(Permission.MembersHidden);
+
     /// <summary>
     /// Whether the user may read the comments on members at all (the column of buttons is shown). Comments are no part of what the members page
     /// shows by itself; which members' comments, see <see cref="MayViewComments"/>.
@@ -129,6 +132,11 @@ public sealed partial class MembersViewModel : PageViewModel
     {
         if (IsShowingComments && !MayViewComments(Comments.Member)) Comments.Close(); // the user may no longer read what is open
 
+        // The list of hidden members is for those who may see it: without the permission the page is back at its members (read again
+        // right after this, see PageViewModel), and a question about hiding somebody is for those who may.
+        if (ShowingHidden && !CanViewHidden) LeaveHidden();
+        if (!CanEdit) PendingHide = null;
+
         base.OnPermissionsChanged();
         NotifyStateChanged();
     }
@@ -141,7 +149,7 @@ public sealed partial class MembersViewModel : PageViewModel
     /// unless the user is in the middle of something (a form). The comments of a member that are open are read again too (tags may have been
     /// changed on the tags page meanwhile), which leaves a comment that is being written as it is.
     /// </summary>
-    protected override bool ReloadsOnActivation => !IsFormOpen;
+    protected override bool ReloadsOnActivation => !IsFormOpen && !IsConfirmingHide;
 
     /// <summary>
     /// The members of another group are another list: the old one goes away, and with it a form for one of its members, so that a
@@ -150,6 +158,7 @@ public sealed partial class MembersViewModel : PageViewModel
     protected override void OnContextChanged()
     {
         CloseForm();
+        PendingHide = null;
 
         // The data was refreshed (the same group): the comments stay open, a draft included, and are read again with the list.
         if (Comments.Member is { } open && open.Member.GroupId != Shell.SelectedGroupId) Comments.Close();
@@ -286,7 +295,7 @@ public sealed partial class MembersViewModel : PageViewModel
             || FormBirthDay != member.Member.BirthDate
             || FormBeltSinceDay != (SelectedBelt.IsNone ? null : member.Member.BeltSince));
 
-    private bool CanBeginEdit(MemberRow? member) => CanEdit && member is not null && !ReferenceEquals(member, Editing) && !IsShowingComments;
+    private bool CanBeginEdit(MemberRow? member) => CanEdit && member is not null && !ReferenceEquals(member, Editing) && !IsShowingComments && !ShowingHidden && !IsConfirmingHide;
 
     [RelayCommand(CanExecute = nameof(CanBeginEdit))]
     private void BeginEdit(MemberRow member)
@@ -376,7 +385,7 @@ public sealed partial class MembersViewModel : PageViewModel
     /// <summary>The page shows the comments on one member, not the list of members.</summary>
     public bool IsShowingComments => Comments.IsOpen;
 
-    private bool CanOpenComments(MemberRow? member) => MayViewComments(member) && !IsBusy && !IsShowingComments;
+    private bool CanOpenComments(MemberRow? member) => MayViewComments(member) && !IsBusy && !IsShowingComments && !ShowingHidden && !IsConfirmingHide;
 
     [RelayCommand(CanExecute = nameof(CanOpenComments))]
     private async Task OpenCommentsAsync(MemberRow member)
@@ -401,6 +410,143 @@ public sealed partial class MembersViewModel : PageViewModel
         Members = [.. Members.Select(m => m.Id == memberId ? new MemberRow(m.Member with { CommentCount = count }, m.Belt) : m)];
     }
 
+    // --- Hiding members --------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// The page lists the hidden members (<see cref="Members"/> holds them) in place of the members: all there is to do with them is to make
+    /// them visible again. The only way to this list, and so the only way back for a hidden member, is <see cref="ShowHiddenCommand"/>.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LedeText), nameof(NobodyText), nameof(ShowsCommentsColumn), nameof(ShowsEditColumn), nameof(ShowsUnhideColumn))]
+    private bool _showingHidden;
+
+    /// <summary>The list has a column of buttons that open the comments: for those who may read them, and not while it lists the hidden members.</summary>
+    public bool ShowsCommentsColumn => CanViewComments && !ShowingHidden;
+
+    /// <summary>The list has a column of buttons that edit and hide a member: for those who may, and not while it lists the hidden members.</summary>
+    public bool ShowsEditColumn => CanEdit && !ShowingHidden;
+
+    /// <summary>The list has a column of buttons that make a member visible again: only while it lists the hidden members.</summary>
+    public bool ShowsUnhideColumn => CanViewHidden && ShowingHidden;
+
+    partial void OnShowingHiddenChanged(bool value) => NotifyStateChanged();
+
+    /// <summary>What the page says it is for: the members, or the hidden members.</summary>
+    public string LedeText => ShowingHidden ? Strings.MemberPage_HiddenLede : Strings.MemberPage_Lede;
+
+    /// <summary>What an empty list says.</summary>
+    public string NobodyText => ShowingHidden ? Strings.MemberPage_NoneHidden : Strings.Members_NobodyHere;
+
+    /// <summary>The member waiting for the confirmation that hides them.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingHide), nameof(ConfirmHideText))]
+    private MemberRow? _pendingHide;
+
+    partial void OnPendingHideChanged(MemberRow? value) => NotifyStateChanged();
+
+    public bool IsConfirmingHide => PendingHide is not null;
+
+    public string ConfirmHideText => PendingHide is { } member ? string.Format(Strings.MemberPage_ConfirmHide, member.Name) : "";
+
+    private bool CanShowHidden() => CanViewHidden && !ShowingHidden && !IsBusy && !IsFormOpen && !IsShowingComments && !IsConfirmingHide;
+
+    [RelayCommand(CanExecute = nameof(CanShowHidden))]
+    private async Task ShowHiddenAsync()
+    {
+        if (!CanShowHidden()) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        ShowingHidden = true;
+        Members = [];
+        HasLoaded = false;
+        await InvalidateAsync();
+    }
+
+    private bool CanShowMembers() => ShowingHidden && !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanShowMembers))]
+    private async Task ShowMembersAsync()
+    {
+        if (!CanShowMembers()) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        LeaveHidden();
+        await InvalidateAsync();
+    }
+
+    /// <summary>Back to the members; the list of the hidden ones goes away with its rows.</summary>
+    private void LeaveHidden()
+    {
+        ShowingHidden = false;
+        Members = [];
+        HasLoaded = false;
+    }
+
+    private bool CanHide(MemberRow? member) => CanEdit && member is not null && !ShowingHidden && !IsBusy && !IsFormOpen && !IsShowingComments;
+
+    [RelayCommand(CanExecute = nameof(CanHide))]
+    private void AskHide(MemberRow member)
+    {
+        if (!CanHide(member)) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        PendingHide = member;
+    }
+
+    [RelayCommand]
+    private void CancelHide() => PendingHide = null;
+
+    [RelayCommand]
+    private async Task ConfirmHideAsync()
+    {
+        if (PendingHide is not { } member || !CanEdit || ShowingHidden) return;
+
+        PendingHide = null;
+        var hidden = false;
+        await LoadAsync(async ct =>
+        {
+            await _api.HideMemberAsync(member.Id, ct);
+            hidden = true;
+        });
+
+        if (!hidden) return; // the reason is in ErrorMessage
+
+        // Nothing is left to change or to read about a member who is gone from the page.
+        if (Editing?.Id == member.Id) CloseForm();
+        if (IsShowingComments && Comments.Member?.Id == member.Id) Comments.Close();
+        Members = [.. Members.Where(m => m.Id != member.Id)];
+
+        var name = member.Name;
+        SetNotice(() => string.Format(Strings.MemberPage_MemberHidden, name));
+    }
+
+    private bool CanUnhide(MemberRow? member) => CanViewHidden && member is not null && ShowingHidden && !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanUnhide))]
+    private async Task UnhideAsync(MemberRow member)
+    {
+        if (!CanUnhide(member)) return;
+
+        ErrorMessage = null;
+        SetNotice(null);
+        var shown = false;
+        await LoadAsync(async ct =>
+        {
+            await _api.UnhideMemberAsync(member.Id, ct);
+            shown = true;
+        });
+
+        if (!shown) return; // the reason is in ErrorMessage
+
+        Members = [.. Members.Where(m => m.Id != member.Id)];
+
+        var name = member.Name;
+        SetNotice(() => string.Format(Strings.MemberPage_MemberUnhidden, name));
+    }
+
     // --- Loading ---------------------------------------------------------------------------------------------
 
     /// <summary>Asks the API again, e.g. after a failed load.</summary>
@@ -415,7 +561,7 @@ public sealed partial class MembersViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             var belts = await _api.GetBeltsAsync(ct);
-            var members = await _api.GetMembersAsync(groupId, ct);
+            var members = ShowingHidden ? await _api.GetHiddenMembersAsync(groupId, ct) : await _api.GetMembersAsync(groupId, ct);
 
             BeltOptions = [_noBelt, .. belts.Select(b => new BeltOption(b))];
             Members = [.. members.Select(m => new MemberRow(m, BeltOf(m.BeltId)))];
@@ -442,11 +588,18 @@ public sealed partial class MembersViewModel : PageViewModel
         ClearStartedAtCommand.NotifyCanExecuteChanged();
         ClearBirthDateCommand.NotifyCanExecuteChanged();
         ClearBeltSinceCommand.NotifyCanExecuteChanged();
+        ShowHiddenCommand.NotifyCanExecuteChanged();
+        ShowMembersCommand.NotifyCanExecuteChanged();
+        AskHideCommand.NotifyCanExecuteChanged();
+        UnhideCommand.NotifyCanExecuteChanged();
     }
 
     protected override void OnLanguageChanged()
     {
         base.OnLanguageChanged();
+        OnPropertyChanged(nameof(LedeText));
+        OnPropertyChanged(nameof(NobodyText));
+        OnPropertyChanged(nameof(ConfirmHideText));
         foreach (var belt in BeltOptions) belt.Refresh();
         foreach (var member in Members) member.Refresh();
         Comments.Refresh();

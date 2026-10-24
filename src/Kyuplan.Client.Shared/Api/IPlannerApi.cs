@@ -205,6 +205,15 @@ public interface IPlannerApi
     /// <summary>Sets the belt, the day it was received, the start day and the birth date of a member (<c>null</c> clears any).</summary>
     Task<MemberDto> UpdateMemberAsync(int memberId, MemberInputDto member, CancellationToken cancellationToken = default);
 
+    /// <summary>The members of a Spond group a user hid, by name (<c>members.hidden</c>); no other call returns them.</summary>
+    Task<IReadOnlyList<MemberDto>> GetHiddenMembersAsync(string groupId, CancellationToken cancellationToken = default);
+
+    /// <summary>Hides a member: no statistic counts them and nothing lists them but <see cref="GetHiddenMembersAsync"/> (<c>members.edit</c>).</summary>
+    Task HideMemberAsync(int memberId, CancellationToken cancellationToken = default);
+
+    /// <summary>Makes a hidden member visible again (<c>members.hidden</c>).</summary>
+    Task<MemberDto> UnhideMemberAsync(int memberId, CancellationToken cancellationToken = default);
+
     /// <summary>The comments on a member, oldest first (a reply comes after the comment it replies to), with their tags and the history of their edits.</summary>
     Task<IReadOnlyList<RatingDto>> GetMemberRatingsAsync(int memberId, CancellationToken cancellationToken = default);
 

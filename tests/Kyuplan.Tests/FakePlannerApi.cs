@@ -1072,6 +1072,43 @@ internal sealed class FakePlannerApi : IPlannerApi
             return updated;
         });
 
+    /// <summary>The members a user hid: <see cref="Members"/> are the visible ones, like the server's list.</summary>
+    public List<MemberDto> HiddenMembers { get; } = [];
+
+    /// <summary>When set, the hidden members cannot be listed.</summary>
+    public Exception? HiddenListFailure { get; set; }
+
+    public List<string> HiddenMemberListRequests { get; } = [];
+
+    public Task<IReadOnlyList<MemberDto>> GetHiddenMembersAsync(string groupId, CancellationToken cancellationToken = default)
+    {
+        HiddenMemberListRequests.Add(groupId);
+        return HiddenListFailure is { } failure
+            ? Task.FromException<IReadOnlyList<MemberDto>>(failure)
+            : Run<IReadOnlyList<MemberDto>>(() =>
+                HiddenMembers.Where(m => m.GroupId == groupId).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase).ToList());
+    }
+
+    public Task HideMemberAsync(int memberId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            BeltCalls.Add($"hide-member:{memberId}");
+            var existing = Members.FirstOrDefault(m => m.Id == memberId) ?? throw NotFound();
+            Members.Remove(existing);
+            HiddenMembers.Add(existing);
+            return 0;
+        });
+
+    public Task<MemberDto> UnhideMemberAsync(int memberId, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            BeltCalls.Add($"unhide-member:{memberId}");
+            var existing = HiddenMembers.FirstOrDefault(m => m.Id == memberId) ?? throw NotFound();
+            HiddenMembers.Remove(existing);
+            Members.Add(existing);
+            return WithComments(existing);
+        });
+
     // --- Comments and tags: a server that keeps them in lists ----------------------------------------------
 
     /// <summary>The tags the server holds; <see cref="TagDto.CommentCount"/> is worked out from <see cref="Comments"/>.</summary>

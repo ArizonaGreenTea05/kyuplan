@@ -283,7 +283,7 @@ The complete list of keys is in the [configuration table of the reference](refer
 | calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`), `calendar.feeds` (define calendar feeds, see [Calendar feeds](#calendar-feeds)) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
 | payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the stamp fee and belt price per belt) |
-| members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
+| members | `members.view`, `members.edit` (belt, belt day, start day, birth date; hide a member), `members.hidden` (the list of hidden members, and making them visible again; give it only to those who may undo hiding) |
 | belts | `belts.view`, `belts.edit` |
 | comments | `comments.view`, `comments.viewOwn` (read the comments about the members one is oneself), `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
 | ratings | `ratings.view` (see every user's star evaluations of members), `ratings.viewOwn` (read the evaluations of the members one is oneself), `ratings.write` (evaluate members at an event, change and take back one's own) |

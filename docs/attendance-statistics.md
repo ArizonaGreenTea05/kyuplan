@@ -65,6 +65,9 @@ The **Members** filter restricts the report to the members of one or more subgro
 everyone in at least one of them is reported (a member of two ticked subgroups appears once). With none ticked, the
 whole group is reported. Events are then counted over those members only.
 
+A member who was **hidden** on the Members page is not part of the group for any of this: they are not reported, their answers count for no
+event, and they are no host of an event. Making them visible again brings all of it back.
+
 ## Remembered and saved filters
 
 The filters above (time span, subgroups, minimum attendance, minimum invitations, event name terms) are what a **remembered**

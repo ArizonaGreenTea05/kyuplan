@@ -442,6 +442,353 @@ public sealed class MembersViewModelTests : IDisposable
         Assert.True(vm.IsFormOpen);
     }
 
+    // --- Hidden members ----------------------------------------------------------------------------------------
+
+    private void SignInWith(params string[] permissions) => _api.Account = TestAccounts.WithPermissions(1, "anna", permissions);
+
+    /// <summary>Somebody who may edit members and see the hidden ones (the permissions the page needs to be shown at all included).</summary>
+    private void SignInAsKeeper() => SignInWith(Permission.MembersView, Permission.MembersEdit, Permission.MembersHidden, Permission.BeltsView);
+
+    private MemberDto AddHiddenMember(string name, string groupId = "g1")
+    {
+        var member = _api.AddMember(name, groupId);
+        _api.Members.Remove(member);
+        _api.HiddenMembers.Add(member);
+        return member;
+    }
+
+    [Fact]
+    public async Task Hiding_a_member_asks_first_and_then_takes_them_off_the_list_and_says_so()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        var ben = Row(vm, "Ben");
+
+        vm.AskHideCommand.Execute(ben);
+
+        Assert.True(vm.IsConfirmingHide);
+        Assert.Equal("Hide “Ben”? A hidden member is ignored in the statistics and shown nowhere; only someone who may view hidden members can make them visible again.", vm.ConfirmHideText);
+        Assert.Equal(3, vm.Members.Count); // nothing is hidden before the question is answered
+        Assert.Empty(_api.HiddenMembers);
+
+        await vm.ConfirmHideCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsConfirmingHide);
+        Assert.Equal(["Anna", "Clara"], vm.Members.Select(m => m.Name));
+        Assert.Equal("2 members", vm.CountText);
+        Assert.Equal(["Ben"], _api.HiddenMembers.Select(m => m.Name));
+        Assert.Equal("Ben is hidden.", vm.NoticeText);
+        Assert.False(vm.HasError);
+    }
+
+    [Fact]
+    public async Task Hiding_can_be_called_off_and_changes_nothing()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        vm.AskHideCommand.Execute(Row(vm, "Ben"));
+
+        vm.CancelHideCommand.Execute(null);
+
+        Assert.False(vm.IsConfirmingHide);
+        Assert.Equal("", vm.ConfirmHideText);
+        Assert.Equal(3, vm.Members.Count);
+        Assert.Empty(_api.HiddenMembers);
+        Assert.DoesNotContain("hide-member", string.Join(' ', _api.BeltCalls));
+        await vm.ConfirmHideCommand.ExecuteAsync(null); // nothing is asked: nothing happens
+        Assert.Equal(3, vm.Members.Count);
+    }
+
+    [Fact]
+    public async Task Somebody_who_may_not_edit_members_cannot_hide_one()
+    {
+        SignInWith(Permission.MembersView, Permission.MembersHidden, Permission.BeltsView);
+        var vm = await ShownAsync();
+        var ben = Row(vm, "Ben");
+
+        Assert.False(vm.AskHideCommand.CanExecute(ben));
+        vm.AskHideCommand.Execute(ben); // Execute does not ask CanExecute: what the user may not do is not done
+
+        Assert.False(vm.IsConfirmingHide);
+        Assert.Empty(_api.HiddenMembers);
+    }
+
+    [Fact]
+    public async Task While_the_question_is_open_nothing_else_is_started_and_the_page_does_not_read_again_under_it()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        var ben = Row(vm, "Ben");
+        vm.AskHideCommand.Execute(ben);
+
+        Assert.False(vm.BeginEditCommand.CanExecute(Row(vm, "Anna")));
+        Assert.False(vm.ShowHiddenCommand.CanExecute(null));
+        await vm.ActivateAsync(); // shown again meanwhile
+        Assert.Single(_api.MemberListRequests);
+        Assert.True(vm.IsConfirmingHide);
+
+        vm.CancelHideCommand.Execute(null);
+
+        Assert.True(vm.BeginEditCommand.CanExecute(Row(vm, "Anna")));
+        Assert.True(vm.ShowHiddenCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task A_member_cannot_be_hidden_while_a_form_is_open_or_the_list_is_busy()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        vm.BeginEditCommand.Execute(Row(vm, "Anna"));
+
+        Assert.False(vm.AskHideCommand.CanExecute(Row(vm, "Ben")));
+        vm.AskHideCommand.Execute(Row(vm, "Ben"));
+        Assert.False(vm.IsConfirmingHide);
+        Assert.True(vm.IsFormOpen);
+    }
+
+    [Fact]
+    public async Task A_refused_hide_leaves_the_list_as_it_is_and_says_why()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        var gone = new MemberRow(new MemberDto(999, "g1", "Gone", null, null), new BeltOption());
+        vm.AskHideCommand.Execute(gone);
+
+        await vm.ConfirmHideCommand.ExecuteAsync(null);
+
+        Assert.True(vm.HasError);
+        Assert.False(vm.IsConfirmingHide);
+        Assert.Equal(3, vm.Members.Count);
+        Assert.False(vm.HasNotice);
+    }
+
+    [Fact]
+    public async Task The_form_of_a_member_who_was_hidden_meanwhile_is_closed_with_them()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        var ben = Row(vm, "Ben");
+        vm.AskHideCommand.Execute(ben);
+        vm.BeginEditCommand.Execute(ben); // not allowed while the question is open; nothing opens
+        Assert.False(vm.IsFormOpen);
+
+        await vm.ConfirmHideCommand.ExecuteAsync(null);
+
+        Assert.False(vm.IsFormOpen);
+        Assert.DoesNotContain(vm.Members, m => m.Name == "Ben");
+    }
+
+    [Fact]
+    public async Task The_hidden_members_are_listed_in_place_of_the_members_and_the_way_back_lists_the_members_again()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        AddHiddenMember("Dora", "g2");
+        var vm = await ShownAsync();
+        Assert.False(vm.ShowingHidden);
+        Assert.Equal("Members", vm.Title);
+        Assert.Equal(["Anna", "Ben", "Clara"], vm.Members.Select(m => m.Name));
+        Assert.StartsWith("Which belt each member holds", vm.LedeText);
+
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+
+        Assert.True(vm.ShowingHidden);
+        Assert.Equal(["g1"], _api.HiddenMemberListRequests);
+        Assert.Equal(["Eva"], vm.Members.Select(m => m.Name));
+        Assert.Equal("1 members", vm.CountText);
+        Assert.StartsWith("These members are hidden", vm.LedeText);
+        Assert.True(vm.ShowsUnhideColumn);
+        Assert.False(vm.ShowsEditColumn);
+        Assert.False(vm.ShowsCommentsColumn);
+
+        await vm.ShowMembersCommand.ExecuteAsync(null);
+
+        Assert.False(vm.ShowingHidden);
+        Assert.Equal(["Anna", "Ben", "Clara"], vm.Members.Select(m => m.Name));
+        Assert.False(vm.ShowsUnhideColumn);
+        Assert.True(vm.ShowsEditColumn);
+    }
+
+    [Fact]
+    public async Task In_the_list_of_hidden_members_nobody_can_be_edited_hidden_or_have_comments_opened_only_made_visible()
+    {
+        SignInWith(Permission.MembersView, Permission.MembersEdit, Permission.MembersHidden, Permission.BeltsView, Permission.CommentsView);
+        AddHiddenMember("Eva");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        var eva = Row(vm, "Eva");
+
+        Assert.False(vm.BeginEditCommand.CanExecute(eva));
+        Assert.False(vm.AskHideCommand.CanExecute(eva));
+        Assert.False(vm.OpenCommentsCommand.CanExecute(eva));
+        Assert.True(vm.UnhideCommand.CanExecute(eva));
+        vm.BeginEditCommand.Execute(eva);
+        vm.AskHideCommand.Execute(eva);
+        Assert.False(vm.IsFormOpen);
+        Assert.False(vm.IsConfirmingHide);
+        Assert.False(vm.ShowHiddenCommand.CanExecute(null)); // already there
+        Assert.True(vm.ShowMembersCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Making_a_member_visible_takes_them_off_the_hidden_list_and_puts_them_among_the_members()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        AddHiddenMember("Finn");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+
+        await vm.UnhideCommand.ExecuteAsync(Row(vm, "Eva"));
+
+        Assert.Equal(["Finn"], vm.Members.Select(m => m.Name));
+        Assert.Equal("Eva is visible again.", vm.NoticeText);
+        Assert.Equal(["Finn"], _api.HiddenMembers.Select(m => m.Name));
+
+        await vm.ShowMembersCommand.ExecuteAsync(null);
+
+        Assert.Equal(["Anna", "Ben", "Clara", "Eva"], vm.Members.Select(m => m.Name));
+        Assert.False(vm.HasNotice); // the notice is about the list that was left
+    }
+
+    [Fact]
+    public async Task The_last_hidden_member_made_visible_leaves_an_empty_list_that_says_so()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        Assert.False(vm.IsNobodyHere);
+
+        await vm.UnhideCommand.ExecuteAsync(Row(vm, "Eva"));
+
+        Assert.True(vm.IsNobodyHere);
+        Assert.Equal("No members are hidden.", vm.NobodyText);
+        _language.Select("de");
+        Assert.Equal("Es sind keine Mitglieder ausgeblendet.", vm.NobodyText);
+        Assert.StartsWith("Diese Mitglieder sind ausgeblendet", vm.LedeText);
+    }
+
+    [Fact]
+    public async Task A_refused_unhide_leaves_the_hidden_list_as_it_is_and_says_why()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        var eva = Row(vm, "Eva");
+        _api.HiddenMembers.Clear(); // somebody else made them visible meanwhile
+
+        await vm.UnhideCommand.ExecuteAsync(eva);
+
+        Assert.True(vm.HasError);
+        Assert.Equal(["Eva"], vm.Members.Select(m => m.Name));
+        Assert.False(vm.HasNotice);
+    }
+
+    [Fact]
+    public async Task Somebody_without_the_permission_has_no_way_to_the_hidden_members_even_by_the_command()
+    {
+        SignInWith(Permission.MembersView, Permission.MembersEdit, Permission.BeltsView);
+        AddHiddenMember("Eva");
+        var vm = await ShownAsync();
+
+        Assert.False(vm.CanViewHidden);
+        Assert.False(vm.ShowHiddenCommand.CanExecute(null));
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+
+        Assert.False(vm.ShowingHidden);
+        Assert.Empty(_api.HiddenMemberListRequests);
+        Assert.Equal(["Anna", "Ben", "Clara"], vm.Members.Select(m => m.Name));
+        Assert.False(vm.UnhideCommand.CanExecute(Row(vm, "Anna")));
+    }
+
+    [Fact]
+    public async Task Losing_the_permission_while_the_hidden_members_are_shown_brings_the_page_back_to_its_members()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        Assert.Equal(["Eva"], vm.Members.Select(m => m.Name));
+
+        _shell.Session.User = TestAccounts.WithPermissions(1, "anna", Permission.MembersView, Permission.MembersEdit, Permission.BeltsView);
+        await Eventually(() => vm.Members.Select(m => m.Name).SequenceEqual(["Anna", "Ben", "Clara"]));
+
+        Assert.False(vm.ShowingHidden);
+        Assert.False(vm.CanViewHidden);
+    }
+
+    [Fact]
+    public async Task Losing_the_right_to_edit_closes_the_question_about_hiding()
+    {
+        SignInAsKeeper();
+        var vm = await ShownAsync();
+        vm.AskHideCommand.Execute(Row(vm, "Ben"));
+
+        _shell.Session.User = TestAccounts.WithPermissions(1, "anna", Permission.MembersView, Permission.BeltsView);
+
+        Assert.False(vm.IsConfirmingHide);
+    }
+
+    [Fact]
+    public async Task A_hidden_list_that_cannot_be_read_says_so_and_can_be_read_again()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        _api.HiddenListFailure = new PlannerApiException("The hidden list is not available.");
+        var vm = await ShownAsync();
+
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+
+        Assert.Equal("The hidden list is not available.", vm.ErrorMessage);
+        Assert.True(vm.ShowingHidden);
+        Assert.False(vm.IsNobodyHere); // not an empty list, one that could not be loaded
+
+        _api.HiddenListFailure = null;
+        await vm.RetryCommand.ExecuteAsync(null);
+
+        Assert.False(vm.HasError);
+        Assert.Equal(["Eva"], vm.Members.Select(m => m.Name));
+    }
+
+    [Fact]
+    public async Task Another_group_shows_its_hidden_members_while_the_page_stays_on_the_hidden_list()
+    {
+        SignInAsKeeper();
+        AddHiddenMember("Eva");
+        AddHiddenMember("Dora", "g2");
+        var vm = await ShownAsync();
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+
+        _shell.SelectedGroupId = "g2";
+        await Eventually(() => vm.Members.Select(m => m.Name).SequenceEqual(["Dora"]));
+
+        Assert.True(vm.ShowingHidden);
+        Assert.Equal(["g1", "g2"], _api.HiddenMemberListRequests);
+    }
+
+    [Fact]
+    public async Task The_hidden_list_is_not_entered_while_comments_or_a_form_are_open()
+    {
+        SignInWith(Permission.MembersView, Permission.MembersEdit, Permission.MembersHidden, Permission.BeltsView, Permission.CommentsView);
+        var vm = await ShownAsync();
+        vm.BeginEditCommand.Execute(Row(vm, "Anna"));
+
+        Assert.False(vm.ShowHiddenCommand.CanExecute(null));
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        Assert.False(vm.ShowingHidden);
+        Assert.True(vm.IsFormOpen);
+
+        vm.CancelFormCommand.Execute(null);
+        await vm.OpenCommentsCommand.ExecuteAsync(Row(vm, "Anna"));
+
+        Assert.False(vm.ShowHiddenCommand.CanExecute(null));
+        await vm.ShowHiddenCommand.ExecuteAsync(null);
+        Assert.False(vm.ShowingHidden);
+        Assert.Empty(_api.HiddenMemberListRequests);
+    }
+
     // --- Language ----------------------------------------------------------------------------------------------
 
     [Fact]

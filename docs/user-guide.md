@@ -248,6 +248,11 @@ Who is a member is decided by **the data source**: names come from there and mem
 as the last automatic sync (every 15 minutes by default). A member who leaves the data source is removed, together with their belt
 data, comments and exam invitations.
 
+**Hide** takes a member out of the statistics and out of every list and page (after a question; the member stays in the data source and
+keeps their belt, comments and results). Hidden members can only be seen again with **View hidden members** at the top of the page, which
+needs its own permission (`members.hidden`): there you can make each of them visible again with **Make visible**, and **Back to members**
+returns to the list.
+
 What the data source does not know, you enter here, because the Exams page needs it:
 
 - **Edit** sets the belt (or none), the day they got it (only possible with a belt), the day they train since, and the birth date.

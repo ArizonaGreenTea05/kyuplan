@@ -177,6 +177,10 @@ the groups to analyse**; the account sees the groups it belongs to.
 - **Group administrators and hosts.** Group administrators (usually the login account) are members like everybody else and appear in
   the member list. An event counts for none of its **hosts**, the owners Spond lists for it (matched to the group's members by their Spond profile; an owner who is no member of the group is no host): the event is in no statistic of theirs
   and they are no participants of an exam at it, whether or not Spond also lists them among the answers.
+  **Upgrading:** the old option *Ignore administrators* (on by default, it hid every Spond member who is not a respondent) is gone. After the
+  upgrade those members, usually the login account and the other administrators, appear in the member list, the statistics and the exams
+  after the next sync. A leftover `IgnoreAdministrators` entry in `settings.json` is ignored. To keep someone out of the numbers, make them
+  the host of the events they run, or leave them out of the Spond group.
 - **Caching.** Events are fetched month by month and cached for 15 minutes (`Spond:CacheDuration`). The **Refresh** button in the clients clears the
   cache. The server logs in again every 6 hours (`Spond:LoginLifetime`).
 - The Spond password is stored **encrypted** in `settings.json`; the key is in the `keys` folder next to it. Keep that folder safe and, if

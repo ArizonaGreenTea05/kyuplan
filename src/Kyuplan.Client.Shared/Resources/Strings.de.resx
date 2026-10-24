@@ -2753,7 +2753,7 @@
     <value>Verbindungszeichenfolge</value>
   </data>
   <data name="Backup_LocationHintSqlite" xml:space="preserve">
-    <value>Der Ordner erhält die Dateien planner.db und accounts.db; er wird angelegt, falls er fehlt.</value>
+    <value>Der Ordner erhält die Dateien planner.db und accounts.db; er wird angelegt, falls er fehlt, und muss unterhalb des Ordners der Einstellungsdatei liegen.</value>
   </data>
   <data name="Backup_LocationHintPostgres" xml:space="preserve">
     <value>Zum Beispiel Host=db;Database=kyuplan_backup;Username=kyuplan;Password=…; die Tabellen beider Datenbanken landen darin.</value>

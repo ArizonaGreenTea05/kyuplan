@@ -42,6 +42,7 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
             builder.UseSetting("DefaultData:Enabled", "false");
             builder.UseSetting("Backup:Enabled", "false"); // the tests run the backup databases themselves
             builder.UseSetting("Backup:TargetsFile", Path.Combine(_folder, "targets.json"));
+            builder.UseSetting("Setup:SettingsFile", Path.Combine(_folder, "settings.json")); // backup databases may only be below its folder
             builder.UseSetting("Database:ConnectionString", (planner ?? _planner).ConnectionString);
             Configure(builder, accounts ?? _accounts);
             builder.ConfigureServices(services => services.AddSingleton<IAppRestarter>(_restarter));
@@ -391,9 +392,9 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Null(changed.NextRunUtc); // switched off
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/backup/targets", Target("nightly", Path.Combine(_folder, "b")))).StatusCode); // same name
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/backup/targets", Target("Fast", _folder, minutes: 1))).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/backup/targets", Target(" ", _folder))).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync("/api/backup/targets/99", Target("x", _folder))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/backup/targets", Target("Fast", Path.Combine(_folder, "c"), minutes: 1))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/backup/targets", Target(" ", Path.Combine(_folder, "c")))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync("/api/backup/targets/99", Target("x", Path.Combine(_folder, "c")))).StatusCode);
 
         using var again = CreateHost();
         Assert.Equal("Nightly", Assert.Single((await again.CreateSignedInClient().GetFromJsonAsync<List<BackupTargetDto>>("/api/backup/targets"))!).Name);
@@ -508,6 +509,87 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Empty(store.Due());
         Assert.True(Directory.Exists(Path.Combine(_folder, "due")));
         Assert.False(Directory.Exists(Path.Combine(_folder, "off")));
+    }
+
+    // --- Where a backup database may be --------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task A_backup_folder_outside_the_data_folder_is_refused_when_it_is_saved_and_nothing_is_written()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var outside = Path.Combine(Path.GetTempPath(), "pp-backup-outside-" + Guid.NewGuid().ToString("N"));
+        var created = await ReadAsync<BackupTargetDto>(await admin.PostAsJsonAsync("/api/backup/targets", Target("Inside", Path.Combine(_folder, "inside"))));
+
+        foreach (var folder in new[] { outside, Path.Combine(_folder, "..", "pp-up"), Path.Combine(_folder, "a", "..", "..", "pp-up"), _folder, "wwwroot" })
+        {
+            var post = await admin.PostAsJsonAsync("/api/backup/targets", Target("Out", folder));
+            Assert.Equal(HttpStatusCode.BadRequest, post.StatusCode);
+            Assert.Contains("settings file", await post.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/backup/targets/{created.Id}", Target("Inside", folder))).StatusCode);
+        }
+
+        Assert.False(Directory.Exists(outside));
+        Assert.Equal(Path.Combine(_folder, "inside"), Assert.Single((await admin.GetFromJsonAsync<List<BackupTargetDto>>("/api/backup/targets"))!).Location); // the refused update changed nothing
+    }
+
+    [Fact]
+    public async Task A_folder_in_the_web_root_is_refused_even_below_the_data_folder()
+    {
+        var web = Directory.CreateDirectory(Path.Combine(_folder, "www")).FullName;
+        using var host = CreateHost(configure: builder => builder.UseWebRoot(web));
+        var admin = host.CreateSignedInClient();
+
+        var post = await admin.PostAsJsonAsync("/api/backup/targets", Target("Public", Path.Combine(web, "backups")));
+
+        Assert.Equal(HttpStatusCode.BadRequest, post.StatusCode);
+        Assert.Contains("web server", await post.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsJsonAsync("/api/backup/targets", Target("Private", Path.Combine(_folder, "private")))).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_PostgreSQL_location_is_not_a_folder()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+
+        var created = await admin.PostAsJsonAsync("/api/backup/targets", new BackupTargetInputDto("Pg", BackupTargetKind.PostgreSql, "Host=elsewhere;Database=x;Username=u;Password=p", 60, false));
+
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_stored_backup_folder_that_is_no_longer_allowed_fails_its_run_and_writes_nothing()
+    {
+        var outside = Path.Combine(Path.GetTempPath(), "pp-backup-stale-" + Guid.NewGuid().ToString("N"));
+        // The definitions file of an older version (or an edited one): the location is stored as it was, plain text without a key ring.
+        await File.WriteAllTextAsync(Path.Combine(_folder, "targets.json"),
+            System.Text.Json.JsonSerializer.Serialize(new[] { new { id = 1, name = "Old", kind = BackupTargetKind.Sqlite, location = outside, intervalMinutes = 60, enabled = true } }));
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+
+        var result = await ReadAsync<BackupTargetDto>(await admin.PostAsync("/api/backup/targets/1/run", null));
+
+        Assert.False(result.LastSucceeded);
+        Assert.Contains("settings file", result.LastMessage);
+        Assert.False(Directory.Exists(outside));
+    }
+
+    [Fact]
+    public async Task A_backup_folder_that_holds_the_live_database_behind_a_link_is_refused()
+    {
+        var real = Directory.CreateDirectory(Path.Combine(_folder, "real")).FullName;
+        var alias = Path.Combine(_folder, "alias");
+        if (!BackupFolderTests.TryLink(alias, real)) return; // creating links needs a privilege on Windows
+
+        using var host = CreateHost(configure: builder => builder.UseSetting("Database:ConnectionString", $"Data Source={Path.Combine(alias, "planner.db")}")); // the live file is named through the link
+        var admin = host.CreateSignedInClient();
+        var created = await ReadAsync<BackupTargetDto>(await admin.PostAsJsonAsync("/api/backup/targets", Target("Live", real))); // the backup folder through the real path
+
+        var result = await ReadAsync<BackupTargetDto>(await admin.PostAsync($"/api/backup/targets/{created.Id}/run", null));
+
+        Assert.False(result.LastSucceeded);
+        Assert.Contains("live database", result.LastMessage);
     }
 
     private static List<string> BeltNamesIn(string folder) => Query(Path.Combine(folder, "planner.db"), "SELECT Name FROM Belts ORDER BY Name");

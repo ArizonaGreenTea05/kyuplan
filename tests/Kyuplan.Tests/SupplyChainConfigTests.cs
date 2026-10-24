@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Kyuplan.Contracts;
 
 namespace Kyuplan.Tests;
 
@@ -212,6 +213,58 @@ public partial class SupplyChainConfigTests
         Assert.DoesNotMatch(@"trivy-action@v", release);
         Assert.Contains("format: cyclonedx", release);
         Assert.Contains("artifacts/sbom/*", release);
+    }
+
+    [Fact]
+    public void The_pr_build_builds_the_three_artifacts_replaces_the_old_ones_and_never_touches_the_release_secrets()
+    {
+        var workflow = Read(".github/workflows/pr-build.yml");
+        // WPF installer and Android APK (shared with the preview), and the image, which carries both
+        var clients = Read(".github/workflows/build-clients.yml");
+        Assert.Contains("src/Kyuplan.Client.Wpf", clients);
+        Assert.Contains("src/Kyuplan.Client.Android", clients);
+        Assert.Contains("uses: ./.github/workflows/build-clients.yml", workflow);
+        Assert.Contains("build-contexts: installer=artifacts/installer", workflow);
+        Assert.Matches(@"needs:\s*clients\b", workflow);
+        // a new commit replaces the release (with its files and tag), the image tag and the comment; closing removes them
+        Assert.Contains("gh release delete \"$TAG\" --cleanup-tag", workflow);
+        Assert.Contains("<!-- pr-build -->", workflow);
+        Assert.Contains("types: [opened, reopened, synchronize, ready_for_review, closed]", workflow);
+        Assert.Contains("cancel-in-progress: true", workflow);
+        // forks get no token that can write
+        Assert.Contains("github.event.pull_request.head.repo.full_name == github.repository", workflow);
+        // only the built-in token: the signing keys of the release stay out of builds of unreviewed code
+        foreach (var file in new[] { workflow, clients, Read(".github/workflows/preview.yml") })
+        {
+            Assert.DoesNotContain("WINDOWS_CERT", file);
+            Assert.DoesNotContain("UPDATE_SIGNING_KEY", file);
+            Assert.DoesNotContain("ANDROID_KEY", file);
+        }
+
+        // a name the installer parser accepts, so the server offers the installers inside the image
+        Assert.NotNull(ClientDownload.Parse("Kyuplan-windows-0.0.0-pr.12.3.exe"));
+        Assert.NotNull(ClientDownload.Parse("Kyuplan-android-0.0.0-pr.12.3.apk"));
+        Assert.Contains("0.0.0-pr.${{ github.event.pull_request.number }}.${{ github.run_number }}", workflow);
+    }
+
+    [Fact]
+    public void The_preview_publishes_every_commit_of_main_as_its_own_package_apart_from_the_releases()
+    {
+        var preview = Read(".github/workflows/preview.yml");
+        Assert.Contains("branches: [main]", preview);
+        Assert.Contains("uses: ./.github/workflows/build-clients.yml", preview);
+        Assert.Contains("kyuplan-preview", preview);
+        Assert.Contains("sha-${GITHUB_SHA::7}", preview);
+        // every commit gets its package: a newer run must not cancel one that is still publishing
+        Assert.Contains("cancel-in-progress: false", preview);
+        Assert.Contains("push: true", preview);
+        // the release's image has another name, so the preview cannot move its tags (latest, 1.2, ...)
+        Assert.DoesNotContain("/kyuplan\"", preview);
+        Assert.DoesNotContain("/kyuplan:", preview);
+        Assert.Contains("ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kyuplan\"", Read(".github/workflows/release.yml"));
+        Assert.NotNull(ClientDownload.Parse("Kyuplan-windows-0.0.0-preview.34.exe"));
+        Assert.NotNull(ClientDownload.Parse("Kyuplan-android-0.0.0-preview.34.apk"));
+        Assert.Contains("0.0.0-preview.${{ github.run_number }}", preview);
     }
 
     [Fact]

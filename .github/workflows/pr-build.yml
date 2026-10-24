@@ -1,0 +1,138 @@
+name: PR build
+
+# Every pull request gets the things a release has, to try the change out: the Docker image (ghcr.io/<owner>/kyuplan:pr-<number>), the WPF
+# installer and the Android APK. The installers are attached to the pre-release "pr-<number>" and the image is named in a comment on the PR.
+# Every new commit builds again and replaces all of it (the old release and image tag are overwritten, nothing piles up); closing the PR removes it.
+# The builds are not signed: the Windows installer is not Authenticode-signed and carries no update signature, the APK has a debug key. The
+# secrets of the release are not used, and a PR from a fork is not built (it gets no token that can write).
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: pr-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  VERSION: 0.0.0-pr.${{ github.event.pull_request.number }}.${{ github.run_number }}
+  TAG: pr-${{ github.event.pull_request.number }}
+
+jobs:
+  # Installer and APK, built by build-clients.yml (unsigned, tests are the job of ci.yml).
+  clients:
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/build-clients.yml
+    with:
+      version: 0.0.0-pr.${{ github.event.pull_request.number }}.${{ github.run_number }}
+
+  # The image carries the installers, like the release's, and is pushed as :pr-<number>. The tag is moved by every build.
+  image:
+    needs: clients
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: artifacts/installer
+
+      - name: Work out the image name
+        id: image
+        # Registry paths are lower case, owners are not.
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/kyuplan" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/Kyuplan.Api/Dockerfile
+          build-contexts: installer=artifacts/installer
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.name }}:${{ env.TAG }}
+          build-args: |
+            VERSION=${{ env.VERSION }}
+            DOCS_REPO_REF=${{ github.event.pull_request.head.ref }}
+            REPOSITORY_URL=${{ github.server_url }}/${{ github.repository }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.revision=${{ github.event.pull_request.head.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The old release of this PR goes with its tag and files, the new one carries only the files of this build.
+      - name: Replace the pre-release of the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.image.outputs.name }}:${{ env.TAG }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" artifacts/installer/* --prerelease --target "$SHA" \
+            --title "PR #${{ github.event.pull_request.number }} build $VERSION" \
+            --notes "Test build of pull request #${{ github.event.pull_request.number }} (commit \`${SHA::7}\`), replaced by every new commit and deleted when the PR is closed. Not signed. Docker image: \`$IMAGE\`."
+
+      # One comment per PR, found by its marker and edited by every build.
+      - name: Comment on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ steps.image.outputs.name }}:${{ env.TAG }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          base="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$TAG"
+          cat > comment.md <<EOF
+          <!-- pr-build -->
+          ### Test build of \`${SHA::7}\`
+
+          | | |
+          |---|---|
+          | Docker image | \`docker pull $IMAGE\` |
+          | Windows installer | [Kyuplan-windows-$VERSION.exe]($base/Kyuplan-windows-$VERSION.exe) |
+          | Android APK | [Kyuplan-android-$VERSION.apk]($base/Kyuplan-android-$VERSION.apk) |
+
+          Everything is replaced by the next commit and removed when the PR is closed. The builds are not signed ([all files]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$TAG)).
+          EOF
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --jq '.[] | select(.body | startswith("<!-- pr-build -->")) | .id' | head -n1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md > /dev/null
+          else
+            gh pr comment "$PR" --body-file comment.md
+          fi
+
+  # A closed PR takes its release, its tag and its image tag with it. The comment stays, as the record of what was built.
+  cleanup:
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the release and the image tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OWNER_TYPE: ${{ github.event.repository.owner.type }}
+        run: |
+          gh release delete "$TAG" --cleanup-tag --yes || echo "No pre-release $TAG."
+
+          # The package belongs to the user or organisation that owns the repository.
+          scope=$([ "$OWNER_TYPE" = Organization ] && echo orgs || echo users)
+          versions=$(gh api --paginate "$scope/$GITHUB_REPOSITORY_OWNER/packages/container/kyuplan/versions" \
+            --jq ".[] | select(.metadata.container.tags | index(\"$TAG\")) | .id") || versions=
+          for id in $versions; do
+            gh api -X DELETE "$scope/$GITHUB_REPOSITORY_OWNER/packages/container/kyuplan/versions/$id" \
+              || echo "::warning::Could not delete the image version $id of $TAG; delete it under the repository's Packages."
+          done

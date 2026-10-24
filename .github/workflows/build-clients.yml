@@ -1,0 +1,80 @@
+name: Build clients
+
+# Builds the installer of the WPF client and the Android APK, unsigned, and uploads them as the artifacts "installer-windows" and
+# "installer-android" (Kyuplan-<platform>-<version>.<ext>). Used by pr-build.yml and preview.yml, which put them into the Docker image.
+# The release builds its own, signed ones (release.yml). Tests are the job of ci.yml.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The version of the builds, e.g. 0.0.0-pr.12.3. Android orders its builds by the run number.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish the WPF client
+        run: dotnet publish src/Kyuplan.Client.Wpf -c Release -r win-x64 --self-contained -p:Version=$VERSION -o artifacts/wpf
+
+      # Inno Setup is part of the runner image.
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          # Windows file versions have four numbers: 0.0.0-pr.12.3 -> 0.0.0.0
+          $info = ((($env:VERSION -split '-')[0] + '.0.0') -split '\.')[0..3] -join '.'
+          & $iscc "/DAppVersion=$env:VERSION" "/DVersionInfo=$info" `
+            "/DSourceDir=$PWD\artifacts\wpf" "/DOutputDir=$PWD\artifacts\installer" installer\Kyuplan.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-windows
+          path: artifacts/installer/Kyuplan-windows-${{ inputs.version }}.exe
+          if-no-files-found: error
+
+  android:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install the Android workload
+        run: dotnet workload install android
+
+      # No keystore: the APK has a debug key. The version code is the run number, so a later build installs over an earlier one
+      # (a release has a much higher code; a phone with a release installed has to uninstall it first).
+      - name: Build the app
+        run: |
+          dotnet publish src/Kyuplan.Client.Android -c Release -p:Version="$VERSION" -p:ApplicationVersion="$GITHUB_RUN_NUMBER" -o artifacts/android
+          mkdir -p artifacts/installer
+          cp artifacts/android/org.kyuplan.client-Signed.apk "artifacts/installer/Kyuplan-android-$VERSION.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-android
+          path: artifacts/installer/Kyuplan-android-${{ inputs.version }}.apk
+          if-no-files-found: error

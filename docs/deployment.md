@@ -202,6 +202,27 @@ git push origin v0.1
 The workflow is `.github/workflows/release.yml` (it reads the tag with `.github/actions/release-version` and publishes the release
 with `.github/actions/publish-release`).
 
+### Test builds of pull requests
+
+`.github/workflows/pr-build.yml` (the installer and APK come from `build-clients.yml`) builds the Docker image, the WPF installer and the Android APK of every pull request from the same
+repository (not from a fork) and comments on the PR with where to find them:
+
+- the image is pushed as `ghcr.io/<owner>/kyuplan:pr-<number>` (amd64 and arm64, with the two installers inside, like the release's);
+- the installers are attached to the pre-release `pr-<number>`, named like a release's (`Kyuplan-windows-0.0.0-pr.<number>.<run>.exe`).
+
+Every new commit builds again and **replaces** all of it: the old pre-release with its files and tag is deleted, the image tag is moved, and
+the comment is edited. Closing the PR deletes the pre-release, the tag and the image tag. The builds are not signed (no secrets of the release
+are used): the installer has no Authenticode or update signature, so an installed client does not update itself from it, and the APK has a debug
+key, so a phone that has a release installed must uninstall it first. The tests are the job of `ci.yml`.
+
+### Preview packages of main
+
+`.github/workflows/preview.yml` publishes the Docker image of every commit on `main` as its own package, **independent of the releases**:
+`ghcr.io/<owner>/kyuplan-preview`, tagged `sha-<first 7 characters of the commit>` and `main` (always the latest commit). The releases push
+`ghcr.io/<owner>/kyuplan` from a tag and never touch these tags, and the preview never moves `latest`. Like a release's image it carries the
+installers (unsigned, version `0.0.0-preview.<run>`; the builds are shared with the PR builds in `.github/workflows/build-clients.yml`).
+Every commit gets its package; old ones stay until you delete them under the repository's *Packages*. The tests are the job of `ci.yml`.
+
 ### Dependency and supply-chain checks
 
 - **Updates**: Dependabot (`.github/dependabot.yml`) opens one pull request a week per ecosystem for the NuGet packages

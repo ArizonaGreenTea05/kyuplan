@@ -199,6 +199,15 @@ public partial class SupplyChainConfigTests
     }
 
     [Fact]
+    public void The_release_version_action_strips_the_carriage_returns_of_jq_on_the_windows_runner()
+    {
+        // jq.exe ends lines with CRLF: "true\r" != "true" failed the release with "a word appears twice"
+        var lines = Read(".github/actions/release-version/action.yml").Split('\n').Where(l => l.Contains("jq -r")).ToList();
+        Assert.Equal(2, lines.Count);
+        Assert.All(lines, l => Assert.Contains("| tr -d '\\r')", l));
+    }
+
+    [Fact]
     public void The_release_scans_the_image_before_it_pushes_it_and_attaches_the_sbom()
     {
         var release = Read(".github/workflows/release.yml");

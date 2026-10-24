@@ -47,9 +47,10 @@ runs:
         # The name comes from codenames.json and depends on the major number alone: stable within a major, different for every other major.
         # That holds while no word appears twice in a list, the two lists have no common divisor, and the major is below adjectives * nouns;
         # all three are checked, so a name can never be used twice (a release fails instead).
+        # jq.exe on the windows runner ends its lines with CRLF, so both jq calls below pipe through tr -d '\r'.
         names="$GITHUB_ACTION_PATH/codenames.json"
         major="${version%%.*}"
-        read -r a n unique < <(jq -r '"\(.adjectives | length) \(.nouns | length) \((.adjectives | unique | length) == (.adjectives | length) and (.nouns | unique | length) == (.nouns | length))"' "$names")
+        read -r a n unique < <(jq -r '"\(.adjectives | length) \(.nouns | length) \((.adjectives | unique | length) == (.adjectives | length) and (.nouns | unique | length) == (.nouns | length))"' "$names" | tr -d '\r')
         gcd() { local x=$1 y=$2; while ((y)); do set -- "$y" $((x % y)); x=$1 y=$2; done; echo "$x"; }
         if [[ "$unique" != true ]]; then
           echo "::error::codenames.json: a word appears twice in a list, so two majors could get the same name."
@@ -63,7 +64,7 @@ runs:
           echo "::error::Major $major has no name left: codenames.json offers $((a * n)) (adjectives x nouns). Add words so that the counts stay without a common divisor."
           exit 1
         fi
-        codename=$(jq -r --argjson m "$major" '"\(.adjectives[$m % (.adjectives | length)]) \(.nouns[$m % (.nouns | length)])"' "$names")
+        codename=$(jq -r --argjson m "$major" '"\(.adjectives[$m % (.adjectives | length)]) \(.nouns[$m % (.nouns | length)])"' "$names" | tr -d '\r')
 
         {
           echo "codename=$codename"

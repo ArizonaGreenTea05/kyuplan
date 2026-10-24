@@ -192,7 +192,7 @@ jobs:
     container: archlinux:latest
     steps:
       - name: Install the build tools
-        run: pacman -Syu --noconfirm --needed base-devel git dotnet-sdk openssl sudo
+        run: pacman -Syu --noconfirm --needed base-devel git dotnet-sdk openssl sudo github-cli jq
 
       - uses: actions/checkout@v7
 

@@ -26,6 +26,9 @@ runs:
         TAG: ${{ github.ref_name }}
         GH_TOKEN: ${{ github.token }}
       run: |
+        for tool in gh jq; do
+          command -v "$tool" > /dev/null || { echo "::error::'$tool' is not installed on this runner (the release-version action needs gh and jq; add them to a container job)."; exit 1; }
+        done
         version="$TAG"
         if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
           echo "::error::The tag '$TAG' is not of the form v<major>.<minor>[.<patch>][-<prerelease>], for example v0.1 or v1.2.3."

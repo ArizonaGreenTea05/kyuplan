@@ -27,6 +27,12 @@ public sealed class DataSourceOptions
     /// <summary>How long what the script returned is reused before it is asked again.</summary>
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(15);
 
+    /// <summary>
+    /// How long a failed run (an error or the timeout) is remembered: calls for the same data in that time get the same error at once
+    /// instead of starting the script again, which would queue behind a service that does not answer. Zero or less = every call tries again.
+    /// </summary>
+    public TimeSpan FailureCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
+
     /// <summary>Whether the script may reach loopback, "this network", link-local and the cloud metadata addresses (<c>localhost</c>, <c>169.254.x.x</c>, <c>fd00:ec2::/32</c>).</summary>
     public bool AllowLocalAddresses { get; set; }
 

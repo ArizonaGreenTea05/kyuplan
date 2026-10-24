@@ -135,6 +135,10 @@ Rules to know:
   128 MB of memory, after `DataSource:ScriptMaxStatements` statements (10 million, `0` = no limit) or at 300 nested calls. Every run is logged with
   its outcome and duration. A script that fails (an exception, a result that is not as described above) makes the pages show the
   error message and the server log the details; the rest of kyuplan keeps working with what it has.
+- What the script returns is kept for `DataSource:CacheDuration` (15 minutes); the **Refresh** button drops it. Callers who need the same data at the same time share one
+  run. A **failed** run (an error or the timeout) is remembered for `DataSource:FailureCacheDuration` (30 seconds, `00:00:00` = off): in that time everybody gets the same
+  error message, with the seconds left, instead of starting the script again behind a service that does not answer. After a timeout (of the script, or of a single request, which is 30 seconds) that holds for all data, not only for the
+  data that was asked, because the service answers for none of it.
 - **Treat the script like code of the server.** Whoever may save the settings (`settings.edit`) can make the server send requests to any address it
   can reach (addresses inside your network only once `DataSource:AllowPrivateAddresses` / `AllowLocalAddresses` allow them). Keep that permission to people you trust. Tokens in the script are stored in `settings.json`
   as plain text, so protect that file; the script is also part of backups of the settings file.

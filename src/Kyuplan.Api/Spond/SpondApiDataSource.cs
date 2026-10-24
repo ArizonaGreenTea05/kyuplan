@@ -100,8 +100,8 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
             }
 
             var mapped = groups.Select(g => MapGroup(g)).ToList();
-            Store(ProfilesKey, MemberIdsByProfile(groups));
             Store("groups", mapped);
+            Store(ProfilesKey, MemberIdsByProfile(groups)); // stored last: it never expires before the groups do
             return mapped;
         }
         finally
@@ -146,6 +146,7 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
     {
         var key = $"events:{groupId}:{month:yyyy-MM}";
         if (_cache.TryGetValue(key, out IReadOnlyList<EventInfo>? cached) && cached is not null) return cached;
+        var members = await GetMemberIdsAsync(cancellationToken);
         try
         {
             await _gate.WaitAsync(cancellationToken);
@@ -179,15 +180,37 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
                 return result;
             });
 
-            _cache.TryGetValue(ProfilesKey, out IReadOnlyDictionary<string, string>? members);
             var mapped = spondEvents.Select(e => MapEvent(e, members)).ToList();
-            Store(key, mapped, mapped.Count == 0 ? EmptyResultCacheDuration : _options.CacheDuration);
+
+            // Without the member lookup the hosts are not recognised: keep that result only briefly, so that it is mapped again soon.
+            Store(key, mapped, mapped.Count == 0 || members is null ? EmptyResultCacheDuration : _options.CacheDuration);
             return mapped;
         }
         finally
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// The member ids by profile id, to turn the owners of an event into members. If they are not cached (the groups were never loaded or
+    /// have expired) the groups are loaded first; <c>null</c> if Spond cannot deliver them. Must be called without <see cref="_gate"/> held.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>?> GetMemberIdsAsync(CancellationToken cancellationToken)
+    {
+        if (_cache.TryGetValue(ProfilesKey, out IReadOnlyDictionary<string, string>? members) && members is not null) return members;
+
+        try
+        {
+            await GetGroupsAsync(cancellationToken);
+        }
+        catch (SpondUnavailableException ex)
+        {
+            _logger.LogWarning("The groups are needed to recognise the hosts of the events, but could not be loaded: {Message}", ex.Message);
+            return null;
+        }
+
+        return _cache.TryGetValue(ProfilesKey, out members) ? members : null;
     }
 
     private void Store<T>(string key, T value, TimeSpan? duration = null) =>

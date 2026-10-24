@@ -176,7 +176,7 @@ public sealed class ManualDataService(PlannerDbContext db)
         var valid = await db.ManualMembers.Where(m => m.GroupId == manualEvent.GroupId && ids.Contains(m.Id)).CountAsync(cancellationToken);
         if (valid != ids.Count) throw new InvalidInputException("invitations: every invited member must belong to the event's group.");
 
-        var trainerIds = (input.TrainerIds ?? []).Distinct().ToList();
+        var trainerIds = (input.TrainerIds ?? []).Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id.Trim()).Distinct().ToList();
         var validTrainers = await db.ManualMembers.Where(m => m.GroupId == manualEvent.GroupId && trainerIds.Contains(m.Id)).CountAsync(cancellationToken);
         if (validTrainers != trainerIds.Count) throw new InvalidInputException("trainerIds: every trainer must be a member of the event's group.");
 

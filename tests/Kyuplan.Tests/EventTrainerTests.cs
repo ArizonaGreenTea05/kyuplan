@@ -167,6 +167,12 @@ public sealed class EventTrainerTests
             new ManualEventInputDto("Training", start, start.AddHours(1), false, invitations, [tina.Id, tina.Id]));
         Assert.Equal([tina.Id], created.TrainerIds);
 
+        // Blank and null entries are left out, the ids are trimmed.
+        var tidy = await admin.PutAsJsonAsync($"/api/manual/events/{created.Id}",
+            new ManualEventInputDto("Training", start, start.AddHours(1), false, invitations, [$" {tina.Id} ", "", "  ", null!, tina.Id]));
+        Assert.Equal(HttpStatusCode.OK, tidy.StatusCode);
+        Assert.Equal([tina.Id], (await tidy.Content.ReadFromJsonAsync<ManualEventDto>())!.TrainerIds);
+
         // The trainer is invited and said yes, still the event counts for Anna only.
         var from = DateOnly.FromDateTime(start.UtcDateTime.AddDays(-2));
         var to = DateOnly.FromDateTime(DateTime.UtcNow);

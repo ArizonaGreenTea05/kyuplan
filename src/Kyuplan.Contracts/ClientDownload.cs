@@ -28,7 +28,7 @@ public static partial class ClientDownload
         return match.Success ? (match.Groups[1].Value.ToLowerInvariant(), match.Groups[2].Value) : null;
     }
 
-    [GeneratedRegex(@"^Kyuplan-(windows|macos|linux)-(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)\.(?:exe|msi|dmg|pkg|deb|rpm|appimage|zip)$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^Kyuplan-(windows|macos|linux|android)-(\d+\.\d+(?:\.\d+)?(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?)\.(?:exe|msi|dmg|pkg|deb|rpm|appimage|zip|apk)$", RegexOptions.IgnoreCase)]
     private static partial Regex InstallerName();
 
     /// <summary>

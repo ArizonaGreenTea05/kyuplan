@@ -202,6 +202,9 @@
   <data name="Update_Hint" xml:space="preserve">
     <value>Dieses Programm ist Version {0}, der Server bietet {1} an. Das Programm schließt sich, installiert die Aktualisierung und startet neu.</value>
   </data>
+  <data name="Update_AllowInstall" xml:space="preserve">
+    <value>Erlaube dieser App in den soeben geöffneten Einstellungen, Apps zu installieren, und tippe dann erneut auf die Aktualisieren-Schaltfläche.</value>
+  </data>
   <data name="Download_Button" xml:space="preserve">
     <value>Für {0} herunterladen</value>
   </data>

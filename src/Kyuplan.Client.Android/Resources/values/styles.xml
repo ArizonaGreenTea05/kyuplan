@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The pages draw themselves (Ui.cs); the theme only has to be light or dark in step with the system and not bring an action bar. -->
+  <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:windowBackground">@color/window_background</item>
+    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+  </style>
+</resources>

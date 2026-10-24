@@ -24,6 +24,8 @@
     <!-- Draws the SVG logos in the WPF client (WPF cannot). It brings SkiaSharp and the matching native library along. -->
     <PackageVersion Include="Svg.Skia" Version="5.2.3" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.13" />
+    <!-- The container of the Android client, which has no generic host. -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.13" />

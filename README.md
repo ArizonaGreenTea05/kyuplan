@@ -16,7 +16,7 @@ kyuplan reads the groups, members and events of your club from a **data source**
 - **Suggests who is fit for the next exam** from belt, the day the belt was received, age and training attendance, and lets you save the members you put forward.
 - **Shows what happened at past exams**: who attended and who received which belt.
 - **Attendance statistics** with filters, comments and tags, exam prices and payments, calendar feeds (ICS), backups.
-- **Web and Windows desktop client**, both in **English and German**, with themes and your own club branding.
+- **Web, Windows desktop and Android client**, all in **English and German**, with themes and your own club branding.
 - **Your data stays with you**: SQLite or PostgreSQL, accounts with roles and permissions, no cloud service besides the data source you choose.
 
 ## Self-host it in two minutes

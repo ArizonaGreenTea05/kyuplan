@@ -210,6 +210,9 @@
     <value>This program is version {0}; the server offers {1}. The program closes, installs the update and starts again.</value>
     <comment>{0} = installed version, {1} = new version.</comment>
   </data>
+  <data name="Update_AllowInstall" xml:space="preserve">
+    <value>To install the update, allow this app to install apps in the settings that just opened, then tap the update button again.</value>
+  </data>
   <data name="Download_Button" xml:space="preserve">
     <value>Download for {0}</value>
     <comment>{0} = name of the operating system (Windows, macOS, Linux).</comment>

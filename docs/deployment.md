@@ -8,7 +8,7 @@
 - [Choosing the database](#choosing-the-database) · [HTTPS and reverse proxies](#https-and-reverse-proxies)
 - [Azure](#azure) · [Other clouds](#other-clouds-and-platforms) · [Kubernetes](#kubernetes) · [TrueNAS](#truenas)
 - [Backup, restore and updates](#backup-restore-and-updates) · [Troubleshooting](#troubleshooting)
-- [The WPF client installer](#the-wpf-client-installer) · [Building the pieces by hand](#building-the-pieces-by-hand)
+- [The WPF client installer](#the-wpf-client-installer) · [The Android client](#the-android-client) · [Building the pieces by hand](#building-the-pieces-by-hand)
 
 ## Step-by-step: your first deployment
 
@@ -126,7 +126,7 @@ The full list is the configuration table of the [reference](reference.md#configu
 ---
 
 The whole framework has **one version** and is released by pushing one tag, `v<version>`. The release is a single Docker image with
-everything in it: the API, the web client **and the installers of the desktop clients** (today Windows). To set Kyuplan up, deploy that one container and do the rest in
+everything in it: the API, the web client **and the installers of the clients** (Windows, and the Android app). To set Kyuplan up, deploy that one container and do the rest in
 the web client. It runs **anywhere Docker runs** (see [Where and how to run it](#where-and-how-to-run-it-overview)) and keeps its data in **SQLite (default) or PostgreSQL** (see [Choosing the database](#choosing-the-database)).
 
 | Tag | What the workflow produces |
@@ -135,18 +135,18 @@ the web client. It runs **anywhere Docker runs** (see [Where and how to run it](
 
 How the pieces find each other:
 
-- **One installer per operating system** (`windows`, `macos`, `linux`: `ClientPlatform` in `Kyuplan.Contracts`). Its file is named
-  `Kyuplan-<platform>-<version>.<extension>` (`Kyuplan-windows-1.2.3.exe`) and lies in the folder `downloads` next to the program
+- **One installer per operating system** (`windows`, `macos`, `linux`, `android`: `ClientPlatform` in `Kyuplan.Contracts`). Its file is named
+  `Kyuplan-<platform>-<version>.<extension>` (`Kyuplan-windows-1.2.3.exe`, `Kyuplan-android-1.2.3.apk`) and lies in the folder `downloads` next to the program
   (`ClientDownload__Directory` sets another one); of several versions of a platform the newest counts. A build from source or a local
   `docker build` has none; the server then offers no download and no update.
 - The server **offers each installer for download**: `GET /api/client/<platform>` (needs a login, like the rest of the API). The web
   client shows an eye-catching *Download for <system>* button in its left panel for the system the browser runs on, when the server has
-  an installer for it (none on phones).
+  an installer for it (on an Android phone the Android app; none on iPhones).
 - `GET /api/info` carries `ClientVersions`, the version of every installer by platform. An installed **desktop client compares the entry
   of its own platform with its own version** when it has signed in and then every hour; when the server's is newer, an *Update to x.y.z*
   button appears in its left panel. A click downloads the installer from the server, runs it silently (the WPF client: `/SILENT
   /Relaunch=1`), ends the program, and the installer starts the new version when it is done. Updating the server therefore updates the clients.
-  The WPF client only runs a downloaded installer that it can trust, so a server that has been taken over cannot push code to the clients. Either
+  The WPF client only runs a downloaded installer that it can trust (the Android app hands the APK to Android, which only installs an update signed with the key of the installed app; see [The Android client](#the-android-client)), so a server that has been taken over cannot push code to the clients. Either
   works, the first needs no certificate:
   - **Update key (recommended).** The release signs the installer with a private key (ECDSA P-256) and publishes the signature beside it
     (`Kyuplan-windows-<version>.exe.sig`, served at `GET /api/client/<platform>/signature`); the public key is built into the program
@@ -165,7 +165,7 @@ How the pieces find each other:
 
   An installer with neither is deleted and not run (the update then has to be done by hand); for development the environment variable
   `KYUPLAN_ALLOW_UNSIGNED_UPDATES=1` lifts that for a program that is not Authenticode-signed.
-- **Adding a client for another system** (say a macOS or Linux app): give it an `IClientUpdater` (`Client.Shared`) that names its
+- **Adding a client for another system** (say a macOS or Linux app; the Android app is one, see [The Android client](#the-android-client)): give it an `IClientUpdater` (`Client.Shared`) that names its
   platform, installer extension and version and knows how to run its installer; register `ClientUpdateViewModel` and show its button as
   the WPF client does. In `.github/workflows/release.yml` add a job next to `windows` that builds it and uploads its installer as the
   artifact `installer-<platform>` (named as above), and add the job to `needs` of `image`. Nothing in the API or the web client changes.
@@ -181,7 +181,7 @@ git push origin v0.1
   belongs to the tag only, the version of the application is `0.1` or `1.2.3`. Anything else (`0.1`, `v1`, `v1.2.3+x`) makes the
   workflow fail at once. (Tags of the earlier per-app releases, `api/v...` and `wpf/v...`, no longer start a workflow.)
 - The workflow first audits the dependencies (see [Dependency and supply-chain checks](#dependency-and-supply-chain-checks)), then runs the whole test suite (on Windows: it contains tests of the WPF client's encrypted login file), then
-  publishes and packs the WPF client into the installer (every client has such a job), and builds the documentation (see [The documentation](#the-documentation)). Only when they worked, the Docker image (which contains the installer) is built,
+  publishes and packs the WPF client into the installer and builds the Android APK (every client has such a job), and builds the documentation (see [The documentation](#the-documentation)). Only when they worked, the Docker image (which contains the installer) is built,
   scanned for vulnerabilities, pushed and the release published.
 - **The version of the tag is the version of everything**: it is passed to every build as `-p:Version=0.1`, so it becomes the assembly,
   file and informational version of the API, the clients and the installer. The API reports it (`GET /api/info`, shown in both clients);
@@ -501,6 +501,38 @@ server (*Download for Windows*) or from the GitHub release; once installed, the 
   when the release carries the update-key signature (`UPDATE_SIGNING_KEY`).
 - The user's own data (server address, language, theme, last filter, the remembered login) is in `%LocalAppData%\Kyuplan` and stays when the
   program is uninstalled.
+
+## The Android client
+
+`Kyuplan-android-<version>.apk` is the native Android app (`src/Kyuplan.Client.Android`, .NET for Android, Android 7.0 / API 24 and later). It
+is built from the same shared view models as the other clients and has the pages of everyday use in a **tab bar at the bottom**: dashboard,
+calendar, exams, members and account. The statistics and the administration pages are left out on purpose. Users get it from the web client
+(*Download for Android*, shown on an Android phone) or the GitHub release; once installed, it offers the updates the server carries.
+
+- **First start**: the app asks for the address of the server (kept in the app's private preferences) and signs in. The remembered login is
+  encrypted with a key of the Android Keystore and only handed out for the server it was saved for. HTTP without TLS works when the API allows it
+  (`Api__AllowInsecureHttp`, see [HTTPS](#https-and-reverse-proxies)); prefer HTTPS.
+- **Signing**: Android installs an update only when it is signed with the **same key** as the installed app. The release workflow signs with
+  your keystore when the repository secrets `ANDROID_KEYSTORE` (the `.keystore` file, Base64-encoded), `ANDROID_KEYSTORE_PASSWORD`,
+  `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` exist. Without them the APK is signed with a throw-away debug key: it installs, but the next release
+  (another debug key) cannot update it. Create the keystore once and keep it safe; a lost key means everybody has to uninstall and install again:
+  ```
+  keytool -genkeypair -v -keystore kyuplan.keystore -alias kyuplan -keyalg RSA -keysize 4096 -validity 10000
+  base64 -w0 kyuplan.keystore    # the value of ANDROID_KEYSTORE
+  ```
+- **Updates**: the app compares `ClientVersions["android"]` of `GET /api/info` with its own version (shown as the *Update to x.y.z* bar), downloads
+  the APK and checks the update-key signature beside it when there is one (`Kyuplan-android-<version>.apk.sig`, the same `UPDATE_SIGNING_KEY`
+  as the Windows installer), then hands the file to the Android package installer. The user confirms the installation, and the first time
+  allows the app to install apps (a setting Android opens by itself). The version code Android orders updates by is made from the version
+  (`1.2.3` becomes `1002003`), so minor versions stay below 1000.
+- **Building by hand** needs the .NET 10 SDK, the Android workload (`dotnet workload install android`) and a JDK 21 plus the Android SDK
+  (the workload finds a Visual Studio installation of them, or set `JAVA_HOME` and `AndroidSdkDirectory`). The project is part of
+  `Kyuplan.sln`, so building the whole solution needs them too; `dotnet test tests/Kyuplan.Tests` does not:
+  ```
+  dotnet publish src/Kyuplan.Client.Android -c Release -p:Version=1.2.3 -p:ApplicationVersion=1002003 -o artifacts/android
+  # artifacts/android/org.kyuplan.client-Signed.apk; add -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=... to sign with your own key
+  ```
+  Copy the APK as `Kyuplan-android-1.2.3.apk` into the server's `downloads` folder to offer it.
 
 ## Building the pieces by hand
 

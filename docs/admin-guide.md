@@ -572,13 +572,18 @@ The backup databases and files protect against losing the server's disk or a wro
 
 ## Desktop clients and updates
 
-The server image carries the Windows installer. The web client shows a **Download for Windows** button for the visitor's system, and
-installed desktop apps check the server every hour and offer an **Update to x.y.z** button when the server's version is newer. So
+The server image carries the Windows installer and the Android app (`.apk`). The web client shows a **Download for Windows** or **Download for Android** button for the visitor's system, and
+installed apps check the server every hour and offer an **Update to x.y.z** button when the server's version is newer. So
 **updating the server updates the clients** (users click the button). Nothing has to be distributed by hand.
 
 Silent installation for managed PCs: `Kyuplan-windows-1.2.3.exe /VERYSILENT /SUPPRESSMSGBOXES`. The installer does not know the server
 address; each user enters it at first start (it is kept in `%LocalAppData%\Kyuplan\api-address.txt`). The installer is not code-signed, so SmartScreen
 warns on download. Users' local data (address, language, theme, last filter, remembered login) stays after uninstalling.
+
+The Android app is installed from the downloaded file: Android asks the user once to allow the browser to install apps. It updates itself the same
+way (the first update asks to allow the app itself to install apps). An update is only accepted by Android when it is signed with the same key as the
+installed app, so the release has to be signed with the keystore secrets described in the [deployment guide](deployment.md#the-android-client).
+The app has the pages of everyday use only (dashboard, calendar, exams, members, account), not the statistics and not the administration.
 
 ## Documentation for your users
 

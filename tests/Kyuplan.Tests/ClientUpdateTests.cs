@@ -51,6 +51,8 @@ public class ClientVersionTests
     [InlineData("Kyuplan-macos-2.0.dmg", "macos", "2.0")]
     [InlineData("Kyuplan-linux-2.0.0.AppImage", "linux", "2.0.0")]
     [InlineData("kyuplan-Linux-2.0.deb", "linux", "2.0")]
+    [InlineData("Kyuplan-android-1.2.3.apk", "android", "1.2.3")]
+    [InlineData("Kyuplan-android-2.0.0-beta.1.APK", "android", "2.0.0-beta.1")]
     public void Platform_and_version_are_read_from_the_file_name(string name, string platform, string version) =>
         Assert.Equal((platform, version), ClientDownload.Parse(name));
 
@@ -60,6 +62,8 @@ public class ClientVersionTests
     [InlineData("Kyuplan-beos-1.2.3.exe")]
     [InlineData("Kyuplan-Setup-1.2.3.exe")]
     [InlineData("Other-windows-1.2.3.exe")]
+    [InlineData("Kyuplan-android-1.2.3.apk.sig")]
+    [InlineData("Kyuplan-android-1.2.3.aab")]
     public void Other_files_are_no_installers(string name) => Assert.Null(ClientDownload.Parse(name));
 
     [Fact]
@@ -68,6 +72,10 @@ public class ClientVersionTests
         Assert.All(ClientPlatform.All, p => Assert.True(ClientPlatform.IsKnown(p)));
         Assert.Equal("macOS", ClientPlatform.DisplayName(ClientPlatform.MacOs));
         Assert.Equal("api/client/linux", ClientDownload.PathFor(ClientPlatform.Linux));
+        Assert.Equal("Android", ClientPlatform.DisplayName(ClientPlatform.Android));
+        Assert.Equal("api/client/android", ClientDownload.PathFor(ClientPlatform.Android));
+        Assert.Equal("Kyuplan-android-1.2.3.apk", ClientDownload.FileName(ClientPlatform.Android, "1.2.3", "apk"));
+        Assert.True(ClientPlatform.IsKnown("android"));
         Assert.False(ClientPlatform.IsKnown("beos"));
     }
 }
@@ -356,6 +364,26 @@ public sealed class ClientDownloadApiTests(WebApplicationFactory<Program> factor
 
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/" + ClientDownload.PathFor(ClientPlatform.Linux))).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/client/beos")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_android_app_is_offered_like_the_desktop_installers()
+    {
+        Put("Kyuplan-android-1.2.3.apk", 9, 8, 7);
+        Put("Kyuplan-android-1.2.3.apk.sig", 6);
+        var client = Host().CreateSignedInClient();
+        var api = new PlannerApiClient(client);
+
+        Assert.Equal("1.2.3", (await api.GetInfoAsync()).ClientVersion(ClientPlatform.Android));
+
+        using var received = new MemoryStream();
+        await api.DownloadClientAsync(ClientPlatform.Android, received);
+        Assert.Equal(new byte[] { 9, 8, 7 }, received.ToArray());
+        Assert.Equal("Kyuplan-android-1.2.3.apk", (await client.GetAsync("/" + ClientDownload.PathFor(ClientPlatform.Android))).Content.Headers.ContentDisposition?.FileName);
+
+        using var signature = new MemoryStream();
+        Assert.True(await api.DownloadClientSignatureAsync(ClientPlatform.Android, signature));
+        Assert.Equal(new byte[] { 6 }, signature.ToArray());
     }
 
     [Fact]

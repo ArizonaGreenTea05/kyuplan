@@ -27,7 +27,7 @@ kyuplan is the planner for the club's belt exams. It reads the club's groups, me
 3. **Who trains regularly?** The attendance analysis shows how many of the events they were invited to each member accepted, plus
    figures that show how engaged each member is.
 
-It is used in a **web browser** and, on Windows, as an **installed desktop app**. Both show the same pages and work the same way.
+It is used in a **web browser**, on Windows as an **installed desktop app** and on Android as an **app on your phone**. They show the same data and work the same way; the phone app is the short version for day-to-day use (see [On your Android phone](#on-your-android-phone)).
 
 > **What "attended" means.** The data source records *answers to invitations*, not who actually stood in the hall. kyuplan counts a member as
 > having **attended** an event when they **accepted** the invitation. Somebody who accepted and stayed at home counts as present;
@@ -62,6 +62,21 @@ cancel the dialog, the page says that you are not signed in and offers **Try aga
 4. To use another server, sign out and press **Change …** next to the server address in the sign-in window.
 5. **Updates**: when the server has a newer version, an **Update to x.y.z** button appears at the bottom left. A click downloads and
    installs it, and the app restarts by itself.
+
+### On your Android phone
+
+1. Install the app. Open the address of your server in the phone's browser, sign in and use the **Download for Android** button (or take the
+   file `Kyuplan-android-<version>.apk` from your administrator). Android asks once whether the browser may install apps: allow that.
+2. At the first start the app asks for the **address of the server**, then the sign-in follows. Tick **Remember me on this computer** to stay
+   signed in; the login is kept encrypted, in a place only this app can use.
+3. The pages are the **tabs at the bottom**: **Dashboard**, **Calendar**, **Exams**, **Members** and **Account** (you only see the tabs you
+   may use). The group everything is about is chosen at the top. The calendar opens first; tap an event to see who was invited and what they
+   answered, and to write a comment about a member. In **Exams** you tick the candidates of an exam; in **Members** you search the list and open a member.
+4. **Account** has the language, the guides, **Change …** (another server) and **Sign out**.
+5. **Updates**: when the server has a newer version, an **Update to x.y.z** bar appears at the top. Tap it; Android asks you to confirm the
+   installation. The first time it asks you to allow this app to install apps.
+
+The phone app does not have the statistics and the administration pages; use the web client for those.
 
 ### Where the data comes from
 

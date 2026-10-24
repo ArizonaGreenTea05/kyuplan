@@ -24,13 +24,15 @@ kyuplan is a planner for a karate club's belt exams built on the club's Spond gr
 | API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, the `Spond.API` package |
 | Web client | Blazor WebAssembly, hand-written CSS, served by the API itself |
 | Desktop client | WPF, four designs (the Fluent theme that ships with .NET, Windows 10, Aero, native; Windows only), no control library, `Svg.Skia` for SVG logos |
+| Phone client | .NET for Android (`net10.0-android`), native views drawn in code, no UI library; a bottom tab bar over the shared view models |
 | Shared client code | typed API client, **all view models** (CommunityToolkit.Mvvm) and **all UI texts** (`.resx`) |
 | Tests | xUnit, a single project, in-memory SQLite |
 | Packaging | one Docker image (API + web client + the Windows installer), Inno Setup installer, GitHub Actions |
 
 ```
 Spond ──► Api ──JSON──► Client.Shared (API client + view models) ──► Blazor (WASM)
-                                                                 └──► WPF (Windows)
+                                                                 ├──► WPF (Windows)
+                                                                 └──► Android (APK)
 ```
 
 The guiding principle: **logic lives once**, in `Client.Shared` (what the UI does) or `Api` (what the server does). The two UI projects
@@ -51,7 +53,7 @@ contain **markup only** and bind to the same view models. If you find yourself w
 ```bash
 dotnet test tests/Kyuplan.Tests              # builds the dependencies and runs everything; Linux-safe, skips the WPF project
 dotnet test tests/Kyuplan.Tests --filter "FullyQualifiedName~ExamSuggestion"   # a narrow run
-dotnet build Kyuplan.sln                     # the whole solution, Windows only (includes WPF)
+dotnet build Kyuplan.sln                     # the whole solution, Windows only (includes WPF and, with the Android workload + JDK/SDK, the Android client)
 ```
 
 ### Run it locally (demo mode)
@@ -108,11 +110,12 @@ src/
   Kyuplan.Client.Shared  IPlannerApi + PlannerApiClient, ViewModels/, Localization/, Resources/Strings*.resx, Storage/
   Kyuplan.Client.Blazor  Pages/, Components/, Layout/, wwwroot/ (markup only)
   Kyuplan.Client.Wpf     Views/, Controls/, Themes/, Services/, ViewModels/ (shell glue only), Localization/
+  Kyuplan.Client.Android Screens/ (one per page), Kit/ (widgets, `Screen` base), Services/ (login store, updater), Resources/
 tests/Kyuplan.Tests      One xUnit project for everything
 docs/                    This documentation and the domain rules (Markdown, written for GitHub and for the Docusaurus site)
 website/                 Docusaurus project: one site per audience built from docs/ (scripts/audiences.mjs), served by the API under /docs
 deploy/                  Docker Compose files (generic, PostgreSQL, TrueNAS) and .env.example
-installer/               Inno Setup script of the WPF client
+installer/               Inno Setup script of the WPF client, and the public update key (also built into the Android app)
 assets/branding/         Placeholder logos and icons
 tools/                   Render-Branding.ps1 (program icon from the tab icon)
 .github/                 Release workflow and its composite actions
@@ -183,6 +186,13 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
 - **WPF**: `Views/*.xaml` with `{loc:Loc Key}` bindings; `ThemeService` loads the design the user picked (`Themes/Design.*.xaml`, see
   the WPF part of [Look](reference.md#look) in the reference) and applies the accent colour from the API to it;
   `DpapiLoginStore` keeps the remembered login encrypted for the Windows user; `IClientUpdater` implementation runs the installer for self-update.
+- **Android** (`src/Kyuplan.Client.Android`, part of `Kyuplan.sln`; building it needs the Android workload and a JDK/SDK): one
+  `MainActivity` shows the address question, the sign-in and then `MainScreen`. `MobileShellViewModel` (Client.Shared, tested) is the tab bar: the
+  pages of everyday use only, each tab present while the user may use it. A `Screen` (`Kit/Screen.cs`) draws a view model with plain Android
+  views (`Ui` has the widgets) and draws again, once per burst, when a view model it observes changes; texts come from the shared `Strings`
+  like everywhere (no layout files, nothing hard-coded). `KeystoreLoginStore` keeps the login encrypted with the Android Keystore,
+  `AndroidClientUpdater` + `UpdateFileProvider` hand the downloaded APK to the package installer. A new page: a `Screen`, an entry in
+  `MobileShellViewModel` and `MainScreen.CreatePage`. The screens have no automated tests (they need a device); keep logic in the view models.
 
 ## The rules that bite
 

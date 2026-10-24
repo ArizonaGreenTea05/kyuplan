@@ -244,4 +244,53 @@ public sealed class EventTrainerTests
         Assert.Equal(["Anna"], detail.Attendees.Select(a => a.Name));
         Assert.NotEqual(plain.Id, hosted.Id);
     }
+
+    [Fact]
+    public async Task A_calendar_feed_does_not_count_the_trainers_of_an_event_as_invited()
+    {
+        using var database = new InMemoryDatabase();
+        using var accounts = new InMemoryDatabase();
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("DataSource:Kind", "manual");
+            builder.UseSetting("Sync:Enabled", "false");
+            builder.UseSetting("DefaultData:Enabled", "false");
+            builder.UseSetting("Database:ConnectionString", database.ConnectionString);
+            TestAccounts.Configure(builder, accounts);
+        });
+        var admin = factory.CreateSignedInClient();
+
+        async Task<T> Post<T>(string url, object body)
+        {
+            var response = await admin.PostAsJsonAsync(url, body);
+            Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
+            return (await response.Content.ReadFromJsonAsync<T>())!;
+        }
+
+        var group = await Post<ManualGroupDto>("/api/manual/groups", new ManualNameInputDto("Dojo"));
+        var anna = await Post<ManualMemberDto>($"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Anna", null, null));
+        var tina = await Post<ManualMemberDto>($"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Tina", null, null));
+        var start = DateTimeOffset.UtcNow.AddHours(-1);
+        await Post<ManualEventDto>($"/api/manual/groups/{group.Id}/events", new ManualEventInputDto("Training", start, start.AddHours(2), false,
+            [new ManualInvitationDto(anna.Id, ManualRsvp.Accepted), new ManualInvitationDto(tina.Id, ManualRsvp.Accepted)], [tina.Id]));
+
+        var members = (await admin.GetFromJsonAsync<List<MemberDto>>($"/api/members?groupId={group.Id}"))!;
+        var annaId = members.Single(m => m.Name == "Anna").Id;
+        var tinaId = members.Single(m => m.Name == "Tina").Id;
+
+        async Task<int> EventsOfAsync(string invitation, params int[] memberIds)
+        {
+            var response = await admin.PostAsJsonAsync("/api/calendar-feeds", new CalendarFeedInputDto($"{invitation} {string.Join('-', memberIds)}",
+                [new CalendarSourceDto(CalendarSourceKinds.Events, group.Id, MemberIds: memberIds, Invitation: invitation)]));
+            response.EnsureSuccessStatusCode();
+            var feed = (await response.Content.ReadFromJsonAsync<CalendarFeedDto>())!;
+            var ics = await factory.CreateClient().GetStringAsync(new Uri(feed.Url).PathAndQuery);
+            return ics.Split("BEGIN:VEVENT").Length - 1;
+        }
+
+        Assert.Equal(1, await EventsOfAsync(EventInvitations.Any, annaId));
+        Assert.Equal(0, await EventsOfAsync(EventInvitations.Any, tinaId)); // Tina hosts: not invited
+        Assert.Equal(1, await EventsOfAsync(EventInvitations.Only, annaId)); // the host does not break "only these"
+        Assert.Equal(0, await EventsOfAsync(EventInvitations.All, annaId, tinaId));
+    }
 }

@@ -1,0 +1,13 @@
+{
+  "id": "matrix",
+  "name": "Matrix",
+  "nameDe": "Matrix",
+  "scheme": "dark",
+  "highContrast": false,
+  "accent": "#00ff41",
+  "colors": {
+    "ground": "#000a03", "sheet": "#031a0a", "sheetAlt": "#062a12", "sidebar": "#000502",
+    "text": "#c6ffd0", "muted": "#5fbf75", "rule": "#0b4a1d", "ruleStrong": "#00b82e",
+    "amber": "#d6ff3d", "amberWash": "#2a3a05", "red": "#ff5f5f", "redWash": "#3a0b0b"
+  }
+}

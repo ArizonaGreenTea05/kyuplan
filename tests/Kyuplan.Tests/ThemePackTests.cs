@@ -44,6 +44,28 @@ public class ThemePackRulesTests
         Assert.Equal(BuiltInThemePacks.All.Count, BuiltInThemePacks.All.Select(p => p.Id).Distinct().Count());
     }
 
+    [Fact]
+    public void Every_example_pack_in_the_docs_is_valid_and_named_after_its_id()
+    {
+        var folder = Path.Combine(RepositoryRoot(), "docs", "examples");
+        var files = Directory.GetFiles(folder, "*.json");
+        Assert.Contains(files, f => Path.GetFileName(f) == "matrix.json");
+        Assert.All(files, file =>
+        {
+            var pack = JsonSerializer.Deserialize<ThemePackDto>(File.ReadAllText(file), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            Assert.Null(ThemePackRules.Check(pack));
+            Assert.Equal(Path.GetFileNameWithoutExtension(file), pack!.Id);
+            Assert.DoesNotContain(BuiltInThemePacks.All, b => b.Id == pack.Id);
+        });
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "global.json"))) directory = directory.Parent;
+        return directory?.FullName ?? throw new InvalidOperationException("global.json not found above the test binaries.");
+    }
+
     [Theory]
     [InlineData(BuiltInThemePacks.HighContrastDark)]
     [InlineData(BuiltInThemePacks.HighContrastLight)]

@@ -446,7 +446,7 @@ borders, thick focus rings, underlined links) and some popular palettes (Nord, S
 To add one, use **Install theme pack ...** on the Branding page (permission `themes.edit`) and pick the file; a pack with the id of an
 installed one replaces it. Or put `<id>.json` into the `themes` folder next to `settings.json` (in the container: `/data/themes`; the
 folder can be moved with `Themes__Directory`): it is picked up at once, without a restart, and a file that is no valid pack is skipped
-(and named in the log). The file:
+(and named in the log). Ready-made examples to install are in the repository folder `docs/examples` (Cyberpunk 2077, Matrix). The file:
 
 ```json
 {

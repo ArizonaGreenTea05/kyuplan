@@ -332,6 +332,7 @@
                                             <th>@Strings.Manual_ColInvited</th>
                                             <th>@Strings.Manual_ColName</th>
                                             <th>@Strings.Manual_ColAnswer</th>
+                                            <th>@Strings.Manual_ColTrainer</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -349,6 +350,7 @@
                                                         }
                                                     </select>
                                                 </td>
+                                                <td><input type="checkbox" aria-label="@($"{Strings.Manual_ColTrainer}: {invitee.Name}")" checked="@invitee.IsTrainer" @onchange="e => invitee.IsTrainer = (bool)(e.Value ?? false)" /></td>
                                             </tr>
                                         }
                                     </tbody>

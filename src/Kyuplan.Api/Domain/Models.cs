@@ -28,10 +28,20 @@ public enum Rsvp
 /// <param name="Start">Start in the club time zone.</param>
 /// <param name="End">End in the club time zone.</param>
 /// <param name="Responses">Every invited member id with their answer. Members not in here were not invited.</param>
+/// <param name="Trainers">The ids of the members who host (train) the event. They run it instead of taking part: it counts for no statistic of theirs, whatever <paramref name="Responses"/> says about them.</param>
 public sealed record EventInfo(
     string Id,
     string Name,
     DateTimeOffset Start,
     DateTimeOffset End,
     bool Cancelled,
-    IReadOnlyDictionary<string, Rsvp> Responses);
+    IReadOnlyDictionary<string, Rsvp> Responses,
+    IReadOnlyCollection<string>? Trainers = null)
+{
+    /// <summary>The invitations of the members who take part: <see cref="Responses"/> without the <see cref="Trainers"/>. This is what every statistic reads.</summary>
+    public IEnumerable<KeyValuePair<string, Rsvp>> Participants =>
+        Trainers is { Count: > 0 } trainers ? Responses.Where(r => !trainers.Contains(r.Key)) : Responses;
+
+    /// <summary>Whether the member hosts the event.</summary>
+    public bool IsTrainer(string memberId) => Trainers?.Contains(memberId) == true;
+}

@@ -100,10 +100,10 @@ Your administrator uses this to try things out.
 ## Calendar
 
 The **Calendar** page shows the events of the selected group as in any calendar app: **Day**, **Week** (Monday to Sunday) or **Month**, with
-*Previous*, *Next* and *Today*. Cancelled events are struck through. The calendar only knows the events kyuplan reads from the data source (about the
+*Previous*, *Next* and *Today*. Cancelled events are struck through. The **trainers** of an event are in the tooltip of the event (and in the list of the web client's day and week view). The calendar only knows the events kyuplan reads from the data source (about the
 last year and the next six months).
 
-Choosing an event opens its **detail**: when it takes place, how many accepted, declined or did not answer, and **everybody invited** with their
+Choosing an event opens its **detail**: when it takes place, who its **trainers** (hosts) are, how many accepted, declined or did not answer, and **everybody invited** with their
 answer. Below each member you see the comments written about them **for this event** and, if you may write comments, a box to add one. A
 comment written there is **tagged automatically** with the event: kyuplan uses the tag that is connected to the event, and creates one
 (named after the event and its day) if there is none yet. The comment is an ordinary comment on the member; you find it on the Members page, and

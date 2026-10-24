@@ -80,7 +80,7 @@ public sealed class ApiTests(WebApplicationFactory<Program> factory) : IClassFix
 
         Assert.Equal(2, groups.Count);
         var dojo = groups.Single(g => g.Id == "demo-dojo");
-        Assert.Equal(30, dojo.MemberCount);
+        Assert.Equal(33, dojo.MemberCount); // 30 members and their 3 trainers
         Assert.Equal(["Erwachsene", "Jugend", "Kinder"], dojo.SubGroups.Select(s => s.Name).Order());
     }
 

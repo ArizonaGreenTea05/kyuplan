@@ -56,6 +56,11 @@ waiting list or unconfirmed). Members are only judged against events they were i
 three months ago is not penalised for the year before, and a member of the *Kinder* subgroup is not measured against
 the adults' training.
 
+An event can also have **hosts** (trainers): the owners of the event in Spond, a list in the custom script (`trainers`), the members ticked
+as *Trainer* in the manual data. They run the event instead of taking part, so it counts for none of their numbers (not as an invitation, an
+acceptance or a streak), however Spond lists them among the answers; it is no start day for them and they are no participants of an exam at it.
+The event's own numbers (invited, accepted, ...) leave them out too, and an event of nobody but hosts is not listed.
+
 The **Members** filter restricts the report to the members of one or more subgroups: tick any number of them and
 everyone in at least one of them is reported (a member of two ticked subgroups appears once). With none ticked, the
 whole group is reported. Events are then counted over those members only.

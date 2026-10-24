@@ -1528,7 +1528,7 @@ internal sealed class FakePlannerApi : IPlannerApi
         {
             ManualCalls.Add($"create-event:{manualEvent.Name}");
             LastManualEventInput = manualEvent;
-            var created = new ManualEventDto($"e{_nextId++}", groupId, manualEvent.Name, manualEvent.Start, manualEvent.End, manualEvent.Cancelled, manualEvent.Invitations ?? []);
+            var created = new ManualEventDto($"e{_nextId++}", groupId, manualEvent.Name, manualEvent.Start, manualEvent.End, manualEvent.Cancelled, manualEvent.Invitations ?? [], manualEvent.TrainerIds ?? []);
             ManualEvents.Add(created);
             return created;
         });
@@ -1542,7 +1542,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             if (index < 0) throw NotFound();
             return ManualEvents[index] = ManualEvents[index] with
             {
-                Name = manualEvent.Name, Start = manualEvent.Start, End = manualEvent.End, Cancelled = manualEvent.Cancelled, Invitations = manualEvent.Invitations ?? [],
+                Name = manualEvent.Name, Start = manualEvent.Start, End = manualEvent.End, Cancelled = manualEvent.Cancelled, Invitations = manualEvent.Invitations ?? [], TrainerIds = manualEvent.TrainerIds ?? [],
             };
         });
 
@@ -1571,7 +1571,7 @@ internal sealed class FakePlannerApi : IPlannerApi
     // --- Setup and settings ----------------------------------------------------------------------------------
 
     public static readonly SettingsDto DefaultSettings = new(
-        "data/kyuplan.db", "data/accounts.db", false, null, null, false, true, "Europe/Berlin", "Prüfung", 60, 3, true, 30);
+        "data/kyuplan.db", "data/accounts.db", false, null, null, false, "Europe/Berlin", "Prüfung", 60, 3, true, 30);
 
     /// <summary>What the server says of whether it needs the setup; the fake never needs it unless a test says so.</summary>
     public bool NeedsSetup { get; set; }
@@ -1626,7 +1626,7 @@ internal sealed class FakePlannerApi : IPlannerApi
                 DatabasePath = settings.DatabasePath, AccountsDatabasePath = settings.AccountsDatabasePath, UseDemoData = settings.UseDemoData,
                 SpondEmail = settings.SpondEmail, SpondPhoneNumber = settings.SpondPhoneNumber,
                 HasSpondPassword = Settings.HasSpondPassword || !string.IsNullOrEmpty(settings.SpondPassword),
-                IgnoreAdministrators = settings.IgnoreAdministrators, TimeZone = settings.TimeZone, ExamKeyword = settings.ExamKeyword,
+                TimeZone = settings.TimeZone, ExamKeyword = settings.ExamKeyword,
                 DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent, DefaultMinInvitedEvents = settings.DefaultMinInvitedEvents,
                 SyncEnabled = settings.SyncEnabled, SyncIntervalMinutes = settings.SyncIntervalMinutes,
                 DefaultEventStars = settings.DefaultEventStars ?? Settings.DefaultEventStars,

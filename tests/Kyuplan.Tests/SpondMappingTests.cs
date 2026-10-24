@@ -165,7 +165,7 @@ public class SpondMappingTests
     }
 
     [Fact]
-    public void Members_who_are_not_respondents_are_the_administrators_and_left_out_only_when_asked_for()
+    public void Every_member_of_the_group_is_kept_whether_they_answer_events_or_administer_the_group()
     {
         var group = new SpondGroup
         {
@@ -178,29 +178,86 @@ public class SpondMappingTests
         };
 
         Assert.Equal(["trainer", "m1"], SpondApiDataSource.MapGroup(group).Members.Select(m => m.Id));
-        Assert.Equal(["trainer", "m1"], SpondApiDataSource.MapGroup(group, ignoreAdministrators: false).Members.Select(m => m.Id));
-        Assert.Equal(["m1"], SpondApiDataSource.MapGroup(group, ignoreAdministrators: true).Members.Select(m => m.Id));
     }
 
     [Fact]
-    public void Respondent_is_read_from_the_member_json_of_the_group()
+    public void The_owners_of_an_event_are_its_trainers()
     {
-        var group = JsonConvert.DeserializeObject<SpondGroup>("""
-            { "id": "g1", "members": [{ "id": "boss", "respondent": false }, { "id": "m1", "respondent": true }] }
+        using var source = CreateSource();
+
+        var mapped = source.MapEvent(JsonConvert.DeserializeObject<SpondEvent>("""
+            {
+              "id": "e1", "heading": "Training", "startTimestamp": "2026-03-10T17:30:00Z", "endTimestamp": "2026-03-10T19:00:00Z",
+              "owners": [{ "id": "t1", "response": "accepted" }, { "id": "t2" }, { "id": "t1" }, { "id": "" }],
+              "responses": { "acceptedIds": ["t1", "m1"], "declinedIds": ["m2"] }
+            }
+            """)!);
+
+        Assert.Equal(["t1", "t2"], mapped.Trainers);
+        Assert.True(mapped.IsTrainer("t1"));
+        Assert.False(mapped.IsTrainer("m1"));
+        Assert.Equal(["m1", "m2"], mapped.Participants.Select(p => p.Key).Order());
+        Assert.Equal(3, mapped.Responses.Count); // what Spond sent stays; the statistics read Participants
+    }
+
+    [Fact]
+    public void Owners_named_by_their_profile_become_the_members_they_are()
+    {
+        using var source = CreateSource();
+        var groups = JsonConvert.DeserializeObject<List<SpondGroup>>("""
+            [{ "id": "g1", "members": [
+                { "id": "m-tina", "profile": { "id": "p-tina" } },
+                { "id": "m-ben", "profile": { "id": "p-ben" } },
+                { "id": "m-kid" }] }]
             """)!;
+        var members = SpondApiDataSource.MemberIdsByProfile(groups);
 
-        Assert.Equal(["m1"], SpondApiDataSource.MapGroup(group, ignoreAdministrators: true).Members.Select(m => m.Id));
+        var mapped = source.MapEvent(JsonConvert.DeserializeObject<SpondEvent>("""
+            {
+              "id": "e1", "startTimestamp": "2026-03-10T17:30:00Z", "endTimestamp": "2026-03-10T19:00:00Z",
+              "owners": [{ "id": "p-tina" }, { "id": "m-ben" }, { "id": "p-ben" }, { "id": "p-stranger" }],
+              "responses": { "acceptedIds": ["m-tina", "m-kid"] }
+            }
+            """)!, members);
+
+        Assert.Equal(["m-tina", "m-ben"], mapped.Trainers); // the profile and the member id both find the member; a stranger is no trainer
+        Assert.Equal(["m-kid"], mapped.Participants.Select(p => p.Key));
     }
 
     [Fact]
-    public void Leaving_administrators_out_is_off_by_default_and_set_in_the_spond_section()
+    public void Members_are_found_by_member_id_and_by_profile_id_across_the_groups()
     {
-        Assert.False(new SpondOptions().IgnoreAdministrators);
+        var members = SpondApiDataSource.MemberIdsByProfile(
+        [
+            new SpondGroup { Id = "g1", Members = [new SpondMember { Id = "a", Profile = new SpondUserProfile { Id = "pa" } }, new SpondMember { Id = "b" }] },
+            new SpondGroup { Id = "g2", Members = [new SpondMember { Id = "a", Profile = new SpondUserProfile { Id = "pa" } }] },
+        ]);
 
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["Spond:IgnoreAdministrators"] = "true" })
-            .Build();
-        Assert.True(configuration.GetSection(SpondOptions.Section).Get<SpondOptions>()!.IgnoreAdministrators);
+        Assert.Equal(["a", "a", "b"], new[] { members["a"], members["pa"], members["b"] });
+        Assert.Equal(3, members.Count);
+    }
+
+    [Fact]
+    public void An_event_without_owners_has_no_trainers()
+    {
+        using var source = CreateSource();
+
+        var mapped = source.MapEvent(new SpondEvent
+        {
+            Id = "e1",
+            StartTimestamp = "2026-03-10T17:30:00Z",
+            EndTimestamp = "2026-03-10T19:00:00Z",
+            Responses = new SpondEventResponses { AcceptedIds = ["a"] },
+        });
+
+        Assert.Empty(mapped.Trainers!);
+        Assert.Equal(["a"], mapped.Participants.Select(p => p.Key));
+    }
+
+    [Fact]
+    public void The_option_to_ignore_administrators_is_gone()
+    {
+        Assert.Null(typeof(SpondOptions).GetProperty("IgnoreAdministrators"));
     }
 
     [Theory]

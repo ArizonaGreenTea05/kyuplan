@@ -533,6 +533,23 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.ToTable("ManualEvents");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEventTrainer", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MemberId")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId", "MemberId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("ManualEventTrainers");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.ManualGroup", b =>
                 {
                     b.Property<string>("Id")
@@ -1026,6 +1043,25 @@ namespace Kyuplan.Api.Persistence.Migrations
                     b.Navigation("Group");
                 });
 
+            modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEventTrainer", b =>
+                {
+                    b.HasOne("Kyuplan.Api.Persistence.ManualEvent", "Event")
+                        .WithMany("Trainers")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Kyuplan.Api.Persistence.ManualMember", "Member")
+                        .WithMany()
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Member");
+                });
+
             modelBuilder.Entity("Kyuplan.Api.Persistence.ManualInvitation", b =>
                 {
                     b.HasOne("Kyuplan.Api.Persistence.ManualEvent", "Event")
@@ -1148,6 +1184,8 @@ namespace Kyuplan.Api.Persistence.Migrations
             modelBuilder.Entity("Kyuplan.Api.Persistence.ManualEvent", b =>
                 {
                     b.Navigation("Invitations");
+
+                    b.Navigation("Trainers");
                 });
 
             modelBuilder.Entity("Kyuplan.Api.Persistence.ManualGroup", b =>

@@ -300,9 +300,12 @@ public sealed class CustomScriptDataSource(
                 foreach (var response in map.EnumerateObject())
                     responses[response.Name] = ManualDataService.ParseRsvp(response.Value.ValueKind == JsonValueKind.String ? response.Value.GetString()!.ToLowerInvariant() : "");
 
+            // The members who host the event, by id; anything that is not a text is skipped.
+            var trainers = Array(item, "trainers").Where(t => t.ValueKind == JsonValueKind.String).Select(t => t.GetString()!.Trim()).Where(t => t.Length > 0).Distinct().ToList();
+
             events.Add(new EventInfo(
                 id, Text(item, "name") ?? id, clock.ToClub(start), clock.ToClub(end),
-                item.TryGetProperty("cancelled", out var cancelled) && cancelled.ValueKind == JsonValueKind.True, responses));
+                item.TryGetProperty("cancelled", out var cancelled) && cancelled.ValueKind == JsonValueKind.True, responses, trainers));
         }
 
         return [.. events.DistinctBy(e => e.Id)];

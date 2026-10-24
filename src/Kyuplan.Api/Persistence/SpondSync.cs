@@ -287,7 +287,7 @@ public sealed class SpondSync(
         var now = clock.Now;
         foreach (var e in events.Where(e => !e.Cancelled && e.End <= now)) // chronological: the first match is the first event
         {
-            foreach (var (spondId, rsvp) in e.Responses)
+            foreach (var (spondId, rsvp) in e.Participants)
             {
                 if (rsvp == Rsvp.Accepted && waiting.Remove(spondId, out var member))
                     member.StartedAt = DateOnly.FromDateTime(e.Start.Date);
@@ -304,7 +304,7 @@ public sealed class SpondSync(
         ExamService.Follow(exam, current);
 
         var stored = exam.Participants.ToDictionary(p => p.MemberId);
-        foreach (var (spondId, rsvp) in current.Responses)
+        foreach (var (spondId, rsvp) in current.Participants)
         {
             // Somebody who is invited but is not a member of the group (any more) cannot be recorded.
             if (!members.TryGetValue(spondId, out var member)) continue;

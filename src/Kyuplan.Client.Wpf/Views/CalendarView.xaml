@@ -9,7 +9,7 @@
         <DataTemplate x:Key="GridEvent">
             <Button Command="{Binding DataContext.OpenEventCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                    Padding="6,3" Margin="0,2,0,0" FontSize="12" ToolTip="{Binding WhenText}">
+                    Padding="6,3" Margin="0,2,0,0" FontSize="12" ToolTip="{Binding TipText}">
                 <TextBlock TextTrimming="CharacterEllipsis">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -83,6 +83,8 @@
                             <TextBlock Style="{StaticResource MutedText}">
                                 <Run Text="{Binding InvitedText, Mode=OneWay}" /> · <Run Text="{Binding CountsText, Mode=OneWay}" />
                             </TextBlock>
+                            <TextBlock Text="{Binding TrainersText}" Style="{StaticResource MutedText}"
+                                       Visibility="{Binding HasTrainers, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
 
                         <TextBlock Text="{loc:Loc Calendar_TagNote}" Style="{StaticResource LedeText}" Margin="0,12,0,0" />

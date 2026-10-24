@@ -125,7 +125,7 @@ public sealed class ManualDataService(PlannerDbContext db)
     public async Task<IReadOnlyList<ManualEventDto>> ListEventsAsync(string groupId, CancellationToken cancellationToken)
     {
         await FindGroupAsync(groupId, cancellationToken);
-        var events = await db.ManualEvents.AsNoTracking().Include(e => e.Invitations).Where(e => e.GroupId == groupId).ToListAsync(cancellationToken);
+        var events = await db.ManualEvents.AsNoTracking().Include(e => e.Invitations).Include(e => e.Trainers).Where(e => e.GroupId == groupId).ToListAsync(cancellationToken);
         return [.. events.OrderByDescending(e => e.Start).Select(ToDto)];
     }
 
@@ -143,7 +143,7 @@ public sealed class ManualDataService(PlannerDbContext db)
 
     public async Task<ManualEventDto> UpdateEventAsync(string eventId, ManualEventInputDto input, CancellationToken cancellationToken)
     {
-        var manualEvent = await db.ManualEvents.Include(e => e.Invitations).FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken)
+        var manualEvent = await db.ManualEvents.Include(e => e.Invitations).Include(e => e.Trainers).FirstOrDefaultAsync(e => e.Id == eventId, cancellationToken)
             ?? throw new ManualDataNotFoundException("event", eventId);
         await ApplyAsync(manualEvent, input, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
@@ -176,6 +176,10 @@ public sealed class ManualDataService(PlannerDbContext db)
         var valid = await db.ManualMembers.Where(m => m.GroupId == manualEvent.GroupId && ids.Contains(m.Id)).CountAsync(cancellationToken);
         if (valid != ids.Count) throw new InvalidInputException("invitations: every invited member must belong to the event's group.");
 
+        var trainerIds = (input.TrainerIds ?? []).Distinct().ToList();
+        var validTrainers = await db.ManualMembers.Where(m => m.GroupId == manualEvent.GroupId && trainerIds.Contains(m.Id)).CountAsync(cancellationToken);
+        if (validTrainers != trainerIds.Count) throw new InvalidInputException("trainerIds: every trainer must be a member of the event's group.");
+
         manualEvent.Name = input.Name.Trim();
         manualEvent.Start = input.Start;
         manualEvent.End = input.End;
@@ -187,6 +191,10 @@ public sealed class ManualDataService(PlannerDbContext db)
             if (manualEvent.Invitations.FirstOrDefault(i => i.MemberId == invitation.MemberId) is { } existing) existing.Rsvp = rsvp;
             else manualEvent.Invitations.Add(new ManualInvitation { EventId = manualEvent.Id, MemberId = invitation.MemberId, Rsvp = rsvp });
         }
+
+        manualEvent.Trainers.RemoveAll(t => !trainerIds.Contains(t.MemberId));
+        foreach (var id in trainerIds.Where(id => manualEvent.Trainers.All(t => t.MemberId != id)))
+            manualEvent.Trainers.Add(new ManualEventTrainer { EventId = manualEvent.Id, MemberId = id });
     }
 
     internal static Rsvp ParseRsvp(string rsvp) => rsvp switch
@@ -208,7 +216,8 @@ public sealed class ManualDataService(PlannerDbContext db)
     private static ManualMemberDto ToDto(ManualMember m) => new(m.Id, m.GroupId, m.Name, m.BirthDate, [.. m.SubGroups.Select(l => l.SubGroupId).Order()]);
 
     private static ManualEventDto ToDto(ManualEvent e) => new(
-        e.Id, e.GroupId, e.Name, e.Start, e.End, e.Cancelled, [.. e.Invitations.OrderBy(i => i.MemberId).Select(i => new ManualInvitationDto(i.MemberId, FormatRsvp(i.Rsvp)))]);
+        e.Id, e.GroupId, e.Name, e.Start, e.End, e.Cancelled, [.. e.Invitations.OrderBy(i => i.MemberId).Select(i => new ManualInvitationDto(i.MemberId, FormatRsvp(i.Rsvp)))],
+        [.. e.Trainers.Select(t => t.MemberId).Order()]);
 
     private async Task<ManualGroup> FindGroupAsync(string groupId, CancellationToken cancellationToken) =>
         await db.ManualGroups.FirstOrDefaultAsync(g => g.Id == groupId, cancellationToken) ?? throw new ManualDataNotFoundException("group", groupId);

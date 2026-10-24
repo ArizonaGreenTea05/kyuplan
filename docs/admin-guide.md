@@ -107,7 +107,8 @@ function getEvents(groupId, from, to) {
     id: "e1", name: "Training",
     start: "2026-10-01T16:00:00Z", end: "2026-10-01T17:30:00Z",   // ISO 8601 (without an offset: UTC), a Date or epoch milliseconds
     cancelled: false,
-    responses: { m1: "accepted", m2: "declined" }       // every invited member: accepted | declined | unanswered | other. Not listed = not invited
+    responses: { m1: "accepted", m2: "declined" },      // every invited member: accepted | declined | unanswered | other. Not listed = not invited
+    trainers: ["m3"]                                    // optional: the ids of the members who host the event; it counts for none of their statistics
   }];
 }
 ```
@@ -156,7 +157,8 @@ permission `manualdata.edit`; give it to a role on the Roles page (administrator
 4. **Events** (tab): trainings, exams and other dates, with start and end in the club's time zone. In the form, invite everybody or nobody
    (then tick who is invited) and choose what each answered: *Accepted*, *Declined*, *No answer* or *Waiting list*. **All invited came**
    marks everybody invited as accepted, the quick way to record a training: *accepted* counts as attended (see
-   [attendance statistics](attendance-statistics.md)).
+   [attendance statistics](attendance-statistics.md)). Tick **Host (trainer)** for the members who host the event: it counts for none of their
+   statistics, whether they are invited or not.
 
 Every change is saved at once and the members and exams are brought in line right away, so the other pages show it immediately; no waiting for
 the next sync. The page tells you when the data source is not Manual (what you enter is then not used).
@@ -172,14 +174,14 @@ the groups to analyse**; the account sees the groups it belongs to.
   add *Backup Spond accounts*; when the first yields no groups or events (or its login is rejected), the next is asked. An account that
   came back empty while another delivered is asked last for 10 minutes (`Spond:AccountCooldown`). All accounts must see the same groups;
   the log says which account was skipped.
-- **Ignore group administrators.** Group administrators (the members with `Respondent = false` in Spond, usually the login account) are
-  members like everybody else and appear in statistics, the member list and exam planning. Tick *Ignore group administrators* to leave
-  them out; those already in the database are removed by the next sync together with their belt and exam data.
+- **Group administrators and hosts.** Group administrators (usually the login account) are members like everybody else and appear in
+  the member list. An event counts for none of its **hosts**, the owners Spond lists for it (matched to the group's members by their Spond profile; an owner who is no member of the group is no host): the event is in no statistic of theirs
+  and they are no participants of an exam at it, whether or not Spond also lists them among the answers.
 - **Caching.** Events are fetched month by month and cached for 15 minutes (`Spond:CacheDuration`). The **Refresh** button in the clients clears the
   cache. The server logs in again every 6 hours (`Spond:LoginLifetime`).
 - The Spond password is stored **encrypted** in `settings.json`; the key is in the `keys` folder next to it. Keep that folder safe and, if
   you share backups, keep the key apart from the settings file (`Setup__KeyDirectory`).
-- **Demo mode**: the data source *Demo data* serves generated data for a fictional club (the clients show a "Demo data" marker). Good
+- **Demo mode**: the data source *Demo data* serves generated data for a fictional club, trainers who host the events included (the clients show a "Demo data" marker). Good
   for training users, never for real use.
 
 ### The automatic sync

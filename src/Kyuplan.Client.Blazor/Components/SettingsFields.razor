@@ -135,11 +135,6 @@
             <button type="button" class="btn secondary" disabled="@(Disabled || Form.BackupAccounts.Count >= SettingsRules.MaxBackupAccounts)" @onclick="() => Form.AddBackupAccountCommand.Execute(null)">@Strings.Settings_BackupAdd</button>
         </div>
 
-        <label class="check">
-            <input type="checkbox" disabled="@Disabled" @bind="Form.IgnoreAdministrators" />
-            <span>@Strings.Settings_IgnoreAdministrators<small>@Strings.Settings_IgnoreAdministratorsHint</small></span>
-        </label>
-
         <label class="field">
             <span>@Strings.Settings_UnregisteredSubGroup</span>
             <select value="@Form.UnregisteredSubGroup" disabled="@Disabled" @onchange="e => Form.UnregisteredSubGroup = e.Value?.ToString() ?? string.Empty">

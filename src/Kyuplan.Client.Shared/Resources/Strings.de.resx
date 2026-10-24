@@ -1309,12 +1309,6 @@
   <data name="Settings_SpondIncomplete" xml:space="preserve">
     <value>Ein Spond-Zugang braucht die E-Mail (oder Telefonnummer) und das Passwort.</value>
   </data>
-  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
-    <value>Gruppen-Administratoren ignorieren</value>
-  </data>
-  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
-    <value>Mitglieder, die ihre Spond-Gruppe verwalten (meist der Zugangs-Account), bleiben aus Statistik, Mitgliedern und Prüfungen heraus.</value>
-  </data>
   <data name="Settings_StatisticsTitle" xml:space="preserve">
     <value>Statistik und Prüfungen</value>
   </data>
@@ -2575,6 +2569,9 @@
   <data name="Calendar_Invited" xml:space="preserve">
     <value>{0} eingeladen</value>
   </data>
+  <data name="Calendar_Trainers" xml:space="preserve">
+    <value>Trainer: {0}</value>
+  </data>
   <data name="Calendar_BackToMembers" xml:space="preserve">
     <value>Zurück zu den Mitgliedern</value>
   </data>
@@ -3207,6 +3204,9 @@
   </data>
   <data name="Manual_ColAnswer" xml:space="preserve">
     <value>Antwort</value>
+  </data>
+  <data name="Manual_ColTrainer" xml:space="preserve">
+    <value>Leitung (Trainer)</value>
   </data>
   <data name="Manual_Rsvp_accepted" xml:space="preserve">
     <value>Zugesagt</value>

@@ -87,6 +87,8 @@ public class PlannerDbContext : DbContext
 
     public DbSet<ManualInvitation> ManualInvitations => Set<ManualInvitation>();
 
+    public DbSet<ManualEventTrainer> ManualEventTrainers => Set<ManualEventTrainer>();
+
     public DbSet<CustomBranding> CustomBranding => Set<CustomBranding>();
 
     public DbSet<CustomBrandingImage> CustomBrandingImages => Set<CustomBrandingImage>();
@@ -246,6 +248,15 @@ public class PlannerDbContext : DbContext
             invitation.Property(i => i.Rsvp).HasConversion<string>().HasMaxLength(RsvpLength);
             invitation.HasOne(i => i.Event).WithMany(e => e.Invitations).HasForeignKey(i => i.EventId).OnDelete(DeleteBehavior.Cascade);
             invitation.HasOne(i => i.Member).WithMany().HasForeignKey(i => i.MemberId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualEventTrainer>(trainer =>
+        {
+            trainer.HasKey(t => new { t.EventId, t.MemberId });
+            trainer.Property(t => t.EventId).HasMaxLength(IdLength);
+            trainer.Property(t => t.MemberId).HasMaxLength(IdLength);
+            trainer.HasOne(t => t.Event).WithMany(e => e.Trainers).HasForeignKey(t => t.EventId).OnDelete(DeleteBehavior.Cascade);
+            trainer.HasOne(t => t.Member).WithMany().HasForeignKey(t => t.MemberId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ExamParticipant>(participant =>

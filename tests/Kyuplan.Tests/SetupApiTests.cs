@@ -76,7 +76,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
 
     /// <summary>The input that changes nothing: what the API runs with.</summary>
     private static SettingsInputDto Unchanged(SettingsDto s) => new(
-        s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData, s.SpondEmail, s.SpondPhoneNumber, null, s.IgnoreAdministrators,
+        s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData, s.SpondEmail, s.SpondPhoneNumber, null,
         s.TimeZone, s.ExamKeyword, s.DefaultMinAttendancePercent, s.DefaultMinInvitedEvents, s.SyncEnabled, s.SyncIntervalMinutes);
 
     private static async Task<SetupStatusDto> StatusAsync(HttpClient client) =>

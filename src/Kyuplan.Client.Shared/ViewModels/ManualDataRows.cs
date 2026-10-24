@@ -90,12 +90,16 @@ public sealed class ManualRsvpOption(string value) : ObservableObject
     public void Refresh() => OnPropertyChanged(string.Empty);
 }
 
-/// <summary>A member of the group in the event form: invited or not, and what they answered if so.</summary>
-public sealed partial class ManualInviteRow(string memberId, string name, bool isInvited, ManualRsvpOption answer) : ObservableObject
+/// <summary>A member of the group in the event form: invited or not, and what they answered if so, and whether they host the event.</summary>
+public sealed partial class ManualInviteRow(string memberId, string name, bool isInvited, ManualRsvpOption answer, bool isTrainer = false) : ObservableObject
 {
     public string MemberId => memberId;
 
     public string Name => name;
+
+    /// <summary>Hosts the event: it counts for no statistic of theirs.</summary>
+    [ObservableProperty]
+    private bool _isTrainer = isTrainer;
 
     [ObservableProperty]
     private bool _isInvited = isInvited;

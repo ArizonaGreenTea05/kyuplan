@@ -10,7 +10,6 @@ namespace Kyuplan.Contracts;
 /// <param name="UseDemoData">Show generated sample data instead of asking Spond.</param>
 /// <param name="SpondEmail">Spond login (email); use this or <paramref name="SpondPhoneNumber"/>.</param>
 /// <param name="HasSpondPassword">A Spond password is stored. The password itself is never sent back.</param>
-/// <param name="IgnoreAdministrators">Leave the Spond group administrators out of the statistics, members and exams.</param>
 /// <param name="TimeZone">Time zone id (<c>Europe/Berlin</c>) in which days and weekdays are read.</param>
 /// <param name="ExamKeyword">Events whose name contains this word are exams.</param>
 /// <param name="SyncIntervalMinutes">Minutes between two syncs with Spond; 0 = only when the API starts.</param>
@@ -30,7 +29,6 @@ public sealed record SettingsDto(
     string? SpondEmail,
     string? SpondPhoneNumber,
     bool HasSpondPassword,
-    bool IgnoreAdministrators,
     string TimeZone,
     string ExamKeyword,
     int DefaultMinAttendancePercent,
@@ -67,7 +65,6 @@ public sealed record SettingsInputDto(
     string? SpondEmail,
     string? SpondPhoneNumber,
     string? SpondPassword,
-    bool IgnoreAdministrators,
     string TimeZone,
     string ExamKeyword,
     int DefaultMinAttendancePercent,

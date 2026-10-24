@@ -92,10 +92,9 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
   `Spond:AccountCooldown` (10 min), so an account Spond ignores is not asked again and again. A month without events at all
   (every account empty) changes nothing. All accounts must see the same groups; the log tells which account was skipped.
 - The account sees the groups it belongs to; use a dedicated account that is an admin of the groups to analyse.
-- Administrators are members of their group like everybody else, so they show up in the statistics, the member list and the
-  exam planning. Set `Spond:IgnoreAdministrators` to `true` to leave out the administrators: in Spond the members of a group
-  with `Respondent` = true are the normal ones, those with `Respondent` = false are the administrators. Members who are
-  already in the database are removed by the next sync, with their belt and their exam invitations.
+- Administrators are members of their group like everybody else, so they show up in the member list. An event does not count for
+  its **hosts**, the owners Spond lists for it (`owners`): whether or not they are among its responses, the event is in no statistic
+  of theirs and they are no participants of an exam at it (see [Who was "invited"](attendance-statistics.md#who-was-invited)).
 - **Accounts with two-factor authentication are not supported** (the API runs unattended).
 - Spond.API never refreshes its token and reports failed requests as empty lists, so the API logs in again every
   `Spond:LoginLifetime` (6 h), treats "no groups" as a failed login, and keeps empty results cached only briefly.
@@ -113,7 +112,6 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | `Spond:Email` / `PhoneNumber` / `Password` | – | Spond login (the first account). |
 | `Spond:Accounts` | `[]` | More Spond logins (each with `Email` or `PhoneNumber`, and `Password`), asked in this order when the one before yields no groups or events. |
 | `Spond:AccountCooldown` | `00:10:00` | How long an account that came back empty while another one delivered is asked after the others. |
-| `Spond:IgnoreAdministrators` | `false` | Leave the administrators of the Spond groups (the members with `Respondent` = false, the login account usually among them) out of the statistics, the members and the exams. Not used with demo data. |
 | `Spond:UnregisteredSubGroup` | empty | Name (or id) of the Spond subgroup of the people not registered in the club yet; its members are marked "not registered yet" on the Members page. Empty = everybody is registered. |
 | `Spond:LoginLifetime` / `CacheDuration` | `06:00:00` / `00:15:00` | Re-login interval, event cache lifetime. |
 | `Statistics:TimeZone` | `Europe/Berlin` | Time zone for days, weekdays and months (Spond delivers UTC). |

@@ -24,8 +24,9 @@ public sealed class CalendarService(
         var end = clock.StartOfDay(to.AddDays(1));
 
         var events = await statistics.GetWindowEventsAsync(groupId, cancellationToken);
+        var names = await MemberNamesAsync(groupId, cancellationToken);
         return new CalendarDto(view, day, from, to, clock.Today,
-            [.. events.Where(e => e.Start >= start && e.Start < end).Select(e => ToDto(e, groupId))]);
+            [.. events.Where(e => e.Start >= start && e.Start < end).Select(e => ToDto(e, groupId, names))]);
     }
 
     /// <summary>The events that are going on right now: started and not over, cancelled ones left out.</summary>
@@ -34,7 +35,8 @@ public sealed class CalendarService(
     {
         var now = clock.Now;
         var events = await statistics.GetWindowEventsAsync(groupId, cancellationToken);
-        return [.. events.Where(e => !e.Cancelled && e.Start <= now && now < e.End).Select(e => ToDto(e, groupId))];
+        var names = await MemberNamesAsync(groupId, cancellationToken);
+        return [.. events.Where(e => !e.Cancelled && e.Start <= now && now < e.End).Select(e => ToDto(e, groupId, names))];
     }
 
     /// <summary>One event with everybody invited to it, by name. Comments are only given for the members <paramref name="mayReadComments"/> says yes to, evaluations for those <paramref name="mayReadRatings"/> does (<c>null</c> = for none).</summary>
@@ -52,7 +54,7 @@ public sealed class CalendarService(
             : new Dictionary<int, IReadOnlyList<RatingDto>>();
         var names = group.Members.ToDictionary(m => m.Id, m => m.Name);
 
-        var attendees = info.Responses
+        var attendees = info.Participants
             .Select(r =>
             {
                 int? memberId = known.TryGetValue(r.Key, out var id) ? id : null;
@@ -64,7 +66,7 @@ public sealed class CalendarService(
             .OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        return new CalendarEventDetailDto(ToDto(info, groupId), attendees);
+        return new CalendarEventDetailDto(ToDto(info, groupId, names), attendees);
     }
 
     /// <summary>Writes a comment on a member of the event, tagged with the event's tag (which is made when there is none).</summary>
@@ -103,9 +105,14 @@ public sealed class CalendarService(
         _ => AttendanceMark.Other,
     };
 
-    private static CalendarEventDto ToDto(EventInfo e, string groupId) => new(
-        e.Id, groupId, e.Name, e.Start, e.End, e.Cancelled, e.Responses.Count,
-        e.Responses.Count(r => r.Value == Rsvp.Accepted),
-        e.Responses.Count(r => r.Value == Rsvp.Declined),
-        e.Responses.Count(r => r.Value == Rsvp.Unanswered));
+    private async Task<IReadOnlyDictionary<string, string>> MemberNamesAsync(string groupId, CancellationToken cancellationToken) =>
+        (await statistics.GetGroupInfoAsync(groupId, cancellationToken)).Members.ToDictionary(m => m.Id, m => m.Name);
+
+    /// <summary>The names of the trainers, by name; one whose member is gone shows by id rather than not at all.</summary>
+    private static CalendarEventDto ToDto(EventInfo e, string groupId, IReadOnlyDictionary<string, string> names) => new(
+        e.Id, groupId, e.Name, e.Start, e.End, e.Cancelled, e.Participants.Count(),
+        e.Participants.Count(r => r.Value == Rsvp.Accepted),
+        e.Participants.Count(r => r.Value == Rsvp.Declined),
+        e.Participants.Count(r => r.Value == Rsvp.Unanswered),
+        [.. (e.Trainers ?? []).Select(id => names.GetValueOrDefault(id, id)).Order(StringComparer.CurrentCultureIgnoreCase)]);
 }

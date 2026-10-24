@@ -1387,12 +1387,6 @@
   <data name="Settings_SpondIncomplete" xml:space="preserve">
     <value>A Spond login needs the email (or phone number) and the password.</value>
   </data>
-  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
-    <value>Ignore group administrators</value>
-  </data>
-  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
-    <value>Leave members who administer their Spond group (usually the login account) out of the statistics, members and exams.</value>
-  </data>
   <data name="Settings_StatisticsTitle" xml:space="preserve">
     <value>Statistics and exams</value>
   </data>
@@ -2676,6 +2670,9 @@
   <data name="Calendar_Invited" xml:space="preserve">
     <value>{0} invited</value>
   </data>
+  <data name="Calendar_Trainers" xml:space="preserve">
+    <value>Trainers: {0}</value>
+  </data>
   <data name="Calendar_BackToMembers" xml:space="preserve">
     <value>Back to the members</value>
   </data>
@@ -3308,6 +3305,9 @@
   </data>
   <data name="Manual_ColAnswer" xml:space="preserve">
     <value>Answer</value>
+  </data>
+  <data name="Manual_ColTrainer" xml:space="preserve">
+    <value>Host (trainer)</value>
   </data>
   <data name="Manual_Rsvp_accepted" xml:space="preserve">
     <value>Accepted</value>

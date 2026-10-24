@@ -583,6 +583,21 @@ public sealed class ManualEvent
     public bool Cancelled { get; set; }
 
     public List<ManualInvitation> Invitations { get; set; } = [];
+
+    /// <summary>The members who host (train) the event; they take part in no statistic of it.</summary>
+    public List<ManualEventTrainer> Trainers { get; set; } = [];
+}
+
+/// <summary>One member who hosts a manual event.</summary>
+public sealed class ManualEventTrainer
+{
+    public string EventId { get; set; } = "";
+
+    public ManualEvent Event { get; set; } = null!;
+
+    public string MemberId { get; set; } = "";
+
+    public ManualMember Member { get; set; } = null!;
 }
 
 /// <summary>One member invited to a manual event and what they answered.</summary>

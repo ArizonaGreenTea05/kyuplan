@@ -51,6 +51,7 @@ public sealed record ManualMemberInputDto(string Name, DateOnly? BirthDate, IRea
 public sealed record ManualInvitationDto(string MemberId, string Rsvp);
 
 /// <param name="Invitations">The members invited to the event and what each answered; members not in the list were not invited.</param>
+/// <param name="TrainerIds">The members who host (train) the event. The event counts for no statistic of them, invited or not.</param>
 public sealed record ManualEventDto(
     string Id,
     string GroupId,
@@ -58,15 +59,17 @@ public sealed record ManualEventDto(
     DateTimeOffset Start,
     DateTimeOffset End,
     bool Cancelled,
-    IReadOnlyList<ManualInvitationDto> Invitations);
+    IReadOnlyList<ManualInvitationDto> Invitations,
+    IReadOnlyList<string>? TrainerIds = null);
 
-/// <summary>What is saved of an event. Everything is replaced, the invitations too.</summary>
+/// <summary>What is saved of an event. Everything is replaced, the invitations and the trainers too (<c>null</c> trainers = none).</summary>
 public sealed record ManualEventInputDto(
     string Name,
     DateTimeOffset Start,
     DateTimeOffset End,
     bool Cancelled,
-    IReadOnlyList<ManualInvitationDto>? Invitations);
+    IReadOnlyList<ManualInvitationDto>? Invitations,
+    IReadOnlyList<string>? TrainerIds = null);
 
 /// <summary>What the manual data have to look like. The API enforces it; the clients check the same rules.</summary>
 public static class ManualDataRules

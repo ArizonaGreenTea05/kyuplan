@@ -46,7 +46,7 @@ internal static class AttendanceCalculator
         var invitations = members.ToDictionary(m => m.Id, _ => new List<Invitation>());
         foreach (var e in heldEvents)
         {
-            foreach (var (memberId, rsvp) in e.Responses)
+            foreach (var (memberId, rsvp) in e.Participants)
             {
                 if (invitations.TryGetValue(memberId, out var list)) list.Add(new Invitation(e, rsvp));
             }
@@ -220,7 +220,7 @@ internal static class AttendanceCalculator
         {
             int invited = 0, attended = 0, declined = 0, unanswered = 0;
             List<double> stars = [];
-            foreach (var (memberId, rsvp) in e.Responses)
+            foreach (var (memberId, rsvp) in e.Participants)
             {
                 if (!included.Contains(memberId)) continue;
                 invited++;

@@ -36,14 +36,15 @@ public sealed class ManualDataSource(IServiceScopeFactory scopes, ClubClock cloc
         var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
 
         // DateTimeOffset cannot be compared in SQL on SQLite; a club's events are few enough to filter here.
-        var events = await db.ManualEvents.AsNoTracking().Include(e => e.Invitations).Where(e => e.GroupId == groupId).ToListAsync(cancellationToken);
+        var events = await db.ManualEvents.AsNoTracking().Include(e => e.Invitations).Include(e => e.Trainers).Where(e => e.GroupId == groupId).ToListAsync(cancellationToken);
         return [.. events.Where(e => e.End >= from && e.End <= to).OrderBy(e => e.Start).Select(e => new EventInfo(
             e.Id,
             e.Name,
             clock.ToClub(e.Start),
             clock.ToClub(e.End),
             e.Cancelled,
-            e.Invitations.ToDictionary(i => i.MemberId, i => i.Rsvp)))];
+            e.Invitations.ToDictionary(i => i.MemberId, i => i.Rsvp),
+            [.. e.Trainers.Select(t => t.MemberId)]))];
     }
 
     public void InvalidateCache()

@@ -33,8 +33,8 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
         IReadOnlyList<GroupInfo> Groups,
         IReadOnlyDictionary<string, IReadOnlyList<EventInfo>> Events);
 
-    /// <summary>One training slot of the weekly schedule. <c>SubGroupId</c> null means the whole group is invited.</summary>
-    private sealed record Slot(DayOfWeek Day, TimeOnly Start, TimeOnly End, string Name, string? SubGroupId);
+    /// <summary>One training slot of the weekly schedule. <c>SubGroupId</c> null means the whole group is invited; <c>Trainers</c> are the ids of the members who host it.</summary>
+    private sealed record Slot(DayOfWeek Day, TimeOnly Start, TimeOnly End, string Name, string? SubGroupId, IReadOnlyList<string> Trainers);
 
     /// <summary>How a fictional member behaves: how often they come, how reliably they answer, whether it fades.</summary>
     private sealed record Profile(
@@ -95,30 +95,36 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
             ["Thomas", "Sabine", "Michael", "Julia", "Stefan", "Anna", "Markus", "Katrin", "Daniel", "Nina", "Frank", "Petra"],
             lastNameOffset: 18, youngestAge: 20, ageSpread: 30));
 
+        // The trainers host the trainings instead of taking part. They are members of the group like in Spond, but in no subgroup.
+        var dojoTrainers = CreateTrainers(today, "dojo-t", ["Klaus Berger", "Birgit Vogel", "Christian Roth"], youngestAge: 38);
+        string[] headTrainer = ["dojo-t-01"], kidsTrainers = ["dojo-t-02", "dojo-t-03"], youthTrainers = ["dojo-t-03", "dojo-t-01"];
+
         var dojoSlots = new Slot[]
         {
-            new(DayOfWeek.Monday, new(17, 0), new(18, 0), "Kindertraining", "sg-kids"),
-            new(DayOfWeek.Thursday, new(17, 0), new(18, 0), "Kindertraining", "sg-kids"),
-            new(DayOfWeek.Tuesday, new(18, 0), new(19, 30), "Jugendtraining", "sg-youth"),
-            new(DayOfWeek.Friday, new(17, 30), new(19, 0), "Jugendtraining", "sg-youth"),
-            new(DayOfWeek.Monday, new(19, 0), new(20, 30), "Training Erwachsene", "sg-adults"),
-            new(DayOfWeek.Wednesday, new(19, 30), new(21, 0), "Training Erwachsene", "sg-adults"),
+            new(DayOfWeek.Monday, new(17, 0), new(18, 0), "Kindertraining", "sg-kids", kidsTrainers),
+            new(DayOfWeek.Thursday, new(17, 0), new(18, 0), "Kindertraining", "sg-kids", kidsTrainers),
+            new(DayOfWeek.Tuesday, new(18, 0), new(19, 30), "Jugendtraining", "sg-youth", youthTrainers),
+            new(DayOfWeek.Friday, new(17, 30), new(19, 0), "Jugendtraining", "sg-youth", youthTrainers),
+            new(DayOfWeek.Monday, new(19, 0), new(20, 30), "Training Erwachsene", "sg-adults", headTrainer),
+            new(DayOfWeek.Wednesday, new(19, 30), new(21, 0), "Training Erwachsene", "sg-adults", headTrainer),
         };
 
-        groups.Add(new GroupInfo("demo-dojo", $"{DemoClubName()} (Demo)", dojoSubGroups, dojoProfiles.Select(p => p.Info).ToList()));
-        events["demo-dojo"] = BuildEvents(rng, today, "demo-dojo", dojoProfiles, dojoSlots, withSpecialEvents: true);
+        groups.Add(new GroupInfo("demo-dojo", $"{DemoClubName()} (Demo)", dojoSubGroups,
+            [.. dojoProfiles.Select(p => p.Info), .. dojoTrainers]));
+        events["demo-dojo"] = BuildEvents(rng, today, "demo-dojo", dojoProfiles, dojoSlots, specialEventTrainers: ["dojo-t-01", "dojo-t-02"]);
 
         // Competition team: a small group without subgroups.
         var teamProfiles = CreateProfiles(rng, today, "team", null, 0.6, 0.97,
             ["Tim", "Laura", "Jan", "Lea", "Max", "Sarah", "Nico", "Amelie"], lastNameOffset: 30, youngestAge: 15, ageSpread: 14);
+        var teamTrainers = CreateTrainers(today, "team-t", ["Ralf Winter"], youngestAge: 42);
         var teamSlots = new Slot[]
         {
-            new(DayOfWeek.Tuesday, new(20, 0), new(21, 30), "Wettkampftraining", null),
-            new(DayOfWeek.Saturday, new(9, 0), new(11, 0), "Kumite-Training", null),
+            new(DayOfWeek.Tuesday, new(20, 0), new(21, 30), "Wettkampftraining", null, ["team-t-01"]),
+            new(DayOfWeek.Saturday, new(9, 0), new(11, 0), "Kumite-Training", null, ["team-t-01"]),
         };
 
-        groups.Add(new GroupInfo("demo-team", "Wettkampfteam (Demo)", [], teamProfiles.Select(p => p.Info).ToList()));
-        events["demo-team"] = BuildEvents(rng, today, "demo-team", teamProfiles, teamSlots, withSpecialEvents: false);
+        groups.Add(new GroupInfo("demo-team", "Wettkampfteam (Demo)", [], [.. teamProfiles.Select(p => p.Info), .. teamTrainers]));
+        events["demo-team"] = BuildEvents(rng, today, "demo-team", teamProfiles, teamSlots, specialEventTrainers: null);
 
         return new Snapshot(today, groups, events);
     }
@@ -155,6 +161,10 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
         return profiles;
     }
 
+    /// <summary>Adults who host the events: members of the group in no subgroup, so no age class is measured against them.</summary>
+    private static List<MemberInfo> CreateTrainers(DateOnly today, string idPrefix, string[] names, int youngestAge) =>
+        [.. names.Select((name, i) => new MemberInfo($"{idPrefix}-{i + 1:00}", name, [], BirthDate(today, youngestAge + i * 4, i + 5)))];
+
     /// <summary>
     /// A birth date that gives <paramref name="age"/> today, and a birthday that is spread over the year. Worked out from the index and
     /// not drawn from the random generator, so that adding it left every other generated value as it was.
@@ -162,7 +172,7 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
     private static DateOnly BirthDate(DateOnly today, int age, int index) => today.AddYears(-age).AddDays(-(index * 53 % 330 + 1));
 
     private List<EventInfo> BuildEvents(
-        Random rng, DateOnly today, string groupId, List<Profile> profiles, Slot[] slots, bool withSpecialEvents)
+        Random rng, DateOnly today, string groupId, List<Profile> profiles, Slot[] slots, string[]? specialEventTrainers)
     {
         var now = clock.Now;
         var historyStart = today.AddDays(-HistoryDays);
@@ -175,23 +185,23 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
             var onBreak = IsBreak(day);
 
             foreach (var slot in slots.Where(s => s.Day == day.DayOfWeek))
-                Add(day, slot.Name, slot.Start, slot.End, slot.SubGroupId, onBreak || rng.NextDouble() < 0.03);
+                Add(day, slot.Name, slot.Start, slot.End, slot.SubGroupId, slot.Trainers, onBreak || rng.NextDouble() < 0.03);
 
-            if (!withSpecialEvents) continue;
+            if (specialEventTrainers is null) continue;
 
             if (day.DayOfWeek == DayOfWeek.Saturday && day.DayNumber / 7 % 4 == 0)
-                Add(day, "Offenes Training (alle)", new(10, 0), new(12, 0), null, onBreak);
+                Add(day, "Offenes Training (alle)", new(10, 0), new(12, 0), null, specialEventTrainers, onBreak);
             if (day.Month is 3 or 9 && day.DayOfWeek == DayOfWeek.Saturday && day.Day is >= 22 and <= 28)
-                Add(day, "Gürtelprüfung", new(10, 0), new(13, 0), null, cancelled: false);
+                Add(day, "Gürtelprüfung", new(10, 0), new(13, 0), null, specialEventTrainers, cancelled: false);
             if (day is { Month: 7, DayOfWeek: DayOfWeek.Saturday, Day: >= 8 and <= 14 })
-                Add(day, "Sommerfest", new(15, 0), new(20, 0), null, cancelled: false);
+                Add(day, "Sommerfest", new(15, 0), new(20, 0), null, specialEventTrainers, cancelled: false);
             if (day.Month is 5 or 11 && day.DayOfWeek == DayOfWeek.Sunday && day.Day is >= 8 and <= 14)
-                Add(day, "Turnier", new(9, 0), new(16, 0), "sg-youth", cancelled: false);
+                Add(day, "Turnier", new(9, 0), new(16, 0), "sg-youth", specialEventTrainers, cancelled: false);
         }
 
         return events;
 
-        void Add(DateOnly day, string name, TimeOnly start, TimeOnly end, string? subGroupId, bool cancelled)
+        void Add(DateOnly day, string name, TimeOnly start, TimeOnly end, string? subGroupId, IReadOnlyList<string> trainers, bool cancelled)
         {
             var startAt = clock.At(day, start);
             var endAt = clock.At(day, end);
@@ -206,9 +216,12 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
 
             if (responses.Count == 0) return;
 
+            // Spond lists the first host among the answers as well, the others only as owners: the statistics ignore both.
+            responses[trainers[0]] = cancelled ? Rsvp.Unanswered : Rsvp.Accepted;
+
             // Named by day, not by position: the history window moves with "today", and exams and saved filters keep
             // the ids of the events they stand for.
-            events.Add(new EventInfo($"{groupId}-{day:yyyyMMdd}-{++eventsToday}", name, startAt, endAt, cancelled, responses));
+            events.Add(new EventInfo($"{groupId}-{day:yyyyMMdd}-{++eventsToday}", name, startAt, endAt, cancelled, responses, trainers));
         }
     }
 

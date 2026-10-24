@@ -147,6 +147,7 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           # Android orders versions by one whole number: 1.2.3 -> 1002003 (a prerelease suffix does not count).
+          # Minor and patch each get three digits: a minor or patch of 1000 or more would overlap the next field and break the order.
           IFS=. read -r major minor patch <<< "${VERSION%%-*}"
           code=$(( major * 1000000 + minor * 1000 + ${patch:-0} ))
           signing=()
@@ -171,8 +172,7 @@ jobs:
             echo "::warning::No UPDATE_SIGNING_KEY secret: the APK has no update signature."
             exit 0
           fi
-          printf '%s
-' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
           installer="artifacts/installer/Kyuplan-android-$VERSION.apk"
           openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
           rm "$RUNNER_TEMP/update-key.pem"

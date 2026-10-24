@@ -66,7 +66,8 @@ jobs:
         run: dotnet workload install android
 
       # No keystore: the APK has a debug key. The version code is the run number, so a later build installs over an earlier one
-      # (a release has a much higher code; a phone with a release installed has to uninstall it first).
+      # (a release has a much higher code; a phone with a release installed has to uninstall it first). The run number counts per workflow,
+      # so APKs of different workflows (a PR build and a preview build) can share a code: uninstall one before installing the other.
       - name: Build the app
         run: |
           dotnet publish src/Kyuplan.Client.Android -c Release -p:Version="$VERSION" -p:ApplicationVersion="$GITHUB_RUN_NUMBER" -o artifacts/android

@@ -44,9 +44,7 @@ public sealed class MobileShellViewModel : ObservableObject
         Tabs = new ReadOnlyObservableCollection<MobileTab>(_tabs);
         MobileTab Tab(MobileTabKind kind) => _all.First(t => t.Kind == kind);
 
-        // A phone is for a quick look at what is going on: the calendar is what opens, as in the browser on a phone.
-        Select(Tab(MobileTabKind.Calendar).Page.CanView ? Tab(MobileTabKind.Calendar) : _all.First(t => t.Page.CanView));
-        ShowPermittedTabs();
+        ShowPermittedTabs(); // selects the first tab (once, so one page loads at start-up)
         shell.PermissionsChanged += (_, _) => ShowPermittedTabs();
 
         // The banner of an event in progress opens the event on the calendar, whatever tab is shown.
@@ -98,12 +96,18 @@ public sealed class MobileShellViewModel : ObservableObject
 
     /// <summary>
     /// Puts the tabs the signed-in user may use into the bar and takes the others out (somebody else signed in, or their permissions changed).
-    /// A tab that is taken out while it is shown gives way to the first one.
+    /// A tab that is taken out while it is shown gives way to the first one. The first time (nothing is shown yet) the calendar is what opens:
+    /// a phone is for a quick look at what is going on, as in the browser on a phone.
     /// </summary>
     private void ShowPermittedTabs()
     {
+        // The account tab is everybody's (no view permission), so there is always one tab; wanted[0] cannot fail.
         var wanted = _all.Where(t => t.Page.ShowInNavigation).ToList();
-        if (_selected is null || !wanted.Contains(_selected)) Select(wanted[0]);
+        if (_selected is null || !wanted.Contains(_selected))
+        {
+            var calendar = wanted.Find(t => t.Kind == MobileTabKind.Calendar);
+            Select(_selected is null && calendar is not null ? calendar : wanted[0]);
+        }
 
         foreach (var tab in _tabs.Where(t => !wanted.Contains(t)).ToList()) _tabs.Remove(tab);
         for (var i = 0; i < wanted.Count; i++)

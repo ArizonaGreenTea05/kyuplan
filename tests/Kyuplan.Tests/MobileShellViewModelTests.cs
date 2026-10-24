@@ -91,6 +91,20 @@ public sealed class MobileShellViewModelTests : IDisposable
     }
 
     [Fact]
+    public void The_account_tab_is_always_in_the_bar_so_there_is_always_a_tab_to_show()
+    {
+        // ShowPermittedTabs takes wanted[0] without a check: this pins the invariant that makes it safe.
+        var account = _mobile.AllTabs.Single(t => t.Kind == MobileTabKind.Account);
+
+        foreach (var user in new UserDto?[] { null, Nobody(4, "eve"), Anna, Boss })
+        {
+            _session.User = user;
+            Assert.True(account.Page.ShowInNavigation);
+            Assert.Contains(account, _mobile.Tabs);
+        }
+    }
+
+    [Fact]
     public void The_administration_and_the_statistics_are_not_on_the_phone_even_for_an_administrator()
     {
         _session.User = Boss;

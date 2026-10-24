@@ -19,8 +19,10 @@ public sealed class CustomScriptDataSourceTests
 {
     private static readonly ClubClock Clock = new(new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero)), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin"));
 
-    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null, bool allowPrivate = false) =>
-        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, AllowPrivateAddresses = allowPrivate, ScriptMaxStatements = maxStatements ?? 10_000_000 }), Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
+    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null, bool allowPrivate = false,
+        TimeSpan? failureCache = null, ClubClock? clock = null) =>
+        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, AllowPrivateAddresses = allowPrivate, ScriptMaxStatements = maxStatements ?? 10_000_000,
+            FailureCacheDuration = failureCache ?? TimeSpan.FromSeconds(30) }), clock ?? Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
 
     private sealed class ListLogger : ILogger<CustomScriptDataSource>
     {
@@ -376,11 +378,227 @@ public sealed class CustomScriptDataSourceTests
     [Fact]
     public async Task A_stopped_script_does_not_poison_the_next_call()
     {
-        using var source = Source("function getGroups() { while (true) { } }", maxStatements: 10_000);
+        using var source = Source("function getGroups() { while (true) { } }", maxStatements: 10_000, failureCache: TimeSpan.Zero);
 
         await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         // The gate is released and the engine is fresh: the second call is stopped the same way instead of hanging.
         await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+    }
+
+    private static string CountingScript(string url, int status) => $$"""
+        function getGroups() {
+          var r = http.get('{{url}}/hit/{{status}}');
+          if (!r.ok) throw new Error('upstream answered ' + r.status);
+          return [{ id: 'g', name: 'G' }];
+        }
+        function getEvents() { return []; }
+        """;
+
+    [Fact]
+    public async Task Concurrent_calls_for_the_same_data_share_one_run_of_the_script()
+    {
+        await using var service = await StartServiceAsync();
+        using var source = Source(CountingScript(service.Url, 200));
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => source.GetGroupsAsync(CancellationToken.None)));
+
+        Assert.Equal(1, service.Hits);
+        Assert.All(results, r => Assert.Same(results[0], r));
+    }
+
+    [Fact]
+    public async Task Concurrent_calls_for_a_failing_service_share_one_failed_run()
+    {
+        await using var service = await StartServiceAsync();
+        using var source = Source(CountingScript(service.Url, 503));
+
+        var calls = Enumerable.Range(0, 5).Select(_ => source.GetGroupsAsync(CancellationToken.None)).ToList();
+        var errors = new List<SpondUnavailableException>();
+        foreach (var call in calls) errors.Add(await Assert.ThrowsAsync<SpondUnavailableException>(() => call));
+
+        Assert.Equal(1, service.Hits);
+        Assert.All(errors, e => Assert.Contains("upstream answered 503", e.Message));
+    }
+
+    [Fact]
+    public async Task A_failed_run_is_not_repeated_within_the_failure_window_and_the_message_says_how_long_is_left()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero));
+        await using var service = await StartServiceAsync();
+        using var source = Source(CountingScript(service.Url, 500), clock: new ClubClock(time, Clock.Zone), failureCache: TimeSpan.FromSeconds(30));
+
+        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        time.Advance(TimeSpan.FromSeconds(10));
+        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Equal(1, service.Hits);
+        Assert.Contains("upstream answered 500", first.Message);
+        Assert.Contains("upstream answered 500", second.Message);
+        Assert.DoesNotContain("not asked again", first.Message);
+        Assert.Contains("another 20 seconds", second.Message);
+        Assert.Same(first.InnerException, second.InnerException);
+    }
+
+    [Fact]
+    public async Task A_failed_run_is_tried_again_once_the_failure_window_is_over_and_a_success_is_cached_as_usual()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero));
+        await using var service = await StartServiceAsync();
+        service.Status = 500;
+        using var source = Source(CountingScript(service.Url, 0), clock: new ClubClock(time, Clock.Zone), failureCache: TimeSpan.FromSeconds(30));
+
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        time.Advance(TimeSpan.FromSeconds(29));
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        Assert.Equal(1, service.Hits);
+
+        service.Status = 200;
+        time.Advance(TimeSpan.FromSeconds(1)); // exactly the end of the window
+        var groups = await source.GetGroupsAsync(CancellationToken.None);
+        Assert.Equal(2, service.Hits);
+        Assert.Same(groups, await source.GetGroupsAsync(CancellationToken.None));
+        Assert.Equal(2, service.Hits);
+    }
+
+    [Fact]
+    public async Task A_timeout_is_remembered_like_any_other_failure()
+    {
+        await using var service = await StartServiceAsync();
+        service.Delay = TimeSpan.FromSeconds(5);
+        using var source = Source(CountingScript(service.Url, 200), TimeSpan.FromMilliseconds(300));
+
+        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("took longer", first.Message);
+        Assert.Contains("took longer", second.Message);
+        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(250), "the second call must not run the script again");
+    }
+
+    [Fact]
+    public async Task A_timeout_holds_for_all_data_because_the_service_does_not_answer_for_any()
+    {
+        await using var service = await StartServiceAsync();
+        service.Delay = TimeSpan.FromSeconds(5);
+        using var source = Source($$"""
+            function getGroups() { return [{ id: 'g', name: 'G' }]; }
+            function getEvents(groupId) { http.get('{{service.Url}}/hit/200'); return []; }
+            """, TimeSpan.FromMilliseconds(300));
+        var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
+        var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
+
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var other = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
+        var groups = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("took longer", other.Message);
+        Assert.Contains("took longer", groups.Message);
+        Assert.Equal(1, service.Hits);
+        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(250), "no further call may wait out the timeout");
+    }
+
+    [Fact]
+    public async Task A_request_that_times_out_holds_for_all_data_like_the_script_timeout()
+    {
+        await using var service = await StartServiceAsync();
+        service.Delay = TimeSpan.FromSeconds(5);
+        using var source = Source($$"""
+            function getGroups() { var r = http.get('{{service.Url}}/hit/200'); return [{ id: 'g', name: 'G' }]; }
+            function getEvents(groupId) { http.get('{{service.Url}}/hit/200'); return []; }
+            """);
+        source.RequestTimeout = TimeSpan.FromMilliseconds(300);
+        var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
+        var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
+
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
+
+        Assert.Equal(1, service.Hits);
+        Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(250), "no further call may wait out the request timeout");
+    }
+
+    [Fact]
+    public async Task A_failure_is_not_remembered_when_the_window_is_zero_or_negative()
+    {
+        await using var service = await StartServiceAsync();
+        foreach (var window in new[] { TimeSpan.Zero, TimeSpan.FromSeconds(-5) })
+        {
+            service.Hits = 0;
+            using var source = Source(CountingScript(service.Url, 500), failureCache: window);
+
+            await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+            await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+            Assert.Equal(2, service.Hits);
+        }
+    }
+
+    [Fact]
+    public async Task Refreshing_the_cache_also_forgets_a_failure()
+    {
+        await using var service = await StartServiceAsync();
+        service.Status = 500;
+        using var source = Source(CountingScript(service.Url, 0));
+
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        service.Status = 200;
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None)); // still remembered
+        source.InvalidateCache();
+
+        Assert.Single(await source.GetGroupsAsync(CancellationToken.None));
+        Assert.Equal(2, service.Hits);
+    }
+
+    [Fact]
+    public async Task A_failure_only_holds_for_the_data_that_failed()
+    {
+        using var source = Source("""
+            function getGroups() { throw new Error('groups down'); }
+            function getEvents(groupId) { if (groupId == 'bad') throw new Error('events down'); return []; }
+            """);
+        var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
+        var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
+
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("bad", from, to, CancellationToken.None));
+
+        Assert.Empty(await source.GetEventsAsync("good", from, to, CancellationToken.None));
+        // Another window of the failing group is another key and is tried by itself.
+        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("bad", from.AddYears(1), to.AddYears(1), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_caller_who_gives_up_while_waiting_neither_disturbs_the_run_nor_leaves_a_failure_behind()
+    {
+        await using var service = await StartServiceAsync();
+        using var source = Source(CountingScript(service.Url, 200));
+        var running = source.GetGroupsAsync(CancellationToken.None);
+        await Task.Delay(50); // the first caller holds the gate
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => source.GetGroupsAsync(cancel.Token));
+
+        Assert.Single(await running);
+        Assert.Single(await source.GetGroupsAsync(CancellationToken.None));
+        Assert.Equal(1, service.Hits);
+    }
+
+    [Fact]
+    public async Task A_run_cancelled_by_its_caller_is_not_remembered_as_a_failure()
+    {
+        await using var service = await StartServiceAsync();
+        service.Delay = TimeSpan.FromSeconds(5);
+        using var source = Source(CountingScript(service.Url, 200));
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => source.GetGroupsAsync(cancel.Token));
+        service.Delay = TimeSpan.Zero;
+
+        Assert.Single(await source.GetGroupsAsync(CancellationToken.None));
     }
 
     [Theory]
@@ -464,6 +682,15 @@ public sealed class CustomScriptDataSourceTests
 
         public string? LastToken { get; set; }
 
+        /// <summary>How often <c>/hit/{status}</c> was asked.</summary>
+        public int Hits;
+
+        /// <summary>The answer of <c>/hit/0</c> (other values are answered as given); 0 = 200.</summary>
+        public int Status { get; set; }
+
+        /// <summary>How long <c>/hit/*</c> waits before it answers.</summary>
+        public TimeSpan Delay { get; set; } = TimeSpan.FromMilliseconds(300);
+
         public async ValueTask DisposeAsync() => await app.DisposeAsync();
     }
 
@@ -478,6 +705,12 @@ public sealed class CustomScriptDataSourceTests
         {
             service.LastToken = context.Request.Headers["X-Token"];
             return Results.Json(new[] { new { id = "g1", name = "Dojo" } });
+        });
+        app.MapGet("/hit/{status:int}", async (int status, CancellationToken aborted) =>
+        {
+            Interlocked.Increment(ref service.Hits);
+            await Task.Delay(service.Delay, aborted);
+            return Results.StatusCode(status == 0 ? (service.Status == 0 ? 200 : service.Status) : status);
         });
         app.MapPost("/echo", (System.Text.Json.JsonElement body) => Results.Json(body));
         app.MapGet("/to-lan", () => Results.Redirect("http://192.168.1.1/"));

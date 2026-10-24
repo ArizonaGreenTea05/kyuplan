@@ -25,7 +25,8 @@ namespace Kyuplan.Api.Sources;
 /// milliseconds; an answer is <c>accepted</c>, <c>declined</c>, <c>unanswered</c> or <c>other</c>; the members in <c>responses</c> are the invited ones.
 /// The script gets <c>http.get/post/put/delete(url, [body,] headers)</c> (answering <c>{ status, ok, text, json() }</c>) and <c>console.log</c>, nothing else:
 /// no file system, no .NET. It runs in a fresh engine for every call, one call at a time, with a time, memory, statement and recursion limit; every run is logged with its duration. What it returns is cached
-/// for <see cref="DataSourceOptions.CacheDuration"/>.
+/// for <see cref="DataSourceOptions.CacheDuration"/>; callers waiting for the same data share one run, and a failure is remembered for
+/// <see cref="DataSourceOptions.FailureCacheDuration"/>.
 /// </summary>
 public sealed class CustomScriptDataSource(
     IOptions<DataSourceOptions> options, ClubClock clock, ILogger<CustomScriptDataSource> logger) : IDataSource, IDisposable
@@ -38,13 +39,24 @@ public sealed class CustomScriptDataSource(
 
     private readonly MemoryCache _cache = new(new MemoryCacheOptions());
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Failure> _failures = new();
+
+    /// <summary>The key of a failure that holds for all data (a timeout), not only for the one that was asked.</summary>
+    private const string AnyData = "*";
+
+    /// <summary>How long one request of the script may take (30 seconds); settable for tests.</summary>
+    internal TimeSpan RequestTimeout
+    {
+        get => _http.Timeout;
+        set => _http.Timeout = value;
+    }
 
     public bool IsDemo => false;
 
     public string Kind => DataSourceKinds.Custom;
 
     public Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
-        CachedAsync("groups", () => RunAsync(engine => ParseGroups(Call(engine, "getGroups")), cancellationToken));
+        CachedAsync("groups", () => RunAsync(engine => ParseGroups(Call(engine, "getGroups")), cancellationToken), cancellationToken);
 
     public Task<IReadOnlyList<EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
     {
@@ -54,10 +66,14 @@ public sealed class CustomScriptDataSource(
         var end = to.UtcDateTime.Date is var last && last < DateTime.MaxValue.Date ? last.AddDays(1) : last;
         return CachedAsync($"events|{groupId}|{start.Ticks}|{end.Ticks}", () => RunAsync(
             engine => ParseEvents(Call(engine, "getEvents", groupId, start.ToString("o", CultureInfo.InvariantCulture), end.ToString("o", CultureInfo.InvariantCulture))),
-            cancellationToken));
+            cancellationToken), cancellationToken);
     }
 
-    public void InvalidateCache() => _cache.Compact(1.0);
+    public void InvalidateCache()
+    {
+        _cache.Compact(1.0);
+        _failures.Clear();
+    }
 
     public void Dispose()
     {
@@ -82,14 +98,81 @@ public sealed class CustomScriptDataSource(
         }
     }
 
-    private async Task<IReadOnlyList<T>> CachedAsync<T>(string key, Func<Task<IReadOnlyList<T>>> load)
+    /// <summary>
+    /// What the script delivered for <paramref name="key"/>, from the cache or from one run. Runs go through the gate one at a time and the
+    /// cache is looked at again once it is taken, so callers who wait for the same key share the run of the first one (its result, or its
+    /// failure, which is kept for <see cref="DataSourceOptions.FailureCacheDuration"/>: an unreachable service is not asked again by everybody in turn).
+    /// </summary>
+    private async Task<IReadOnlyList<T>> CachedAsync<T>(string key, Func<Task<IReadOnlyList<T>>> load, CancellationToken cancellationToken)
     {
-        if (_cache.TryGetValue(key, out IReadOnlyList<T>? cached) && cached is not null) return cached;
+        if (TryGetCached(key, out IReadOnlyList<T>? cached)) return cached;
 
-        var fresh = await load();
-        _cache.Set(key, fresh, options.Value.CacheDuration);
-        return fresh;
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (TryGetCached(key, out cached)) return cached;
+
+            try
+            {
+                var fresh = await load();
+                _cache.Set(key, fresh, options.Value.CacheDuration);
+                return fresh;
+            }
+            catch (SpondUnavailableException ex)
+            {
+                RememberFailure(key, ex);
+                throw;
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
+
+    /// <summary>The cached result, or <c>false</c>; throws the failure of the last run while it is remembered.</summary>
+    private bool TryGetCached<T>(string key, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out IReadOnlyList<T>? result)
+    {
+        if (_cache.TryGetValue(key, out result) && result is not null) return true;
+
+        foreach (var failureKey in new[] { key, AnyData })
+        {
+            if (!_failures.TryGetValue(failureKey, out var failure)) continue;
+
+            var remaining = failure.Until - clock.Now;
+            if (remaining > TimeSpan.Zero)
+                throw new SpondUnavailableException(
+                    $"{failure.Error.Message} (not asked again for another {Math.Ceiling(remaining.TotalSeconds):0} seconds)", failure.Error.InnerException);
+            // Only this very entry: another caller may have stored a newer failure meanwhile.
+            _failures.TryRemove(new KeyValuePair<string, Failure>(failureKey, failure));
+        }
+
+        return false;
+    }
+
+    private void RememberFailure(string key, SpondUnavailableException error)
+    {
+        var duration = options.Value.FailureCacheDuration;
+        if (duration <= TimeSpan.Zero) return;
+
+        var now = clock.Now;
+        foreach (var expired in _failures.Where(f => f.Value.Until <= now).Select(f => f.Key).ToList()) _failures.TryRemove(expired, out _);
+        var failure = new Failure(error, now + duration);
+        _failures[key] = failure;
+        // A service that does not answer does not answer for any other data either, and every further attempt would wait out the whole timeout in turn.
+        if (IsTimeout(error)) _failures[AnyData] = failure;
+    }
+
+    /// <summary>The script ran out of time, or the HTTP client did (it reports that as a cancelled task caused by a <see cref="TimeoutException"/>).</summary>
+    private static bool IsTimeout(Exception error)
+    {
+        for (var inner = error.InnerException; inner is not null; inner = inner.InnerException)
+            if (inner is TimeoutException) return true;
+
+        return false;
+    }
+
+    private sealed record Failure(SpondUnavailableException Error, DateTimeOffset Until);
 
     private Task<T> RunAsync<T>(Func<Engine, T> work, CancellationToken cancellationToken)
     {
@@ -98,9 +181,8 @@ public sealed class CustomScriptDataSource(
             throw new SpondUnavailableException("The data source is a custom script, but there is none (DataSource:Script; the settings page saves it).");
 
         // The script asks over HTTP synchronously, so it runs on a thread of its own and never blocks a request thread.
-        return Task.Run(async () =>
+        return Task.Run(() =>
         {
-            await _gate.WaitAsync(cancellationToken);
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var outcome = "failed";
             // The time limit also ends a request that is waiting for an answer, which Jint's own timeout cannot interrupt.
@@ -118,12 +200,14 @@ public sealed class CustomScriptDataSource(
             {
                 // Jint reports its own timeout and a cancelled token with exceptions of its own, so they are told apart by the token, not by the type.
                 outcome = "timed out";
-                throw new SpondUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.");
+                throw new SpondUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.", new TimeoutException());
             }
-            catch (OperationCanceledException)
+            catch (Exception ex) when (cancellationToken.IsCancellationRequested)
             {
+                // The caller gave up (Jint reports that with an exception of its own): not a failure of the script, so nobody else is told it failed.
                 outcome = "cancelled";
-                throw;
+                if (ex is OperationCanceledException) throw;
+                throw new OperationCanceledException(cancellationToken);
             }
             catch (Exception ex)
             {
@@ -133,7 +217,6 @@ public sealed class CustomScriptDataSource(
             finally
             {
                 logger.LogInformation("The custom data script {Outcome} after {DurationMs} ms.", outcome, watch.ElapsedMilliseconds);
-                _gate.Release();
             }
         }, cancellationToken);
     }

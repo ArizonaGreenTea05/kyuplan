@@ -9,7 +9,8 @@ namespace Kyuplan.Client.AndroidApp.Screens;
 
 /// <summary>
 /// The calendar of the selected group as a list of days with their events, and one event in detail: who was invited, what they answered, and
-/// the comments about them, with a box to write a new one (the phone is for a quick note during training).
+/// the evaluations and comments about them (reply, edit, delete), with the stars to give and a box to write a new comment (the phone is for a
+/// quick note during training).
 /// </summary>
 public sealed class CalendarScreen : ScrollScreen
 {
@@ -166,28 +167,94 @@ public sealed class CalendarScreen : ScrollScreen
         return card;
     }
 
-    /// <summary>The comments about a member, and the box for a new one.</summary>
+    /// <summary>The evaluations of a member, the stars the user can give, the comments about them and the box to write one.</summary>
     private void Expanded(LinearLayout card, EventAttendeeRow attendee)
     {
-        foreach (var comment in attendee.Comments)
+        Ratings(card, attendee);
+
+        foreach (var comment in attendee.Comments) card.AddView(CommentLine(attendee, comment), Ui.Params(top: 10));
+
+        if (!attendee.CanCompose) return;
+
+        if (attendee.IsComposing)
         {
-            var text = Ui.Text(string.Concat(comment.Spans.Select(s => s.Text)), TextStyle.Body);
-            var line = Ui.Column(Ui.Text($"{comment.AuthorName} · {comment.CreatedText}", TextStyle.Caption), text);
-            line.SetPadding(Ui.Dp(Math.Min(comment.Depth, CommentRow.MaxIndentLevel) * 12), 0, 0, 0);
-            card.AddView(line, Ui.Params(top: 10));
+            var composing = Ui.Row(
+                Ui.Text(attendee.ComposingText, TextStyle.Caption),
+                Ui.Chip(Strings.Comments_Cancel, false, () => Act(attendee.CancelReplyCommand)));
+            composing.GetChildAt(0)!.LayoutParameters = Ui.Params(weight: 1);
+            card.AddView(composing, Ui.Params(top: 12));
         }
 
-        if (!_vm.CanWriteComments) return;
-
-        var input = Ui.Input(Strings.Calendar_CommentHint, attendee.Draft, text => attendee.Draft = text, multiline: true);
-        card.AddView(input, Ui.Params(top: 12));
+        var input = Ui.Input(string.Format(Strings.Calendar_CommentHint, attendee.Name), attendee.Draft, text => attendee.Draft = text, multiline: true);
+        card.AddView(input, Ui.Params(top: attendee.IsComposing ? 4 : 12));
         card.AddView(
-            Ui.Button(Strings.Calendar_Post, () =>
+            Ui.Button(attendee.PostText, () =>
             {
                 Ui.Hide(input);
-                if (_vm.PostCommentCommand.CanExecute(attendee)) _vm.PostCommentCommand.Execute(attendee);
+                Run(_vm.PostCommentCommand, attendee);
             }),
             Ui.Params(top: 8));
+    }
+
+    private View CommentLine(EventAttendeeRow attendee, CommentRow comment)
+    {
+        var line = Ui.Column(
+            Ui.Text($"{comment.AuthorName} · {comment.CreatedText}", TextStyle.Caption),
+            Ui.Text(string.Concat(comment.Spans.Select(s => s.Text)), TextStyle.Body));
+        line.SetPadding(Ui.Dp(Math.Min(comment.Depth, CommentRow.MaxIndentLevel) * 12), 0, 0, 0);
+        if (comment.IsEdited) line.AddView(Ui.Text(comment.EditedText, TextStyle.Caption));
+
+        List<View> actions = [];
+        if (attendee.CanReply) actions.Add(Ui.Chip(Strings.Comments_Reply, false, () => Act(attendee.ReplyCommand, comment)));
+        if (comment.CanEdit && !comment.IsBeingEdited) actions.Add(Ui.Chip(Strings.Comments_Edit, false, () => Act(attendee.EditCommand, comment)));
+        if (comment.CanDelete) actions.Add(Ui.Chip(Strings.Comments_Delete, false, () => Act(_vm.AskDeleteCommand, comment)));
+        if (actions.Count > 0) line.AddView(Ui.ChipRow([.. actions]), Ui.Params(top: 4));
+
+        if (comment.IsConfirmingDelete)
+        {
+            var answer = Ui.ChipRow(
+                Ui.Chip(Strings.Comments_ConfirmYes, true, () => Act(_vm.ConfirmDeleteCommand, comment)),
+                Ui.Chip(Strings.Comments_Cancel, false, () => Act(_vm.CancelDeleteCommand, comment)));
+            line.AddView(Ui.Notice(comment.ConfirmText, Tone.Danger, answer), Ui.Params(top: 6));
+        }
+
+        return line;
+    }
+
+    /// <summary>What the users gave the member, and (while the event has started) the buttons to give or take back one's own.</summary>
+    private void Ratings(LinearLayout card, EventAttendeeRow attendee)
+    {
+        if (!_vm.ShowRatings) return;
+
+        if (_vm.ShowNotStarted) card.AddView(Ui.Text(Strings.Rating_NotStarted, TextStyle.Caption), Ui.Params(top: 10));
+
+        if (attendee.HasRatings)
+        {
+            foreach (var rating in attendee.Ratings)
+            {
+                card.AddView(Ui.Text($"{rating.Glyphs} {rating.ValueText} · {rating.UserText}", TextStyle.Body), Ui.Params(top: 6));
+            }
+
+            card.AddView(Ui.Text(attendee.RatingSummary, TextStyle.Caption), Ui.Params(top: 2));
+        }
+        else if (attendee.ShowRating || attendee.MayViewRatings)
+        {
+            card.AddView(Ui.Text(Strings.Rating_None, TextStyle.Caption), Ui.Params(top: 10));
+        }
+
+        if (!attendee.CanRate) return;
+
+        card.AddView(Ui.Text(Strings.Rating_YourChoice, TextStyle.Caption), Ui.Params(top: 10));
+        List<View> choices = [.. attendee.Choices.Select(c => Ui.Chip(c.Text, c.IsSelected, () => Run(_vm.RateCommand, c)))];
+        if (attendee.HasMyRating) choices.Add(Ui.Chip(attendee.ClearChoice.Text, false, () => Run(_vm.RateCommand, attendee.ClearChoice)));
+        card.AddView(Ui.ChipRow([.. choices]), Ui.Params(top: 4));
+    }
+
+    /// <summary>Runs a command that changes the rows only (the rows do not tell the screen), so the screen draws them again.</summary>
+    private void Act(System.Windows.Input.ICommand command, object? parameter = null)
+    {
+        Run(command, parameter);
+        Invalidate();
     }
 
     private static void Run(System.Windows.Input.ICommand command, object? parameter = null)

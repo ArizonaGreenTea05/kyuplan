@@ -1,6 +1,6 @@
 name: Release
 
-# A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every client (Windows, built with Inno Setup, and the Android APK;
+# A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every client (Windows, built with Inno Setup, the Linux package for Arch and the Android APK;
 # further systems get a job beside "windows" that uploads its installer as Kyuplan-<platform>-<version>.<ext>) is built and goes
 # into the Docker image of the server (API + web client), which offers them for download and as the update of the installed clients, and
 # the image is pushed to ghcr.io/<owner>/kyuplan. The GitHub release carries the installers, the documentation archive and the SBOM of the image as well.
@@ -185,6 +185,55 @@ jobs:
             artifacts/installer/Kyuplan-android-${{ steps.v.outputs.version }}.apk.sig
           if-no-files-found: error
 
+  # The native Linux client as a pacman package for Arch Linux, built by makepkg in an Arch container (makepkg refuses to run as root).
+  linux:
+    needs: audit
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install the build tools
+        run: pacman -Syu --noconfirm --needed base-devel git dotnet-sdk openssl sudo
+
+      - uses: actions/checkout@v7
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - name: Build the package
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          useradd -m builder
+          chown -R builder "$GITHUB_WORKSPACE"
+          # -d: the build tools are installed above; the run-time dependencies belong to the machines the package is installed on.
+          su builder -c "cd '$GITHUB_WORKSPACE/deploy/arch' && KYUPLAN_VERSION='$VERSION' makepkg -f -d --noconfirm"
+          mkdir -p artifacts/installer
+          cp deploy/arch/kyuplan-*-any.pkg.tar.zst "artifacts/installer/Kyuplan-linux-$VERSION.pkg.tar.zst"
+
+      # Same update key as the other installers (installer/update-key.pub.pem is built into the program).
+      - name: Sign the package with the update key
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::No UPDATE_SIGNING_KEY secret: the package has no update signature and the installed clients will not install it."
+            exit 0
+          fi
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          installer="artifacts/installer/Kyuplan-linux-$VERSION.pkg.tar.zst"
+          openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
+          rm "$RUNNER_TEMP/update-key.pem"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-linux
+          path: |
+            artifacts/installer/Kyuplan-linux-${{ steps.v.outputs.version }}.pkg.tar.zst
+            artifacts/installer/Kyuplan-linux-${{ steps.v.outputs.version }}.pkg.tar.zst.sig
+          if-no-files-found: error
+
   # The documentation (Docusaurus, website/): the image carries the guides the server shows its users (the Dockerfile builds them itself), the
   # release carries all of them, the developer guide too, as one archive that any web server can serve at /docs/.
   docs:
@@ -222,7 +271,7 @@ jobs:
           if-no-files-found: error
 
   image:
-    needs: [windows, android, docs] # add every further client job here
+    needs: [windows, linux, android, docs] # add every further client job here
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

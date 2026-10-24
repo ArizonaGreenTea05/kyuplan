@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.WpfShots", "tests\K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.Client.Android", "src\Kyuplan.Client.Android\Kyuplan.Client.Android.csproj", "{584F97FD-E76F-44BC-A729-9C8BC5BE8696}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kyuplan.Client.Linux", "src\Kyuplan.Client.Linux\Kyuplan.Client.Linux.csproj", "{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -129,6 +131,18 @@ Global
 		{584F97FD-E76F-44BC-A729-9C8BC5BE8696}.Release|x64.Build.0 = Release|Any CPU
 		{584F97FD-E76F-44BC-A729-9C8BC5BE8696}.Release|x86.ActiveCfg = Release|Any CPU
 		{584F97FD-E76F-44BC-A729-9C8BC5BE8696}.Release|x86.Build.0 = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|x64.Build.0 = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Debug|x86.Build.0 = Debug|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|x64.ActiveCfg = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|x64.Build.0 = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|x86.ActiveCfg = Release|Any CPU
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -142,6 +156,7 @@ Global
 		{0541B386-0BD7-4B40-911B-7CDC0BC155CD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F9C467D5-3DA7-4F7E-AEF6-83A403465608} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{584F97FD-E76F-44BC-A729-9C8BC5BE8696} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{41E0CC92-6A7F-44AA-9EAD-DF418956C1EA} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DFEEF9E6-AF75-44F8-8F57-4D3D341E7C7D}

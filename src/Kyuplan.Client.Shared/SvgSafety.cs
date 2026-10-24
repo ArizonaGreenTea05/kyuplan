@@ -1,8 +1,7 @@
-using System.IO;
 using System.Text.RegularExpressions;
 using System.Xml;
 
-namespace Kyuplan.Client.WpfApp.Services;
+namespace Kyuplan.Client;
 
 /// <summary>
 /// Whether an SVG is safe to hand to the renderer. A browser draws an SVG that is shown as an image from what the file itself carries and

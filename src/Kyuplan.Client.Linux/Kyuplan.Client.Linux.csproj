@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Native GTK 4 / libadwaita client for Linux (built for Arch Linux, runs wherever GTK 4.10+ and libadwaita 1.4+ are installed).
+       Gir.Core is only managed bindings: the project builds on every OS, it needs the GTK libraries to run. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Kyuplan.Client.LinuxApp</RootNamespace>
+    <AssemblyName>kyuplan</AssemblyName>
+    <Description>Native GTK 4 client of Kyuplan for Linux.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GirCore.Adw-1" />
+    <PackageReference Include="GirCore.Gtk-4.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kyuplan.Client.Shared\Kyuplan.Client.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The public half of the key that signs the releases (LinuxClientUpdater); the private half is the release secret UPDATE_SIGNING_KEY. -->
+    <EmbeddedResource Include="..\..\installer\update-key.pub.pem" LogicalName="update-key.pub.pem" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

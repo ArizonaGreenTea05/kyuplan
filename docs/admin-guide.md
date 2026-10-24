@@ -572,7 +572,7 @@ The backup databases and files protect against losing the server's disk or a wro
 
 ## Desktop clients and updates
 
-The server image carries the Windows installer and the Android app (`.apk`). The web client shows a **Download for Windows** or **Download for Android** button for the visitor's system, and
+The server image carries the Windows installer, the Linux package (`.pkg.tar.zst` for Arch Linux) and the Android app (`.apk`). The web client shows a **Download for Windows**, **Download for Linux** or **Download for Android** button for the visitor's system, and
 installed apps check the server every hour and offer an **Update to x.y.z** button when the server's version is newer. So
 **updating the server updates the clients** (users click the button). Nothing has to be distributed by hand.
 
@@ -584,6 +584,11 @@ The Android app is installed from the downloaded file: Android asks the user onc
 way (the first update asks to allow the app itself to install apps). An update is only accepted by Android when it is signed with the same key as the
 installed app, so the release has to be signed with the keystore secrets described in the [deployment guide](deployment.md#the-android-client).
 The app has the pages of everyday use only (dashboard, calendar, exams, members, account), not the statistics and not the administration.
+
+The Linux app is a pacman package: `sudo pacman -U Kyuplan-linux-<version>.pkg.tar.zst` installs it. It updates itself through polkit (the user types
+their password once per update) and only installs a package that carries a valid signature of the release's update key
+(see the [deployment guide](deployment.md#the-linux-client)). It has every page the web client has, including the administration. The server
+address and the language are kept in `~/.config/kyuplan`, the remembered login in the desktop's keyring (never on disk).
 
 ## Documentation for your users
 

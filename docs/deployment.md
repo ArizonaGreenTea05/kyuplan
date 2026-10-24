@@ -126,17 +126,17 @@ The full list is the configuration table of the [reference](reference.md#configu
 ---
 
 The whole framework has **one version** and is released by pushing one tag, `v<version>`. The release is a single Docker image with
-everything in it: the API, the web client **and the installers of the clients** (Windows, and the Android app). To set Kyuplan up, deploy that one container and do the rest in
+everything in it: the API, the web client **and the installers of the clients** (Windows, the Linux package for Arch Linux and the Android app). To set Kyuplan up, deploy that one container and do the rest in
 the web client. It runs **anywhere Docker runs** (see [Where and how to run it](#where-and-how-to-run-it-overview)) and keeps its data in **SQLite (default) or PostgreSQL** (see [Choosing the database](#choosing-the-database)).
 
 | Tag | What the workflow produces |
 | --- | --- |
-| `v0.1` | Docker image `ghcr.io/<owner>/kyuplan` for `linux/amd64` and `linux/arm64` (API + web client + the installers of the desktop clients) and a GitHub release with the installers (`Kyuplan-windows-0.1.exe`) attached |
+| `v0.1` | Docker image `ghcr.io/<owner>/kyuplan` for `linux/amd64` and `linux/arm64` (API + web client + the installers of the desktop clients) and a GitHub release with the installers (`Kyuplan-windows-0.1.exe`, `Kyuplan-linux-0.1.pkg.tar.zst`, `Kyuplan-android-0.1.apk`) attached |
 
 How the pieces find each other:
 
 - **One installer per operating system** (`windows`, `macos`, `linux`, `android`: `ClientPlatform` in `Kyuplan.Contracts`). Its file is named
-  `Kyuplan-<platform>-<version>.<extension>` (`Kyuplan-windows-1.2.3.exe`, `Kyuplan-android-1.2.3.apk`) and lies in the folder `downloads` next to the program
+  `Kyuplan-<platform>-<version>.<extension>` (`Kyuplan-windows-1.2.3.exe`, `Kyuplan-linux-1.2.3.pkg.tar.zst`, `Kyuplan-android-1.2.3.apk`) and lies in the folder `downloads` next to the program
   (`ClientDownload__Directory` sets another one); of several versions of a platform the newest counts. A build from source or a local
   `docker build` has none; the server then offers no download and no update.
 - The server **offers each installer for download**: `GET /api/client/<platform>` (needs a login, like the rest of the API). The web
@@ -146,7 +146,7 @@ How the pieces find each other:
   of its own platform with its own version** when it has signed in and then every hour; when the server's is newer, an *Update to x.y.z*
   button appears in its left panel. A click downloads the installer from the server, runs it silently (the WPF client: `/SILENT
   /Relaunch=1`), ends the program, and the installer starts the new version when it is done. Updating the server therefore updates the clients.
-  The WPF client only runs a downloaded installer that it can trust (the Android app hands the APK to Android, which only installs an update signed with the key of the installed app; see [The Android client](#the-android-client)), so a server that has been taken over cannot push code to the clients. Either
+  The WPF client only runs a downloaded installer that it can trust (the Linux client installs a package only when the update key signed it, see [The Linux client](#the-linux-client); the Android app hands the APK to Android, which only installs an update signed with the key of the installed app; see [The Android client](#the-android-client)), so a server that has been taken over cannot push code to the clients. Either
   works, the first needs no certificate:
   - **Update key (recommended).** The release signs the installer with a private key (ECDSA P-256) and publishes the signature beside it
     (`Kyuplan-windows-<version>.exe.sig`, served at `GET /api/client/<platform>/signature`); the public key is built into the program
@@ -165,7 +165,7 @@ How the pieces find each other:
 
   An installer with neither is deleted and not run (the update then has to be done by hand); for development the environment variable
   `KYUPLAN_ALLOW_UNSIGNED_UPDATES=1` lifts that for a program that is not Authenticode-signed.
-- **Adding a client for another system** (say a macOS or Linux app; the Android app is one, see [The Android client](#the-android-client)): give it an `IClientUpdater` (`Client.Shared`) that names its
+- **Adding a client for another system** (say a macOS app; the Android app and the Linux app are such clients, see [The Android client](#the-android-client) and [The Linux client](#the-linux-client)): give it an `IClientUpdater` (`Client.Shared`) that names its
   platform, installer extension and version and knows how to run its installer; register `ClientUpdateViewModel` and show its button as
   the WPF client does. In `.github/workflows/release.yml` add a job next to `windows` that builds it and uploads its installer as the
   artifact `installer-<platform>` (named as above), and add the job to `needs` of `image`. Nothing in the API or the web client changes.
@@ -522,6 +522,36 @@ server (*Download for Windows*) or from the GitHub release; once installed, the 
   when the release carries the update-key signature (`UPDATE_SIGNING_KEY`).
 - The user's own data (server address, language, theme, last filter, the remembered login) is in `%LocalAppData%\Kyuplan` and stays when the
   program is uninstalled.
+
+## The Linux client
+
+`Kyuplan-linux-<version>.pkg.tar.zst` is the **native Linux client** (`src/Kyuplan.Client.Linux`): a GTK 4 / libadwaita program written with
+[Gir.Core](https://github.com/gircore/gir.core) bindings, not a web view. It is built for **Arch Linux** and has every page of the web client. It
+is made of the same shared view models as the other clients; only the widgets are its own. The package is `arch=('any')`: managed code only, one
+package for x86_64 and aarch64. Users get it from the web client (*Download for Linux*) or the GitHub release.
+
+- **Installing**: `sudo pacman -U Kyuplan-linux-1.2.3.pkg.tar.zst`. It depends on `dotnet-runtime`, `gtk4`, `libadwaita` and `librsvg` (SVG logos);
+  `libsecret` (the keyring), `gnome-keyring` and `polkit` (updates) are optional. It installs `/usr/bin/kyuplan`, the program in `/usr/lib/kyuplan`,
+  a desktop entry and the icon.
+- **Building the package yourself** (needs `base-devel` and `dotnet-sdk`; `KYUPLAN_VERSION` is the version, default the one of `Directory.Build.props`):
+  ```
+  cd deploy/arch && KYUPLAN_VERSION=1.2.3 makepkg -si
+  ```
+  `deploy/arch/PKGBUILD` publishes the project from the checkout. The release workflow builds the same package in an Arch Linux container
+  (job `linux`, artifact `installer-linux`), names it `Kyuplan-linux-<version>.pkg.tar.zst` and signs it with the update key like the other installers.
+- **First start**: the program asks for the address of the server (`~/.config/kyuplan/api-address.txt`, `$XDG_CONFIG_HOME` is respected). The language
+  and the last statistics filter are kept there as well. The remembered login is kept in the **keyring of the desktop** through `secret-tool`
+  (Secret Service: GNOME Keyring, KWallet, KeePassXC) and only handed out for the server it was saved for; without `secret-tool` or a running
+  keyring nothing is remembered.
+- **Themes**: light or dark follows the desktop unless the theme has one scheme only (Dracula, Catppuccin, the theme packs); the theme packs and the
+  accent colour of the instance are drawn through libadwaita's named colours. The user's choice is the one of the web client (it is kept with the account).
+- **Updates**: the program compares `ClientVersions["linux"]` of `GET /api/info` with its own version (the *Update to x.y.z* button of the sidebar),
+  downloads the package and its signature (`Kyuplan-linux-<version>.pkg.tar.zst.sig`, the same `UPDATE_SIGNING_KEY` as the other installers), and
+  installs it with `pkexec pacman -U` only when the signature is valid (the public key `installer/update-key.pub.pem` is built into the program); polkit asks the user for the
+  password. The program then starts again. `KYUPLAN_ALLOW_UNSIGNED_UPDATES=1` lifts the check for development.
+- **Running from source**: `dotnet run --project src/Kyuplan.Client.Linux` needs GTK 4.10+ and libadwaita 1.4+ (`pacman -S gtk4 libadwaita librsvg`).
+  The project builds on every system (Gir.Core is managed code) but only runs where the libraries are. `tests/linux/` has a container that
+  starts the demo API and the client in a virtual X server and takes screenshots of every page, see the [developer guide](developer-guide.md#linux-screenshots).
 
 ## The Android client
 

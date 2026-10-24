@@ -21,8 +21,18 @@
   <ItemGroup>
     <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\DpapiLoginStore.cs" Link="Wpf\DpapiLoginStore.cs" />
     <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\AccentShades.cs" Link="Wpf\AccentShades.cs" />
-    <Compile Include="..\..\src\Kyuplan.Client.Wpf\Services\SvgSafety.cs" Link="Wpf\SvgSafety.cs" />
     <Compile Include="..\..\src\Kyuplan.Client.Wpf\ViewModels\MainViewModel.cs" Link="Wpf\MainViewModel.cs" />
+  </ItemGroup>
+
+  <!-- The same for the Linux client: its files that need no GTK (the keyring login, the settings folder, the updater, the colours of the themes, the navigation). -->
+  <ItemGroup>
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\Services\SecretServiceLoginStore.cs" Link="Linux\SecretServiceLoginStore.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\Services\UserPreferences.cs" Link="Linux\UserPreferences.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\Services\FileFilterSettingsStore.cs" Link="Linux\FileFilterSettingsStore.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\Services\LinuxClientUpdater.cs" Link="Linux\LinuxClientUpdater.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\Services\ThemePalette.cs" Link="Linux\ThemePalette.cs" />
+    <Compile Include="..\..\src\Kyuplan.Client.Linux\NavigationViewModel.cs" Link="Linux\NavigationViewModel.cs" />
+    <EmbeddedResource Include="..\..\installer\update-key.pub.pem" LogicalName="update-key.pub.pem" />
   </ItemGroup>
 
   <!-- The XAML of the WPF client is read (as text) by DesignContractTests: every design must define what the pages ask the design for. -->

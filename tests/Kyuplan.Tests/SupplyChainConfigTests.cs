@@ -56,7 +56,7 @@ public partial class SupplyChainConfigTests
     public void Dependabot_watches_the_nuget_packages_the_npm_packages_the_images_and_the_actions()
     {
         var ecosystems = Updates().Select(u => u.Ecosystem).ToList();
-        Assert.Equal(["docker", "docker-compose", "github-actions", "npm", "npm", "nuget"], ecosystems.Order());
+        Assert.Equal(["docker", "docker", "docker-compose", "github-actions", "npm", "npm", "nuget"], ecosystems.Order());
     }
 
     [Fact]

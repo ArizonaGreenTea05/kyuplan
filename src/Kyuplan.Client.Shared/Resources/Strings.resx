@@ -875,6 +875,9 @@
   <data name="Login_RememberHint" xml:space="preserve">
     <value>The login is saved encrypted and can only be read by your Windows account.</value>
   </data>
+  <data name="Login_RememberHintKeyring" xml:space="preserve">
+    <value>The login is kept in the keyring of your desktop (Secret Service) and can only be read by your user account.</value>
+  </data>
   <data name="Login_SignIn" xml:space="preserve">
     <value>Sign in</value>
   </data>

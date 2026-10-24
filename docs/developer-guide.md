@@ -24,6 +24,7 @@ kyuplan is a planner for a karate club's belt exams built on the club's Spond gr
 | API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, the `Spond.API` package |
 | Web client | Blazor WebAssembly, hand-written CSS, served by the API itself |
 | Desktop client | WPF, four designs (the Fluent theme that ships with .NET, Windows 10, Aero, native; Windows only), no control library, `Svg.Skia` for SVG logos |
+| Linux client | GTK 4 + libadwaita through the Gir.Core bindings (`GirCore.Gtk-4.0`, `GirCore.Adw-1`), widgets built in code, no web view; built for Arch Linux (`deploy/arch/PKGBUILD`) |
 | Phone client | .NET for Android (`net10.0-android`), native views drawn in code, no UI library; a bottom tab bar over the shared view models |
 | Shared client code | typed API client, **all view models** (CommunityToolkit.Mvvm) and **all UI texts** (`.resx`) |
 | Tests | xUnit, a single project, in-memory SQLite |
@@ -32,6 +33,7 @@ kyuplan is a planner for a karate club's belt exams built on the club's Spond gr
 ```
 Spond ──► Api ──JSON──► Client.Shared (API client + view models) ──► Blazor (WASM)
                                                                  ├──► WPF (Windows)
+                                                                 ├──► GTK 4 (Linux)
                                                                  └──► Android (APK)
 ```
 
@@ -110,12 +112,14 @@ src/
   Kyuplan.Client.Shared  IPlannerApi + PlannerApiClient, ViewModels/, Localization/, Resources/Strings*.resx, Storage/
   Kyuplan.Client.Blazor  Pages/, Components/, Layout/, wwwroot/ (markup only)
   Kyuplan.Client.Wpf     Views/, Controls/, Themes/, Services/, ViewModels/ (shell glue only), Localization/
+  Kyuplan.Client.Linux   Pages/ (one per page, `PageRegistry`), Pages/Parts/, Stages/ (address, setup, login, shell), Kit/ (widgets, bindings), Services/
   Kyuplan.Client.Android Screens/ (one per page), Kit/ (widgets, `Screen` base), Services/ (login store, updater), Resources/
 tests/Kyuplan.Tests      One xUnit project for everything
+tests/linux/             Dockerfile and script that run the Linux client in a virtual X server on Arch Linux and take screenshots
 docs/                    This documentation and the domain rules (Markdown, written for GitHub and for the Docusaurus site)
 website/                 Docusaurus project: one site per audience built from docs/ (scripts/audiences.mjs), served by the API under /docs
-deploy/                  Docker Compose files (generic, PostgreSQL, TrueNAS) and .env.example
-installer/               Inno Setup script of the WPF client, and the public update key (also built into the Android app)
+deploy/                  Docker Compose files (generic, PostgreSQL, TrueNAS), .env.example, and arch/ (PKGBUILD, desktop entry of the Linux client)
+installer/               Inno Setup script of the WPF client, and the public update key (also built into the Android and Linux clients)
 assets/branding/         Placeholder logos and icons
 tools/                   Render-Branding.ps1 (program icon from the tab icon)
 .github/                 Release workflow and its composite actions
@@ -186,6 +190,20 @@ and permissions are returned by `GET /api/account` so clients can hide what the 
 - **WPF**: `Views/*.xaml` with `{loc:Loc Key}` bindings; `ThemeService` loads the design the user picked (`Themes/Design.*.xaml`, see
   the WPF part of [Look](reference.md#look) in the reference) and applies the accent colour from the API to it;
   `DpapiLoginStore` keeps the remembered login encrypted for the Windows user; `IClientUpdater` implementation runs the installer for self-update.
+- **Linux** (`src/Kyuplan.Client.Linux`, part of `Kyuplan.sln`; it builds on every system because Gir.Core is managed code, but only runs where GTK 4.10+
+  and libadwaita 1.4+ are installed): one `Adw.ApplicationWindow` shows, one after the other, the address question, the setup of a new API, the sign-in
+  and then the application (`KyuplanApp`, `Stages/`). `NavigationViewModel` is the sidebar (a page is in it while the user may use it, as in WPF, plus the
+  settings page the web client has); `PageRegistry` picks the page that draws a page view model (view-model-first, like the WPF data templates).
+  GTK has no data binding, so the widgets are built in code with the helpers of `Kit/`: `Bind.Watch` subscribes to a view model's
+  `PropertyChanged` (and ends with the widget), `Ui` has the factories (`Ui.Entry(vm, nameof(vm.Name))` is a two-way bound field, `Ui.Row`, `Ui.Choice`, `Ui.Repeat`,
+  `Ui.BoxedList`), `Widgets` the shared pieces (page frame, key figures, bars, charts), `Table` a grid for the big tables. Texts come from the shared
+  `Strings` like everywhere; they are read when a screen is built and the screen is built again when the language changes. Themes are
+  colour sets (`Services/ThemePalette.cs`) that replace libadwaita's named colours through a CSS provider (`Theming`); light or dark follows the desktop
+  (`Adw.StyleManager`). `SecretServiceLoginStore` keeps the login in the keyring through `secret-tool` (never on disk), `UserPreferences` the small
+  settings in `$XDG_CONFIG_HOME/kyuplan`, `LinuxClientUpdater` installs the signed pacman package with `pkexec pacman -U`. A new page: a file in `Pages/`, an entry in
+  `PageRegistry` and in `NavigationViewModel`. The files of the project that need no GTK (`Services/`, `NavigationViewModel`) are compiled into the test
+  project and tested there; the widgets have no unit tests (they need a display): keep logic in the view models and look at them with
+  [the screenshots](#linux-screenshots).
 - **Android** (`src/Kyuplan.Client.Android`, part of `Kyuplan.sln`; building it needs the Android workload and a JDK/SDK): one
   `MainActivity` shows the address question, the sign-in and then `MainScreen`. `MobileShellViewModel` (Client.Shared, tested) is the tab bar: the
   pages of everyday use only, each tab present while the user may use it. A `Screen` (`Kit/Screen.cs`) draws a view model with plain Android
@@ -336,6 +354,23 @@ npx playwright show-report artifacts/report
 - `KYUPLAN_UI_BASE_URL` (+ `KYUPLAN_UI_PASSWORD`) tests an API that already runs; `KYUPLAN_UI_STRICT_CONSOLE=1` also fails on errors in the browser console.
 - A new page of the web client = an entry in the list at the top of `smoke.spec.ts`.
 
+### Linux screenshots
+
+`tests/linux` (not part of `dotnet test`) is the Linux counterpart of the browser smoke tests: a Dockerfile of an Arch Linux with GTK 4, libadwaita, the .NET SDK and
+a virtual X server (Xvfb), and `shots.sh`, which builds the API and the client from the checkout, starts the API in demo mode, starts the client, signs in as the
+administrator and saves a PNG of the login screen and of every page of the sidebar. It fails when the build or the start fails or the client logs an exception.
+Any machine with Docker will do, also Windows and macOS:
+
+```bash
+docker build -t kyuplan-arch tests/linux
+docker run --rm -v "$PWD":/repo:ro -v "$PWD/linux-screenshots":/out kyuplan-arch bash /repo/tests/linux/shots.sh
+```
+
+- The pages are reached by clicking the rows of the sidebar at fixed places (the administrator of the demo data sees all of them); a new page of the
+  sidebar moves the ones below it, so adjust the table in `shots.sh`.
+- The administrator's password is made up by the script for that one run of a throw-away API.
+- The window is drawn by the software renderer (`GSK_RENDERER=cairo`); the fonts and the theme are those of the container, not of your desktop.
+
 ### WPF screenshots
 
 `tests/Kyuplan.WpfShots` (Windows only, not part of `dotnet test`) opens the main window of the WPF client offscreen, signs in as the
@@ -354,7 +389,7 @@ dotnet run --project tests/Kyuplan.WpfShots -- http://localhost:5100 <user> <pas
 ## Releases and CI
 
 - One tag `v<version>` releases everything (`.github/workflows/release.yml`): it tests on Windows, publishes the WPF client self-contained,
-  builds the Inno Setup installer, builds and pushes the multi-arch Docker image (`ghcr.io/<owner>/kyuplan`, with the installer baked into
+  builds the Inno Setup installer, builds the Linux package (`makepkg` in an Arch Linux container) and the Android app, builds and pushes the multi-arch Docker image (`ghcr.io/<owner>/kyuplan`, with the installer baked into
   `downloads/`), builds the documentation (the image carries the guides for users, `Kyuplan-docs-<version>.zip` carries all of them), and publishes a GitHub release with the installer and the archive attached.
 - The tag's version becomes `-p:Version` for every build: assembly versions, `GET /api/info`, the installer and the self-update comparison.
 - Locally built versions use `<Version>` of `Directory.Build.props`.

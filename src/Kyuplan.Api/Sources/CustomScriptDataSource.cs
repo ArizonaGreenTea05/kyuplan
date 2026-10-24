@@ -203,14 +203,22 @@ public sealed class CustomScriptDataSource(
         return System.Text.Json.JsonSerializer.Serialize(new { status = (int)response.StatusCode, text = Encoding.UTF8.GetString(buffer.GetBuffer(), 0, (int)buffer.Length) });
     }
 
-    private static HttpClient CreateHttp(IOptions<DataSourceOptions> options) => new(new SocketsHttpHandler
+    private static HttpClient CreateHttp(IOptions<DataSourceOptions> options) => new(CreateHandler(options)) { Timeout = TimeSpan.FromSeconds(30) };
+
+    internal static SocketsHttpHandler CreateHandler(IOptions<DataSourceOptions> options) => new()
     {
+        // Through a proxy the callback would only see the proxy's address, so the destination would never be checked.
+        UseProxy = false,
         ConnectCallback = async (context, cancellationToken) =>
         {
             // Checked on the addresses the name resolved to (redirects and DNS tricks included), not on the text of the URL.
-            var addresses = await System.Net.Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
-            if (!options.Value.AllowLocalAddresses && addresses.Any(IsLocal))
-                throw new InvalidOperationException($"http: {context.DnsEndPoint.Host} is a local address (loopback, link-local or the cloud metadata service); DataSource:AllowLocalAddresses allows it.");
+            var host = context.DnsEndPoint.Host;
+            var addresses = await System.Net.Dns.GetHostAddressesAsync(host, cancellationToken);
+            var scopes = addresses.Select(ScriptAddressPolicy.Classify).ToHashSet();
+            if (scopes.Contains(AddressScope.Local) && !options.Value.AllowLocalAddresses)
+                throw new InvalidOperationException($"http: {host} is a local address (loopback, link-local or the cloud metadata service); DataSource:AllowLocalAddresses allows it.");
+            if (scopes.Contains(AddressScope.Private) && !options.Value.AllowPrivateAddresses)
+                throw new InvalidOperationException($"http: {host} is a private address (internal network, e.g. 10.x, 172.16-31.x, 192.168.x, fc00::/7); DataSource:AllowPrivateAddresses allows it.");
 
             var socket = new System.Net.Sockets.Socket(System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp) { NoDelay = true };
             try
@@ -224,18 +232,7 @@ public sealed class CustomScriptDataSource(
                 throw;
             }
         },
-    }) { Timeout = TimeSpan.FromSeconds(30) };
-
-    private static bool IsLocal(System.Net.IPAddress address)
-    {
-        if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
-        if (System.Net.IPAddress.IsLoopback(address) || address.Equals(System.Net.IPAddress.Any) || address.Equals(System.Net.IPAddress.IPv6Any)) return true;
-        if (address.IsIPv6LinkLocal) return true;
-        if (address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork) return false;
-
-        var b = address.GetAddressBytes();
-        return b[0] == 169 && b[1] == 254;
-    }
+    };
 
     private const string Prelude = """
         var console = { log: function () { __log(Array.prototype.slice.call(arguments).map(String).join(' ')); } };

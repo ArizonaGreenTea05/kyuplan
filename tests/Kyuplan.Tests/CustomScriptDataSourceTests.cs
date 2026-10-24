@@ -19,8 +19,8 @@ public sealed class CustomScriptDataSourceTests
 {
     private static readonly ClubClock Clock = new(new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero)), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin"));
 
-    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null) =>
-        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, ScriptMaxStatements = maxStatements ?? 10_000_000 }), Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
+    private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null, bool allowPrivate = false) =>
+        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, AllowPrivateAddresses = allowPrivate, ScriptMaxStatements = maxStatements ?? 10_000_000 }), Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
 
     private sealed class ListLogger : ILogger<CustomScriptDataSource>
     {
@@ -139,6 +139,170 @@ public sealed class CustomScriptDataSourceTests
         var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("local address", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("http://10.0.0.1/")]
+    [InlineData("http://172.17.0.1/")]
+    [InlineData("http://192.168.1.1/")]
+    [InlineData("http://100.64.0.1/")]
+    [InlineData("http://[fd12:3456::1]/")]
+    [InlineData("http://[::ffff:192.168.1.1]/")]
+    public async Task Private_addresses_are_refused_unless_allowed(string url)
+    {
+        using var source = Source($"function getGroups() {{ http.get('{url}'); return []; }}", allowLocal: true, allowPrivate: false);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("private address", ex.Message);
+        Assert.Contains("AllowPrivateAddresses", ex.Message);
+    }
+
+    [Fact]
+    public async Task A_redirect_into_the_internal_network_is_refused()
+    {
+        await using var service = await StartServiceAsync();
+        using var source = Source($"function getGroups() {{ http.get('{service.Url}/to-lan'); return []; }}", allowLocal: true, allowPrivate: false);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("private address", ex.Message);
+    }
+
+    [Fact]
+    public async Task Local_addresses_stay_refused_when_only_private_ones_are_allowed()
+    {
+        using var source = Source("function getGroups() { http.get('http://127.0.0.1:1/'); return []; }", allowLocal: false, allowPrivate: true);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("local address", ex.Message);
+    }
+
+    [Fact]
+    public async Task Allowed_private_addresses_are_tried_not_refused()
+    {
+        // Nothing answers at a unique-local address of a test machine: the request fails by connect or timeout, not by the guard.
+        using var source = Source("function getGroups() { http.get('http://[fd12:3456::1]:1/'); return []; }", TimeSpan.FromSeconds(2), allowLocal: false, allowPrivate: true);
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.DoesNotContain("private address", ex.Message);
+        Assert.DoesNotContain("local address", ex.Message);
+    }
+
+    [Fact]
+    public void Requests_never_go_through_a_proxy()
+    {
+        using var handler = CustomScriptDataSource.CreateHandler(Options.Create(new DataSourceOptions()));
+
+        Assert.False(handler.UseProxy);
+    }
+
+    [Fact]
+    public async Task A_configured_proxy_neither_receives_the_request_nor_hides_the_destination()
+    {
+        var proxy = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        proxy.Start();
+        try
+        {
+            var connections = 0;
+            _ = Task.Run(async () =>
+            {
+                try { while (true) { using var _ = await proxy.AcceptTcpClientAsync(); Interlocked.Increment(ref connections); } }
+                catch (Exception) { /* listener stopped */ }
+            });
+            using var handler = CustomScriptDataSource.CreateHandler(Options.Create(new DataSourceOptions()));
+            handler.Proxy = new System.Net.WebProxy($"http://127.0.0.1:{((System.Net.IPEndPoint)proxy.LocalEndpoint).Port}");
+            using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+
+            // Without the guard this goes to the proxy; with it the destination itself is checked and refused.
+            var ex = await Assert.ThrowsAsync<HttpRequestException>(() => http.GetAsync("http://192.168.1.1/"));
+
+            Assert.Contains("private address", ex.InnerException?.Message);
+            Assert.Equal(0, connections);
+        }
+        finally
+        {
+            proxy.Stop();
+        }
+    }
+
+    [Theory]
+    [InlineData("127.0.0.1", AddressScope.Local)]
+    [InlineData("127.255.255.254", AddressScope.Local)]
+    [InlineData("0.0.0.0", AddressScope.Local)]
+    [InlineData("0.1.2.3", AddressScope.Local)]
+    [InlineData("169.254.169.254", AddressScope.Local)]
+    [InlineData("::", AddressScope.Local)]
+    [InlineData("::1", AddressScope.Local)]
+    [InlineData("fe80::1", AddressScope.Local)]
+    [InlineData("febf::1", AddressScope.Local)]
+    [InlineData("fd00:ec2::254", AddressScope.Local)]
+    [InlineData("::ffff:127.0.0.1", AddressScope.Local)]
+    [InlineData("::ffff:169.254.169.254", AddressScope.Local)]
+    [InlineData("::127.0.0.1", AddressScope.Local)]
+    [InlineData("64:ff9b::7f00:1", AddressScope.Local)] // NAT64 of 127.0.0.1
+    [InlineData("64:ff9b::a9fe:a9fe", AddressScope.Local)] // NAT64 of 169.254.169.254
+    [InlineData("2002:7f00:1::", AddressScope.Local)] // 6to4 of 127.0.0.1
+    [InlineData("2001:0:7f00:1::", AddressScope.Local)] // Teredo server 127.0.0.1
+    [InlineData("2001:0:808:808:0:0:80ff:fffe", AddressScope.Local)] // Teredo client 127.0.0.1 (inverted)
+    [InlineData("10.0.0.1", AddressScope.Private)]
+    [InlineData("10.255.255.255", AddressScope.Private)]
+    [InlineData("172.16.0.1", AddressScope.Private)]
+    [InlineData("172.31.255.255", AddressScope.Private)]
+    [InlineData("192.168.0.1", AddressScope.Private)]
+    [InlineData("100.64.0.1", AddressScope.Private)]
+    [InlineData("100.127.255.255", AddressScope.Private)]
+    [InlineData("198.18.0.1", AddressScope.Private)]
+    [InlineData("198.19.255.255", AddressScope.Private)]
+    [InlineData("192.0.0.1", AddressScope.Private)]
+    [InlineData("192.0.2.1", AddressScope.Private)]
+    [InlineData("198.51.100.1", AddressScope.Private)]
+    [InlineData("203.0.113.1", AddressScope.Private)]
+    [InlineData("224.0.0.1", AddressScope.Private)]
+    [InlineData("239.255.255.250", AddressScope.Private)]
+    [InlineData("240.0.0.1", AddressScope.Private)]
+    [InlineData("255.255.255.255", AddressScope.Private)]
+    [InlineData("fc00::1", AddressScope.Private)]
+    [InlineData("fdff::1", AddressScope.Private)]
+    [InlineData("fd00:ec3::1", AddressScope.Private)]
+    [InlineData("fec0::1", AddressScope.Private)]
+    [InlineData("ff02::1", AddressScope.Private)]
+    [InlineData("2001:db8::1", AddressScope.Private)]
+    [InlineData("100::1", AddressScope.Private)]
+    [InlineData("64:ff9b:1::1", AddressScope.Private)]
+    [InlineData("::ffff:10.1.2.3", AddressScope.Private)]
+    [InlineData("::10.1.2.3", AddressScope.Private)]
+    [InlineData("64:ff9b::c0a8:101", AddressScope.Private)] // NAT64 of 192.168.1.1
+    [InlineData("2002:c0a8:101::", AddressScope.Private)] // 6to4 of 192.168.1.1
+    [InlineData("2001:0:c0a8:101::1", AddressScope.Private)] // Teredo server 192.168.1.1
+    [InlineData("8.8.8.8", AddressScope.Public)]
+    [InlineData("1.1.1.1", AddressScope.Public)]
+    [InlineData("172.15.255.255", AddressScope.Public)]
+    [InlineData("172.32.0.1", AddressScope.Public)]
+    [InlineData("100.63.255.255", AddressScope.Public)]
+    [InlineData("100.128.0.1", AddressScope.Public)]
+    [InlineData("198.17.255.255", AddressScope.Public)]
+    [InlineData("198.20.0.1", AddressScope.Public)]
+    [InlineData("192.0.1.1", AddressScope.Public)]
+    [InlineData("223.255.255.255", AddressScope.Public)]
+    [InlineData("169.253.0.1", AddressScope.Public)]
+    [InlineData("2606:4700:4700::1111", AddressScope.Public)]
+    [InlineData("2001:4860:4860::8888", AddressScope.Public)]
+    [InlineData("::ffff:8.8.8.8", AddressScope.Public)]
+    [InlineData("64:ff9b::808:808", AddressScope.Public)] // NAT64 of 8.8.8.8
+    [InlineData("2002:808:808::", AddressScope.Public)] // 6to4 of 8.8.8.8
+    public void Addresses_are_classified_by_where_they_lead(string address, AddressScope expected) =>
+        Assert.Equal(expected, ScriptAddressPolicy.Classify(System.Net.IPAddress.Parse(address)));
+
+    [Fact]
+    public void A_teredo_address_is_as_strict_as_its_stricter_half()
+    {
+        // public server 8.8.8.8, client 192.168.1.1 (inverted: 3f57fefe)
+        Assert.Equal(AddressScope.Private, ScriptAddressPolicy.Classify(System.Net.IPAddress.Parse("2001:0:808:808:0:0:3f57:fefe")));
+        // public server and public client (8.8.4.4 inverted: f7f7fbfb)
+        Assert.Equal(AddressScope.Public, ScriptAddressPolicy.Classify(System.Net.IPAddress.Parse("2001:0:808:808:0:0:f7f7:fbfb")));
     }
 
     [Theory]
@@ -316,6 +480,7 @@ public sealed class CustomScriptDataSourceTests
             return Results.Json(new[] { new { id = "g1", name = "Dojo" } });
         });
         app.MapPost("/echo", (System.Text.Json.JsonElement body) => Results.Json(body));
+        app.MapGet("/to-lan", () => Results.Redirect("http://192.168.1.1/"));
         await app.StartAsync();
         return service;
     }

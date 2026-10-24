@@ -123,8 +123,10 @@ The button **Insert example script** puts a complete example into the box. Insid
 - Everything of plain JavaScript (ECMAScript), and nothing else: no file system, no network but `http`, no .NET.
 
 > **Who can reach what.** The requests are made **by the server**, from its network position, and follow redirects. A script can therefore reach addresses only the server
-> can: other containers, the internal network and the like. Loopback (`localhost`) and link-local addresses (`169.254.x.x`, the cloud metadata service)
-> are refused unless `DataSource:AllowLocalAddresses` is `true`; every other address is open. Only give the permission to change the settings to people you trust with that, and never paste a script you did not read.
+> can. Two groups of addresses are refused by default, checked on the addresses a name resolves to (redirects included, IPv4 inside IPv6 forms such as `::ffff:`, NAT64, 6to4 and Teredo too):
+> loopback, `0.0.0.0/8`, link-local (`169.254.x.x`, the cloud metadata service) and `fd00:ec2::/32` need `DataSource:AllowLocalAddresses` = `true`; the internal network (`10/8`, `172.16/12`, `192.168/16`,
+> `100.64/10`, `fc00::/7`, multicast and other non-public ranges, i.e. the LAN, the Docker host and sibling containers) needs `DataSource:AllowPrivateAddresses` = `true`. Set the latter if your source
+> lives inside your network. Requests never go through `HTTP_PROXY`/`HTTPS_PROXY`. Only give the permission to change the settings to people you trust with that, and never paste a script you did not read.
 > Credentials in the script are stored in `data/settings.json` and shown to everybody who may open the Settings page.
 
 Rules to know:
@@ -134,7 +136,7 @@ Rules to know:
   its outcome and duration. A script that fails (an exception, a result that is not as described above) makes the pages show the
   error message and the server log the details; the rest of kyuplan keeps working with what it has.
 - **Treat the script like code of the server.** Whoever may save the settings (`settings.edit`) can make the server send requests to any address it
-  can reach, including addresses inside your network. Keep that permission to people you trust. Tokens in the script are stored in `settings.json`
+  can reach (addresses inside your network only once `DataSource:AllowPrivateAddresses` / `AllowLocalAddresses` allow them). Keep that permission to people you trust. Tokens in the script are stored in `settings.json`
   as plain text, so protect that file; the script is also part of backups of the settings file.
 - The settings page checks the **syntax** when you save; whether the functions return the right things shows when the data is read the next time.
   Try a change on a copy first, e.g. with `DataSource__Script` in the environment of a test container.

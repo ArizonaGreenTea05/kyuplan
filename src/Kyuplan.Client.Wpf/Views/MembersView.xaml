@@ -77,10 +77,38 @@
             </Grid.RowDefinitions>
 
             <!-- Title -->
-            <StackPanel Grid.Row="0">
-                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
-                <TextBlock Text="{loc:Loc MemberPage_Lede}" Style="{StaticResource LedeText}" />
-            </StackPanel>
+            <DockPanel Grid.Row="0">
+                <!-- The way to the hidden members, and the only way back for them: for those who may see them. -->
+                <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="16,0,0,0" Command="{Binding ShowMembersCommand}"
+                        Visibility="{Binding ShowingHidden, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE72B;" />
+                        <TextBlock Text="{loc:Loc MemberPage_BackToMembers}" />
+                    </StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Right" VerticalAlignment="Top" Margin="16,0,0,0" Command="{Binding ShowHiddenCommand}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanViewHidden}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding ShowingHidden}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xED1A;" />
+                        <TextBlock Text="{loc:Loc MemberPage_ViewHidden}" />
+                    </StackPanel>
+                </Button>
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                    <TextBlock Text="{Binding LedeText}" Style="{StaticResource LedeText}" />
+                </StackPanel>
+            </DockPanel>
 
             <!-- What went wrong / what was achieved. Trying again only makes sense while there is no list. -->
             <Border Grid.Row="1" Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
@@ -115,6 +143,18 @@
                     <TextBlock Text="{loc:Loc Comments_Back}" />
                 </StackPanel>
             </Button>
+
+            <!-- Nobody is hidden before this question is answered -->
+            <Border Grid.Row="4" Style="{StaticResource BannerBorder}" Margin="0,14,0,0"
+                    Visibility="{Binding IsConfirmingHide, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                        <Button Command="{Binding ConfirmHideCommand}" Content="{loc:Loc MemberPage_ConfirmHideYes}" />
+                        <Button Command="{Binding CancelHideCommand}" Content="{loc:Loc MemberPage_Cancel}" Margin="8,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ConfirmHideText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </DockPanel>
+            </Border>
 
             <!-- The form: the belt and the start day of one member -->
             <Border Grid.Row="4" Style="{StaticResource CardBorder}" Margin="0,14,0,0"
@@ -232,7 +272,7 @@
                             <!-- Wide enough for the count in both languages: an automatic width is not worked out again when the language changes.
                                  Somebody who may not read comments has no use for the column (and is not told how many there are). -->
                             <DataGridTemplateColumn Width="170" MinWidth="150"
-                                                    Visibility="{Binding Data.CanViewComments, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                                                    Visibility="{Binding Data.ShowsCommentsColumn, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="{Binding CommentsText}" Margin="8,0" VerticalAlignment="Center"
@@ -244,12 +284,29 @@
 
                             <!-- Wide enough for the button in both languages: an automatic width is not worked out again when the language changes.
                                  Somebody who may not change members has no use for the column. -->
-                            <DataGridTemplateColumn Width="120" MinWidth="110"
-                                                    Visibility="{Binding Data.CanEdit, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                            <DataGridTemplateColumn Width="230" MinWidth="210"
+                                                    Visibility="{Binding Data.ShowsEditColumn, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="{loc:Loc MemberPage_Edit}" Margin="8,0" VerticalAlignment="Center"
-                                                Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="{loc:Loc MemberPage_Edit}" Margin="8,0,0,0"
+                                                    Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{loc:Loc MemberPage_Hide}" Margin="8,0"
+                                                    Command="{Binding DataContext.AskHideCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- The way back for a hidden member; wide enough for the button in both languages. -->
+                            <DataGridTemplateColumn Width="150" MinWidth="130"
+                                                    Visibility="{Binding Data.ShowsUnhideColumn, Source={StaticResource Page}, Converter={StaticResource BoolToVisibility}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{loc:Loc MemberPage_Unhide}" Margin="8,0" VerticalAlignment="Center"
+                                                Command="{Binding DataContext.UnhideCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -267,7 +324,7 @@
                                     Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
 
             <TextBlock Grid.Row="5" Margin="0,40,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Style="{StaticResource LedeText}"
-                       Text="{loc:Loc Members_NobodyHere}"
+                       Text="{Binding NobodyText}"
                        Visibility="{Binding IsNobodyHere, Converter={StaticResource BoolToVisibility}}" />
 
             <ProgressBar Grid.RowSpan="6" IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" VerticalAlignment="Top" Margin="-24,-6,-24,0"

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Client.Api;
 using Kyuplan.Contracts;
@@ -107,6 +108,26 @@ public sealed class CalendarApiTests(WebApplicationFactory<Program> factory) : I
 
         Assert.Contains(during, e => e.Id == training.Id);
         Assert.DoesNotContain(after, e => e.Id == training.Id);
+    }
+
+    [Fact]
+    public async Task The_demo_events_are_hosted_by_trainers_who_are_not_among_the_attendees()
+    {
+        using var host = CreateHost();
+        var api = new PlannerApiClient(host.CreateSignedInClient());
+        var training = await AnEventAsync(api);
+
+        var detail = await api.GetCalendarEventAsync(Group, training.Id);
+
+        Assert.NotEmpty(training.Trainers!);
+        var group = (await host.Services.GetRequiredService<IDataSource>().GetGroupsAsync(CancellationToken.None)).Single(g => g.Id == Group);
+        Assert.All(training.Trainers!, name => Assert.Contains(group.Members, m => m.Name == name && m.SubGroupIds.Count == 0));
+        Assert.DoesNotContain(detail.Attendees, a => training.Trainers!.Contains(a.Name));
+
+        // Like Spond, the demo lists the first host among the answers too; they still are no participant.
+        var info = (await host.Services.GetRequiredService<IDataSource>().GetEventsAsync(Group, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, CancellationToken.None))
+            .Single(e => e.Id == training.Id);
+        Assert.Contains(info.Trainers!, id => info.Responses.ContainsKey(id) && !info.Participants.Any(p => p.Key == id));
     }
 
     [Fact]

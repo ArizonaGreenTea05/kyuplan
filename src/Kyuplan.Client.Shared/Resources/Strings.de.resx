@@ -1174,6 +1174,36 @@
   <data name="MemberPage_NoneMatch" xml:space="preserve">
     <value>Kein Mitglied passt.</value>
   </data>
+  <data name="MemberPage_Hide" xml:space="preserve">
+    <value>Ausblenden</value>
+  </data>
+  <data name="MemberPage_ConfirmHide" xml:space="preserve">
+    <value>„{0}“ ausblenden? Ein ausgeblendetes Mitglied wird in den Statistiken ignoriert und nirgends angezeigt; nur wer ausgeblendete Mitglieder ansehen darf, kann es wieder einblenden.</value>
+  </data>
+  <data name="MemberPage_ConfirmHideYes" xml:space="preserve">
+    <value>Ja, ausblenden</value>
+  </data>
+  <data name="MemberPage_MemberHidden" xml:space="preserve">
+    <value>{0} ist ausgeblendet.</value>
+  </data>
+  <data name="MemberPage_ViewHidden" xml:space="preserve">
+    <value>Ausgeblendete Mitglieder anzeigen</value>
+  </data>
+  <data name="MemberPage_BackToMembers" xml:space="preserve">
+    <value>Zurück zu den Mitgliedern</value>
+  </data>
+  <data name="MemberPage_HiddenLede" xml:space="preserve">
+    <value>Diese Mitglieder sind ausgeblendet: Sie werden in den Statistiken ignoriert und sonst nirgends angezeigt. Blenden Sie ein Mitglied wieder ein, um es zurückzuholen.</value>
+  </data>
+  <data name="MemberPage_Unhide" xml:space="preserve">
+    <value>Einblenden</value>
+  </data>
+  <data name="MemberPage_MemberUnhidden" xml:space="preserve">
+    <value>{0} ist wieder sichtbar.</value>
+  </data>
+  <data name="MemberPage_NoneHidden" xml:space="preserve">
+    <value>Es sind keine Mitglieder ausgeblendet.</value>
+  </data>
   <data name="MemberPage_ColRegistered" xml:space="preserve">
     <value>Anmeldung</value>
   </data>
@@ -1308,12 +1338,6 @@
   </data>
   <data name="Settings_SpondIncomplete" xml:space="preserve">
     <value>Ein Spond-Zugang braucht die E-Mail (oder Telefonnummer) und das Passwort.</value>
-  </data>
-  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
-    <value>Gruppen-Administratoren ignorieren</value>
-  </data>
-  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
-    <value>Mitglieder, die ihre Spond-Gruppe verwalten (meist der Zugangs-Account), bleiben aus Statistik, Mitgliedern und Prüfungen heraus.</value>
   </data>
   <data name="Settings_StatisticsTitle" xml:space="preserve">
     <value>Statistik und Prüfungen</value>
@@ -2305,6 +2329,9 @@
   <data name="Permission_members_edit" xml:space="preserve">
     <value>Gürtel und Tage eines Mitglieds festlegen</value>
   </data>
+  <data name="Permission_members_hidden" xml:space="preserve">
+    <value>Ausgeblendete Mitglieder ansehen und wieder einblenden</value>
+  </data>
   <data name="Permission_belts_view" xml:space="preserve">
     <value>Die Gürtel sehen</value>
   </data>
@@ -2574,6 +2601,9 @@
   </data>
   <data name="Calendar_Invited" xml:space="preserve">
     <value>{0} eingeladen</value>
+  </data>
+  <data name="Calendar_Trainers" xml:space="preserve">
+    <value>Trainer: {0}</value>
   </data>
   <data name="Calendar_BackToMembers" xml:space="preserve">
     <value>Zurück zu den Mitgliedern</value>
@@ -3207,6 +3237,9 @@
   </data>
   <data name="Manual_ColAnswer" xml:space="preserve">
     <value>Antwort</value>
+  </data>
+  <data name="Manual_ColTrainer" xml:space="preserve">
+    <value>Leitung (Trainer)</value>
   </data>
   <data name="Manual_Rsvp_accepted" xml:space="preserve">
     <value>Zugesagt</value>

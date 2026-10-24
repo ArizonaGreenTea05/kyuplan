@@ -36,6 +36,41 @@ public sealed class CalendarViewModelTests : IDisposable
     private static CalendarEventDto Event(string id, int day, int hour, string name = "Training", bool cancelled = false) =>
         new(id, "g1", name, Offset.AddDays(day - 13).AddHours(hour), Offset.AddDays(day - 13).AddHours(hour + 1), cancelled, 4, 2, 1, 1);
 
+    [Theory]
+    [InlineData(null, false, "")]
+    [InlineData(new string[0], false, "")]
+    [InlineData(new[] { "Tina Trainer" }, true, "Trainers: Tina Trainer")]
+    [InlineData(new[] { "Ben", "Tina Trainer" }, true, "Trainers: Ben, Tina Trainer")]
+    public void An_event_row_names_its_trainers_and_says_so_only_when_it_has_some(string[]? trainers, bool has, string text)
+    {
+        var row = new CalendarEventRow(Event("e1", 13, 18) with { Trainers = trainers });
+
+        Assert.Equal(has, row.HasTrainers);
+        Assert.Equal(text, row.TrainersText);
+        Assert.Equal(has ? $"{row.WhenText} · {text}" : row.WhenText, row.TipText);
+    }
+
+    [Fact]
+    public void Events_with_the_same_trainers_are_equal_whatever_list_holds_them()
+    {
+        var a = Event("e1", 13, 18) with { Trainers = ["Tina"] };
+
+        Assert.Equal(a, Event("e1", 13, 18) with { Trainers = new List<string> { "Tina" } });
+        Assert.Equal(Event("e1", 13, 18), Event("e1", 13, 18) with { Trainers = [] });
+        Assert.NotEqual(a, Event("e1", 13, 18) with { Trainers = ["Ben"] });
+        Assert.NotEqual(a, Event("e1", 13, 18));
+        Assert.Equal(a.GetHashCode(), (Event("e1", 13, 18) with { Trainers = ["Tina"] }).GetHashCode());
+    }
+
+    [Fact]
+    public void The_trainers_of_an_event_row_follow_the_language()
+    {
+        var row = new CalendarEventRow(Event("e1", 13, 18) with { Trainers = ["Tina"] });
+        _shell.Language.Select("de");
+
+        Assert.Equal("Trainer: Tina", row.TrainersText);
+    }
+
     private async Task ShownAsync()
     {
         _api.CalendarEvents.AddRange([Event("e1", 13, 18), Event("e2", 14, 18, "Exam"), Event("e3", 20, 10)]);

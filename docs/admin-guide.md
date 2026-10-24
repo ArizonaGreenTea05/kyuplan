@@ -107,7 +107,8 @@ function getEvents(groupId, from, to) {
     id: "e1", name: "Training",
     start: "2026-10-01T16:00:00Z", end: "2026-10-01T17:30:00Z",   // ISO 8601 (without an offset: UTC), a Date or epoch milliseconds
     cancelled: false,
-    responses: { m1: "accepted", m2: "declined" }       // every invited member: accepted | declined | unanswered | other. Not listed = not invited
+    responses: { m1: "accepted", m2: "declined" },      // every invited member: accepted | declined | unanswered | other. Not listed = not invited
+    trainers: ["m3"]                                    // optional: the ids of the members who host the event; it counts for none of their statistics
   }];
 }
 ```
@@ -156,7 +157,8 @@ permission `manualdata.edit`; give it to a role on the Roles page (administrator
 4. **Events** (tab): trainings, exams and other dates, with start and end in the club's time zone. In the form, invite everybody or nobody
    (then tick who is invited) and choose what each answered: *Accepted*, *Declined*, *No answer* or *Waiting list*. **All invited came**
    marks everybody invited as accepted, the quick way to record a training: *accepted* counts as attended (see
-   [attendance statistics](attendance-statistics.md)).
+   [attendance statistics](attendance-statistics.md)). Tick **Host (trainer)** for the members who host the event: it counts for none of their
+   statistics, whether they are invited or not.
 
 Every change is saved at once and the members and exams are brought in line right away, so the other pages show it immediately; no waiting for
 the next sync. The page tells you when the data source is not Manual (what you enter is then not used).
@@ -172,14 +174,18 @@ the groups to analyse**; the account sees the groups it belongs to.
   add *Backup Spond accounts*; when the first yields no groups or events (or its login is rejected), the next is asked. An account that
   came back empty while another delivered is asked last for 10 minutes (`Spond:AccountCooldown`). All accounts must see the same groups;
   the log says which account was skipped.
-- **Ignore group administrators.** Group administrators (the members with `Respondent = false` in Spond, usually the login account) are
-  members like everybody else and appear in statistics, the member list and exam planning. Tick *Ignore group administrators* to leave
-  them out; those already in the database are removed by the next sync together with their belt and exam data.
+- **Group administrators and hosts.** Group administrators (usually the login account) are members like everybody else and appear in
+  the member list. An event counts for none of its **hosts**, the owners Spond lists for it (matched to the group's members by their Spond profile; an owner who is no member of the group is no host): the event is in no statistic of theirs
+  and they are no participants of an exam at it, whether or not Spond also lists them among the answers.
+  **Upgrading:** the old option *Ignore administrators* (on by default, it hid every Spond member who is not a respondent) is gone. After the
+  upgrade those members, usually the login account and the other administrators, appear in the member list, the statistics and the exams
+  after the next sync. A leftover `IgnoreAdministrators` entry in `settings.json` is ignored. To keep someone out of the numbers, make them
+  the host of the events they run, or leave them out of the Spond group.
 - **Caching.** Events are fetched month by month and cached for 15 minutes (`Spond:CacheDuration`). The **Refresh** button in the clients clears the
   cache. The server logs in again every 6 hours (`Spond:LoginLifetime`).
 - The Spond password is stored **encrypted** in `settings.json`; the key is in the `keys` folder next to it. Keep that folder safe and, if
   you share backups, keep the key apart from the settings file (`Setup__KeyDirectory`).
-- **Demo mode**: the data source *Demo data* serves generated data for a fictional club (the clients show a "Demo data" marker). Good
+- **Demo mode**: the data source *Demo data* serves generated data for a fictional club, trainers who host the events included (the clients show a "Demo data" marker). Good
   for training users, never for real use.
 
 ### The automatic sync
@@ -277,7 +283,7 @@ The complete list of keys is in the [configuration table of the reference](refer
 | calendar | `calendar.view` (the Calendar page, the event detail, the banner of an event in progress; writing a comment there needs `comments.write`), `calendar.feeds` (define calendar feeds, see [Calendar feeds](#calendar-feeds)) |
 | exams | `exams.view` (page, suggestions, saved filters), `exams.edit` (add/delete exams), `exams.filters` (save/replace/delete saved filters), `exams.candidates` (save members for an exam), `exams.results` (record belts handed out) |
 | payments | `payments.view` (the Exam prices page, the payments of every exam), `payments.edit` (record what members paid), `prices.edit` (change the general fee and the stamp fee and belt price per belt) |
-| members | `members.view`, `members.edit` (belt, belt day, start day, birth date) |
+| members | `members.view`, `members.edit` (belt, belt day, start day, birth date; hide a member), `members.hidden` (the list of hidden members, and making them visible again; give it only to those who may undo hiding) |
 | belts | `belts.view`, `belts.edit` |
 | comments | `comments.view`, `comments.viewOwn` (read the comments about the members one is oneself), `comments.write`, `comments.edit` (change any comment), `comments.delete` (own), `comments.deleteAny` |
 | ratings | `ratings.view` (see every user's star evaluations of members), `ratings.viewOwn` (read the evaluations of the members one is oneself), `ratings.write` (evaluate members at an event, change and take back one's own) |

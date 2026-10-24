@@ -24,6 +24,42 @@ public sealed class MemberService(PlannerDbContext db)
             .Select(m => ToDto(m, comments.GetValueOrDefault(m.Id))).ToList();
     }
 
+    /// <summary>The members of a group (or of every group) a user hid, by name. Members that are gone from the data source are not among them.</summary>
+    public async Task<IReadOnlyList<MemberDto>> ListHiddenAsync(string? groupId, CancellationToken cancellationToken)
+    {
+        var query = db.Members.IgnoreQueryFilters().Where(m => m.Hidden && m.RemovedAt == null);
+        if (!string.IsNullOrWhiteSpace(groupId)) query = query.Where(m => m.GroupId == groupId);
+
+        var members = await query.AsNoTracking().ToListAsync(cancellationToken);
+
+        // The query filter of the comments hides those of a hidden member, and the member is hidden: the page does not offer them anyway.
+        return members.OrderBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase).ThenBy(m => m.Id)
+            .Select(m => ToDto(m, 0)).ToList();
+    }
+
+    /// <summary>Hides a member: they are ignored by the statistics and shown nowhere until somebody who may views the hidden members makes them visible.</summary>
+    /// <exception cref="MemberNotFoundException">There is no such member (a hidden one is none, as far as this is concerned).</exception>
+    public async Task HideAsync(int memberId, CancellationToken cancellationToken)
+    {
+        var member = await db.Members.FirstOrDefaultAsync(m => m.Id == memberId, cancellationToken)
+                     ?? throw new MemberNotFoundException(memberId);
+
+        member.Hidden = true;
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Makes a hidden member visible again.</summary>
+    /// <exception cref="MemberNotFoundException">There is no hidden member with this id.</exception>
+    public async Task<MemberDto> UnhideAsync(int memberId, CancellationToken cancellationToken)
+    {
+        var member = await db.Members.IgnoreQueryFilters().FirstOrDefaultAsync(m => m.Id == memberId && m.Hidden && m.RemovedAt == null, cancellationToken)
+                     ?? throw new MemberNotFoundException(memberId);
+
+        member.Hidden = false;
+        await db.SaveChangesAsync(cancellationToken);
+        return ToDto(member, await db.Comments.CountAsync(c => c.MemberId == memberId, cancellationToken));
+    }
+
     /// <summary>Replaces the belt, the day it was received, the start day and the birth date of a member. Without a belt there is no day it was received.</summary>
     /// <exception cref="MemberNotFoundException"/>
     /// <exception cref="InvalidInputException">The belt does not exist.</exception>
@@ -76,9 +112,11 @@ public sealed class MemberService(PlannerDbContext db)
     public async Task SetUserMembersAsync(int userId, IReadOnlyList<int> memberIds, CancellationToken cancellationToken)
     {
         var wanted = memberIds.Distinct().ToList();
-        var members = await db.Members.Where(m => wanted.Contains(m.Id) || m.UserId == userId).ToListAsync(cancellationToken);
+        // A hidden member is not offered to be linked, but one that is linked already is released with the others.
+        var members = await db.Members.IgnoreQueryFilters()
+            .Where(m => m.RemovedAt == null && (wanted.Contains(m.Id) || m.UserId == userId)).ToListAsync(cancellationToken);
 
-        foreach (var id in wanted.Where(id => members.All(m => m.Id != id))) throw new MemberNotFoundException(id);
+        foreach (var id in wanted.Where(id => members.All(m => m.Id != id || m.Hidden))) throw new MemberNotFoundException(id);
         if (members.FirstOrDefault(m => wanted.Contains(m.Id) && m.UserId is { } other && other != userId) is { } taken)
             throw new AlreadyExistsException($"The member '{taken.Name}' is already linked to another user.");
 

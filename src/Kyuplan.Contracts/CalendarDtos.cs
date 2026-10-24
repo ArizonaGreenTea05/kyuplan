@@ -29,7 +29,8 @@ public static class CalendarViews
 /// <summary>An event of the calendar with how many of those invited answered what.</summary>
 /// <param name="Start">Start in the club time zone.</param>
 /// <param name="End">End in the club time zone.</param>
-/// <param name="Invited">Everybody who was invited.</param>
+/// <param name="Invited">Everybody who was invited. The trainers are not counted.</param>
+/// <param name="Trainers">The names of the members who host (train) the event; <c>null</c> or empty when nobody does.</param>
 public sealed record CalendarEventDto(
     string Id,
     string GroupId,
@@ -40,7 +41,17 @@ public sealed record CalendarEventDto(
     int Invited,
     int Accepted,
     int Declined,
-    int Unanswered);
+    int Unanswered,
+    IReadOnlyList<string>? Trainers = null)
+{
+    // A list compares by reference, so two answers of the API for the same event would differ (the banner would redraw on every poll).
+    public bool Equals(CalendarEventDto? other) =>
+        other is not null && Id == other.Id && GroupId == other.GroupId && Name == other.Name && Start == other.Start && End == other.End
+        && Cancelled == other.Cancelled && Invited == other.Invited && Accepted == other.Accepted && Declined == other.Declined
+        && Unanswered == other.Unanswered && (Trainers ?? []).SequenceEqual(other.Trainers ?? []);
+
+    public override int GetHashCode() => HashCode.Combine(Id, GroupId, Start, End, Cancelled, Invited, Accepted, Trainers?.Count ?? 0);
+}
 
 /// <summary>The events of a group within a day, a week or a month.</summary>
 /// <param name="View">One of <see cref="CalendarViews"/>.</param>

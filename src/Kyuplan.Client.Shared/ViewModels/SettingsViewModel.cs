@@ -62,7 +62,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         if (!CanView)
         {
             _loaded = null;
-            Form.Load(new SettingsDto("", "", false, null, null, false, false, "", "", 0, 0, false, 0));
+            Form.Load(new SettingsDto("", "", false, null, null, false, "", "", 0, 0, false, 0));
         }
 
         base.OnPermissionsChanged();

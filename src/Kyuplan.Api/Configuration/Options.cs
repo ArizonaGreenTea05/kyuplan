@@ -65,13 +65,6 @@ public sealed class SpondOptions
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
-    /// Leave the members who are administrators of their Spond group (the ones who are not respondents, the login account
-    /// usually among them) out of everything: the statistics, the member list and the exams. Members already in the
-    /// database who are administrators are removed by the next sync. Has no effect with <see cref="UseDemoData"/>.
-    /// </summary>
-    public bool IgnoreAdministrators { get; set; }
-
-    /// <summary>
     /// Name or id of the Spond subgroup that holds the people who are in the group but not registered as members of the club yet
     /// (case-insensitive). The members in it are marked as not registered. Empty, or a group without such a subgroup = everybody is registered.
     /// </summary>

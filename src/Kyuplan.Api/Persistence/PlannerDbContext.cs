@@ -87,6 +87,8 @@ public class PlannerDbContext : DbContext
 
     public DbSet<ManualInvitation> ManualInvitations => Set<ManualInvitation>();
 
+    public DbSet<ManualEventTrainer> ManualEventTrainers => Set<ManualEventTrainer>();
+
     public DbSet<CustomBranding> CustomBranding => Set<CustomBranding>();
 
     public DbSet<CustomBrandingImage> CustomBrandingImages => Set<CustomBrandingImage>();
@@ -185,17 +187,18 @@ public class PlannerDbContext : DbContext
         });
 
         // A member that is gone from the data source is hidden, with everything about them, until the retention is over (SpondSync;
-        // it and the backup see them with IgnoreQueryFilters). The filters of the rows that belong to a member say the same, so that no
-        // payment, comment or result of a hidden member turns up without the member.
-        modelBuilder.Entity<Member>().HasQueryFilter(m => m.RemovedAt == null);
-        modelBuilder.Entity<ExamParticipant>().HasQueryFilter(p => p.Member.RemovedAt == null);
-        modelBuilder.Entity<ExamCandidate>().HasQueryFilter(c => c.Member.RemovedAt == null);
-        modelBuilder.Entity<ExamResult>().HasQueryFilter(r => r.Member.RemovedAt == null);
-        modelBuilder.Entity<ExamPayment>().HasQueryFilter(p => p.Member.RemovedAt == null);
-        modelBuilder.Entity<Comment>().HasQueryFilter(c => c.Member.RemovedAt == null);
-        modelBuilder.Entity<MemberRating>().HasQueryFilter(r => r.Member.RemovedAt == null);
-        modelBuilder.Entity<CommentEdit>().HasQueryFilter(e => e.Comment.Member.RemovedAt == null);
-        modelBuilder.Entity<CommentTag>().HasQueryFilter(t => t.Comment.Member.RemovedAt == null);
+        // it and the backup see them with IgnoreQueryFilters), and so is a member a user hid (Member.Hidden; MemberService lists them for
+        // the page of hidden members). The filters of the rows that belong to a member say the same, so that no payment, comment or
+        // result of a hidden member turns up without the member.
+        modelBuilder.Entity<Member>().HasQueryFilter(m => m.RemovedAt == null && !m.Hidden);
+        modelBuilder.Entity<ExamParticipant>().HasQueryFilter(p => p.Member.RemovedAt == null && !p.Member.Hidden);
+        modelBuilder.Entity<ExamCandidate>().HasQueryFilter(c => c.Member.RemovedAt == null && !c.Member.Hidden);
+        modelBuilder.Entity<ExamResult>().HasQueryFilter(r => r.Member.RemovedAt == null && !r.Member.Hidden);
+        modelBuilder.Entity<ExamPayment>().HasQueryFilter(p => p.Member.RemovedAt == null && !p.Member.Hidden);
+        modelBuilder.Entity<Comment>().HasQueryFilter(c => c.Member.RemovedAt == null && !c.Member.Hidden);
+        modelBuilder.Entity<MemberRating>().HasQueryFilter(r => r.Member.RemovedAt == null && !r.Member.Hidden);
+        modelBuilder.Entity<CommentEdit>().HasQueryFilter(e => e.Comment.Member.RemovedAt == null && !e.Comment.Member.Hidden);
+        modelBuilder.Entity<CommentTag>().HasQueryFilter(t => t.Comment.Member.RemovedAt == null && !t.Comment.Member.Hidden);
 
         modelBuilder.Entity<ManualGroup>(group =>
         {
@@ -246,6 +249,15 @@ public class PlannerDbContext : DbContext
             invitation.Property(i => i.Rsvp).HasConversion<string>().HasMaxLength(RsvpLength);
             invitation.HasOne(i => i.Event).WithMany(e => e.Invitations).HasForeignKey(i => i.EventId).OnDelete(DeleteBehavior.Cascade);
             invitation.HasOne(i => i.Member).WithMany().HasForeignKey(i => i.MemberId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ManualEventTrainer>(trainer =>
+        {
+            trainer.HasKey(t => new { t.EventId, t.MemberId });
+            trainer.Property(t => t.EventId).HasMaxLength(IdLength);
+            trainer.Property(t => t.MemberId).HasMaxLength(IdLength);
+            trainer.HasOne(t => t.Event).WithMany(e => e.Trainers).HasForeignKey(t => t.EventId).OnDelete(DeleteBehavior.Cascade);
+            trainer.HasOne(t => t.Member).WithMany().HasForeignKey(t => t.MemberId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ExamParticipant>(participant =>

@@ -100,10 +100,10 @@ Your administrator uses this to try things out.
 ## Calendar
 
 The **Calendar** page shows the events of the selected group as in any calendar app: **Day**, **Week** (Monday to Sunday) or **Month**, with
-*Previous*, *Next* and *Today*. Cancelled events are struck through. The calendar only knows the events kyuplan reads from the data source (about the
+*Previous*, *Next* and *Today*. Cancelled events are struck through. The **trainers** of an event are in the tooltip of the event (and in the list of the web client's day and week view). The calendar only knows the events kyuplan reads from the data source (about the
 last year and the next six months).
 
-Choosing an event opens its **detail**: when it takes place, how many accepted, declined or did not answer, and **everybody invited** with their
+Choosing an event opens its **detail**: when it takes place, who its **trainers** (hosts) are, how many accepted, declined or did not answer, and **everybody invited** with their
 answer. Below each member you see the comments written about them **for this event** and, if you may write comments, a box to add one. A
 comment written there is **tagged automatically** with the event: kyuplan uses the tag that is connected to the event, and creates one
 (named after the event and its day) if there is none yet. The comment is an ordinary comment on the member; you find it on the Members page, and
@@ -247,6 +247,11 @@ date**. You can search by name and show only members who hold no belt yet.
 Who is a member is decided by **the data source**: names come from there and members cannot be added or removed in kyuplan. The list is as fresh
 as the last automatic sync (every 15 minutes by default). A member who leaves the data source is removed, together with their belt
 data, comments and exam invitations.
+
+**Hide** takes a member out of the statistics and out of every list and page (after a question; the member stays in the data source and
+keeps their belt, comments and results). Hidden members can only be seen again with **View hidden members** at the top of the page, which
+needs its own permission (`members.hidden`): there you can make each of them visible again with **Make visible**, and **Back to members**
+returns to the list.
 
 What the data source does not know, you enter here, because the Exams page needs it:
 

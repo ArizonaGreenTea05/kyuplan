@@ -49,7 +49,6 @@ public sealed class SettingsService(
             first.Email,
             first.PhoneNumber,
             !string.IsNullOrEmpty(first.Password),
-            first.IgnoreAdministrators,
             statistics.Value.TimeZone,
             statistics.Value.ExamKeyword,
             statistics.Value.DefaultMinAttendancePercent,
@@ -251,7 +250,6 @@ public sealed class SettingsService(
         Set("Spond:Email", now.SpondEmail ?? "", input.SpondEmail?.Trim() ?? "");
         Set("Spond:PhoneNumber", now.SpondPhoneNumber ?? "", input.SpondPhoneNumber?.Trim() ?? "");
         if (!string.IsNullOrEmpty(input.SpondPassword) && input.SpondPassword != spond.Value.Password) changes["Spond:Password"] = input.SpondPassword;
-        Set("Spond:IgnoreAdministrators", Flag(now.IgnoreAdministrators), Flag(input.IgnoreAdministrators));
         // An older client that does not know the field sends none: that keeps what is set.
         if (input.UnregisteredSubGroup is not null) Set("Spond:UnregisteredSubGroup", now.UnregisteredSubGroup ?? "", input.UnregisteredSubGroup.Trim());
         Set("Statistics:TimeZone", now.TimeZone, input.TimeZone.Trim());

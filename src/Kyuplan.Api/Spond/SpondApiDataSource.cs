@@ -99,8 +99,9 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
                     : $"Spond returned no groups for any of the {_accounts.Count} accounts.");
             }
 
-            var mapped = groups.Select(g => MapGroup(g, _options.IgnoreAdministrators)).ToList();
+            var mapped = groups.Select(g => MapGroup(g)).ToList();
             Store("groups", mapped);
+            Store(ProfilesKey, MemberIdsByProfile(groups)); // stored last: it never expires before the groups do
             return mapped;
         }
         finally
@@ -145,6 +146,7 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
     {
         var key = $"events:{groupId}:{month:yyyy-MM}";
         if (_cache.TryGetValue(key, out IReadOnlyList<EventInfo>? cached) && cached is not null) return cached;
+        var members = await GetMemberIdsAsync(cancellationToken);
         try
         {
             await _gate.WaitAsync(cancellationToken);
@@ -178,14 +180,37 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
                 return result;
             });
 
-            var mapped = spondEvents.Select(MapEvent).ToList();
-            Store(key, mapped, mapped.Count == 0 ? EmptyResultCacheDuration : _options.CacheDuration);
+            var mapped = spondEvents.Select(e => MapEvent(e, members)).ToList();
+
+            // Without the member lookup the hosts are not recognised: keep that result only briefly, so that it is mapped again soon.
+            Store(key, mapped, mapped.Count == 0 || members is null ? EmptyResultCacheDuration : _options.CacheDuration);
             return mapped;
         }
         finally
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// The member ids by profile id, to turn the owners of an event into members. If they are not cached (the groups were never loaded or
+    /// have expired) the groups are loaded first; <c>null</c> if Spond cannot deliver them. Must be called without <see cref="_gate"/> held.
+    /// </summary>
+    private async Task<IReadOnlyDictionary<string, string>?> GetMemberIdsAsync(CancellationToken cancellationToken)
+    {
+        if (_cache.TryGetValue(ProfilesKey, out IReadOnlyDictionary<string, string>? members) && members is not null) return members;
+
+        try
+        {
+            await GetGroupsAsync(cancellationToken);
+        }
+        catch (SpondUnavailableException ex)
+        {
+            _logger.LogWarning("The groups are needed to recognise the hosts of the events, but could not be loaded: {Message}", ex.Message);
+            return null;
+        }
+
+        return _cache.TryGetValue(ProfilesKey, out members) ? members : null;
     }
 
     private void Store<T>(string key, T value, TimeSpan? duration = null) =>
@@ -288,16 +313,11 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
         public DateTimeOffset AskedLastUntil { get; set; } = DateTimeOffset.MinValue;
     }
 
-    /// <summary>
-    /// With <paramref name="ignoreAdministrators"/> the members whose <see cref="SpondMember.Respondent"/> is false are left out: in Spond,
-    /// the members who answer events are the normal ones, the administrators (the login account usually among them) are not respondents.
-    /// </summary>
-    internal static GroupInfo MapGroup(SpondGroup group, bool ignoreAdministrators = false) => new(
+    internal static GroupInfo MapGroup(SpondGroup group) => new(
         group.Id,
         group.Name ?? group.Id,
         (group.SubGroups ?? []).Select(s => new SubGroupInfo(s.Id, s.Name ?? s.Id)).ToList(),
         (group.Members ?? [])
-            .Where(m => !ignoreAdministrators || m.Respondent)
             .Select(m => new MemberInfo(
                 m.Id,
                 $"{m.FirstName} {m.LastName}".Trim(),
@@ -313,7 +333,26 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
             ? day
             : null;
 
-    internal EventInfo MapEvent(SpondEvent e)
+    private const string ProfilesKey = "profiles";
+
+    /// <summary>
+    /// Spond names the owner of an event by the id of their user profile, not by the id of their member in the group. Maps both to the member id,
+    /// so that an owner is found whichever of the two the event carries.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> MemberIdsByProfile(IEnumerable<SpondGroup> groups)
+    {
+        var ids = new Dictionary<string, string>();
+        foreach (var member in groups.SelectMany(g => g.Members ?? []))
+        {
+            ids[member.Id] = member.Id;
+            if (!string.IsNullOrEmpty(member.Profile?.Id)) ids.TryAdd(member.Profile.Id, member.Id);
+        }
+
+        return ids;
+    }
+
+    /// <param name="memberIds">The member ids by profile or member id (<see cref="MemberIdsByProfile"/>); the owners are turned into members with it, and one who is no member of the groups is no trainer. <c>null</c> = not known (yet): the owners' ids are kept.</param>
+    internal EventInfo MapEvent(SpondEvent e, IReadOnlyDictionary<string, string>? memberIds = null)
     {
         var start = ParseTimestamp(e.StartTimestamp, e.StartTime);
         var end = ParseTimestamp(e.EndTimestamp, e.EndTime);
@@ -329,8 +368,13 @@ public sealed class SpondApiDataSource : IDataSource, IDisposable
             foreach (var id in r.UnconfirmedIds ?? []) responses.TryAdd(id, Rsvp.Other);
         }
 
+        // The owners are the hosts of the event; they are not asked to take part, so they may be in the responses or not.
+        var trainers = (e.Owners ?? []).Select(o => o.Id).Where(id => !string.IsNullOrEmpty(id))
+            .Select(id => memberIds is null ? id : memberIds.GetValueOrDefault(id))
+            .OfType<string>().Distinct().ToList();
+
         // SpondEvent.Name is a read-only alias of Heading.
-        return new EventInfo(e.Id, e.Name ?? string.Empty, start, end < start ? start : end, e.Cancelled ?? false, responses);
+        return new EventInfo(e.Id, e.Name ?? string.Empty, start, end < start ? start : end, e.Cancelled ?? false, responses, trainers);
     }
 
     /// <summary>Prefers the raw ISO timestamp: <c>SpondEvent.StartTime</c> is converted to the *machine's* time zone.</summary>

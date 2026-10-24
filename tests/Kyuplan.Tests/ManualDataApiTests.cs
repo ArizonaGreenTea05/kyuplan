@@ -197,4 +197,45 @@ public sealed class ManualDataApiTests(WebApplicationFactory<Program> factory) :
 
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsJsonAsync("/api/manual/groups", new ManualNameInputDto("Dojo"))).StatusCode);
     }
+
+    [Fact]
+    public async Task A_hidden_member_is_not_shown_on_the_manual_pages_either_and_keeps_their_invitations_until_made_visible()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var group = await PostAsync<ManualGroupDto>(admin, "/api/manual/groups", new ManualNameInputDto("Dojo"));
+        var anna = await PostAsync<ManualMemberDto>(admin, $"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Anna", null, null));
+        var ben = await PostAsync<ManualMemberDto>(admin, $"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Ben", null, null));
+        var start = DateTimeOffset.UtcNow.AddDays(-3);
+        var training = await PostAsync<ManualEventDto>(admin, $"/api/manual/groups/{group.Id}/events", new ManualEventInputDto(
+            "Training", start, start.AddHours(1), false,
+            [new ManualInvitationDto(anna.Id, ManualRsvp.Accepted), new ManualInvitationDto(ben.Id, ManualRsvp.Declined)], [anna.Id]));
+        var annaRow = (await admin.GetFromJsonAsync<List<MemberDto>>($"/api/members?groupId={group.Id}"))!.Single(m => m.Name == "Anna");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/members/{annaRow.Id}/hide", null)).StatusCode);
+
+        Assert.Equal(["Ben"], (await admin.GetFromJsonAsync<List<ManualMemberDto>>($"/api/manual/groups/{group.Id}/members"))!.Select(m => m.Name));
+        Assert.Equal(1, (await admin.GetFromJsonAsync<List<ManualGroupDto>>("/api/manual/groups"))!.Single().MemberCount);
+        var listed = Assert.Single((await admin.GetFromJsonAsync<List<ManualEventDto>>($"/api/manual/groups/{group.Id}/events"))!);
+        Assert.Equal([ben.Id], listed.Invitations.Select(i => i.MemberId));
+        Assert.Empty(listed.TrainerIds ?? []);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.PutAsJsonAsync($"/api/manual/members/{anna.Id}", new ManualMemberInputDto("Anna B", null, null))).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.DeleteAsync($"/api/manual/members/{anna.Id}")).StatusCode);
+
+        // Saving the event from the page, which does not know Anna, leaves her invitation and her hosting as they are; naming her is ignored.
+        var saved = await admin.PutAsJsonAsync($"/api/manual/events/{training.Id}", new ManualEventInputDto(
+            "Training 2", start, start.AddHours(1), false,
+            [new ManualInvitationDto(ben.Id, ManualRsvp.Accepted), new ManualInvitationDto(anna.Id, ManualRsvp.Declined)], [anna.Id]));
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        Assert.Equal([ben.Id], (await saved.Content.ReadFromJsonAsync<ManualEventDto>())!.Invitations.Select(i => i.MemberId));
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/members/{annaRow.Id}/unhide", null)).StatusCode);
+
+        Assert.Equal(["Anna", "Ben"], (await admin.GetFromJsonAsync<List<ManualMemberDto>>($"/api/manual/groups/{group.Id}/members"))!.Select(m => m.Name));
+        Assert.Equal(2, (await admin.GetFromJsonAsync<List<ManualGroupDto>>("/api/manual/groups"))!.Single().MemberCount);
+        var back = Assert.Single((await admin.GetFromJsonAsync<List<ManualEventDto>>($"/api/manual/groups/{group.Id}/events"))!);
+        Assert.Equal(ManualRsvp.Accepted, back.Invitations.Single(i => i.MemberId == anna.Id).Rsvp); // as it was, not as the page tried to say
+        Assert.Equal([anna.Id], back.TrainerIds);
+        Assert.Equal(ManualRsvp.Accepted, back.Invitations.Single(i => i.MemberId == ben.Id).Rsvp);
+    }
 }

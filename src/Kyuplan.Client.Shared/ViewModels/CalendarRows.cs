@@ -25,10 +25,18 @@ public sealed partial class CalendarEventRow(CalendarEventDto calendarEvent) : O
     /// <summary>"Sat, 26 Sep 2026 · 18:00 – 19:30".</summary>
     public string WhenText => $"{Display.EventDay(calendarEvent.Start)} · {TimeText}";
 
+    /// <summary>The tooltip: <see cref="WhenText"/>, and the trainers when there are some.</summary>
+    public string TipText => HasTrainers ? $"{WhenText} · {TrainersText}" : WhenText;
+
     /// <summary>"12 accepted · 3 declined · 5 no answer".</summary>
     public string CountsText => string.Format(Strings.Calendar_Counts, calendarEvent.Accepted, calendarEvent.Declined, calendarEvent.Unanswered);
 
     public string InvitedText => string.Format(Strings.Calendar_Invited, calendarEvent.Invited);
+
+    public bool HasTrainers => calendarEvent.Trainers is { Count: > 0 };
+
+    /// <summary>"Trainers: Tina Trainer, Ben Kamp"; empty while nobody hosts the event.</summary>
+    public string TrainersText => HasTrainers ? string.Format(Strings.Calendar_Trainers, string.Join(", ", calendarEvent.Trainers!)) : "";
 
     [ObservableProperty]
     private bool _isSelected;

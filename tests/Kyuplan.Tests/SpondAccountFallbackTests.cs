@@ -7,6 +7,7 @@ using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Spond;
+using Newtonsoft.Json;
 using Spond.API.Models;
 
 namespace Kyuplan.Tests;
@@ -28,7 +29,7 @@ public class SpondAccountFallbackTests
     private SpondApiDataSource CreateSource(params string[] accountNames) => new(
         Options.Create(new SpondOptions { Accounts = accountNames.Select(Account).ToList() }),
         new ClubClock(_time, Berlin),
-        new MemoryCache(new MemoryCacheOptions()),
+        new MemoryCache(new MemoryCacheOptions { Clock = new FakeCacheClock(_time) }),
         _time,
         NullLogger<SpondApiDataSource>.Instance,
         account =>
@@ -103,7 +104,9 @@ public class SpondAccountFallbackTests
         var events = await EventsOf(source, 3);
 
         Assert.Equal(["second"], events.Select(e => e.Id));
-        Assert.Equal(["first:events", "second:events"], _calls.Where(c => c.EndsWith(":events")));
+
+        // The groups, asked for first, (asked twice, with a new login in between) already showed that the first account yields nothing: it is not asked for the events any more.
+        Assert.Equal(["first:groups", "first:groups", "second:groups", "second:events"], _calls.Where(c => c.EndsWith(":events") || c.EndsWith(":groups")));
     }
 
     [Fact]
@@ -201,6 +204,47 @@ public class SpondAccountFallbackTests
     }
 
     [Fact]
+    public async Task The_hosts_of_events_are_recognised_even_when_the_groups_were_not_asked_for_before()
+    {
+        using var source = CreateSource("first");
+
+        var events = await EventsOf(source, 3);
+
+        Assert.Equal(["m-first"], Assert.Single(events).Trainers); // the owner is named by profile, the member id comes from the groups
+        Assert.Contains("first:groups", _calls);
+    }
+
+    [Fact]
+    public async Task The_groups_are_not_asked_again_for_every_month()
+    {
+        using var source = CreateSource("first");
+
+        await source.GetGroupsAsync(CancellationToken.None);
+        await EventsOf(source, 3);
+        await EventsOf(source, 4);
+
+        Assert.Single(_calls, "first:groups");
+    }
+
+    [Fact]
+    public async Task Events_mapped_without_the_groups_are_cached_only_briefly_and_mapped_again_once_the_groups_are_there()
+    {
+        using var source = CreateSource("first");
+        _clients["first"].NoGroups = true;
+
+        var withoutGroups = await EventsOf(source, 3);
+        Assert.Equal(["p-first"], Assert.Single(withoutGroups).Trainers); // the owner's profile id: who that is, is not known
+        await EventsOf(source, 3);
+        Assert.Single(_calls, "first:events"); // cached for the moment
+
+        _clients["first"].NoGroups = false;
+        _time.Advance(TimeSpan.FromMinutes(3));
+        var again = await EventsOf(source, 3);
+
+        Assert.Equal(["m-first"], Assert.Single(again).Trainers);
+    }
+
+    [Fact]
     public async Task Without_accounts_spond_is_reported_as_not_configured()
     {
         using var source = CreateSource();
@@ -209,6 +253,14 @@ public class SpondAccountFallbackTests
 
         Assert.Contains("credentials are not configured", ex.Message);
     }
+
+    /// <summary>The cache expires entries by the test's clock, so that a test can let them run out.</summary>
+#pragma warning disable CS0618 // MemoryCacheOptions.Clock is the only way to hand the cache a clock
+    private sealed class FakeCacheClock(TimeProvider time) : Microsoft.Extensions.Internal.ISystemClock
+    {
+        public DateTimeOffset UtcNow => time.GetUtcNow();
+    }
+#pragma warning restore CS0618
 
     /// <summary>
     /// Spond.API reports a failed request as an empty list: <see cref="Throttled"/> is that, for every call;
@@ -222,6 +274,9 @@ public class SpondAccountFallbackTests
 
         public bool Empty { get; set; }
 
+        /// <summary>The account delivers events but no groups, so there is no member lookup.</summary>
+        public bool NoGroups { get; set; }
+
         public Task<bool> LoginAsync()
         {
             calls.Add($"{name}:login");
@@ -231,7 +286,12 @@ public class SpondAccountFallbackTests
         public Task<List<SpondGroup>> GetGroupsAsync()
         {
             calls.Add($"{name}:groups");
-            return Task.FromResult(Throttled ? [] : new List<SpondGroup> { new() { Id = name, Name = name } });
+            return Task.FromResult(Throttled || NoGroups
+                ? []
+                : new List<SpondGroup>
+                {
+                    new() { Id = name, Name = name, Members = [new SpondMember { Id = $"m-{name}", Profile = new SpondUserProfile { Id = $"p-{name}" } }] },
+                });
         }
 
         public Task<List<SpondEvent>> GetEventsAsync(string groupId, DateTime minEnd, DateTime maxEnd)
@@ -248,6 +308,7 @@ public class SpondAccountFallbackTests
                         StartTimestamp = "2026-03-10T17:30:00Z",
                         EndTimestamp = "2026-03-10T19:00:00Z",
                         Responses = new SpondEventResponses(),
+                        Owners = JsonConvert.DeserializeObject<SpondEvent>($$"""{ "owners": [{ "id": "p-{{name}}" }] }""")!.Owners,
                     },
                 });
         }

@@ -65,7 +65,7 @@ internal static class DashboardBuilder
                      .OrderBy(e => e.Start))
         {
             int invited = 0, accepted = 0, declined = 0, unanswered = 0;
-            foreach (var (memberId, rsvp) in e.Responses)
+            foreach (var (memberId, rsvp) in e.Participants)
             {
                 if (!memberIds.Contains(memberId)) continue;
                 invited++;

@@ -560,7 +560,7 @@ public sealed class ExamApiTests(WebApplicationFactory<Program> factory) : IClas
 
         var source = host.Services.GetRequiredService<IDataSource>();
         var invited = (await source.GetEventsAsync(Group, DateTimeOffset.MinValue, DateTimeOffset.MaxValue, CancellationToken.None))
-            .Single(e => e.Id == events.September.Id).Responses;
+            .Single(e => e.Id == events.September.Id).Participants.ToDictionary(r => r.Key, r => r.Value); // the hosts take no part
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
         var participants = await db.ExamParticipants.AsNoTracking().Include(p => p.Member).Where(p => p.ExamId == exam.Id).ToListAsync();

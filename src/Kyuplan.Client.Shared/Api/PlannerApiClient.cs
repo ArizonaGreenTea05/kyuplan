@@ -282,6 +282,15 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.PutAsync($"api/members/{memberId}", Json(member, PlannerJsonContext.Default.MemberInputDto), cancellationToken),
             PlannerJsonContext.Default.MemberDto, cancellationToken);
 
+    public async Task<IReadOnlyList<MemberDto>> GetHiddenMembersAsync(string groupId, CancellationToken cancellationToken = default) =>
+        await GetAsync($"api/members/hidden?groupId={Uri.EscapeDataString(groupId)}", PlannerJsonContext.Default.ListMemberDto, cancellationToken);
+
+    public Task HideMemberAsync(int memberId, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.PostAsync($"api/members/{memberId}/hide", null, cancellationToken), cancellationToken);
+
+    public Task<MemberDto> UnhideMemberAsync(int memberId, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/members/{memberId}/unhide", null, cancellationToken), PlannerJsonContext.Default.MemberDto, cancellationToken);
+
     public async Task<IReadOnlyList<RatingDto>> GetMemberRatingsAsync(int memberId, CancellationToken cancellationToken = default) =>
         await GetAsync($"api/members/{memberId}/ratings", PlannerJsonContext.Default.ListRatingDto, cancellationToken);
 

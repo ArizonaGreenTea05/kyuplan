@@ -85,7 +85,8 @@ public sealed partial class ManualEventEditorViewModel : ObservableObject
         Start is { } start && End is { } end
             ? new ManualEventInputDto(
                 Name.Trim(), start, end, Cancelled,
-                [.. Invitees.Where(i => i.IsInvited).Select(i => new ManualInvitationDto(i.MemberId, i.Answer.Value))])
+                [.. Invitees.Where(i => i.IsInvited).Select(i => new ManualInvitationDto(i.MemberId, i.Answer.Value))],
+                [.. Invitees.Where(i => i.IsTrainer).Select(i => i.MemberId)])
             : null;
 
     public bool CanSave =>
@@ -94,7 +95,8 @@ public sealed partial class ManualEventEditorViewModel : ObservableObject
 
     private static bool SameEvent(ManualEventInputDto input, ManualEventDto e) =>
         input.Name == e.Name && input.Start == e.Start && input.End == e.End && input.Cancelled == e.Cancelled
-        && input.Invitations!.OrderBy(i => i.MemberId).SequenceEqual(e.Invitations.OrderBy(i => i.MemberId));
+        && input.Invitations!.OrderBy(i => i.MemberId).SequenceEqual(e.Invitations.OrderBy(i => i.MemberId))
+        && input.TrainerIds!.Order().SequenceEqual((e.TrainerIds ?? []).Order());
 
     /// <summary>Closes the form without asking anything.</summary>
     internal void Close() => IsOpen = false;
@@ -149,12 +151,13 @@ public sealed partial class ManualEventEditorViewModel : ObservableObject
         _editing = row;
         var zone = _host.Zone;
         var invitations = row?.Event.Invitations.ToDictionary(i => i.MemberId, i => i.Rsvp) ?? [];
+        var trainers = row?.Event.TrainerIds?.ToHashSet() ?? [];
         var unanswered = ManualRsvpOption.All.First(o => o.Value == ManualRsvp.Unanswered);
 
         Invitees = [.. members.Select(m =>
         {
             var invited = invitations.TryGetValue(m.Id, out var rsvp);
-            return new ManualInviteRow(m.Id, m.Name, invited, invited ? ManualRsvpOption.All.First(o => o.Value == rsvp) : unanswered);
+            return new ManualInviteRow(m.Id, m.Name, invited, invited ? ManualRsvpOption.All.First(o => o.Value == rsvp) : unanswered, trainers.Contains(m.Id));
         })];
         foreach (var invitee in Invitees) invitee.PropertyChanged += (_, _) => Edited();
 

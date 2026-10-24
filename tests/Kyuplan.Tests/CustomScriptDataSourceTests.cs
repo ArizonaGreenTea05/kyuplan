@@ -95,6 +95,28 @@ public sealed class CustomScriptDataSourceTests
     }
 
     [Fact]
+    public async Task The_trainers_of_an_event_are_the_ids_in_its_trainers_list_and_anything_else_is_skipped()
+    {
+        using var source = Source("""
+            function getGroups() { return []; }
+            function getEvents() {
+              return [
+                { id: 'e1', start: '2026-10-01T16:00:00Z', responses: { a: 'accepted', t: 'accepted' }, trainers: ['t', ' t ', 'u', '', 7, null, {}] },
+                { id: 'e2', start: '2026-10-02T16:00:00Z', trainers: 'not-a-list' },
+                { id: 'e3', start: '2026-10-03T16:00:00Z' }
+              ];
+            }
+            """);
+
+        var events = await source.GetEventsAsync("g", DateTimeOffset.Parse("2026-09-01T00:00:00Z"), DateTimeOffset.Parse("2026-11-01T00:00:00Z"), CancellationToken.None);
+
+        Assert.Equal(["t", "u"], events[0].Trainers);
+        Assert.Equal(["a"], events[0].Participants.Select(p => p.Key));
+        Assert.Empty(events[1].Trainers!);
+        Assert.Empty(events[2].Trainers!);
+    }
+
+    [Fact]
     public async Task Windows_within_the_same_days_share_one_run_of_the_script()
     {
         using var source = Source("function getGroups() { return []; } function getEvents() { return []; }");

@@ -1248,6 +1248,39 @@
   <data name="MemberPage_NoneMatch" xml:space="preserve">
     <value>No member matches.</value>
   </data>
+  <data name="MemberPage_Hide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="MemberPage_ConfirmHide" xml:space="preserve">
+    <value>Hide “{0}”? A hidden member is ignored in the statistics and shown nowhere; only someone who may view hidden members can make them visible again.</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="MemberPage_ConfirmHideYes" xml:space="preserve">
+    <value>Yes, hide</value>
+  </data>
+  <data name="MemberPage_MemberHidden" xml:space="preserve">
+    <value>{0} is hidden.</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="MemberPage_ViewHidden" xml:space="preserve">
+    <value>View hidden members</value>
+  </data>
+  <data name="MemberPage_BackToMembers" xml:space="preserve">
+    <value>Back to members</value>
+  </data>
+  <data name="MemberPage_HiddenLede" xml:space="preserve">
+    <value>These members are hidden: they are ignored in the statistics and shown nowhere else. Make a member visible to bring them back.</value>
+  </data>
+  <data name="MemberPage_Unhide" xml:space="preserve">
+    <value>Make visible</value>
+  </data>
+  <data name="MemberPage_MemberUnhidden" xml:space="preserve">
+    <value>{0} is visible again.</value>
+    <comment>{0} = member name.</comment>
+  </data>
+  <data name="MemberPage_NoneHidden" xml:space="preserve">
+    <value>No members are hidden.</value>
+  </data>
   <data name="MemberPage_ColRegistered" xml:space="preserve">
     <value>Registration</value>
   </data>
@@ -1386,12 +1419,6 @@
   </data>
   <data name="Settings_SpondIncomplete" xml:space="preserve">
     <value>A Spond login needs the email (or phone number) and the password.</value>
-  </data>
-  <data name="Settings_IgnoreAdministrators" xml:space="preserve">
-    <value>Ignore group administrators</value>
-  </data>
-  <data name="Settings_IgnoreAdministratorsHint" xml:space="preserve">
-    <value>Leave members who administer their Spond group (usually the login account) out of the statistics, members and exams.</value>
   </data>
   <data name="Settings_StatisticsTitle" xml:space="preserve">
     <value>Statistics and exams</value>
@@ -2406,6 +2433,9 @@
   <data name="Permission_members_edit" xml:space="preserve">
     <value>Set a member’s belt and days</value>
   </data>
+  <data name="Permission_members_hidden" xml:space="preserve">
+    <value>View hidden members and make them visible again</value>
+  </data>
   <data name="Permission_belts_view" xml:space="preserve">
     <value>See the belts</value>
   </data>
@@ -2675,6 +2705,9 @@
   </data>
   <data name="Calendar_Invited" xml:space="preserve">
     <value>{0} invited</value>
+  </data>
+  <data name="Calendar_Trainers" xml:space="preserve">
+    <value>Trainers: {0}</value>
   </data>
   <data name="Calendar_BackToMembers" xml:space="preserve">
     <value>Back to the members</value>
@@ -3308,6 +3341,9 @@
   </data>
   <data name="Manual_ColAnswer" xml:space="preserve">
     <value>Answer</value>
+  </data>
+  <data name="Manual_ColTrainer" xml:space="preserve">
+    <value>Host (trainer)</value>
   </data>
   <data name="Manual_Rsvp_accepted" xml:space="preserve">
     <value>Accepted</value>

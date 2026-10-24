@@ -64,7 +64,7 @@ public sealed class SpondSync(
 
             // A group the account does not see any more has no members in Spond either.
             var groupIds = groups.Select(g => g.Id).ToList();
-            RemoveMembers(await db.Members.Where(m => !groupIds.Contains(m.GroupId)).ToListAsync(cancellationToken));
+            RemoveMembers(await db.Members.IgnoreQueryFilters().Where(m => m.RemovedAt == null && !groupIds.Contains(m.GroupId)).ToListAsync(cancellationToken)); // those a user hid are gone with the group too
             await db.SaveChangesAsync(cancellationToken);
 
             foreach (var group in groups)
@@ -116,7 +116,7 @@ public sealed class SpondSync(
     /// <summary>Refuses the answer when it drops too many of the stored members: all of them, or those of one group.</summary>
     private async Task EnsureRemovalsAreFewAsync(IReadOnlyList<GroupInfo> groups, CancellationToken cancellationToken)
     {
-        var stored = await db.Members.AsNoTracking().Select(m => new { m.GroupId, m.SpondId }).ToListAsync(cancellationToken);
+        var stored = await db.Members.IgnoreQueryFilters().AsNoTracking().Where(m => m.RemovedAt == null).Select(m => new { m.GroupId, m.SpondId }).ToListAsync(cancellationToken);
         var listed = groups.DistinctBy(g => g.Id).ToDictionary(g => g.Id, g => g.Members.Select(m => m.Id).ToHashSet());
 
         var gone = stored.Where(m => !listed.TryGetValue(m.GroupId, out var ids) || !ids.Contains(m.SpondId)).ToList();
@@ -180,7 +180,7 @@ public sealed class SpondSync(
         IReadOnlyList<EventInfo> events;
         try
         {
-            events = await statistics.GetWindowEventsAsync(group.Id, cancellationToken);
+            events = await statistics.GetWindowEventsAsync(group.Id, cancellationToken, includeHidden: true); // the members a user hid are kept up to date too
         }
         catch (Exception ex) when (ex is SpondUnavailableException or GroupNotFoundException)
         {
@@ -193,7 +193,8 @@ public sealed class SpondSync(
         foreach (var exam in exams)
         {
             // Loaded again even when the exam came with its invitations: a member that was just restored has theirs back.
-            await db.ExamParticipants.Where(p => p.ExamId == exam.Id).LoadAsync(cancellationToken);
+            // The invitations of a member a user hid belong to the exam as much as the others (only a removed member's are left alone).
+            await db.ExamParticipants.IgnoreQueryFilters().Where(p => p.ExamId == exam.Id && p.Member.RemovedAt == null).LoadAsync(cancellationToken);
             SyncParticipants(exam, events, members);
         }
 
@@ -287,7 +288,7 @@ public sealed class SpondSync(
         var now = clock.Now;
         foreach (var e in events.Where(e => !e.Cancelled && e.End <= now)) // chronological: the first match is the first event
         {
-            foreach (var (spondId, rsvp) in e.Responses)
+            foreach (var (spondId, rsvp) in e.Participants)
             {
                 if (rsvp == Rsvp.Accepted && waiting.Remove(spondId, out var member))
                     member.StartedAt = DateOnly.FromDateTime(e.Start.Date);
@@ -304,7 +305,7 @@ public sealed class SpondSync(
         ExamService.Follow(exam, current);
 
         var stored = exam.Participants.ToDictionary(p => p.MemberId);
-        foreach (var (spondId, rsvp) in current.Responses)
+        foreach (var (spondId, rsvp) in current.Participants)
         {
             // Somebody who is invited but is not a member of the group (any more) cannot be recorded.
             if (!members.TryGetValue(spondId, out var member)) continue;

@@ -107,16 +107,21 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
                 .Where(e => contains.Length == 0 || contains.Any(t => e.Name.Contains(t, StringComparison.OrdinalIgnoreCase)))
                 .Where(e => !excludes.Any(t => e.Name.Contains(t, StringComparison.OrdinalIgnoreCase)))
                 .Where(e => selected is null || Invites(e, selected, source.Invitation))
-                .Select(e => new IcsEntry($"event-{e.Id}@kyuplan", Title(source, words, e.Name, people => e.Responses.Keys.Any(people.Contains)), e.Start, e.End, null, e.Cancelled)),
+                .Select(e => new IcsEntry($"event-{e.Id}@kyuplan", Title(source, words, e.Name, people => e.Participants.Any(r => people.Contains(r.Key))), e.Start, e.End, null, e.Cancelled)),
         ];
     }
 
-    private static bool Invites(EventInfo e, HashSet<string> selected, string? invitation) => invitation switch
+    /// <summary>Who is invited: the participants, not the hosts of the event (they run it, they are no invitees).</summary>
+    private static bool Invites(EventInfo e, HashSet<string> selected, string? invitation)
     {
-        EventInvitations.All => selected.All(e.Responses.ContainsKey),
-        EventInvitations.Only => e.Responses.Count > 0 && e.Responses.Keys.All(selected.Contains),
-        _ => e.Responses.Keys.Any(selected.Contains),
-    };
+        var invited = e.Participants.Select(r => r.Key).ToHashSet();
+        return invitation switch
+        {
+            EventInvitations.All => selected.All(invited.Contains),
+            EventInvitations.Only => invited.Count > 0 && invited.All(selected.Contains),
+            _ => invited.Any(selected.Contains),
+        };
+    }
 
     /// <summary>The same day every year, for the year before this one, this one and the next, with the number of years in the title.</summary>
     private async Task<List<IcsEntry>> MemberDayEntriesAsync(CalendarSourceDto source, CancellationToken cancellationToken)

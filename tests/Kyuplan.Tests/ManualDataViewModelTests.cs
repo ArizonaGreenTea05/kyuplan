@@ -187,6 +187,32 @@ public sealed class ManualDataViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_members_who_host_an_event_are_ticked_in_the_form_and_saved_with_it()
+    {
+        _api.ManualEvents.Add(new ManualEventDto("e1", "g1", "Training", new DateTimeOffset(2026, 10, 1, 18, 0, 0, TimeSpan.FromHours(2)),
+            new DateTimeOffset(2026, 10, 1, 19, 30, 0, TimeSpan.FromHours(2)), false, [new ManualInvitationDto("m1", ManualRsvp.Accepted)], ["m2"]));
+        await SeedGroupAsync();
+        _api.Info = _api.Info with { TimeZone = "Europe/Berlin" };
+        _vm.SectionIndex = ManualDataViewModel.EventsSection;
+
+        await _vm.EventEditor.BeginEditCommand.ExecuteAsync(_vm.Events.Single());
+
+        Assert.Equal([false, true], _vm.EventEditor.Invitees.Select(i => i.IsTrainer)); // Ben hosts without being invited
+        Assert.False(_vm.EventEditor.SaveCommand.CanExecute(null)); // nothing changed
+
+        _vm.EventEditor.Invitees[0].IsTrainer = true;
+        Assert.True(_vm.EventEditor.SaveCommand.CanExecute(null));
+        await _vm.EventEditor.SaveCommand.ExecuteAsync(null);
+
+        Assert.Equal(["m1", "m2"], _api.LastManualEventInput!.TrainerIds);
+        Assert.Equal(["m1", "m2"], _api.ManualEvents.Single().TrainerIds);
+
+        _vm.EventEditor.BeginNewCommand.Execute(null);
+        await Task.Yield();
+        Assert.All(_vm.EventEditor.Invitees, i => Assert.False(i.IsTrainer));
+    }
+
+    [Fact]
     public async Task An_event_that_ends_before_it_starts_or_has_no_readable_time_cannot_be_saved()
     {
         await SeedGroupAsync();

@@ -67,6 +67,25 @@ public static class BeltEndpoints
             .WithSummary("The members the API holds, by name, optionally only those of one Spond group. They are a copy of Spond's, as of the last sync. The number of comments on a member is only given to whoever may read them (comments.view; about a member the user is themselves comments.viewOwn), else it is 0.")
             .RequirePermission(Permission.MembersView);
 
+        members.MapGet("/hidden", (string? groupId, MemberService service, CancellationToken ct) => service.ListHiddenAsync(groupId, ct))
+            .WithSummary("The members a user hid, by name, optionally only those of one Spond group: what the page of hidden members shows. Hidden members are in no other response.")
+            .RequirePermission(Permission.MembersHidden);
+
+        members.MapPost("/{memberId:int}/hide", async (int memberId, MemberService service, CancellationToken ct) =>
+            {
+                await service.HideAsync(memberId, ct);
+                return Results.NoContent();
+            })
+            .WithSummary("Hide a member: no statistic counts them and no response lists them (404 for a member that is hidden already). Only the list of hidden members shows them again.")
+            .Audited(AuditAreas.Members, AuditActions.Update)
+            .RequirePermission(Permission.MembersEdit);
+
+        members.MapPost("/{memberId:int}/unhide", async (int memberId, MemberService service, CancellationToken ct) =>
+                Results.Ok(await service.UnhideAsync(memberId, ct)))
+            .WithSummary("Make a hidden member visible again (404 when the member is not hidden).")
+            .Audited(AuditAreas.Members, AuditActions.Update)
+            .RequirePermission(Permission.MembersHidden);
+
         members.MapGet("/choices", (MemberService service, CancellationToken ct) => service.ChoicesAsync(ct))
             .WithSummary("Every member by name with the user who already is that member (if any): what the users page offers when an administrator says which members a user is. Nothing else about the members.")
             .RequirePermission(Permission.MembersView, Permission.UsersEdit);

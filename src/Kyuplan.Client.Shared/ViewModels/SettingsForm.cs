@@ -68,7 +68,6 @@ public sealed partial class SettingsForm : ObservableObject
     [ObservableProperty] private string _spondPhoneNumber = "";
     [ObservableProperty] private string _spondPassword = "";
     [ObservableProperty] private bool _hasSpondPassword;
-    [ObservableProperty] private bool _ignoreAdministrators;
     [ObservableProperty] private string _timeZone = "";
     [ObservableProperty] private string _examKeyword = "";
     [ObservableProperty] private int _defaultMinAttendancePercent;
@@ -107,7 +106,6 @@ public sealed partial class SettingsForm : ObservableObject
         SpondPhoneNumber = settings.SpondPhoneNumber ?? "";
         SpondPassword = "";
         HasSpondPassword = settings.HasSpondPassword;
-        IgnoreAdministrators = settings.IgnoreAdministrators;
         TimeZone = settings.TimeZone;
         ExamKeyword = settings.ExamKeyword;
         DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent;
@@ -128,7 +126,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     public SettingsInputDto ToInput() => new(
         DatabasePath.Trim(), AccountsDatabasePath.Trim(), DataSource == DataSourceKinds.Demo, SpondEmail.Trim(), SpondPhoneNumber.Trim(),
-        SpondPassword.Length == 0 ? null : SpondPassword, IgnoreAdministrators, TimeZone.Trim(), ExamKeyword.Trim(),
+        SpondPassword.Length == 0 ? null : SpondPassword, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
         [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
         DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScript,
@@ -153,7 +151,7 @@ public sealed partial class SettingsForm : ObservableObject
     public bool Matches(SettingsDto s) =>
         DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && DataSource == DataSourceKinds.Normalize(s.UseDemoData ? DataSourceKinds.Demo : s.DataSource) && CustomScript == s.CustomScript &&
         SpondEmail.Trim() == (s.SpondEmail ?? "") && SpondPhoneNumber.Trim() == (s.SpondPhoneNumber ?? "") && SpondPassword.Length == 0 &&
-        IgnoreAdministrators == s.IgnoreAdministrators && TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
+        TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
         DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
         UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&

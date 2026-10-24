@@ -27,8 +27,11 @@ public sealed class DataSourceOptions
     /// <summary>How long what the script returned is reused before it is asked again.</summary>
     public TimeSpan CacheDuration { get; set; } = TimeSpan.FromMinutes(15);
 
-    /// <summary>Whether the script may reach loopback, link-local and the cloud metadata addresses (<c>localhost</c>, <c>169.254.x.x</c>); other internal addresses are always allowed.</summary>
+    /// <summary>Whether the script may reach loopback, "this network", link-local and the cloud metadata addresses (<c>localhost</c>, <c>169.254.x.x</c>, <c>fd00:ec2::/32</c>).</summary>
     public bool AllowLocalAddresses { get; set; }
+
+    /// <summary>Whether the script may reach the internal network: <c>10/8</c>, <c>172.16/12</c>, <c>192.168/16</c>, CGNAT <c>100.64/10</c>, <c>fc00::/7</c>, multicast and other non-public ranges.</summary>
+    public bool AllowPrivateAddresses { get; set; }
 
     /// <summary>The source that runs: the demo data when <see cref="SpondOptions.UseDemoData"/> is set (the older switch), else <see cref="Kind"/>.</summary>
     public string Resolve(SpondOptions spond) => spond.UseDemoData ? DataSourceKinds.Demo : DataSourceKinds.Normalize(Kind);

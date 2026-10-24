@@ -15,6 +15,7 @@ public sealed class LinuxNavigationTests : IDisposable
     private static readonly UserDto Boss = Dto(1, "boss", "boss", [], true);
     private static readonly UserDto Anna = Dto(2, "Anna", "Anna", [], false);
 
+    private readonly FakePlannerApi _api = new();
     private readonly ServiceProvider _services;
     private readonly LoginSession _session;
     private readonly NavigationViewModel _navigation;
@@ -23,8 +24,8 @@ public sealed class LinuxNavigationTests : IDisposable
     {
         var services = new ServiceCollection();
         services.AddPlannerClient(options => options.BaseAddress = "http://planner.test/");
-        var api = new FakePlannerApi { AccountGate = new TaskCompletionSource() }; // nobody is signed in until a test says so
-        services.AddSingleton<IPlannerApi>(api);
+        _api.AccountGate = new TaskCompletionSource(); // nobody is signed in until a test says so
+        services.AddSingleton<IPlannerApi>(_api);
         services.AddSingleton<ILoginStore, FakeLoginStore>();
         services.AddSingleton<IClientUpdater, FakeClientUpdater>();
         services.AddSingleton<ClientUpdateViewModel>();
@@ -41,6 +42,25 @@ public sealed class LinuxNavigationTests : IDisposable
     private IEnumerable<PageViewModel> Pages => _navigation.Items.Concat(_navigation.AdminItems).Concat(_navigation.AccountItems).Select(i => i.Page);
 
     private static string[] Names(IEnumerable<PageViewModel> pages) => [.. pages.Select(p => p.GetType().Name.Replace("ViewModel", ""))];
+
+    [Fact]
+    public async Task An_upcoming_event_of_the_dashboard_opens_on_the_calendar_page_whatever_page_is_shown()
+    {
+        _session.User = Boss;
+        _navigation.SelectedItem = _navigation.AccountItems[0];
+        var upcoming = new CalendarEventDto("e1", "g1", "Training", DateTimeOffset.Now.AddDays(2), DateTimeOffset.Now.AddDays(2).AddHours(1), false, 3, 2, 0, 1);
+        _api.CalendarEvents.Add(upcoming);
+        _api.Account = Boss;
+        _api.AccountGate!.SetResult();
+        var calendar = _services.GetRequiredService<CalendarViewModel>();
+        var dashboard = _services.GetRequiredService<DashboardViewModel>();
+
+        dashboard.OpenEventCommand.Execute(new UpcomingEventRowViewModel(new UpcomingEventDto("e1", "Training", upcoming.Start, 3, 2, 0, 1), "g1"));
+
+        Assert.Same(calendar, _navigation.SelectedItem.Page);
+        for (var waited = 0; !calendar.HasDetail && waited < 5000; waited += 10) await Task.Delay(10); // the event is read in the background
+        Assert.Equal("e1", calendar.Detail?.Id);
+    }
 
     [Fact]
     public void Before_anybody_is_known_the_sidebar_has_the_account_pages_only()

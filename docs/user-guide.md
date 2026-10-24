@@ -159,7 +159,7 @@ A quick picture of how the group is doing over the last **30 / 90 / 180 / 365 da
 
 - **Headline figures**: how many members meet the required attendance, the overall attendance and response rate, the average number of
   attendees per event.
-- **Upcoming events** of the next two weeks, with how many members are coming, declined or have not answered yet.
+- **Upcoming events** of the next two weeks, with how many members are coming, declined or have not answered yet. Click an event to open it on the calendar page.
 - **Most engaged**: the five members with the highest engagement score.
 - **Needs attention**: members at risk of dropping out or whose attendance is falling, lowest score first.
 

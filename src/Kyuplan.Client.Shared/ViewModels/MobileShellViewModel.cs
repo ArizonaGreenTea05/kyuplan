@@ -47,19 +47,22 @@ public sealed class MobileShellViewModel : ObservableObject
         ShowPermittedTabs(); // selects the first tab (once, so one page loads at start-up)
         shell.PermissionsChanged += (_, _) => ShowPermittedTabs();
 
-        // The banner of an event in progress opens the event on the calendar, whatever tab is shown.
-        banner.OpenRequested += async (_, e) =>
+        // The banner of an event in progress and an upcoming event of the dashboard open the event on the calendar, whatever tab is shown.
+        async void OpenOnCalendar(string groupId, string eventId)
         {
             SelectedTab = Tab(MobileTabKind.Calendar);
             try
             {
-                await calendar.OpenEventAsync(e.GroupId, e.Id);
+                await calendar.OpenEventAsync(groupId, eventId);
             }
             catch (Exception)
             {
                 // An event handler nobody awaits: whatever goes wrong while the event is read is the calendar's to report (it does), not to end the app.
             }
-        };
+        }
+
+        banner.OpenRequested += (_, e) => OpenOnCalendar(e.GroupId, e.Id);
+        dashboard.OpenEventRequested += (_, e) => OpenOnCalendar(e.GroupId, e.Id);
     }
 
     public ShellViewModel Shell { get; }

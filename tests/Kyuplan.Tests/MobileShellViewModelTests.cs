@@ -221,6 +221,25 @@ public sealed class MobileShellViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task An_upcoming_event_of_the_dashboard_opens_the_calendar_whatever_tab_is_shown()
+    {
+        _session.User = Anna;
+        _mobile.SelectedTab = _mobile.Tabs[0];
+        var upcoming = new CalendarEventDto("e1", "g1", "Training", DateTimeOffset.Now.AddDays(2), DateTimeOffset.Now.AddDays(2).AddHours(1), false, 3, 2, 0, 1);
+        _api.CalendarEvents.Add(upcoming);
+        _api.Account = Anna;
+        _api.AccountGate!.SetResult();
+        var calendar = _services.GetRequiredService<CalendarViewModel>();
+        var dashboard = _services.GetRequiredService<DashboardViewModel>();
+
+        dashboard.OpenEventCommand.Execute(new UpcomingEventRowViewModel(new UpcomingEventDto("e1", "Training", upcoming.Start, 3, 2, 0, 1), "g1"));
+
+        Assert.Equal(MobileTabKind.Calendar, _mobile.SelectedTab.Kind);
+        for (var waited = 0; !calendar.HasDetail && waited < 5000; waited += 10) await Task.Delay(10); // the event is read in the background
+        Assert.Equal("e1", calendar.Detail?.Id);
+    }
+
+    [Fact]
     public void The_tabs_are_the_pages_the_program_keeps()
     {
         _session.User = Anna;

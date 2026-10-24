@@ -160,6 +160,6 @@ The statistics endpoint adds `averageStars`, `starEvents` and `evaluatedEvents` 
 The dashboard uses the same rules over the last 30 / 90 / 180 / 365 days (default 90, `Statistics:DashboardDays`),
 with the default threshold from the server configuration, and adds:
 
-- **Upcoming events** in the next two weeks, with how many members are coming, declined or have not answered yet.
+- **Upcoming events** in the next two weeks, with how many members are coming, declined or have not answered yet. Choosing one opens it on the calendar page (the same detail view as an event chosen there).
 - **Most engaged**: the five highest engagement scores among members with a verdict.
 - **Needs attention**: members in the *At risk* band, or with a *falling* trend (unless *Excellent*), lowest score first.

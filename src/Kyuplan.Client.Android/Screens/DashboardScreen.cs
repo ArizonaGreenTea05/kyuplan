@@ -61,6 +61,11 @@ public sealed class DashboardScreen : ScrollScreen
                 Ui.Bar(upcoming.AcceptedFraction, Ui.P.Success),
                 Ui.Space(4),
                 Ui.Text(upcoming.AcceptedText, TextStyle.Caption));
+            // Opens the event on the calendar tab.
+            card.Clickable = true;
+            card.Foreground = Ui.Ripple(null);
+            card.ContentDescription = $"{upcoming.Name}, {upcoming.StartText}. {Strings.Banner_Open}";
+            card.Click += (_, _) => _vm.OpenEventCommand.Execute(upcoming);
             Ui.Add(content, card, bottom: 8);
         }
 

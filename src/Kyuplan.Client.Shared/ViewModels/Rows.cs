@@ -214,8 +214,11 @@ public sealed class EventRowViewModel(EventAttendanceDto dto)
     public string StarsText => dto.AverageStars is { } stars ? Display.Stars(stars) : Display.None;
 }
 
-public sealed class UpcomingEventRowViewModel(UpcomingEventDto dto)
+public sealed class UpcomingEventRowViewModel(UpcomingEventDto dto, string groupId)
 {
+    /// <summary>The group and event id the calendar page opens the event with.</summary>
+    public string GroupId => groupId;
+    public string Id => dto.Id;
     public string Name => dto.Name;
     public string StartText => Display.EventStart(dto.Start);
     public int Invited => dto.Invited;

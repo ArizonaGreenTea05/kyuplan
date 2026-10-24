@@ -79,6 +79,13 @@ public sealed partial class NavigationViewModel : ObservableObject
             await calendar.OpenEventAsync(e.GroupId, e.Id);
         };
 
+        // An upcoming event of the dashboard opens on the calendar page, like the banner's.
+        dashboard.OpenEventRequested += async (_, e) =>
+        {
+            SelectedItem = Item(calendar);
+            await calendar.OpenEventAsync(e.GroupId, e.Id);
+        };
+
         // The exams page sends the user to the statistics page to define a filter.
         exams.OpenStatisticsRequested += (_, _) => SelectedItem = Item(statistics);
 

@@ -332,6 +332,8 @@ select:disabled { opacity: .6; }
 .eventlist li, .memberlist li { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--rule); }
 .eventlist li:first-child, .memberlist li:first-child { border-top: 0; padding-top: 0; }
 .when, .who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+a.when { color: inherit; text-decoration: none; }
+a.when:hover strong, a.when:focus-visible strong { text-decoration: underline; text-underline-offset: .2em; }
 .who strong, .when strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rsvp { display: flex; flex-direction: column; gap: 5px; width: 46%; }
 .stack { display: flex; height: 6px; border-radius: 2px; overflow: hidden; background: var(--rule); }

@@ -309,7 +309,8 @@ public sealed class Ui(Context context, Palette palette)
         return badge;
     }
 
-    public View BeltSwatch(string? primary, string? secondary)
+    /// <summary>A belt as a small bar (stripe = lower half). Sized here: add it to a LinearLayout without other layout parameters, or it collapses to nothing.</summary>
+    public View BeltSwatch(string? primary, string? secondary, float right = 0)
     {
         var first = Palette.TryParse(primary) ?? P.Line;
         var second = Palette.TryParse(secondary);
@@ -318,7 +319,7 @@ public sealed class Ui(Context context, Palette palette)
             Background = second is { } stripe
                 ? new GradientDrawable(GradientDrawable.Orientation.TopBottom, [(int)first, (int)first, (int)stripe, (int)stripe])
                 : Rounded(first, 3),
-            LayoutParameters = new LinearLayout.LayoutParams(Dp(28), Dp(10)),
+            LayoutParameters = new LinearLayout.LayoutParams(Dp(28), Dp(10)) { RightMargin = Dp(right) },
         };
         return swatch;
     }

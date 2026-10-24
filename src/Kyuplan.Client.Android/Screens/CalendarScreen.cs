@@ -245,7 +245,13 @@ public sealed class CalendarScreen : ScrollScreen
         if (!attendee.CanRate) return;
 
         card.AddView(Ui.Text(Strings.Rating_YourChoice, TextStyle.Caption), Ui.Params(top: 10));
-        List<View> choices = [.. attendee.Choices.Select(c => Ui.Chip(c.Text, c.IsSelected, () => Run(_vm.RateCommand, c)))];
+        List<View> choices = [.. attendee.Choices.Select(c =>
+        {
+            // The same row of stars as in the other clients: filled up to the user's evaluation, "⊘" for the poor 0.
+            var chip = Ui.Chip(c.Glyph, c.IsSelected, () => Run(_vm.RateCommand, c));
+            chip.ContentDescription = c.Tip;
+            return chip;
+        })];
         if (attendee.HasMyRating) choices.Add(Ui.Chip(attendee.ClearChoice.Text, false, () => Run(_vm.RateCommand, attendee.ClearChoice)));
         card.AddView(Ui.ChipRow([.. choices]), Ui.Params(top: 4));
     }

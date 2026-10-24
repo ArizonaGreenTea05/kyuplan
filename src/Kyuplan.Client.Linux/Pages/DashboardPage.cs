@@ -47,9 +47,17 @@ internal static class DashboardPage
 
     private static Gtk.Widget Upcoming(DashboardViewModel page)
     {
-        var list = Ui.Repeat(page, () => page.Upcoming, e => Ui.HBox(12,
-            Ui.VBox(0, Ui.Label(e.Name, "heading").Start(), Ui.Muted(e.StartText)).Expand(),
-            Ui.VBox(4, Widgets.StackedBar(e.AcceptedFraction, e.DeclinedFraction, e.UnansweredFraction, e.AriaText), Ui.Muted(e.SummaryText).Css("caption")).Expand()).Homogeneous(),
+        var list = Ui.Repeat(page, () => page.Upcoming, e =>
+            {
+                // The name and date open the event on the calendar page.
+                var open = Gtk.Button.New();
+                open.SetChild(Ui.VBox(0, Ui.Label(e.Name, "heading").Start(), Ui.Muted(e.StartText)));
+                open.AddCssClass("flat");
+                open.Tip(Strings.Banner_Open);
+                open.OnClicked += (_, _) => page.OpenEventCommand.Execute(e);
+                return Ui.HBox(12, open.Expand(),
+                    Ui.VBox(4, Widgets.StackedBar(e.AcceptedFraction, e.DeclinedFraction, e.UnansweredFraction, e.AriaText), Ui.Muted(e.SummaryText).Css("caption")).Expand()).Homogeneous();
+            },
             [nameof(DashboardViewModel.Upcoming)], spacing: 12);
         var legend = Ui.HBox(14,
             Legend("bar-yes-swatch", Strings.Legend_Coming), Legend("bar-no-swatch", Strings.Legend_Declined), Legend("bar-open-swatch", Strings.Legend_NoAnswerYet));

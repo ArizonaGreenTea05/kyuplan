@@ -151,7 +151,7 @@ public sealed class ExamsScreen : ScrollScreen
             row.AddView(Ui.Text(attendee.Name, TextStyle.Body), Ui.Params(weight: 1));
             if (attendee.SelectedBelt is { IsNone: false } belt)
             {
-                row.AddView(Ui.BeltSwatch(belt.Color, belt.SecondaryColor), Ui.Params(wrap: true, right: 8));
+                row.AddView(Ui.BeltSwatch(belt.Color, belt.SecondaryColor, right: 8));
                 row.AddView(Ui.Text(belt.Label, TextStyle.Caption), Ui.Params(wrap: true));
             }
 

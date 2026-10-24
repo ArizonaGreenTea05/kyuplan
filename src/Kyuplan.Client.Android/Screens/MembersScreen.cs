@@ -101,7 +101,7 @@ public sealed class MembersScreen : Screen
         Ui.Add(_detail, Ui.Row(Ui.IconButton(Resource.Drawable.ic_back, Strings.MemberPage_BackToMembers, () => HandleBack()), Ui.Text(Strings.MemberPage_BackToMembers, TextStyle.Caption)));
 
         var belt = Ui.Row();
-        if (member.HasBelt) belt.AddView(Ui.BeltSwatch(member.Belt.Color, member.Belt.SecondaryColor), Ui.Params(wrap: true, right: 8));
+        if (member.HasBelt) belt.AddView(Ui.BeltSwatch(member.Belt.Color, member.Belt.SecondaryColor, right: 8));
         belt.AddView(Ui.Text(member.Belt.Label, TextStyle.Body), Ui.Params(wrap: true));
         Ui.Add(_detail, Ui.Card(Ui.Text(member.Name, TextStyle.Title), Ui.Space(4), belt), bottom: 12);
 
@@ -148,7 +148,7 @@ public sealed class MembersScreen : Screen
             row.AddView(ui.Text(member.Name, TextStyle.Body), ui.Params(weight: 1));
             if (member.HasBelt)
             {
-                row.AddView(ui.BeltSwatch(member.Belt.Color, member.Belt.SecondaryColor), ui.Params(wrap: true, right: 8));
+                row.AddView(ui.BeltSwatch(member.Belt.Color, member.Belt.SecondaryColor, right: 8));
                 row.AddView(ui.Text(member.Belt.Label, TextStyle.Caption), ui.Params(wrap: true));
             }
 

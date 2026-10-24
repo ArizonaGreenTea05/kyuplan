@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Kyuplan.Client.Api;
 using Kyuplan.Client.Resources;
 using Kyuplan.Contracts;
@@ -49,6 +50,15 @@ public sealed partial class DashboardViewModel(ShellViewModel shell, IPlannerApi
     /// <summary>True when a load finished without any held event in the period: the page says so instead of staying blank.</summary>
     public bool HasNoData => !HasData && !IsBusy && !HasError && Shell.SelectedGroup is not null;
 
+    /// <summary>The user chose an upcoming event: the client shows it on the calendar page (<see cref="CalendarViewModel.OpenEventAsync(string, string)"/>).</summary>
+    public event EventHandler<UpcomingEventRowViewModel>? OpenEventRequested;
+
+    [RelayCommand]
+    private void OpenEvent(UpcomingEventRowViewModel? row)
+    {
+        if (row is not null) OpenEventRequested?.Invoke(this, row);
+    }
+
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
@@ -97,7 +107,7 @@ public sealed partial class DashboardViewModel(ShellViewModel shell, IPlannerApi
             new(Strings.Kpi_AtRisk, s.AtRiskCount.ToString(), Strings.Kpi_AtRiskHint, s.AtRiskCount > 0 ? KpiTone.Warning : KpiTone.Neutral),
         ];
 
-        Upcoming = d.Upcoming.Select(u => new UpcomingEventRowViewModel(u)).ToList();
+        Upcoming = d.Upcoming.Select(u => new UpcomingEventRowViewModel(u, d.GroupId)).ToList();
         TopMembers = d.TopMembers.Select(m => new MemberRowViewModel(m)).ToList();
         NeedsAttention = d.NeedsAttention.Select(m => new MemberRowViewModel(m)).ToList();
         Trend = ChartData.MonthlyTrend(d.MonthlyTrend);

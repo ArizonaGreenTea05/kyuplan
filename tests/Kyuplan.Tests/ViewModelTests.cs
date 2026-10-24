@@ -590,6 +590,39 @@ public class DashboardViewModelTests
     }
 
     [Fact]
+    public async Task An_upcoming_event_knows_the_group_and_event_the_calendar_opens_it_with()
+    {
+        await _vm.ActivateAsync();
+        await Eventually(() => _vm.Upcoming.Count == 1);
+
+        var row = _vm.Upcoming.Single();
+
+        Assert.Equal(("g1", "u1"), (row.GroupId, row.Id));
+    }
+
+    [Fact]
+    public async Task Choosing_an_upcoming_event_asks_the_client_to_show_it_on_the_calendar()
+    {
+        await _vm.ActivateAsync();
+        await Eventually(() => _vm.Upcoming.Count == 1);
+        var requested = new List<UpcomingEventRowViewModel>();
+        _vm.OpenEventRequested += (_, row) => requested.Add(row);
+
+        _vm.OpenEventCommand.Execute(_vm.Upcoming.Single());
+        _vm.OpenEventCommand.Execute(null); // nothing chosen: nothing to show
+
+        Assert.Same(_vm.Upcoming.Single(), Assert.Single(requested));
+    }
+
+    [Fact]
+    public void Choosing_an_upcoming_event_without_a_listening_client_does_nothing()
+    {
+        var row = new UpcomingEventRowViewModel(new UpcomingEventDto("e1", "Training", DateTimeOffset.Now, 3, 1, 1, 1), "g1");
+
+        _vm.OpenEventCommand.Execute(row);
+    }
+
+    [Fact]
     public async Task Changing_the_period_reloads_with_the_chosen_number_of_days()
     {
         await _vm.ActivateAsync();

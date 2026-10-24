@@ -88,7 +88,7 @@ Alternatively, create the administrator by configuration (`Accounts__InitialAdmi
 
 1. Sign in with the administrator. The **Members** page fills within a minute (the first sync runs at start).
 2. If you used demo data, a "Demo data" marker is shown; switch it off on the Settings page before real use.
-3. Download the desktop app from the button at the bottom left (Windows) and sign in once.
+3. Download the desktop app from the button at the bottom left (Windows, Linux or Android, whichever system you are on) and sign in once.
 
 ### 6. Hand it over to the people
 
@@ -141,7 +141,7 @@ How the pieces find each other:
   `docker build` has none; the server then offers no download and no update.
 - The server **offers each installer for download**: `GET /api/client/<platform>` (needs a login, like the rest of the API). The web
   client shows an eye-catching *Download for <system>* button in its left panel for the system the browser runs on, when the server has
-  an installer for it (on an Android phone the Android app; none on iPhones).
+  an installer for it (Windows, Linux, and on an Android phone the Android app, where the button shrinks to an icon in the top strip; none on iPhones and macOS).
 - `GET /api/info` carries `ClientVersions`, the version of every installer by platform. An installed **desktop client compares the entry
   of its own platform with its own version** when it has signed in and then every hour; when the server's is newer, an *Update to x.y.z*
   button appears in its left panel. A click downloads the installer from the server, runs it silently (the WPF client: `/SILENT

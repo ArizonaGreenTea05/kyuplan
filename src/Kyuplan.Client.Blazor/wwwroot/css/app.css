@@ -131,7 +131,7 @@ nav { display: flex; flex-direction: column; gap: 2px; }
     content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--accent);
 }
 
-/* The download of the Windows app: the one filled, pulsing thing in the sidebar, so a visitor on Windows cannot miss it. */
+/* The download of the app for the visitor's system (Windows, Linux, Android): the one filled, pulsing thing in the sidebar, so it cannot be missed. */
 .download-cta {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     margin: 16px 2px 0; padding: 12px 14px; border-radius: var(--radius);
@@ -972,7 +972,10 @@ textarea.comment-box:hover, .field textarea:hover { border-color: var(--muted); 
 @media (max-width: 720px) {
     /* A slim icon strip on top instead of the sidebar; the calendar is the first entry. */
     .sidebar { position: sticky; top: 0; z-index: 20; flex-wrap: nowrap; gap: 4px; padding: 6px 8px; }
-    .brand, .product, .help-links, .download-cta, .nav-item span { display: none; }
+    .brand, .product, .help-links, .nav-item span { display: none; }
+    /* The download of the Android app stays, as an icon in the strip (the link carries the text as its aria-label). */
+    .download-cta { margin: 0; padding: 10px 12px; min-width: 44px; }
+    .download-cta span { display: none; }
     .sidebar > nav:first-of-type { flex-wrap: nowrap; overflow-x: auto; flex: 1; scrollbar-width: none; }
     .sidebar > nav:first-of-type > a[href="calendar"] { order: -1; }
     .nav-item { padding: 10px 12px; min-width: 44px; justify-content: center; }

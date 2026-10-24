@@ -4,6 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using SkiaSharp;
 using Svg.Skia;
+using Kyuplan.Client;
 
 namespace Kyuplan.Client.WpfApp.Services;
 

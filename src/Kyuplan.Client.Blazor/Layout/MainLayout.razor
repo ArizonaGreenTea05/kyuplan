@@ -103,6 +103,7 @@
         {
             var system = ClientPlatform.DisplayName(_platform);
             <a class="download-cta" href="@(new Uri(ClientOptions.Value.BaseUri, ClientDownload.PathFor(_platform)))" download
+               aria-label="@string.Format(Strings.Download_Button, system)"
                title="@string.Format(Strings.Download_Hint, system, clientVersion)">
                 <Icon Name="download" Size="22" /><span>@string.Format(Strings.Download_Button, system)</span>
             </a>

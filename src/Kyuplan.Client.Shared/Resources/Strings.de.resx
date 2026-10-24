@@ -202,6 +202,9 @@
   <data name="Update_Hint" xml:space="preserve">
     <value>Dieses Programm ist Version {0}, der Server bietet {1} an. Das Programm schließt sich, installiert die Aktualisierung und startet neu.</value>
   </data>
+  <data name="Update_AllowInstall" xml:space="preserve">
+    <value>Erlaube dieser App in den soeben geöffneten Einstellungen, Apps zu installieren, und tippe dann erneut auf die Aktualisieren-Schaltfläche.</value>
+  </data>
   <data name="Download_Button" xml:space="preserve">
     <value>Für {0} herunterladen</value>
   </data>
@@ -822,6 +825,9 @@
   </data>
   <data name="Login_RememberHint" xml:space="preserve">
     <value>Die Anmeldung wird verschlüsselt gespeichert und ist nur im eigenen Windows-Konto lesbar.</value>
+  </data>
+  <data name="Login_RememberHintKeyring" xml:space="preserve">
+    <value>Die Anmeldung wird im Schlüsselbund Ihres Desktops (Secret Service) gespeichert und ist nur für Ihr Benutzerkonto lesbar.</value>
   </data>
   <data name="Login_SignIn" xml:space="preserve">
     <value>Anmelden</value>

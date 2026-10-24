@@ -1,0 +1,44 @@
+# Maintainer: ArizonaGreenTea05
+#
+# The native Linux client of Kyuplan (GTK 4 / libadwaita) as an Arch Linux package.
+#
+# Build it from a checkout of the repository (this folder is deploy/arch):
+#
+#     cd deploy/arch && makepkg -si
+#
+# The release workflow builds the same package, sets KYUPLAN_VERSION to the version of the tag and signs it for the update from the server
+# (see docs/deployment.md#the-linux-client). Without KYUPLAN_VERSION the version of Directory.Build.props is used.
+
+pkgname=kyuplan
+_version="${KYUPLAN_VERSION:-$(sed -n 's|.*<Version>\(.*\)</Version>.*|\1|p' "${startdir}/../../Directory.Build.props")}"
+pkgver="${_version//-/_}"   # a pacman version has no hyphen: 1.2.3-beta.1 -> 1.2.3_beta.1
+pkgrel=1
+pkgdesc='Native GTK 4 client of Kyuplan, the exam planner for karate clubs'
+arch=('any')                # managed code only: one package for x86_64 and aarch64
+url='https://github.com/ArizonaGreenTea05/kyuplan'
+license=('MIT')
+depends=('dotnet-runtime>=10' 'gtk4' 'libadwaita' 'librsvg')
+makedepends=('dotnet-sdk>=10')
+optdepends=(
+  'libsecret: remember the login in the keyring (secret-tool)'
+  'gnome-keyring: a keyring that libsecret can use'
+  'polkit: install the updates the server offers'
+)
+options=('!strip' '!debug')
+
+build() {
+  cd "${startdir}/../.."
+  export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_CLI_HOME="${srcdir}/dotnet-home"
+  dotnet publish src/Kyuplan.Client.Linux -c Release -p:Version="${_version}" -p:UseAppHost=false -o "${srcdir}/publish" \
+    --artifacts-path "${srcdir}/artifacts"
+}
+
+package() {
+  install -d "${pkgdir}/usr/lib/kyuplan" "${pkgdir}/usr/bin"
+  cp -r "${srcdir}/publish/." "${pkgdir}/usr/lib/kyuplan/"
+  find "${pkgdir}/usr/lib/kyuplan" -name '*.pdb' -delete
+  install -m755 "${startdir}/kyuplan.sh" "${pkgdir}/usr/bin/kyuplan"
+  install -Dm644 "${startdir}/org.kyuplan.Client.desktop" "${pkgdir}/usr/share/applications/org.kyuplan.Client.desktop"
+  install -Dm644 "${startdir}/../../assets/branding/favicon.svg" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/org.kyuplan.Client.svg"
+  install -Dm644 "${startdir}/../../LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

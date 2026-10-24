@@ -8,6 +8,8 @@ Read this instead of exploring. Open `docs/reference.md` (config keys, API, tabl
 - `Api`: ASP.NET minimal API. `Endpoints/` routes, `Persistence/` services + EF (SQLite), `Accounts/` users, `Spond/` Spond access, `Statistics/` engine, `Domain/`.
 - `Client.Shared`: typed API client, **all view models**, **all UI texts** (`Resources/Strings.resx` + `Strings.de.resx`). No UI-framework code.
 - `Client.Blazor` (WASM) and `Client.Wpf` (Windows only): markup only; bind to the shared view models.
+- `Client.Linux` (GTK 4 / libadwaita through Gir.Core; builds on every OS, runs where GTK is): the native Linux client for Arch, widgets built in code (`Pages/`, `Stages/`, `Kit/`: `Bind.Watch`, `Ui.*`), sidebar = `NavigationViewModel`, themes = `Services/ThemePalette.cs` (colour sets over libadwaita's named colours). Package: `deploy/arch/PKGBUILD`. Look at it with `tests/linux` (Docker: Arch + Xvfb + screenshots, `docs/developer-guide.md#linux-screenshots`). Texts from the shared `Strings` as everywhere.
+- `Client.Android` (`net10.0-android`, in the `.sln`; needs `dotnet workload install android` + JDK/Android SDK): the phone app, native views drawn in code (`Screens/`, `Kit/`), bottom tab bar = `MobileShellViewModel` in Client.Shared (no admin pages, no statistics). Texts from the shared `Strings` as everywhere. Build: `dotnet build src/Kyuplan.Client.Android`; docs in `docs/deployment.md#the-android-client`.
 - `website/`: Docusaurus, one site per audience (user/admin/deployment, developer) built from `docs/*.md` (`scripts/audiences.mjs`: which file is a page of which site). The API serves the first three under `/docs/<audience>/`
   with a permission check per audience (`Contracts/Documentation.cs`, `Endpoints/DocumentationEndpoints.cs`); clients show `ShellViewModel.HelpLinks`. A new doc file = an entry in `audiences.mjs`. Node is not needed for `dotnet test`; the Dockerfile's `docs` stage and the release's `docs` job build it.
 - `tests/Kyuplan.Tests`: single xUnit project.
@@ -17,7 +19,7 @@ Big pages are split into sub-view-models the page exposes (statistics: `Table` =
 
 ## Commands
 - Build/test (Linux-safe, skips WPF): `dotnet test tests/Kyuplan.Tests`. Narrow with `--filter "FullyQualifiedName~Name"`.
-- `Client.Wpf` and the full `.sln` build only on Windows; on Linux skip them.
+- `Client.Wpf` and the full `.sln` build only on Windows; on Linux skip them. `Client.Android` also needs the Android workload + JDK/SDK (`dotnet test tests/Kyuplan.Tests` does not build it); skip it unless you change it (it has no automated tests of its own: logic belongs in Client.Shared).
 - A running Api locks its DLLs (MSB3021): build/test with `--artifacts-path <other dir>` or stop it first.
 - Run API in demo mode (no Spond credentials): `dotnet run --project src/Kyuplan.Api --launch-profile http -- --Spond:UseDemoData=true` (port 5100, docs at `/scalar`). The launch profile alone does NOT enable demo data.
 - Every API call needs HTTP Basic login; a new API has no user: the Blazor client then shows a setup screen (settings + first admin, `Endpoints/SettingsEndpoints.cs`), or set `Accounts:InitialAdminPassword`. Settings live in `data/settings.json` (read on top of appsettings, saving restarts the app inside `Program.cs`'s loop); tests set `Setup:SettingsFile` to a missing file. Authorization is permission/role based (see `Accounts/PermissionAuthorization.cs`), there is no admin flag.
@@ -44,7 +46,7 @@ Big pages are split into sub-view-models the page exposes (statistics: `Table` =
 - Domain rules are documented in `docs/` (`attendance-statistics.md`, `exam-planning.md`, `comments-and-tags.md`). Read the matching file before changing that logic, and update it with the code.
 - Tests use in-memory SQLite (`InMemoryDatabase.cs`). Add tests next to the closest existing `*Tests.cs`. Test hosts must set `Sync:Enabled=false` and `DefaultData:Enabled=false`, and must not depend on shipped `appsettings.json` values (that once broke every CI workflow).
 - **Accessibility**: every focusable control has an accessible name (WPF `AutomationProperties.Name` with the same `{loc:Loc}` key as its label, Blazor label/`aria-label`), nothing leaves the tab order, no `role="menu"`; `AccessibilityMarkupTests` enforces it, keyboard glue is `Client.Blazor/wwwroot/js/a11y.js`.
-- Both UIs must keep working: a change to a view model or contract may need Blazor and WPF edits.
+- All UIs must keep working: a change to a view model or contract may need Blazor, WPF, Linux (`src/Kyuplan.Client.Linux/Pages/`) and Android edits (the Linux and Android pages bind by property name, so a renamed property compiles but shows nothing: search for the `nameof(...)`/string).
 
 ## Tests and coverage
 - **Validate before you finish**: every agent builds the solution and runs the tests (`dotnet test tests/Kyuplan.Tests`, plus the Windows-only `Client.Wpf` build on Windows when WPF or shared view models changed) before reporting a task done. While the build or any test fails, the task is NOT finished: fix the cause (never skip, delete or weaken a test to get green) and re-run. If a failure is unrelated to your change or cannot be fixed, report it with the output instead of calling the task done.

@@ -36,6 +36,13 @@ updates:
       interval: weekly
     labels: [dependencies]
 
+  # The Arch Linux container the screenshots of the Linux client are taken in (tests/linux).
+  - package-ecosystem: docker
+    directory: /tests/linux
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+
   # The images of the Compose files (postgres, ...); the image of Kyuplan itself is tagged latest and is left alone.
   - package-ecosystem: docker-compose
     directory: /deploy

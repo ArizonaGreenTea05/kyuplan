@@ -11,8 +11,9 @@ public static class ClientPlatform
     public const string Windows = "windows";
     public const string MacOs = "macos";
     public const string Linux = "linux";
+    public const string Android = "android";
 
-    public static readonly IReadOnlyList<string> All = [Windows, MacOs, Linux];
+    public static readonly IReadOnlyList<string> All = [Windows, MacOs, Linux, Android];
 
     public static bool IsKnown(string? platform) => platform is not null && All.Contains(platform);
 
@@ -22,6 +23,7 @@ public static class ClientPlatform
         Windows => "Windows",
         MacOs => "macOS",
         Linux => "Linux",
+        Android => "Android",
         _ => platform,
     };
 }

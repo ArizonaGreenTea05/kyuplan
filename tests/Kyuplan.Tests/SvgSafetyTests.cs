@@ -1,4 +1,4 @@
-using Kyuplan.Client.WpfApp.Services;
+using Kyuplan.Client;
 
 namespace Kyuplan.Tests;
 

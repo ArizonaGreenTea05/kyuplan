@@ -108,10 +108,16 @@
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding StartText}" Style="{StaticResource MutedText}" />
-                                                </StackPanel>
+                                                <!-- Opens the event on the calendar page. -->
+                                                <Button Style="{StaticResource EventLinkButton}" VerticalAlignment="Center"
+                                                        Command="{Binding DataContext.OpenEventCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="{loc:Loc Banner_Open}"
+                                                        AutomationProperties.Name="{Binding Name}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding StartText}" Style="{StaticResource MutedText}" />
+                                                    </StackPanel>
+                                                </Button>
                                                 <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                                                     <ctl:StackedBar Style="{StaticResource RsvpBar}"
                                                                     Yes="{Binding AcceptedFraction}" No="{Binding DeclinedFraction}"

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <!-- To install the update of the app that the server carries (AndroidClientUpdater); the user still confirms every installation. -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <!-- The server is the user's own and may run without HTTPS (http://nas.local:8080); the API refuses a login over HTTP unless its administrator allowed it. -->
+  <application android:label="kyuplan" android:icon="@mipmap/appicon" android:theme="@style/AppTheme"
+               android:usesCleartextTraffic="true" android:allowBackup="false" android:enableOnBackInvokedCallback="false" />
+</manifest>

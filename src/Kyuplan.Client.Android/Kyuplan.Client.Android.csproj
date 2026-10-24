@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Needs the Android workload (dotnet workload install android), a JDK and the Android SDK to build, see docs/deployment.md ("The Android client"). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Kyuplan.Client.AndroidApp</RootNamespace>
+    <AssemblyName>Kyuplan.Client.Android</AssemblyName>
+    <Description>Native Android client of Kyuplan.</Description>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <ApplicationId>org.kyuplan.client</ApplicationId>
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
+    <!-- Android orders versions by this whole number, the release workflow sets it from the tag (-p:ApplicationVersion=...). -->
+    <ApplicationVersion>1</ApplicationVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <!-- Phones with a 64-bit CPU are the rule, but older ones still run the 32-bit ARM code; x64 is the emulator and Chromebooks. -->
+    <RuntimeIdentifiers>android-arm64;android-arm;android-x64</RuntimeIdentifiers>
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <ProjectReference Include="..\Kyuplan.Client.Shared\Kyuplan.Client.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The public half of the key that signs the releases (AndroidClientUpdater); the private half is the release secret UPDATE_SIGNING_KEY. -->
+    <EmbeddedResource Include="..\..\installer\update-key.pub.pem" LogicalName="update-key.pub.pem" />
+  </ItemGroup>
+
+</Project>

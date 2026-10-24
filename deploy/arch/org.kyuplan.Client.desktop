@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Kyuplan
+GenericName=Exam planner
+GenericName[de]=Prüfungsplaner
+Comment=Plan belt exams and look at the attendance of a karate club
+Comment[de]=Gürtelprüfungen planen und die Anwesenheit eines Karatevereins ansehen
+Exec=kyuplan
+Icon=org.kyuplan.Client
+Terminal=false
+Categories=Office;Calendar;GTK;
+StartupNotify=true
+StartupWMClass=org.kyuplan.Client

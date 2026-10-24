@@ -61,10 +61,11 @@
                             @foreach (var e in Vm.Upcoming)
                             {
                                 <li>
-                                    <div class="when">
+                                    @* Opens the event on the calendar page, like the banner of an event in progress. *@
+                                    <a class="when" href="calendar/@(Uri.EscapeDataString(e.GroupId))/@(Uri.EscapeDataString(e.Id))" title="@Strings.Banner_Open">
                                         <strong>@e.Name</strong>
                                         <small>@e.StartText</small>
-                                    </div>
+                                    </a>
                                     <div class="rsvp">
                                         <span class="stack" role="img" aria-label="@e.AriaText">
                                             <i class="yes" style="width:@CssNum.Pct(e.AcceptedFraction)%"></i>

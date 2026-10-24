@@ -1,6 +1,6 @@
 name: Release
 
-# A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every desktop client (today Windows, built with Inno Setup;
+# A tag v<version>, e.g. v0.1 or v1.2.3, releases the whole framework in one version: the installer of every client (Windows, built with Inno Setup, the Linux package for Arch and the Android APK;
 # further systems get a job beside "windows" that uploads its installer as Kyuplan-<platform>-<version>.<ext>) is built and goes
 # into the Docker image of the server (API + web client), which offers them for download and as the update of the installed clients, and
 # the image is pushed to ghcr.io/<owner>/kyuplan. The GitHub release carries the installers, the documentation archive and the SBOM of the image as well.
@@ -116,6 +116,124 @@ jobs:
             artifacts/installer/Kyuplan-windows-${{ steps.v.outputs.version }}.exe.sig
           if-no-files-found: error
 
+  # The Android app: an APK, signed with the release keystore so that a phone accepts it as the update of the installed one. Secrets:
+  # ANDROID_KEYSTORE (the keystore file, Base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. Without them the APK is
+  # signed with a debug key, which installs but cannot update an app that was signed with another key (Android refuses that).
+  android:
+    needs: audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - name: Install the Android workload
+        run: dotnet workload install android
+
+      - name: Build and sign the app
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # Android orders versions by one whole number: 1.2.3 -> 1002003 (a prerelease suffix does not count).
+          # Minor and patch each get three digits: a minor or patch of 1000 or more would overlap the next field and break the order.
+          IFS=. read -r major minor patch <<< "${VERSION%%-*}"
+          code=$(( major * 1000000 + minor * 1000 + ${patch:-0} ))
+          signing=()
+          if [ -n "$ANDROID_KEYSTORE" ]; then
+            printf '%s' "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            signing=(-p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$RUNNER_TEMP/release.keystore" -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS"
+                     -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD -p:AndroidSigningKeyPass=env:ANDROID_KEY_PASSWORD)
+          else
+            echo "::warning::No ANDROID_KEYSTORE secret: the APK is signed with a debug key and cannot update an app signed with another key."
+          fi
+          dotnet publish src/Kyuplan.Client.Android -c Release -p:Version="$VERSION" -p:ApplicationVersion="$code" "${signing[@]}" -o artifacts/android
+          mkdir -p artifacts/installer
+          cp artifacts/android/org.kyuplan.client-Signed.apk "artifacts/installer/Kyuplan-android-$VERSION.apk"
+
+      # Same update key as the Windows installer (installer/update-key.pub.pem is built into the app); Android checks the APK's own signature on top.
+      - name: Sign the app with the update key
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::No UPDATE_SIGNING_KEY secret: the APK has no update signature."
+            exit 0
+          fi
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          installer="artifacts/installer/Kyuplan-android-$VERSION.apk"
+          openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
+          rm "$RUNNER_TEMP/update-key.pem"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-android
+          path: |
+            artifacts/installer/Kyuplan-android-${{ steps.v.outputs.version }}.apk
+            artifacts/installer/Kyuplan-android-${{ steps.v.outputs.version }}.apk.sig
+          if-no-files-found: error
+
+  # The native Linux client as a pacman package for Arch Linux, built by makepkg in an Arch container (makepkg refuses to run as root).
+  linux:
+    needs: audit
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install the build tools
+        run: pacman -Syu --noconfirm --needed base-devel git dotnet-sdk openssl sudo
+
+      - uses: actions/checkout@v7
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - name: Build the package
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          useradd -m builder
+          chown -R builder "$GITHUB_WORKSPACE"
+          # -d: the build tools are installed above; the run-time dependencies belong to the machines the package is installed on.
+          su builder -c "cd '$GITHUB_WORKSPACE/deploy/arch' && KYUPLAN_VERSION='$VERSION' makepkg -f -d --noconfirm"
+          mkdir -p artifacts/installer
+          cp deploy/arch/kyuplan-*-any.pkg.tar.zst "artifacts/installer/Kyuplan-linux-$VERSION.pkg.tar.zst"
+
+      # Same update key as the other installers (installer/update-key.pub.pem is built into the program).
+      - name: Sign the package with the update key
+        env:
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$UPDATE_SIGNING_KEY" ]; then
+            echo "::warning::No UPDATE_SIGNING_KEY secret: the package has no update signature and the installed clients will not install it."
+            exit 0
+          fi
+          printf '%s\n' "$UPDATE_SIGNING_KEY" > "$RUNNER_TEMP/update-key.pem"
+          installer="artifacts/installer/Kyuplan-linux-$VERSION.pkg.tar.zst"
+          openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
+          rm "$RUNNER_TEMP/update-key.pem"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: installer-linux
+          path: |
+            artifacts/installer/Kyuplan-linux-${{ steps.v.outputs.version }}.pkg.tar.zst
+            artifacts/installer/Kyuplan-linux-${{ steps.v.outputs.version }}.pkg.tar.zst.sig
+          if-no-files-found: error
+
   # The documentation (Docusaurus, website/): the image carries the guides the server shows its users (the Dockerfile builds them itself), the
   # release carries all of them, the developer guide too, as one archive that any web server can serve at /docs/.
   docs:
@@ -153,7 +271,7 @@ jobs:
           if-no-files-found: error
 
   image:
-    needs: [windows, docs] # add every further client job here
+    needs: [windows, linux, android, docs] # add every further client job here
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

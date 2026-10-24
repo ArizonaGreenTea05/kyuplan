@@ -1,0 +1,157 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Kyuplan.Client.Api;
+using Kyuplan.Client.Localization;
+using Kyuplan.Client.Resources;
+using Kyuplan.Client.ViewModels;
+
+namespace Kyuplan.Client.LinuxApp;
+
+/// <summary>An entry of the sidebar: a page and its icon (a symbolic icon of the freedesktop icon theme).</summary>
+public sealed record NavigationItem(PageViewModel Page, string Icon);
+
+/// <summary>
+/// The frame around the shared view models: which page is shown. A page is only in the sidebar while the signed-in user may use it
+/// (<see cref="PageViewModel.CanView"/>), as in the browser; the account pages are everybody's. Same rules as the WPF client's main view
+/// model, plus the settings page the web client has.
+/// </summary>
+public sealed partial class NavigationViewModel : ObservableObject
+{
+    private readonly LoginSession _session;
+    private readonly NavigationItem[] _main, _admin, _account;
+    private readonly ObservableCollection<NavigationItem> _items = [], _adminItems = [], _accountItems = [];
+    private NavigationItem _selectedItem = null!; // assigned in the constructor
+
+    public NavigationViewModel(
+        ShellViewModel shell, ExamsViewModel exams, DashboardViewModel dashboard, AttendanceStatisticsViewModel statistics,
+        MembersViewModel members, BeltsViewModel belts, TagsViewModel tags, AccountViewModel account, PreferencesViewModel preferences,
+        UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, SyncStatusViewModel syncStatus,
+        ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, ManualDataViewModel manualData, SettingsViewModel settings,
+        LoginSession session, ClientUpdateViewModel update, CalendarViewModel calendar, EventBannerViewModel banner)
+    {
+        Shell = shell;
+        Update = update;
+        Banner = banner;
+        _session = session;
+        var all = new NavigationItem[]
+        {
+            new(calendar, "x-office-calendar-symbolic"),
+            new(exams, "x-office-document-symbolic"),
+            new(dashboard, "go-home-symbolic"),
+            new(statistics, "utilities-system-monitor-symbolic"),
+            new(members, "system-users-symbolic"),
+            new(belts, "starred-symbolic"),
+            new(tags, "bookmark-new-symbolic"),
+            new(account, "avatar-default-symbolic"),
+            new(preferences, "preferences-desktop-appearance-symbolic"),
+            new(users, "contact-new-symbolic"),
+            new(roles, "security-high-symbolic"),
+            new(settings, "preferences-system-symbolic"),
+            new(branding, "applications-graphics-symbolic"),
+            new(backup, "drive-harddisk-symbolic"),
+            new(syncStatus, "emblem-synchronizing-symbolic"),
+            new(prices, "accessories-calculator-symbolic"),
+            new(calendarFeeds, "network-wireless-symbolic"),
+            new(manualData, "document-edit-symbolic"),
+        };
+        NavigationItem Item(PageViewModel page) => all.First(i => ReferenceEquals(i.Page, page));
+
+        // The order of the sidebar: the dashboard first (it is what opens), the groups Administration and Account at the bottom.
+        _main = [Item(dashboard), Item(statistics), Item(calendar), Item(exams), Item(members), Item(belts), Item(prices), Item(tags), Item(manualData)];
+        _admin = [Item(users), Item(roles), Item(settings), Item(branding), Item(calendarFeeds), Item(backup), Item(syncStatus)];
+        _account = [Item(account), Item(preferences)];
+        Items = new ReadOnlyObservableCollection<NavigationItem>(_items);
+        AdminItems = new ReadOnlyObservableCollection<NavigationItem>(_adminItems);
+        AccountItems = new ReadOnlyObservableCollection<NavigationItem>(_accountItems);
+        _selectedItem = _main.Concat(_admin).Concat(_account).First(i => i.Page.CanView); // the account page at least
+
+        ShowPermittedPages();
+        shell.PermissionsChanged += (_, _) => ShowPermittedPages();
+        shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Info)) ShowPermittedPages(); // the data source decides on the manual data page
+        };
+
+        // The banner of an event in progress opens the event on the calendar page, whatever page is shown.
+        banner.OpenRequested += async (_, e) =>
+        {
+            SelectedItem = Item(calendar);
+            await calendar.OpenEventAsync(e.GroupId, e.Id);
+        };
+
+        // An upcoming event of the dashboard opens on the calendar page, like the banner's.
+        dashboard.OpenEventRequested += async (_, e) =>
+        {
+            SelectedItem = Item(calendar);
+            await calendar.OpenEventAsync(e.GroupId, e.Id);
+        };
+
+        // The exams page sends the user to the statistics page to define a filter.
+        exams.OpenStatisticsRequested += (_, _) => SelectedItem = Item(statistics);
+
+        shell.Language.Changed += (_, _) => OnPropertyChanged(nameof(SignedInText));
+        session.PropertyChanged += (_, _) => OnPropertyChanged(nameof(SignedInText));
+    }
+
+    public ShellViewModel Shell { get; }
+
+    /// <summary>A newer version of this program is on the server: the sidebar offers to install it.</summary>
+    public ClientUpdateViewModel Update { get; }
+
+    /// <summary>Events of the selected group that are going on now; shown above every page.</summary>
+    public EventBannerViewModel Banner { get; }
+
+    public ReadOnlyObservableCollection<NavigationItem> Items { get; }
+
+    /// <summary>The pages of the "Administration" group; empty (and the group hidden) for somebody who may use none.</summary>
+    public ReadOnlyObservableCollection<NavigationItem> AdminItems { get; }
+
+    /// <summary>The pages of the "Account" group.</summary>
+    public ReadOnlyObservableCollection<NavigationItem> AccountItems { get; }
+
+    /// <summary>
+    /// Puts the pages the signed-in user may use into the sidebar and takes the others out (somebody else signed in, or the user's
+    /// permissions changed). A page that is taken out while it is shown gives way to the first one first.
+    /// </summary>
+    private void ShowPermittedPages()
+    {
+        var visible = _main.Concat(_admin).Concat(_account).Where(i => i.Page.CanView).ToList();
+        if (!visible.Contains(SelectedItem)) SelectedItem = visible[0];
+
+        Sync(_main, _items);
+        Sync(_admin, _adminItems);
+        Sync(_account, _accountItems);
+    }
+
+    private static void Sync(NavigationItem[] source, ObservableCollection<NavigationItem> target)
+    {
+        var wanted = source.Where(i => i.Page.ShowInNavigation).ToList();
+        foreach (var item in target.Where(i => !wanted.Contains(i)).ToList()) target.Remove(item);
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            if (i >= target.Count || !ReferenceEquals(target[i], wanted[i])) target.Insert(i, wanted[i]);
+        }
+    }
+
+    /// <summary>"Signed in as Anna": who the API knows the login as, or what was typed while the API cannot be asked.</summary>
+    public string SignedInText => string.Format(Strings.Shell_SignedInAs, _session.User?.DisplayName ?? _session.Login?.UserName);
+
+    /// <summary>The page that is shown. Choosing the page that is shown already does nothing.</summary>
+    public NavigationItem SelectedItem
+    {
+        get => _selectedItem;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _selectedItem)) return;
+
+            var old = _selectedItem;
+            _selectedItem = value;
+            OnPropertyChanged();
+            old?.Page.Deactivate();
+            _ = value.Page.ActivateAsync();
+        }
+    }
+
+    /// <summary>Shows the first page for the first time: the pages load when they are activated.</summary>
+    public void Start() => _ = _selectedItem.Page.ActivateAsync();
+}

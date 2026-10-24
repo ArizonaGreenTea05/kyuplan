@@ -27,7 +27,7 @@ kyuplan is the planner for the club's belt exams. It reads the club's groups, me
 3. **Who trains regularly?** The attendance analysis shows how many of the events they were invited to each member accepted, plus
    figures that show how engaged each member is.
 
-It is used in a **web browser** and, on Windows, as an **installed desktop app**. Both show the same pages and work the same way.
+It is used in a **web browser**, on Windows as an **installed desktop app**, on Linux as a **native GTK app** and on Android as an **app on your phone**. They show the same data and work the same way; the phone app is the short version for day-to-day use (see [On your Android phone](#on-your-android-phone)). The Linux app has every page the web client has (see [On Linux](#on-linux)).
 
 > **What "attended" means.** The data source records *answers to invitations*, not who actually stood in the hall. kyuplan counts a member as
 > having **attended** an event when they **accepted** the invitation. Somebody who accepted and stayed at home counts as present;
@@ -62,6 +62,38 @@ cancel the dialog, the page says that you are not signed in and offers **Try aga
 4. To use another server, sign out and press **Change …** next to the server address in the sign-in window.
 5. **Updates**: when the server has a newer version, an **Update to x.y.z** button appears at the bottom left. A click downloads and
    installs it, and the app restarts by itself.
+
+### On Linux
+
+The Linux app is a native GTK 4 / libadwaita program: it looks like the other apps of your desktop, follows its light or dark setting and its
+language, and has every page the web client has.
+
+1. Install it. On **Arch Linux** use the package: open the address of your server in the browser, sign in and use the **Download for Linux**
+   button, or take `Kyuplan-linux-<version>.pkg.tar.zst` from your administrator, then `sudo pacman -U Kyuplan-linux-<version>.pkg.tar.zst`.
+   It brings GTK 4, libadwaita and the .NET runtime along. Start **Kyuplan** from the application menu, or `kyuplan` in a terminal.
+2. At the first start the app asks for the **address of the server** (kept in `~/.config/kyuplan`), then the sign-in follows. Tick **Remember me
+   on this computer** to stay signed in: the login is kept in the keyring of your desktop (GNOME Keyring, KWallet, KeePassXC; the package
+   `libsecret` is needed). Without a keyring nothing is remembered and you sign in at every start.
+3. The pages are in the **sidebar**; the group everything is about is chosen at the top. **Administration** and **Account** are the lists at the
+   bottom of the sidebar; **Sign out** is under **Account**. Light or dark follows your desktop; **Personal settings** has the theme (Catppuccin,
+   Dracula, high contrast, the themes of your club) and the language.
+4. **Updates**: when the server has a newer version, an **Update to x.y.z** button appears at the bottom of the sidebar. A click downloads the
+   package, asks for your password (polkit) to install it with `pacman`, and starts the app again.
+
+### On your Android phone
+
+1. Install the app. Open the address of your server in the phone's browser, sign in and use the **Download for Android** button (or take the
+   file `Kyuplan-android-<version>.apk` from your administrator). Android asks once whether the browser may install apps: allow that.
+2. At the first start the app asks for the **address of the server**, then the sign-in follows. Tick **Remember me on this computer** to stay
+   signed in; the login is kept encrypted, in a place only this app can use.
+3. The pages are the **tabs at the bottom**: **Dashboard**, **Calendar**, **Exams**, **Members** and **Account** (you only see the tabs you
+   may use). The group everything is about is chosen at the top. The calendar opens first; tap an event to see who was invited and what they
+   answered, and to write a comment about a member. In **Exams** you tick the candidates of an exam; in **Members** you search the list and open a member.
+4. **Account** has the language, the guides, **Change …** (another server) and **Sign out**.
+5. **Updates**: when the server has a newer version, an **Update to x.y.z** bar appears at the top. Tap it; Android asks you to confirm the
+   installation. The first time it asks you to allow this app to install apps.
+
+The phone app does not have the statistics and the administration pages; use the web client for those.
 
 ### Where the data comes from
 
@@ -127,7 +159,7 @@ A quick picture of how the group is doing over the last **30 / 90 / 180 / 365 da
 
 - **Headline figures**: how many members meet the required attendance, the overall attendance and response rate, the average number of
   attendees per event.
-- **Upcoming events** of the next two weeks, with how many members are coming, declined or have not answered yet.
+- **Upcoming events** of the next two weeks, with how many members are coming, declined or have not answered yet. Click an event to open it on the calendar page.
 - **Most engaged**: the five members with the highest engagement score.
 - **Needs attention**: members at risk of dropping out or whose attendance is falling, lowest score first.
 

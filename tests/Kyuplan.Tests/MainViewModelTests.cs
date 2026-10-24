@@ -42,6 +42,25 @@ public sealed class MainViewModelTests : IDisposable
     private IEnumerable<PageViewModel> Pages => _main.Items.Concat(_main.AdminItems).Concat(_main.AccountItems).Select(i => i.Page);
 
     [Fact]
+    public async Task An_upcoming_event_of_the_dashboard_opens_on_the_calendar_page_whatever_page_is_shown()
+    {
+        _session.User = Boss;
+        _main.SelectedItem = _main.AccountItems[0];
+        var upcoming = new CalendarEventDto("e1", "g1", "Training", DateTimeOffset.Now.AddDays(2), DateTimeOffset.Now.AddDays(2).AddHours(1), false, 3, 2, 0, 1);
+        _api.CalendarEvents.Add(upcoming);
+        _api.Account = Boss;
+        _api.AccountGate!.SetResult();
+        var calendar = _services.GetRequiredService<CalendarViewModel>();
+        var dashboard = _services.GetRequiredService<DashboardViewModel>();
+
+        dashboard.OpenEventCommand.Execute(new UpcomingEventRowViewModel(new UpcomingEventDto("e1", "Training", upcoming.Start, 3, 2, 0, 1), "g1"));
+
+        Assert.Same(calendar, _main.SelectedItem.Page);
+        for (var waited = 0; !calendar.HasDetail && waited < 5000; waited += 10) await Task.Delay(10); // the event is read in the background
+        Assert.Equal("e1", calendar.Detail?.Id);
+    }
+
+    [Fact]
     public void Before_anybody_is_known_the_navigation_has_the_account_page_only()
     {
         Assert.Empty(_main.Items);

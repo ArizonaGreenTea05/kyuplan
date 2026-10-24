@@ -2,6 +2,7 @@ using System.Resources;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Kyuplan.Client.Resources;
+using Kyuplan.Contracts;
 
 namespace Kyuplan.Tests;
 
@@ -190,6 +191,29 @@ public partial class AccessibilityMarkupTests
         var css = Read("Kyuplan.Client.Blazor", "wwwroot", "css", "app.css");
         Assert.Contains(".nav-group[data-dismissed] > .flyout { display: none !important; }", css);
         Assert.Contains(".skip-link:focus", css);
+    }
+
+    [Fact]
+    public void The_download_button_is_named_and_stays_on_phones_for_the_android_app()
+    {
+        var layout = Read("Kyuplan.Client.Blazor", "Layout", "MainLayout.razor");
+        Assert.Matches(@"<a class=""download-cta""[^>]*aria-label=""@string\.Format\(Strings\.Download_Button, system\)""", layout);
+
+        // The phone rules hide the sidebar's texts; the download link must not be among the hidden items, only its text is.
+        var css = Read("Kyuplan.Client.Blazor", "wwwroot", "css", "app.css");
+        var phone = css[css.IndexOf("/* A slim icon strip on top", StringComparison.Ordinal)..];
+        foreach (Match rule in Regex.Matches(phone, @"(?<selector>[^{}]+)\{(?<body>[^{}]*)\}"))
+        {
+            var hidden = rule.Groups["selector"].Value.Split(',').Any(s => s.Trim() == ".download-cta");
+            Assert.False(hidden && rule.Groups["body"].Value.Contains("display: none"), "The phone rules hide the download link.");
+        }
+
+        Assert.Contains(".download-cta span { display: none; }", phone);
+
+        // The script that picks the platform knows the three systems that have an installer.
+        var script = Read("Kyuplan.Client.Blazor", "wwwroot", "js", "platform.js");
+        foreach (var id in new[] { ClientPlatform.Windows, ClientPlatform.Linux, ClientPlatform.Android })
+            Assert.Contains($"return '{id}'", script);
     }
 
     [Fact]

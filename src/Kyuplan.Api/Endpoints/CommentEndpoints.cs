@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -30,6 +31,7 @@ public static class CommentEndpoints
                 var comment = await service.CreateAsync(memberId, input, CommentUser.From(principal), ct);
                 return Results.Created($"/api/comments/{comment.Id}", comment);
             })
+            .Audited(AuditAreas.Comments, AuditActions.Create, withBody: false)
             .WithSummary("Write a comment on a member as the signed-in user, or a reply to one of the member's comments (parentId). The body is written in the markup of CommentFormat: **bold**, *italic*, __underlined__, ~~crossed out~~.")
             .RequirePermission(Permission.CommentsWrite);
 
@@ -43,6 +45,7 @@ public static class CommentEndpoints
 
                 return Results.Ok(await service.UpdateAsync(commentId, input, CommentUser.From(principal), ct));
             })
+            .Audited(AuditAreas.Comments, AuditActions.Update, withBody: false)
             .WithSummary("Replace the body and the tags of a comment. Any signed-in user may; the change is recorded with who made it and how, and what the comment said before is kept. A request that changes nothing records nothing.")
             .RequirePermission(Permission.CommentsEdit);
 
@@ -51,6 +54,7 @@ public static class CommentEndpoints
                 await service.DeleteAsync(commentId, CommentUser.From(principal), ct);
                 return Results.NoContent();
             })
+            .Audited(AuditAreas.Comments, AuditActions.Delete)
             .WithSummary("Delete a comment and the replies to it. Its author needs comments.delete, anybody else comments.deleteAny (403 otherwise).")
             .RequirePermission(Permission.CommentsDelete, Permission.CommentsDeleteAny);
 
@@ -72,6 +76,7 @@ public static class CommentEndpoints
                 var tag = await service.CreateAsync(input, ct);
                 return Results.CreatedAtRoute("GetTag", new { tagId = tag.Id }, tag);
             })
+            .Audited(AuditAreas.Tags, AuditActions.Create)
             .WithSummary("Create a tag. Its name must be new (regardless of case). With groupId and eventId it is connected to that Spond event (it must be in the search window); a tag is about one event or none.")
             .RequirePermission(Permission.TagsEdit);
 
@@ -81,6 +86,7 @@ public static class CommentEndpoints
 
                 return Results.Ok(await service.UpdateAsync(tagId, input, ct));
             })
+            .Audited(AuditAreas.Tags, AuditActions.Update)
             .WithSummary("Replace the name and the event of a tag; leaving the event out disconnects it. The comments that carry the tag keep it.")
             .RequirePermission(Permission.TagsEdit);
 
@@ -89,6 +95,7 @@ public static class CommentEndpoints
                 await service.DeleteAsync(tagId, ct);
                 return Results.NoContent();
             })
+            .Audited(AuditAreas.Tags, AuditActions.Delete)
             .WithSummary("Delete a tag and take it off the comments that carry it; the comments stay.")
             .RequirePermission(Permission.TagsEdit);
 

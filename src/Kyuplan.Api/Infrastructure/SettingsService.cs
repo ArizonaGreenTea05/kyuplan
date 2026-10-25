@@ -221,6 +221,17 @@ public sealed class SettingsService(
         }
     }
 
+    /// <summary>What saving this would change, as the audit log words it: the keys, never the values of secrets (<see cref="SettingsAudit"/>); null when nothing would change.</summary>
+    public string? DescribeChanges(SettingsInputDto input) => Changes(input) is { Count: > 0 } changes ? SettingsAudit.Describe(changes) : null;
+
+    /// <summary>What the first start would change, as <see cref="DescribeChanges"/>, and who the first administrator is.</summary>
+    public string DescribeSetup(SetupInputDto input) =>
+        SettingsAudit.Describe(Changes(input.Settings), new JsonObject
+        {
+            ["adminUserName"] = input.AdminUserName.Trim(),
+            ["settingsFileMoved"] = MovedSettingsFile(input.SettingsFilePath) is not null,
+        });
+
     /// <summary>The configuration keys that differ from what the API runs with, with their new values.</summary>
     private Dictionary<string, object?> Changes(SettingsInputDto input)
     {

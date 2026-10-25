@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Backup;
 using Kyuplan.Api.Configuration;
@@ -26,22 +27,26 @@ public static class BackupEndpoints
             .RequirePermission(Permission.BackupsView);
 
         group.MapPost("/targets", (BackupTargetInputDto input, BackupTargetStore store) => Results.Ok(BackupTargetStore.Mask(store.Add(input))))
+            .Audited(AuditAreas.Backup, AuditActions.Create)
             .Produces<BackupTargetDto>()
             .WithSummary("Define a backup database: a folder for two SQLite files or a PostgreSQL connection string, and how often (minutes) it is updated. 400 with the reason when it cannot be used.")
             .RequirePermission(Permission.BackupsEdit);
 
         group.MapPut("/targets/{id:int}", (int id, BackupTargetInputDto input, BackupTargetStore store) =>
                 store.Update(id, input) is { } target ? Results.Ok(BackupTargetStore.Mask(target)) : Results.NotFound())
+            .Audited(AuditAreas.Backup, AuditActions.Update)
             .Produces<BackupTargetDto>()
             .WithSummary("Replace the definition of a backup database.")
             .RequirePermission(Permission.BackupsEdit);
 
         group.MapDelete("/targets/{id:int}", (int id, BackupTargetStore store) => store.Delete(id) ? Results.NoContent() : Results.NotFound())
+            .Audited(AuditAreas.Backup, AuditActions.Delete)
             .WithSummary("Forget a backup database (the data in it stays where it is).")
             .RequirePermission(Permission.BackupsEdit);
 
         group.MapPost("/targets/{id:int}/run", async (int id, BackupRunner runner, CancellationToken ct) =>
                 await runner.RunAsync(id, ct) is { } target ? Results.Ok(BackupTargetStore.Mask(target)) : Results.NotFound())
+            .Audited(AuditAreas.Backup, AuditActions.Run)
             .Produces<BackupTargetDto>()
             .WithSummary("Update the backup database now. A failed run is still answered with 200; its reason is the target's lastMessage.")
             .RequirePermission(Permission.BackupsEdit);
@@ -53,8 +58,11 @@ public static class BackupEndpoints
                 var passphrase = BackupRules.DecodePassphrase(http.Request.Headers[BackupRules.PassphraseHeader]);
                 if (BackupRules.CheckPassphrase(passphrase) is { } problem) return Results.Problem(problem, statusCode: StatusCodes.Status400BadRequest);
 
+                // The file holds every password hash: who took it, and whether it is encrypted, belongs in the log (written when the download starts).
+                AuditFilter.SetDetails(http, new JsonObject { ["encrypted"] = !string.IsNullOrEmpty(passphrase) }.ToJsonString());
                 return Results.Stream(stream => service.WriteAsync(stream, passphrase, http.RequestAborted), BackupRules.ContentType, service.FileName());
             })
+            .Audited(AuditAreas.Backup, AuditActions.Download, withBody: false)
             .WithSummary("Download a backup file (zip) with all data of both databases; encrypted with a passphrase (header X-Backup-Passphrase, base64 of UTF-8, at least 8 characters) when one is sent. It can be uploaded to restore, or be the InitialDataFile of a new instance.")
             .RequirePermission(Permission.BackupsDownload);
 
@@ -70,7 +78,15 @@ public static class BackupEndpoints
                 {
                     await using (var file = File.Create(temporary)) await request.Body.CopyToAsync(file, ct);
                     await using var stream = File.OpenRead(temporary);
-                    var restored = await service.RestoreAsync(stream, BackupRules.DecodePassphrase(request.Headers[BackupRules.PassphraseHeader]), ct);
+                    var passphrase = BackupRules.DecodePassphrase(request.Headers[BackupRules.PassphraseHeader]);
+                    var restored = await service.RestoreAsync(stream, passphrase, ct);
+                    // Written by the audit filter once the restore went through (the restart is requested below and waits for the answer).
+                    AuditFilter.SetDetails(request.HttpContext, new JsonObject
+                    {
+                        ["backupCreated"] = restored.CreatedUtc,
+                        ["rows"] = restored.Rows,
+                        ["encrypted"] = !string.IsNullOrEmpty(passphrase),
+                    }.ToJsonString());
                     restarter.Request(); // everything that was read from the old data (logins, caches) is read again
                     return Results.Ok(restored);
                 }
@@ -79,6 +95,7 @@ public static class BackupEndpoints
                     File.Delete(temporary);
                 }
             })
+            .Audited(AuditAreas.Backup, AuditActions.Restore, withBody: false)
             .Accepts<Stream>(BackupRules.ContentType)
             .Produces<BackupRestoredDto>()
             .WithSummary("Replace ALL data (both databases) with an uploaded backup file (the body; header X-Backup-Passphrase when it is encrypted). 400 with the reason, and nothing changed, when it is no backup this program can read. The API restarts afterwards.")

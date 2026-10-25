@@ -24,8 +24,11 @@ public static class SettingsEndpoints
                 if (!state.NeedsSetup) throw new SetupDoneException();
                 if (Validate(input, service, IsLocal(context)) is { } errors) return Results.ValidationProblem(errors);
 
+                AuditFilter.SetDetails(context, service.DescribeSetup(input));
+                AuditFilter.SetUserName(context, input.AdminUserName.Trim());
                 return Results.Ok(await service.SetupAsync(input, ct));
             })
+            .Audited(AuditAreas.Settings, AuditActions.Setup, withBody: false)
             .Produces<SettingsSavedDto>()
             .WithSummary("Save the settings and create the first administrator. Only while the API has no user, 409 afterwards. Restarts the API when a setting changed that only a restart applies. Needs no login.");
 
@@ -36,12 +39,16 @@ public static class SettingsEndpoints
             .WithSummary("The settings the API runs with. The Spond password is not given, only whether there is one.")
             .RequirePermission(Permission.SettingsView);
 
-        settings.MapPut("/", async (SettingsInputDto input, SettingsService service, CancellationToken ct) =>
+        settings.MapPut("/", async (SettingsInputDto input, SettingsService service, HttpContext context, CancellationToken ct) =>
             {
                 if (service.Validate(input) is { } errors) return Results.ValidationProblem(errors);
 
+                // The log gets the names of what changed, not the body: it holds the Spond logins, the metrics token and the script.
+                if (service.DescribeChanges(input) is { } described) AuditFilter.SetDetails(context, described);
+                else AuditFilter.Skip(context);
                 return Results.Ok(await service.SaveAsync(input, ct));
             })
+            .Audited(AuditAreas.Settings, AuditActions.Update, withBody: false)
             .Produces<SettingsSavedDto>()
             .WithSummary("Save the settings. They are kept in the settings file; when something changed, the API restarts itself to apply it and is back within seconds.")
             .RequirePermission(Permission.SettingsEdit);

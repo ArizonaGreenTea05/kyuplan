@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Net.Http.Headers;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Infrastructure;
@@ -62,6 +63,7 @@ public static class BrandingEndpoints
 
                 return Results.Ok(await service.SaveAsync(input, ct));
             })
+            .Audited(AuditAreas.Branding, AuditActions.Update)
             .WithSummary("Set the product name, the organisation (may be empty) and the accent colour (#RGB or #RRGGBB). They apply instead of the API's Branding settings from then on. Answers with the settings.")
             .RequirePermission(Permission.BrandingEdit);
 
@@ -69,23 +71,35 @@ public static class BrandingEndpoints
             {
                 if (BrandingSlots.ContentTypes(slot) is null) return Results.NotFound();
 
+                AuditFilter.SetDetails(request.HttpContext, SlotDetails(slot));
+
                 return Results.Ok(await service.SetImageAsync(slot, await ReadImageAsync(request.Body, ct), ct));
             })
+            .Audited(AuditAreas.Branding, AuditActions.Update)
             .Accepts<byte[]>("*/*") // whatever the client calls it: the bytes decide
             .WithSummary($"Upload the image of a slot (logo, logo-on-dark, icon) as the request body. The bytes decide what format it is, not the Content-Type; at most {BrandingRules.MaxImageBytes / 1024} KB. 400 when it is not an image the slot takes. Answers with the settings.")
             .RequirePermission(Permission.BrandingEdit);
 
-        admin.MapDelete("/{slot}", async (string slot, BrandingService service, CancellationToken ct) =>
-            BrandingSlots.ContentTypes(slot) is null ? Results.NotFound() : Results.Ok(await service.RemoveImageAsync(slot, ct)))
+        admin.MapDelete("/{slot}", async (string slot, HttpContext context, BrandingService service, CancellationToken ct) =>
+            {
+                if (BrandingSlots.ContentTypes(slot) is null) return Results.NotFound();
+
+                AuditFilter.SetDetails(context, SlotDetails(slot));
+                return Results.Ok(await service.RemoveImageAsync(slot, ct));
+            })
+            .Audited(AuditAreas.Branding, AuditActions.Delete)
             .WithSummary("Take the image of a slot away: it has none from now on, even if the API's Branding settings name a file. Answers with the settings.")
             .RequirePermission(Permission.BrandingEdit);
 
         admin.MapDelete("/", async (BrandingService service, CancellationToken ct) => Results.Ok(await service.ResetAsync(ct)))
+            .Audited(AuditAreas.Branding, AuditActions.Delete)
             .WithSummary("Forget everything saved here (texts, colour and images): the API's Branding settings apply again. Answers with the settings.")
             .RequirePermission(Permission.BrandingEdit);
 
         return app;
     }
+
+    private static string SlotDetails(string slot) => new JsonObject { ["slot"] = slot }.ToJsonString();
 
     internal static Dictionary<string, string[]>? Validate(BrandingInputDto? input, ThemePackStore? packs = null)
     {

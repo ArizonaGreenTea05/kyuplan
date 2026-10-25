@@ -136,6 +136,43 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
+    public async Task The_setup_is_logged_with_the_names_of_what_it_set_and_never_a_secret()
+    {
+        using var host = CreateHost();
+        var client = host.CreateClient();
+        var input = await SetupInputAsync(client, s => s with { MetricsEnabled = true, MetricsToken = "scrape-token-0123456789", SpondPassword = "spond-pass-1", CustomScript = "token('abc');" });
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/setup", input)).StatusCode);
+
+        var admin = host.CreateSignedInClient("boss", GoodPassword);
+        var entry = Assert.Single((await admin.GetFromJsonAsync<AuditPageDto>("/api/audit?area=" + AuditAreas.Settings))!.Entries);
+        Assert.Equal(AuditActions.Setup, entry.Action);
+        Assert.Equal("boss", entry.UserName); // nobody was signed in: the one the setup created is the one who did it
+        var details = JsonNode.Parse(entry.Details!)!;
+        Assert.Equal("boss", (string?)details["adminUserName"]);
+        Assert.False((bool)details["settingsFileMoved"]!);
+        Assert.Equal("changed", (string?)details["changed"]!["Metrics:Token"]);
+        Assert.Equal("changed", (string?)details["changed"]!["Spond:Password"]);
+        foreach (var secret in new[] { GoodPassword, "scrape-token-0123456789", "spond-pass-1", "token('abc')" })
+            Assert.DoesNotContain(secret, entry.Details);
+    }
+
+    [Fact]
+    public async Task A_second_or_refused_setup_leaves_nothing_in_the_log()
+    {
+        using var host = CreateHost();
+        var client = host.CreateClient();
+        var input = await SetupInputAsync(client);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/setup", input with { AdminPassword = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/setup", input)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/setup", input)).StatusCode);
+
+        var admin = host.CreateSignedInClient("boss", GoodPassword);
+        Assert.Single((await admin.GetFromJsonAsync<AuditPageDto>("/api/audit?area=" + AuditAreas.Settings))!.Entries);
+    }
+
+    [Fact]
     public async Task The_setup_can_be_done_once_only_so_nobody_can_take_over_a_running_api()
     {
         using var host = CreateHost();

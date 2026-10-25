@@ -99,11 +99,15 @@ public sealed class BackupService(
     {
         var (manifest, content) = Read(await DecryptAsync(file, passphrase, cancellationToken));
         if (requireAdministrator) CheckHasAdministrator(content.Accounts);
+        var rows = content.Rows;
 
         await gate.WaitAsync(cancellationToken);
         await sync.WaitAsync(cancellationToken);
         try
         {
+            // The audit log is the record of what was done to this instance: an older backup must not wipe the period since it was made.
+            await KeepAuditLogAsync(content, cancellationToken);
+
             // Two databases cannot share a transaction: each part is undone on its own failure, and when the planner data fails after the accounts
             // were replaced, the accounts are put back (users and Member.UserId links must stay a pair).
             var previousAccounts = await ReadTablesAsync(accounts, cancellationToken);
@@ -134,8 +138,33 @@ public sealed class BackupService(
             gate.Release();
         }
 
-        logger.LogWarning("All data was replaced with the backup of {Created:u} ({Rows} rows).", manifest.CreatedUtc, content.Rows);
-        return new BackupRestoredDto(manifest.CreatedUtc, content.Rows);
+        logger.LogWarning("All data was replaced with the backup of {Created:u} ({Rows} rows).", manifest.CreatedUtc, rows);
+        return new BackupRestoredDto(manifest.CreatedUtc, rows);
+    }
+
+    private const string AuditTable = nameof(AuditEntry);
+    private static readonly string[] AuditColumns = ["At", "UserId", "UserName", "Area", "Action", "Target", "Details"];
+
+    /// <summary>
+    /// Puts the entries of the audit log the instance has now into the backup's content, next to the ones the backup has (an entry both hold counts once), in
+    /// the order of their time and numbered anew. So a restore never erases an entry, whichever backup it takes, and the restore itself is added afterwards.
+    /// </summary>
+    private async Task KeepAuditLogAsync(Content content, CancellationToken cancellationToken)
+    {
+        var type = DatabaseCopier.Tables(planner).Single(t => DatabaseCopier.NameOf(t) == AuditTable);
+        var current = await DatabaseCopier.ReadAsync(planner, type, cancellationToken);
+        if (current.Count == 0) return;
+
+        // The time is compared as an instant: a PostgreSQL backup writes it with another offset than a SQLite one.
+        static string Key(JsonObject row) => string.Join('\u001f',AuditColumns.Select(column =>
+            column == "At" && row[column]?.Deserialize<DateTimeOffset>() is { } at ? at.UtcTicks.ToString() : row[column]?.ToJsonString() ?? ""));
+        static long Ticks(JsonObject row) => row["At"]?.Deserialize<DateTimeOffset>().UtcTicks ?? 0;
+
+        var restored = content.Planner.GetValueOrDefault(AuditTable) ?? [];
+        var known = restored.Select(Key).ToHashSet();
+        var merged = restored.Concat(current.Where(row => known.Add(Key(row)))).OrderBy(Ticks).ToList(); // a stable sort: entries of one instant keep their order
+        for (var i = 0; i < merged.Count; i++) merged[i]["Id"] = i + 1;
+        content.Planner[AuditTable] = merged;
     }
 
     /// <summary>

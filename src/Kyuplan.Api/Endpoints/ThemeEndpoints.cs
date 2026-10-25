@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Contracts;
@@ -26,8 +27,11 @@ public static class ThemeEndpoints
                 using var reader = new StreamReader(request.Body);
                 var json = await ReadLimitedAsync(reader, ct);
 
-                return Results.Ok(store.Save(store.Parse(json)));
+                var pack = store.Parse(json);
+                AuditFilter.SetDetails(request.HttpContext, new JsonObject { ["id"] = pack.Id, ["name"] = pack.Name }.ToJsonString());
+                return Results.Ok(store.Save(pack));
             })
+            .Audited(AuditAreas.Themes, AuditActions.Update)
             .Accepts<string>("application/json")
             .WithSummary($"Install a theme pack (JSON: id, name, nameDe, scheme, highContrast, accent, colors) or replace the one with the same id; at most {ThemePackStore.MaxBytes / 1024} KB. 400 with the reason when it is no usable pack. Answers with the catalog.")
             .RequirePermission(Permission.ThemesEdit);
@@ -36,6 +40,7 @@ public static class ThemeEndpoints
                 BuiltInThemePacks.Contains(id) ? Results.Conflict(new { title = "A built-in theme cannot be deleted." })
                 : store.Delete(id) ? Results.Ok(store.Catalog())
                 : Results.NotFound())
+            .Audited(AuditAreas.Themes, AuditActions.Delete)
             .WithSummary("Delete an uploaded theme pack. Users who had chosen it see the default theme from then on. 404 when there is no such pack, 409 for a built-in theme. Answers with the catalog.")
             .RequirePermission(Permission.ThemesEdit);
 

@@ -1,4 +1,5 @@
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -50,6 +51,7 @@ public static class CalendarFeedEndpoints
 
                 return Results.Ok(await service.CreateAsync(input, BaseUrl(request), ct));
             })
+            .Audited(AuditAreas.CalendarFeeds, AuditActions.Create)
             .WithSummary("Make a calendar feed from sources: events of a group (narrowed by subgroups, members, invitation, name, exams, cancelled), birthdays, club anniversaries or belt anniversaries of members. The answer has the address (url) to give to calendar apps.");
 
         feeds.MapPut("/{id:int}", async (int id, CalendarFeedInputDto input, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
@@ -59,10 +61,12 @@ public static class CalendarFeedEndpoints
 
                 return Results.Ok(await service.UpdateAsync(id, input, BaseUrl(request), ct));
             })
+            .Audited(AuditAreas.CalendarFeeds, AuditActions.Update)
             .WithSummary("Replace the name and sources of a feed. The address stays the same.");
 
         feeds.MapPost("/{id:int}/regenerate", (int id, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
                 service.RegenerateTokenAsync(id, BaseUrl(request), ct))
+            .Audited(AuditAreas.CalendarFeeds, AuditActions.Regenerate)
             .WithSummary("Give a feed a new secret address; the old one stops working (apps that subscribed must be given the new one).");
 
         feeds.MapDelete("/{id:int}", async (int id, CalendarFeedService service, CancellationToken ct) =>
@@ -70,6 +74,7 @@ public static class CalendarFeedEndpoints
                 await service.DeleteAsync(id, ct);
                 return Results.NoContent();
             })
+            .Audited(AuditAreas.CalendarFeeds, AuditActions.Delete)
             .WithSummary("Delete a feed; its address stops working.");
 
         return app;

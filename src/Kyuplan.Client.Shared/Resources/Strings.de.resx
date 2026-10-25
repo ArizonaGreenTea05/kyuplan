@@ -3358,6 +3358,30 @@
   <data name="AuditArea_roles" xml:space="preserve">
     <value>Rollen</value>
   </data>
+  <data name="AuditArea_settings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="AuditArea_backup" xml:space="preserve">
+    <value>Datensicherung</value>
+  </data>
+  <data name="AuditArea_calendarfeeds" xml:space="preserve">
+    <value>Kalender-Feeds</value>
+  </data>
+  <data name="AuditArea_manual" xml:space="preserve">
+    <value>Manuelle Daten</value>
+  </data>
+  <data name="AuditArea_tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="AuditArea_comments" xml:space="preserve">
+    <value>Kommentare</value>
+  </data>
+  <data name="AuditArea_branding" xml:space="preserve">
+    <value>Erscheinungsbild</value>
+  </data>
+  <data name="AuditArea_themes" xml:space="preserve">
+    <value>Theme-Pakete</value>
+  </data>
   <data name="AuditAction_create" xml:space="preserve">
     <value>Angelegt</value>
   </data>
@@ -3366,6 +3390,21 @@
   </data>
   <data name="AuditAction_delete" xml:space="preserve">
     <value>Gelöscht</value>
+  </data>
+  <data name="AuditAction_setup" xml:space="preserve">
+    <value>Ersteinrichtung</value>
+  </data>
+  <data name="AuditAction_download" xml:space="preserve">
+    <value>Heruntergeladen</value>
+  </data>
+  <data name="AuditAction_restore" xml:space="preserve">
+    <value>Wiederhergestellt</value>
+  </data>
+  <data name="AuditAction_run" xml:space="preserve">
+    <value>Ausgeführt</value>
+  </data>
+  <data name="AuditAction_regenerate" xml:space="preserve">
+    <value>Neue Adresse</value>
   </data>
   <data name="SyncStatus_Lede" xml:space="preserve">
     <value>Wie der Abgleich mit der Datenquelle läuft: wann er zuletzt geklappt hat, wie lange er dauert und was schiefging.</value>

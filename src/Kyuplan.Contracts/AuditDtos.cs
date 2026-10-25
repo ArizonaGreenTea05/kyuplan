@@ -9,8 +9,16 @@ public static class AuditAreas
     public const string Members = "members";
     public const string Users = "users";
     public const string Roles = "roles";
+    public const string Settings = "settings";
+    public const string Backup = "backup";
+    public const string CalendarFeeds = "calendarfeeds";
+    public const string Manual = "manual";
+    public const string Tags = "tags";
+    public const string Comments = "comments";
+    public const string Branding = "branding";
+    public const string Themes = "themes";
 
-    public static IReadOnlyList<string> All { get; } = [Exams, Payments, Belts, Members, Users, Roles];
+    public static IReadOnlyList<string> All { get; } = [Exams, Payments, Belts, Members, Users, Roles, Settings, Backup, CalendarFeeds, Manual, Tags, Comments, Branding, Themes];
 
     public static bool IsKnown(string? area) => area is not null && All.Contains(area);
 
@@ -24,8 +32,13 @@ public static class AuditActions
     public const string Create = "create";
     public const string Update = "update";
     public const string Delete = "delete";
+    public const string Setup = "setup";
+    public const string Download = "download";
+    public const string Restore = "restore";
+    public const string Run = "run";
+    public const string Regenerate = "regenerate";
 
-    public static IReadOnlyList<string> All { get; } = [Create, Update, Delete];
+    public static IReadOnlyList<string> All { get; } = [Create, Update, Delete, Setup, Download, Restore, Run, Regenerate];
 
     /// <summary>The name of the text of an action in the language files: <c>AuditAction_create</c>.</summary>
     public static string ResourceKey(string action) => "AuditAction_" + action;
@@ -39,7 +52,7 @@ public static class AuditActions
 /// <param name="Area">One of <see cref="AuditAreas"/>.</param>
 /// <param name="Action">One of <see cref="AuditActions"/> (a change that sets a value, such as a payment or a result, is an update).</param>
 /// <param name="Target">What was changed, by the ids of the request, e.g. <c>examId=3, memberId=12</c>; null when the change has no target (a new record).</param>
-/// <param name="Details">What was sent, as JSON, without passwords; null when nothing was sent.</param>
+/// <param name="Details">What was sent, as JSON, without passwords, tokens, scripts, connection strings and other secrets; null when nothing was sent. The settings list the names of what changed instead.</param>
 public sealed record AuditEntryDto(
     long Id,
     DateTimeOffset At,

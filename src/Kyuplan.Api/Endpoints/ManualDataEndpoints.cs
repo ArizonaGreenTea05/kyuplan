@@ -1,4 +1,5 @@
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using Kyuplan.Contracts;
@@ -27,26 +28,32 @@ public static class ManualDataEndpoints
 
         manual.MapPost("/groups", (ManualNameInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.CreateGroupAsync(input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Create)
             .WithSummary("Add a group.");
 
         manual.MapPut("/groups/{groupId}", (string groupId, ManualNameInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.RenameGroupAsync(groupId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Update)
             .WithSummary("Rename a group.");
 
         manual.MapDelete("/groups/{groupId}", (string groupId, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Delete(() => service.DeleteGroupAsync(groupId, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Delete)
             .WithSummary("Delete a group with its subgroups, members and events. The planner forgets the members' belts and exams of the group at once.");
 
         manual.MapPost("/groups/{groupId}/subgroups", (string groupId, ManualNameInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.CreateSubGroupAsync(groupId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Create)
             .WithSummary("Add a subgroup to a group.");
 
         manual.MapPut("/subgroups/{subGroupId}", (string subGroupId, ManualNameInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.RenameSubGroupAsync(subGroupId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Update)
             .WithSummary("Rename a subgroup.");
 
         manual.MapDelete("/subgroups/{subGroupId}", (string subGroupId, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Delete(() => service.DeleteSubGroupAsync(subGroupId, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Delete)
             .WithSummary("Delete a subgroup; its members stay in the group.");
 
         manual.MapGet("/groups/{groupId}/members", (string groupId, ManualDataService service, CancellationToken ct) => service.ListMembersAsync(groupId, ct))
@@ -54,14 +61,17 @@ public static class ManualDataEndpoints
 
         manual.MapPost("/groups/{groupId}/members", (string groupId, ManualMemberInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.CreateMemberAsync(groupId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Create)
             .WithSummary("Add a member to a group.");
 
         manual.MapPut("/members/{memberId}", (string memberId, ManualMemberInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.UpdateMemberAsync(memberId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Update)
             .WithSummary("Replace the name, birth date and subgroups of a member.");
 
         manual.MapDelete("/members/{memberId}", (string memberId, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Delete(() => service.DeleteMemberAsync(memberId, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Delete)
             .WithSummary("Delete a member; the planner forgets their belt, comments and results at once.");
 
         manual.MapGet("/groups/{groupId}/events", (string groupId, ManualDataService service, CancellationToken ct) => service.ListEventsAsync(groupId, ct))
@@ -69,14 +79,17 @@ public static class ManualDataEndpoints
 
         manual.MapPost("/groups/{groupId}/events", (string groupId, ManualEventInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.CreateEventAsync(groupId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Create)
             .WithSummary("Add an event to a group.");
 
         manual.MapPut("/events/{eventId}", (string eventId, ManualEventInputDto input, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Write(Check(ManualDataRules.Check(input)), async () => await service.UpdateEventAsync(eventId, input, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Update)
             .WithSummary("Replace an event, its invitations and answers included.");
 
         manual.MapDelete("/events/{eventId}", (string eventId, ManualDataService service, SpondSync sync, CancellationToken ct) =>
                 Delete(() => service.DeleteEventAsync(eventId, ct), sync, ct))
+            .Audited(AuditAreas.Manual, AuditActions.Delete)
             .WithSummary("Delete an event.");
 
         return app;

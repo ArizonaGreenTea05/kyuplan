@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -51,6 +52,7 @@ public static class CalendarEndpoints
 
                 return Results.Ok(await service.CommentAsync(groupId, eventId, memberId, input, CommentUser.From(principal), ct));
             })
+            .Audited(AuditAreas.Comments, AuditActions.Create, withBody: false)
             .WithSummary("Write a comment on a member of an event as the signed-in user. It is tagged with the tag of the event, which is made when the event has none.")
             .RequirePermission(Permission.CommentsWrite);
 

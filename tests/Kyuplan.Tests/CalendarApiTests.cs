@@ -164,6 +164,24 @@ public sealed class CalendarApiTests(WebApplicationFactory<Program> factory) : I
     }
 
     [Fact]
+    public async Task A_comment_written_from_an_event_is_logged_but_never_what_it_says()
+    {
+        using var host = CreateHost();
+        var client = host.CreateSignedInClient();
+        var api = new PlannerApiClient(client);
+        var training = await AnEventAsync(api);
+        var (memberId, _) = await SyncOneInvitedAsync(host, training);
+
+        await api.CreateEventCommentAsync(Group, training.Id, memberId, new CalendarCommentInputDto("Private remark"));
+        await Assert.ThrowsAsync<PlannerApiException>(() => api.CreateEventCommentAsync(Group, training.Id, memberId, new CalendarCommentInputDto("")));
+
+        var entry = Assert.Single((await client.GetFromJsonAsync<AuditPageDto>("/api/audit?area=" + AuditAreas.Comments))!.Entries);
+        Assert.Equal(AuditActions.Create, entry.Action);
+        Assert.Contains($"memberId={memberId}", entry.Target);
+        Assert.DoesNotContain("remark", entry.Details ?? "", StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task A_comment_written_from_an_event_carries_the_tag_of_the_event_and_shows_up_on_it()
     {
         using var host = CreateHost();

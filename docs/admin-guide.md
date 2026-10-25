@@ -492,12 +492,20 @@ Kyuplan keeps a record of who changed what, so that payments and role changes ca
 | members | change the belt, belt day, start day and birth date of a member |
 | users | create, change and delete a user; say which members a user is (including the roles and permissions given to them) |
 | roles | create, change and delete a role (including its permissions) |
+| settings | save the settings (also the first setup): the names of the settings that changed, see below |
+| backup | download a backup file (and whether it was encrypted), restore one, define, change, delete and run a backup database |
+| calendarfeeds | create, change, delete a calendar feed and give it a new address |
+| manual | add, change and delete the groups, subgroups, members and events kept by hand |
+| tags, comments | create, change and delete a tag; write, change and delete a comment (that a comment was written, not its text: the text keeps its own history) |
+| branding, themes | change the product name and colour, upload and remove an image, install and delete a theme pack |
 
-Each entry holds the time, the user who made the change (by the name shown to other users, kept as it was even if the user is deleted or renamed later), the area, what was done, the ids it concerned (such as `examId=3, memberId=12`) and what was sent, as JSON. **Passwords are never written to the log.** A request that was refused or failed changes nothing and leaves no entry. Nothing in the log can be changed or deleted through the API; it is part of the [backup file](#backup-file-download-and-restore) like all other data.
+Each entry holds the time, the user who made the change (by the name shown to other users, kept as it was even if the user is deleted or renamed later), the area, what was done, the ids it concerned (such as `examId=3, memberId=12`) and what was sent, as JSON. **Secrets are never written to the log:** whatever is sent under a name that contains `password`, `passphrase`, `token`, `secret`, `connection`, `location`, `credential`, `apikey`, `authorization` or `cookie`, or that ends in `script`, is left out (the connection string of a backup database, the passphrase of a backup, the Spond logins, the metrics token). The **settings** are not logged as they were sent but as the list of settings that changed (`Metrics:Enabled: true`, `Spond:Password: changed`): the value is written only for settings that are no secret (statistics, sync, data source kind, allowed hosts); the **script** of a custom data source appears as its length and a short hash, so that two saves can be told apart without the code (it often holds tokens). A request that was refused or failed changes nothing and leaves no entry, and neither does a save of the settings that changes nothing. Nothing in the log can be changed or deleted through the API; it is part of the [backup file](#backup-file-download-and-restore) like all other data.
+
+A **restore** does not erase the log: the entries the server has when it restores are kept next to the ones in the backup (an entry both have counts once), in the order of their time and numbered anew, and the restore itself is added as the last entry (`backup` / `restore`, with when the backup was made, how many rows it held and whether it was encrypted). A download of a backup is logged when it starts.
 
 Reading the log needs `audit.view`, which only administrators have by default (give it with a role if more people should be able to check). It is read with `GET /api/audit` (see `/scalar`): newest first, `limit` entries at a time (default 50, at most 200), narrowed down with `area` and/or `userId`; pass the `nextBefore` of a page as `before` to read the next, older page.
 
-The log only lists changes made after it was introduced. Changes to comments, ratings, tags, branding, themes, settings, backups and calendar feeds are not part of it (comments keep their own history).
+The log only lists changes made after it was introduced. Changes to ratings are not part of it, and a request that only reads (opening the settings, listing backups) leaves no entry.
 
 ## Calendar feeds
 
@@ -545,7 +553,7 @@ The file is independent of the database system: a backup of a SQLite server rest
 - both databases are replaced, each in one transaction (if writing fails, that database keeps its old data);
 - the server restarts by itself (a few seconds) so that it starts from the new data; the page waits for it to come back.
 
-Everything that is not in the file is **lost**, including users created since: after a restore you can only sign in with the users the backup had. **Download a backup before you restore one.**
+Everything that is not in the file is **lost**, including users created since: after a restore you can only sign in with the users the backup had. The [audit log](#audit-log) is the exception: it is kept and the restore is added to it. **Download a backup before you restore one.**
 
 **A new server from a backup.** A new server has no data to replace, so it cannot be restored through the page (nobody can sign in yet). Put the file on the server and set `Backup:InitialDataFile` (in a container: `Backup__InitialDataFile=/data/start.kyubackup`). When both databases are **created** by that start, their data is loaded from the file instead of the default belts and roles, and the setup screen does not appear because the users come with the file. Once the databases exist the setting is ignored, so it can stay.
 

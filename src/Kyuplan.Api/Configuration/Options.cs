@@ -445,5 +445,17 @@ public sealed class ApiSecurityOptions
     /// <summary>Failed logins as one user name (from any address) within <see cref="LoginFailureWindow"/> before that name is locked out for the rest of the window; 0 = never.</summary>
     public int MaxLoginFailuresPerUser { get; set; } = 30;
 
+    /// <summary>
+    /// Failed logins as one user name within <see cref="LoginFailureWindow"/> before that name is locked out even for the addresses the user signed
+    /// in from (those skip <see cref="MaxLoginFailuresPerUser"/>), so that rotating or forging the address cannot give unlimited guesses; 0 = never.
+    /// </summary>
+    public int MaxLoginFailuresPerUserAnyAddress { get; set; } = 100;
+
     public TimeSpan LoginFailureWindow { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// The reverse proxies (addresses or networks like <c>10.0.0.0/8</c>) whose <c>X-Forwarded-*</c> headers are believed once
+    /// <c>ASPNETCORE_FORWARDEDHEADERS_ENABLED</c> is on. Empty = only this machine (loopback). A proxy in another container or on another machine must be named.
+    /// </summary>
+    public string[] TrustedProxies { get; set; } = [];
 }

@@ -47,7 +47,7 @@ kyuplan.example.org {
 ```
 
 and add to your Compose file (next to the `kyuplan` service; take the published `ports:` away from kyuplan so that only Caddy is reachable, and set
-`ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"` in the `kyuplan` environment):
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"` and `Api__TrustedProxies__0: "172.18.0.0/16"` (the Compose network that Caddy shares with kyuplan, see `docker network inspect`) in the `kyuplan` environment):
 
 ```yaml
   caddy:
@@ -109,7 +109,7 @@ the address and give them the [user guide](user-guide.md).
 | `KYUPLAN_IMAGE`, `KYUPLAN_PORT` | Compose variables: image tag and published port |
 | `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` | Required behind a reverse proxy that ends HTTPS |
 | `Api__AllowInsecureHttp=true` | Trusted network without HTTPS |
-| `Api__TrustedProxies__0=10.0.0.5` (more: `__1`, ...) | The reverse proxies whose `X-Forwarded-*` headers are believed (addresses or networks like `10.0.0.0/8`); default: loopback and the private networks. Anybody else who sends them is ignored. Set it to your proxy's address when the container's port is reachable from other machines. |
+| `Api__TrustedProxies__0=10.0.0.5` (more: `__1`, ...) | The reverse proxies whose `X-Forwarded-*` headers are believed (addresses or networks like `10.0.0.0/8`); default: only this machine (loopback). Anybody else who sends them is ignored, also machines of your own LAN or Docker network, so **name your proxy here** (its address, or the Docker network like `172.18.0.0/16`) whenever it runs in another container or on another machine; without the list the API logs a warning at start and every visitor looks like the proxy. |
 | `AllowedHosts` | Host names the site answers to (the setup proposes the address in use) |
 | `DataSource__Kind` | `Spond` (default), `Custom`, `Manual` or `Demo`; see the [administrator guide](admin-guide.md#data-sources) (usually chosen in the browser) |
 | `DataSource__Script`, `DataSource__ScriptTimeout`, `DataSource__ScriptMaxStatements`, `DataSource__CacheDuration`, `DataSource__FailureCacheDuration`, `DataSource__AllowLocalAddresses`, `DataSource__AllowPrivateAddresses` | The JavaScript of the custom source, the longest a call may take (`00:01:00`), the most statements it may run (`10000000`, `0` = unlimited), how long answers are reused (`00:15:00`), how long a failed run is remembered instead of repeated (`00:00:30`, `00:00:00` = off), whether the script may reach `localhost`/link-local addresses (`false`) and whether it may reach the internal network such as `10.x`, `172.16-31.x`, `192.168.x`, containers of the same Compose network (`false`; set it when the source lives in your LAN) |
@@ -425,10 +425,10 @@ docker run -d --name kyuplan -p 8080:8080 -v kyuplan-data:/data \
 The container speaks plain HTTP on 8080. The login is HTTP Basic, so it has to be wrapped in HTTPS everywhere except on the machine itself:
 
 - Put a **reverse proxy that ends HTTPS** in front and set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, so that the application sees the original scheme and visitor address (that is
-  also what makes failed logins count per visitor and not per proxy). Only proxies in the loopback and private networks are believed (`Api__TrustedProxies__0=<address or network>` narrows or widens that): a visitor who reaches the container directly cannot pose as HTTPS or as another address. A request that carries `X-Forwarded-For` is never treated as "this machine", so a proxy on the same host does not switch the HTTPS check off. Any proxy works: **Caddy** (automatic certificates), **nginx**, **Traefik**, **HAProxy**, the load balancer or ingress of a cloud platform,
+  also what makes failed logins count per visitor and not per proxy). Only the proxies named in `Api__TrustedProxies__0=<address or network>` (`__1`, ...) are believed, without that list only this machine (loopback): a proxy in another container or on another machine **must be named**, and so must one on the Docker host that uses a published port (the container sees it as the gateway of the Docker network, e.g. `172.17.0.1`, not as loopback) (a private network as a whole would let any machine on the same LAN or Docker network forge the headers, and with them the visitor address that the login lockout and the calendar rate limit use), and a visitor who reaches the container directly cannot pose as HTTPS or as another address. The lockout also counts failures per user name regardless of the address (`Api__MaxLoginFailuresPerUserAnyAddress`, 100), so even a forged address gives no unlimited guesses. A request that carries `X-Forwarded-For` is never treated as "this machine", so a proxy on the same host does not switch the HTTPS check off. Any proxy works: **Caddy** (automatic certificates), **nginx**, **Traefik**, **HAProxy**, the load balancer or ingress of a cloud platform,
   **Cloudflare Tunnel**, **Tailscale Serve**, the proxies built into TrueNAS or Synology. Forward the `Host` header unchanged (or adjust `AllowedHosts`).
 - Caddy in one line: `kyuplan.example.org { reverse_proxy kyuplan:8080 }` (in the same Compose project, no published port needed).
-- Behind a platform that ends TLS itself and talks plain HTTP to the container (Azure Container Apps, Cloud Run, App Runner, ...) the forwarded headers are what counts: set the variable above.
+- Behind a platform that ends TLS itself and talks plain HTTP to the container (Azure Container Apps, Cloud Run, App Runner, ...) the forwarded headers are what counts: set the variable above and name the platform's proxy network in `Api__TrustedProxies__0` (its range is in the platform's documentation).
 - **On a network you trust completely** (a home LAN) plain HTTP can be allowed: `Api__AllowInsecureHttp=true`. Without HTTPS or this flag, other machines get `400 HTTPS required`.
 - The desktop clients take an `https://` address (or an `http://` one when the flag above is set).
 
@@ -487,7 +487,7 @@ For SQLite add a `PersistentVolumeClaim` (`ReadWriteOnce`, block storage) mounte
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `400 HTTPS required` | You opened the site over plain HTTP from another machine. Use HTTPS behind a proxy with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, or on a trusted network `Api__AllowInsecureHttp=true`. |
+| `400 HTTPS required` | You opened the site over plain HTTP from another machine. Use HTTPS behind a proxy with `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and the proxy named in `Api__TrustedProxies__0` (the log warns when it is missing), or on a trusted network `Api__AllowInsecureHttp=true`. |
 | `400 Bad Request - Invalid Hostname` | `AllowedHosts` does not contain the address you use. Set `AllowedHosts` (environment variable, or the Settings page) to it, or to `*`. |
 | `unable to open database file`, `readonly database`, `Permission denied` on `/data` | The folder is not writable for the container user (UID 1654, or the one of `--user`). `chown` it, or use a Docker volume. |
 | `database is locked`, or damage after a crash | The SQLite files are on a network share, or two containers use them. Move them to a local disk, or use PostgreSQL. |

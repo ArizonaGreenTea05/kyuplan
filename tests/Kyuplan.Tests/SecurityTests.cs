@@ -4,8 +4,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Configuration;
@@ -163,12 +166,161 @@ public sealed class SecurityTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Single(options.KnownProxies);
         Assert.Single(options.KnownIPNetworks);
 
-        TrustedProxies.Apply(options, null); // default: loopback and the private networks
-        Assert.Empty(options.KnownProxies);
-        Assert.Contains(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse("10.1.2.3")));
-        Assert.DoesNotContain(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse("203.0.113.5")));
-
         Assert.Throws<InvalidOperationException>(() => TrustedProxies.Apply(options, ["not an address"]));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Without_a_list_only_this_machine_is_believed(bool emptyList)
+    {
+        var options = new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions();
+        TrustedProxies.Apply(options, emptyList ? [] : null);
+
+        Assert.Empty(options.KnownProxies);
+        Assert.All(["127.0.0.1", "127.5.6.7", "::1"], a => Assert.Contains(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse(a))));
+        Assert.All(["10.1.2.3", "172.17.0.2", "192.168.1.5", "fd00::1", "fe80::1", "203.0.113.5"],
+            a => Assert.DoesNotContain(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse(a))));
+    }
+
+    [Fact]
+    public void A_list_replaces_the_default_completely()
+    {
+        var options = new Microsoft.AspNetCore.Builder.ForwardedHeadersOptions();
+        TrustedProxies.Apply(options, [" 172.18.0.0/16 "]);
+
+        Assert.Contains(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse("172.18.0.9")));
+        Assert.DoesNotContain(options.KnownIPNetworks, n => n.Contains(IPAddress.Parse("127.0.0.1")));
+    }
+
+    [Theory]
+    [InlineData("true", null, true)]
+    [InlineData("True", "", true)]
+    [InlineData("true", "10.0.0.5", false)]
+    [InlineData("false", null, false)]
+    [InlineData(null, null, false)]
+    [InlineData("1", null, false)] // not what the host reads as "on"
+    public void Enabling_forwarded_headers_without_a_proxy_list_is_warned_about(string? enabled, string? proxy, bool warn) =>
+        Assert.Equal(warn, TrustedProxies.NeedsWarning(enabled, proxy is null ? null : proxy.Length == 0 ? [] : [proxy]));
+
+    [Theory]
+    [InlineData(null, "192.168.1.50", "192.168.1.50")] // default: a neighbour in a private network is no proxy
+    [InlineData(null, "172.17.0.2", "172.17.0.2")]
+    [InlineData(null, "127.0.0.1", "198.51.100.9")] // default: this machine is
+    [InlineData("10.0.0.5", "192.168.1.50", "192.168.1.50")] // explicit list: other private addresses are still not believed
+    [InlineData("10.0.0.5", "127.0.0.1", "127.0.0.1")] // ...and the list replaces loopback
+    [InlineData("10.0.0.5", "10.0.0.5", "198.51.100.9")] // the named proxy is
+    public async Task Forwarded_for_is_only_believed_from_a_sender_that_is_trusted(string? proxy, string sender, string expectedAddress)
+    {
+        using var host = await new HostBuilder().ConfigureWebHost(web => web.UseTestServer().Configure(app =>
+        {
+            var options = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor };
+            TrustedProxies.Apply(options, proxy is null ? null : [proxy]);
+            app.Use((context, next) =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Parse(sender);
+                return next();
+            });
+            app.UseForwardedHeaders(options);
+            app.Run(context => context.Response.WriteAsync(context.Connection.RemoteIpAddress?.ToString() ?? ""));
+        })).StartAsync();
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/");
+        request.Headers.Add("X-Forwarded-For", "198.51.100.9");
+
+        Assert.Equal(expectedAddress, await (await host.GetTestClient().SendAsync(request)).Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_forged_forwarded_address_from_a_private_network_does_not_get_round_the_lockout()
+    {
+        using var host = CreateHost(b =>
+        {
+            b.UseSetting("FORWARDEDHEADERS_ENABLED", "true");
+            b.UseSetting("Api:AllowInsecureHttp", "true");
+            b.UseSetting("Api:MaxLoginFailuresPerAddress", "3");
+            // First in the list = first in the pipeline: the host's forwarded-headers middleware must already see the private sender.
+            b.ConfigureTestServices(s => s.Insert(0, ServiceDescriptor.Singleton<IStartupFilter, PrivateAddressFilter>()));
+        });
+        var client = host.CreateClient();
+
+        for (var i = 0; i < 3; i++)
+        {
+            var guess = Login(AdminName, "wrong password " + i);
+            guess.Headers.Add("X-Forwarded-For", $"198.51.100.{i + 1}");
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(guess)).StatusCode);
+        }
+
+        var next = Login(AdminName, AdminPassword);
+        next.Headers.Add("X-Forwarded-For", "198.51.100.200");
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await client.SendAsync(next)).StatusCode);
+    }
+
+    private sealed class PrivateAddressFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use((context, nextMiddleware) =>
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Parse("192.168.1.50");
+                return nextMiddleware();
+            });
+            next(app);
+        };
+    }
+
+    [Fact]
+    public void Failures_as_one_user_lock_the_name_even_for_its_known_addresses_after_the_higher_limit()
+    {
+        var throttle = new LoginThrottle(Options.Create(new ApiSecurityOptions { MaxLoginFailuresPerUser = 2, MaxLoginFailuresPerUserAnyAddress = 4 }), new ManualTime());
+        throttle.Succeeded("10.0.0.1", "anna");
+
+        for (var i = 0; i < 3; i++) throttle.Failed($"198.51.100.{i}", "anna");
+        Assert.Null(throttle.RetryAfter("10.0.0.1", "anna")); // the owner's address still gets in
+        Assert.NotNull(throttle.RetryAfter("10.0.0.2", "anna"));
+
+        throttle.Failed("198.51.100.9", "anna");
+        Assert.NotNull(throttle.RetryAfter("10.0.0.1", "anna"));
+        Assert.Null(throttle.RetryAfter("10.0.0.1", "bert")); // other names are not affected
+    }
+
+    [Fact]
+    public void The_any_address_lock_of_a_name_ends_with_its_window_and_can_be_switched_off()
+    {
+        var time = new ManualTime();
+        var throttle = new LoginThrottle(Options.Create(new ApiSecurityOptions
+        {
+            MaxLoginFailuresPerAddress = 0, MaxLoginFailuresPerUser = 0, MaxLoginFailuresPerUserAnyAddress = 2, LoginFailureWindow = TimeSpan.FromMinutes(5),
+        }), time);
+        throttle.Failed("a", "anna");
+        throttle.Failed("b", "anna");
+        Assert.Equal(TimeSpan.FromMinutes(5), throttle.RetryAfter("c", "anna"));
+
+        time.Now += TimeSpan.FromMinutes(5);
+        Assert.Null(throttle.RetryAfter("c", "anna"));
+
+        var off = new LoginThrottle(Options.Create(new ApiSecurityOptions
+        {
+            MaxLoginFailuresPerAddress = 0, MaxLoginFailuresPerUser = 0, MaxLoginFailuresPerUserAnyAddress = 0,
+        }), time);
+        for (var i = 0; i < 500; i++) off.Failed("a" + i, "anna");
+        Assert.Null(off.RetryAfter("z", "anna"));
+    }
+
+    [Fact]
+    public void The_longest_of_the_locks_counts()
+    {
+        var time = new ManualTime();
+        var throttle = new LoginThrottle(Options.Create(new ApiSecurityOptions
+        {
+            MaxLoginFailuresPerAddress = 1, MaxLoginFailuresPerUser = 100, MaxLoginFailuresPerUserAnyAddress = 2, LoginFailureWindow = TimeSpan.FromMinutes(10),
+        }), time);
+        throttle.Failed("a", "anna");
+        time.Now += TimeSpan.FromMinutes(4);
+        throttle.Failed("b", "anna"); // starts no new window: the user's window began at the first failure
+
+        Assert.Equal(TimeSpan.FromMinutes(6), throttle.RetryAfter("a", "anna")); // address lock 6 min left, user lock 6 min left
+        Assert.Equal(TimeSpan.FromMinutes(10), throttle.RetryAfter("b", "anna")); // address lock 10 min left (own window), user lock 6: the longer one
     }
 
     [Fact]

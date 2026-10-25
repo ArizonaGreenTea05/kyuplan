@@ -37,6 +37,8 @@ services:
       # Accounts__InitialAdminPassword: ${ADMIN_PASSWORD:-}  # creates the user "admin" without the setup screen (12 to 128 characters)
       # Behind a reverse proxy that ends HTTPS (the login is HTTP Basic: it must not cross a network unencrypted):
       # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Api__TrustedProxies__0: "172.18.0.0/16"   # the proxy's address or network: only it (and this machine) is believed, not the whole LAN
+      # (A proxy on this host that uses the published port reaches the container as the gateway of its Docker network, e.g. 172.18.0.1, not as 127.0.0.1: name that.)
       # Only on a network you trust completely, plain HTTP can be allowed instead:
       # Api__AllowInsecureHttp: "true"
       # Branding: the name, accent colour and logos both clients show. The image ships placeholders; or let an administrator set it in the web client.

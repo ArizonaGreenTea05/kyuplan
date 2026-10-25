@@ -30,6 +30,8 @@ services:
       # Accounts__InitialAdminPassword: "CHANGE ME (12 to 128 characters)"
       # The API only takes logins over HTTPS (from other machines): put a reverse proxy that ends HTTPS in front and set
       # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Api__TrustedProxies__0: "172.18.0.0/16"   # the proxy's address or network: only it (and this machine) is believed, not the whole LAN
+      # (A proxy on this host that uses the published port reaches the container as the gateway of its Docker network, e.g. 172.18.0.1, not as 127.0.0.1: name that.)
       # (Only on a network you trust completely, plain HTTP can be allowed instead: Api__AllowInsecureHttp: "true")
       # Branding__ProductName: "kyuplan"
       # Branding__OrganizationName: "Karate Club Beispiel"

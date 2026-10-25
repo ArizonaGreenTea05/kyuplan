@@ -115,7 +115,6 @@ public sealed class BackupService(
             try
             {
                 await DatabaseCopier.ReplaceAsync(planner, content.Planner, cancellationToken);
-                await CalendarFeedService.HashLegacyTokensAsync(planner, cancellationToken); // a backup from before the hashing holds the tokens themselves
             }
             catch
             {

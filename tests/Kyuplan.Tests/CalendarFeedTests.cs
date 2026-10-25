@@ -330,6 +330,16 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
     }
 
     [Fact]
+    public void A_stored_hash_stays_and_anything_else_is_hashed()
+    {
+        var hash = CalendarFeedService.HashToken("token");
+        Assert.Equal(hash, CalendarFeedService.HashIfLegacy(hash));
+        Assert.Equal(CalendarFeedService.HashToken("short"), CalendarFeedService.HashIfLegacy("short"));
+        Assert.Equal(CalendarFeedService.HashToken(""), CalendarFeedService.HashIfLegacy(""));
+        Assert.Equal(CalendarFeedService.HashToken(new string('x', 65)), CalendarFeedService.HashIfLegacy(new string('x', 65)));
+    }
+
+    [Fact]
     public async Task Without_any_feed_nothing_is_converted()
     {
         using var host = CreateHost();

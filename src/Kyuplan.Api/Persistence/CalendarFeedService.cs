@@ -307,14 +307,18 @@ public sealed class CalendarFeedService(
     /// </summary>
     public static string HashToken(string token) => Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
 
+    /// <summary>The stored value of a feed row: a hash stays as it is, the token itself (a row from before the hashing, 43 characters) is hashed.</summary>
+    public static string HashIfLegacy(string stored) => stored.Length == HashLength ? stored : HashToken(stored);
+
     /// <summary>
-    /// Feeds made before the tokens were hashed (or restored from a backup of those) still hold the token itself (43 characters, a hash has 64):
+    /// Feeds made before the tokens were hashed still hold the token itself (43 characters, a hash has 64):
     /// hashes them, so that their addresses go on working and the secret is gone from the database. Returns how many were converted.
+    /// (A restore converts the rows while it writes them, see <c>DatabaseCopier.Convert</c>.)
     /// </summary>
     public static async Task<int> HashLegacyTokensAsync(PlannerDbContext db, CancellationToken cancellationToken)
     {
         var legacy = await db.CalendarFeeds.Where(f => f.TokenHash.Length != HashLength).ToListAsync(cancellationToken);
-        foreach (var feed in legacy) feed.TokenHash = HashToken(feed.TokenHash);
+        foreach (var feed in legacy) feed.TokenHash = HashIfLegacy(feed.TokenHash);
         await db.SaveChangesAsync(cancellationToken);
         return legacy.Count;
     }

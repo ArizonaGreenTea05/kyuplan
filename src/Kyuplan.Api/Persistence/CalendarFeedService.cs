@@ -22,6 +22,9 @@ public sealed class CalendarFeedService(
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    /// <summary>How long the feed list waits for the groups before it shows the feeds without the check for broken sources.</summary>
+    internal static readonly TimeSpan GroupCheckTimeout = TimeSpan.FromSeconds(3);
+
     public async Task<IReadOnlyList<CalendarFeedDto>> ListAsync(string baseUrl, CancellationToken cancellationToken)
     {
         var feeds = await db.CalendarFeeds.AsNoTracking().ToListAsync(cancellationToken);
@@ -231,14 +234,23 @@ public sealed class CalendarFeedService(
         await db.CalendarFeeds.FirstOrDefaultAsync(f => f.Id == feedId, cancellationToken) ?? throw new CalendarFeedNotFoundException(feedId);
 
     /// <summary>
-    /// The ids of the groups the data source has now, or <c>null</c> when it cannot say (e.g. Spond is unreachable): the feed list does not
-    /// depend on Spond being up, so then no source is reported as broken.
+    /// The ids of the groups the data source has now, or <c>null</c> when it cannot say (e.g. Spond is unreachable or takes longer than
+    /// <see cref="GroupCheckTimeout"/>): the feed list does not depend on Spond being up or fast, so then no source is reported as broken.
+    /// The groups are cached by the data source, so this is only slow when the cache is empty; a load that outlasts the timeout goes on
+    /// in the background and fills the cache for the next request.
     /// </summary>
     private async Task<HashSet<string>?> KnownGroupIdsAsync(CancellationToken cancellationToken)
     {
+        var load = statistics.GetGroupsAsync(cancellationToken);
         try
         {
-            return (await statistics.GetGroupsAsync(cancellationToken)).Select(g => g.Id).ToHashSet();
+            return (await load.WaitAsync(GroupCheckTimeout, time, cancellationToken)).Select(g => g.Id).ToHashSet();
+        }
+        catch (TimeoutException)
+        {
+            log.LogWarning("The groups were not there after {Seconds} seconds; the sources of the calendar feeds are not checked.", GroupCheckTimeout.TotalSeconds);
+            _ = load.ContinueWith(t => _ = t.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
+            return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -411,6 +411,48 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await host.CreateClient().GetAsync(PathOf(stale))).StatusCode);
     }
 
+    private sealed class HangingSource : Kyuplan.Api.Spond.IDataSource
+    {
+        public TaskCompletionSource<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> Groups { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsDemo => false;
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) => Groups.Task;
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
+            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+
+        public void InvalidateCache()
+        {
+        }
+    }
+
+    [Fact]
+    public async Task The_feed_list_does_not_wait_for_a_slow_data_source()
+    {
+        var source = new HangingSource();
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(s => s.AddSingleton<Kyuplan.Api.Spond.IDataSource>(source)));
+        await StoreFeedAsync(host, "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var admin = host.CreateSignedInClient();
+
+        var request = admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds");
+        // The wait is on the fake clock: move it on until the request has registered its timeout.
+        for (var i = 0; i < 500 && !request.IsCompleted; i++)
+        {
+            _time.Advance(CalendarFeedService.GroupCheckTimeout + TimeSpan.FromSeconds(1));
+            await Task.Delay(10);
+        }
+
+        Assert.True(request.IsCompleted, "the feed list waits for the data source");
+        Assert.Empty(Assert.Single((await request)!).BrokenSources ?? []);
+
+        // A load that finishes later (or fails) after the answer is gone must not blow up anything.
+        source.Groups.SetException(new Kyuplan.Api.Spond.SpondUnavailableException("down"));
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+    }
+
     [Fact]
     public void Ics_lines_are_folded_at_75_octets_without_cutting_a_character()
     {

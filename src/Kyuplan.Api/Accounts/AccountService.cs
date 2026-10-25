@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,9 @@ public sealed class ForbiddenException(string message) : Exception(message);
 /// <summary>Somebody tried to delete their own user: they would be signed out with no way back, and might be the last administrator.</summary>
 public sealed class DeleteOwnUserException() : Exception("You cannot delete your own user. Ask somebody else who may delete users to do it.");
 
+/// <summary>The accounts database cannot be reached (down, locked, failing over): nobody can be told whether their login is right.</summary>
+public sealed class AccountsUnavailableException(Exception inner) : Exception("The accounts database is not available. Try again in a moment.", inner);
+
 /// <summary>
 /// Reads and writes user accounts and checks logins. Input is expected to be validated by the endpoints
 /// (<see cref="AccountRules"/>). Passwords are only ever stored as hashes.
@@ -38,21 +42,26 @@ public sealed class AccountService(
     private static readonly string UnknownUserHash =
         new PasswordHasher<UserAccount>().HashPassword(new UserAccount(), Guid.NewGuid().ToString("N"));
 
-    /// <summary>The user for a user name (or an alias) and password, or <c>null</c> when there is no such combination.</summary>
+    /// <summary>
+    /// The user for a user name (or an alias) and password, or <c>null</c> when there is no such combination. Only that is a failed login:
+    /// a cancelled request stays an <see cref="OperationCanceledException"/>, and any other failure is an exception too, so that neither feeds the lockout.
+    /// </summary>
+    /// <exception cref="AccountsUnavailableException">The accounts database could not be read.</exception>
     public async Task<UserAccount?> AuthenticateAsync(string userName, string password, CancellationToken cancellationToken)
     {
+        UserAccount? user;
         try
         {
-            var user = await db.Users.AsNoTracking().Include(u => u.Roles)
+            user = await db.Users.AsNoTracking().Include(u => u.Roles)
                 .FirstOrDefaultAsync(u => u.UserName == userName || u.Aliases.Any(a => a.Alias == userName), cancellationToken);
-
-            var verdict = hasher.VerifyHashedPassword(user ?? new UserAccount(), user?.PasswordHash ?? UnknownUserHash, password);
-            return user is not null && verdict != PasswordVerificationResult.Failed ? user : null;
         }
-        catch
+        catch (DbException e)
         {
-            return null;
+            throw new AccountsUnavailableException(e);
         }
+
+        var verdict = hasher.VerifyHashedPassword(user ?? new UserAccount(), user?.PasswordHash ?? UnknownUserHash, password);
+        return user is not null && verdict != PasswordVerificationResult.Failed ? user : null;
     }
 
     /// <summary>Notes that the user is making a request now, unless the last note is recent enough (<see cref="PresenceRules.WriteInterval"/>). Never fails a request.</summary>

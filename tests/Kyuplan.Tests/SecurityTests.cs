@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.TestHost;
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -7,8 +8,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Configuration;
@@ -86,6 +90,103 @@ public sealed class SecurityTests(WebApplicationFactory<Program> factory) : ICla
         await client.SendAsync(Login(AdminName, "wrong password"));
 
         Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(Login(AdminName, AdminPassword))).StatusCode);
+    }
+
+    // --- A login that cannot be checked is not a failed login --------------------------------------------------
+
+    private sealed class OutageException() : DbException("database is gone");
+
+    /// <summary>Makes every command of the accounts database fail while <see cref="Down"/> is set.</summary>
+    private sealed class OutageInterceptor : DbCommandInterceptor
+    {
+        public volatile bool Down;
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result) =>
+            Down ? throw new OutageException() : result;
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default) =>
+            Down ? throw new OutageException() : ValueTask.FromResult(result);
+    }
+
+    [Fact]
+    public async Task A_database_outage_answers_503_and_does_not_count_as_failed_logins()
+    {
+        var outage = new OutageInterceptor();
+        using var host = CreateHost(b =>
+        {
+            b.UseSetting("Api:MaxLoginFailuresPerAddress", "2");
+            b.UseSetting("Api:MaxLoginFailuresPerUser", "2");
+            b.ConfigureTestServices(s => s.ConfigureDbContext<AccountsDbContext>(o => o.AddInterceptors(outage)));
+        });
+        var client = host.CreateClient(); // starts the host: the first administrator is made before the outage
+        outage.Down = true;
+
+        for (var i = 0; i < 5; i++)
+        {
+            var response = await client.SendAsync(Login(AdminName, AdminPassword));
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+            Assert.Empty(response.Headers.WwwAuthenticate); // no login dialog: the password is not the problem
+            Assert.DoesNotContain("database is gone", await response.Content.ReadAsStringAsync());
+        }
+
+        outage.Down = false;
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(Login(AdminName, AdminPassword))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(Login(AdminName, "wrong password"))).StatusCode); // the first real failure
+    }
+
+    private sealed class CountingHasher : IPasswordHasher<UserAccount>
+    {
+        private readonly PasswordHasher<UserAccount> _inner = new();
+
+        public int Verified { get; private set; }
+
+        public string HashPassword(UserAccount user, string password) => _inner.HashPassword(user, password);
+
+        public PasswordVerificationResult VerifyHashedPassword(UserAccount user, string hashedPassword, string providedPassword)
+        {
+            Verified++;
+            return _inner.VerifyHashedPassword(user, hashedPassword, providedPassword);
+        }
+    }
+
+    private async Task<(AccountService Service, CountingHasher Hasher, IServiceScope Scope)> CreateServiceAsync(WebApplicationFactory<Program> host)
+    {
+        await host.CreateClient().GetAsync("/healthz"); // starts the host and makes the administrator
+        var scope = host.Services.CreateScope();
+        var hasher = new CountingHasher();
+        var service = new AccountService(scope.ServiceProvider.GetRequiredService<AccountsDbContext>(), hasher, TimeProvider.System,
+            Options.Create(new AccountsOptions()), NullLogger<AccountService>.Instance);
+        return (service, hasher, scope);
+    }
+
+    [Fact]
+    public async Task A_cancelled_request_is_not_a_failed_login()
+    {
+        using var host = CreateHost();
+        var (service, _, scope) = await CreateServiceAsync(host);
+        using var _ = scope;
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.AuthenticateAsync(AdminName, AdminPassword, cancelled.Token));
+    }
+
+    [Fact]
+    public async Task An_unknown_user_is_still_checked_against_a_hash_and_is_not_found()
+    {
+        using var host = CreateHost();
+        var (service, hasher, scope) = await CreateServiceAsync(host);
+        using var _ = scope;
+
+        Assert.Null(await service.AuthenticateAsync("nobody", AdminPassword, CancellationToken.None));
+        Assert.Equal(1, hasher.Verified);
+
+        Assert.Null(await service.AuthenticateAsync(AdminName, "wrong password", CancellationToken.None));
+        Assert.Equal(2, hasher.Verified);
+
+        Assert.Equal(AdminName, (await service.AuthenticateAsync(AdminName, AdminPassword, CancellationToken.None))?.UserName);
+        Assert.Equal(3, hasher.Verified);
     }
 
     private sealed class ManualTime : TimeProvider

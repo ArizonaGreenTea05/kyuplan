@@ -66,13 +66,15 @@ public sealed record CalendarFeedInputDto(string Name, IReadOnlyList<CalendarSou
 
 /// <param name="Token">The secret part of the address. Whoever knows the address sees the calendar without logging in; a new token (regenerate) makes the old address stop working.</param>
 /// <param name="Url">The address to subscribe to in a calendar app (ICS).</param>
+/// <param name="BrokenSources">Positions in <paramref name="Sources"/> of the sources whose group does not exist any more; the feed leaves them out until somebody fixes or removes them. <c>null</c>/empty = all fine (or not checked).</param>
 public sealed record CalendarFeedDto(
     int Id,
     string Name,
     string Token,
     string Url,
     IReadOnlyList<CalendarSourceDto> Sources,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<int>? BrokenSources = null);
 
 public static class CalendarFeedRules
 {

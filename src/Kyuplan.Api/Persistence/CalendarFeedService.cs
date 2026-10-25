@@ -17,19 +17,24 @@ public sealed class CalendarFeedNotFoundException(int feedId) : Exception($"No c
 /// feed is made on every request from what Spond and the database say now; calendar apps ask again every few hours.
 /// Input is expected to be validated by the endpoints (<see cref="CalendarFeedRules"/>).
 /// </summary>
-public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService statistics, ClubClock clock, TimeProvider time)
+public sealed class CalendarFeedService(
+    PlannerDbContext db, StatisticsService statistics, ClubClock clock, TimeProvider time, ILogger<CalendarFeedService> log)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<IReadOnlyList<CalendarFeedDto>> ListAsync(string baseUrl, CancellationToken cancellationToken)
     {
         var feeds = await db.CalendarFeeds.AsNoTracking().ToListAsync(cancellationToken);
-        return [.. feeds.OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).Select(f => ToDto(f, baseUrl))];
+        var known = feeds.Count == 0 ? null : await KnownGroupIdsAsync(cancellationToken);
+        return [.. feeds.OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).Select(f => ToDto(f, baseUrl, known))];
     }
 
     /// <exception cref="CalendarFeedNotFoundException"/>
-    public async Task<CalendarFeedDto> GetAsync(int feedId, string baseUrl, CancellationToken cancellationToken) =>
-        ToDto(await FindAsync(feedId, cancellationToken), baseUrl);
+    public async Task<CalendarFeedDto> GetAsync(int feedId, string baseUrl, CancellationToken cancellationToken)
+    {
+        var feed = await FindAsync(feedId, cancellationToken);
+        return ToDto(feed, baseUrl, await KnownGroupIdsAsync(cancellationToken));
+    }
 
     /// <exception cref="GroupNotFoundException"/>
     /// <exception cref="InvalidInputException">A subgroup is not one of the group.</exception>
@@ -58,7 +63,7 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
         var feed = await FindAsync(feedId, cancellationToken);
         feed.Token = NewToken();
         await db.SaveChangesAsync(cancellationToken);
-        return ToDto(feed, baseUrl);
+        return ToDto(feed, baseUrl, await KnownGroupIdsAsync(cancellationToken));
     }
 
     public async Task DeleteAsync(int feedId, CancellationToken cancellationToken)
@@ -68,7 +73,10 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>The name and ICS text of the feed with that token, or <c>null</c> when there is none.</summary>
+    /// <summary>
+    /// The name and ICS text of the feed with that token, or <c>null</c> when there is none. A source whose group is gone (the account lost
+    /// access, the group was deleted) is left out and logged, so that the other sources are still delivered: calendar apps drop a feed that answers 404.
+    /// </summary>
     public async Task<(string Name, string Ics)?> RenderAsync(string token, CancellationToken cancellationToken)
     {
         var feed = await db.CalendarFeeds.AsNoTracking().FirstOrDefaultAsync(f => f.Token == token, cancellationToken);
@@ -77,12 +85,23 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
                 System.Text.Encoding.UTF8.GetBytes(feed.Token), System.Text.Encoding.UTF8.GetBytes(token))) return null;
 
         var entries = new List<IcsEntry>();
+        var missing = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var source in ReadSources(feed))
         {
-            entries.AddRange(source.Kind == CalendarSourceKinds.Events
-                ? await EventEntriesAsync(source, cancellationToken)
-                : await MemberDayEntriesAsync(source, cancellationToken));
+            try
+            {
+                entries.AddRange(source.Kind == CalendarSourceKinds.Events
+                    ? await EventEntriesAsync(source, cancellationToken)
+                    : await MemberDayEntriesAsync(source, cancellationToken));
+            }
+            catch (GroupNotFoundException)
+            {
+                missing.Add(source.GroupId);
+            }
         }
+
+        if (missing.Count > 0)
+            log.LogWarning("Calendar feed {Feed}: the groups '{GroupIds}' do not exist any more; their sources are left out.", feed.Name, string.Join("', '", missing));
 
         return (feed.Name, IcsWriter.Write(feed.Name, entries.DistinctBy(e => e.Uid), time.GetUtcNow()));
     }
@@ -211,8 +230,32 @@ public sealed class CalendarFeedService(PlannerDbContext db, StatisticsService s
     private async Task<CalendarFeed> FindAsync(int feedId, CancellationToken cancellationToken) =>
         await db.CalendarFeeds.FirstOrDefaultAsync(f => f.Id == feedId, cancellationToken) ?? throw new CalendarFeedNotFoundException(feedId);
 
-    private static CalendarFeedDto ToDto(CalendarFeed feed, string baseUrl) =>
-        new(feed.Id, feed.Name, feed.Token, $"{baseUrl}/calendar-feeds/{feed.Token}.ics", ReadSources(feed), feed.CreatedAt);
+    /// <summary>
+    /// The ids of the groups the data source has now, or <c>null</c> when it cannot say (e.g. Spond is unreachable): the feed list does not
+    /// depend on Spond being up, so then no source is reported as broken.
+    /// </summary>
+    private async Task<HashSet<string>?> KnownGroupIdsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await statistics.GetGroupsAsync(cancellationToken)).Select(g => g.Id).ToHashSet();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogWarning(ex, "Could not read the groups to check the sources of the calendar feeds.");
+            return null;
+        }
+    }
+
+    /// <param name="knownGroupIds">The groups that exist; <c>null</c> = not checked (no source is reported as broken).</param>
+    private static CalendarFeedDto ToDto(CalendarFeed feed, string baseUrl, HashSet<string>? knownGroupIds = null)
+    {
+        var sources = ReadSources(feed);
+        var broken = knownGroupIds is null
+            ? []
+            : sources.Select((s, i) => (s, i)).Where(x => !knownGroupIds.Contains(x.s.GroupId)).Select(x => x.i).ToList();
+        return new(feed.Id, feed.Name, feed.Token, $"{baseUrl}/calendar-feeds/{feed.Token}.ics", sources, feed.CreatedAt, broken);
+    }
 
     private static List<CalendarSourceDto> ReadSources(CalendarFeed feed) =>
         JsonSerializer.Deserialize<List<CalendarSourceDto>>(feed.SourcesJson, Json) ?? [];

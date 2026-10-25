@@ -39,7 +39,7 @@ public static class CalendarFeedEndpoints
         var feeds = app.MapGroup("/api/calendar-feeds").WithTags("Calendar feeds").RequirePermission(Permission.CalendarFeeds);
 
         feeds.MapGet("/", (HttpRequest request, CalendarFeedService service, CancellationToken ct) => service.ListAsync(BaseUrl(request), ct))
-            .WithSummary("All calendar feeds with their ICS address and sources.");
+            .WithSummary("All calendar feeds with their ICS address and sources; brokenSources lists the positions of the sources whose group does not exist any more (the ICS leaves them out).");
 
         feeds.MapGet("/{id:int}", (int id, HttpRequest request, CalendarFeedService service, CancellationToken ct) => service.GetAsync(id, BaseUrl(request), ct))
             .WithSummary("One calendar feed.");

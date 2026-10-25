@@ -189,6 +189,8 @@ static async Task<WebApplication> BuildAsync(string[] args)
     }));
 
     var app = builder.Build();
+    if (TrustedProxies.NeedsWarning(app.Configuration["FORWARDEDHEADERS_ENABLED"], app.Configuration.GetSection("Api:TrustedProxies").Get<string[]>()))
+        app.Logger.LogWarning("Forwarded headers are enabled but Api:TrustedProxies is empty: only X-Forwarded-* headers from this machine (loopback) are believed. Set Api:TrustedProxies to the address of your reverse proxy, else every visitor looks like the proxy.");
     app.Services.GetRequiredService<SyncStatusTracker>(); // its meter exists from the start, so /metrics lists the sync before the first run
 
     using (var scope = app.Services.CreateScope())

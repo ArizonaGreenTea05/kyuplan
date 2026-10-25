@@ -259,7 +259,8 @@ running); a save that changes nothing does not. A file that is not valid JSON is
 | --- | --- | --- |
 | `AllowedHosts` | `*` (setup proposes your address) | Host names the server answers to, separated by `;`. **Change it when the address changes**, otherwise the site answers `400 Invalid Hostname`. |
 | `Api:AllowInsecureHttp` | `false` | Accept logins over plain HTTP from other machines. Only on a network you trust completely. |
-| `Api:MaxLoginFailuresPerAddress` / `PerUser` / `LoginFailureWindow` | 10 / 30 / 15 min | Lockout after failed logins (`429` for the rest of the window; `0` = no limit). Behind a reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. |
+| `Api:MaxLoginFailuresPerAddress` / `PerUser` / `PerUserAnyAddress` / `LoginFailureWindow` | 10 / 30 / 100 / 15 min | Lockout after failed logins (`429` for the rest of the window; `0` = no limit). `PerUser` does not apply to addresses the user signed in from lately, `PerUserAnyAddress` applies to every address. Behind a reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and the proxy in `Api:TrustedProxies`. |
+| `Api:TrustedProxies` | empty (loopback only) | Reverse proxies (addresses or networks like `172.18.0.0/16`) whose `X-Forwarded-*` headers are believed. Name your proxy when it runs in another container or on another machine; a warning is logged at start when forwarded headers are on and the list is empty. |
 | `Api:ApiKey` | empty | Optional extra header `X-Api-Key` on all `/api` calls. Only an extra layer: anyone who can open the web client can read it from there. |
 | `Api:AllowedOrigins` | `[]` | Only for a web client hosted at another origin (development). Not needed with the integrated one. |
 
@@ -532,7 +533,7 @@ Example: kids' trainings and the kids' birthdays in one calendar.
 }
 ```
 
-The answer carries `url`, e.g. `https://planner.example.org/calendar-feeds/<token>.ics`: that is the address to paste into the calendar app. **It needs no login**, because calendar apps cannot send one: the secret token in the address is the key, so treat the address like a password. `POST /api/calendar-feeds/{id}/regenerate` gives a feed a new token (the old address stops working), deleting the feed ends it. Calendar apps ask again every few hours (the file suggests one); the entries are made from Spond and the member data at each request. Birthdays and anniversaries are written for last year, this year and next year, so the age in the title is right; a member without the date is skipped. Mind who may see a feed: birthdays name members, and with `https` only the address is secret. Requests to the address are limited to 30 per minute per client address (HTTP 429 beyond that), so behind a reverse proxy set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, otherwise all calendar apps count as one client and can lock each other out, and every read and every unknown token is written to the log (category `Kyuplan.Api.CalendarFeedAccess`: feed, client address, user agent).
+The answer carries `url`, e.g. `https://planner.example.org/calendar-feeds/<token>.ics`: that is the address to paste into the calendar app. **It needs no login**, because calendar apps cannot send one: the secret token in the address is the key, so treat the address like a password. `POST /api/calendar-feeds/{id}/regenerate` gives a feed a new token (the old address stops working), deleting the feed ends it. Calendar apps ask again every few hours (the file suggests one); the entries are made from Spond and the member data at each request. Birthdays and anniversaries are written for last year, this year and next year, so the age in the title is right; a member without the date is skipped. Mind who may see a feed: birthdays name members, and with `https` only the address is secret. Requests to the address are limited to 30 per minute per client address (HTTP 429 beyond that), so behind a reverse proxy set `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and `Api:TrustedProxies`, otherwise all calendar apps count as one client and can lock each other out, and every read and every unknown token is written to the log (category `Kyuplan.Api.CalendarFeedAccess`: feed, client address, user agent).
 
 ## Backups
 
@@ -651,10 +652,10 @@ belts of members, exams, comments and users must be entered again).
 - The server shows **names and attendance of members, including children**, and stores their belts, birth dates and comments. Give every
   person their own account and only the permissions their job needs; `comments.view` is the permission that reveals the notes.
 - **Use HTTPS.** The login is HTTP Basic: the password travels with every request. Terminate TLS at a reverse proxy and set
-  `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`. Over plain HTTP the server refuses logins from other machines unless
+  `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and name the proxy in `Api:TrustedProxies` (only it is believed, not your whole LAN). Over plain HTTP the server refuses logins from other machines unless
   `Api:AllowInsecureHttp` is set (trusted networks only).
 - **Lockout**: 10 failed logins from one address, or 30 for one user name, within 15 minutes block that address or name for the rest of the
-  window.
+  window (the owner's usual addresses skip the per-user limit, but not a limit of 100 per name from any address).
 - Responses carry a content security policy and the usual protection headers; requests for host names not in `AllowedHosts` are refused.
 - Passwords are stored as salted, stretched hashes; the Spond password in `settings.json` is encrypted with a key in `keys/`.
 - Comments are never rendered as HTML, so nothing a user types can inject anything.

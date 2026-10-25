@@ -138,7 +138,8 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | `Setup:SettingsFile` | `data/settings.json` | The file the web client's setup and settings page write to; read on top of `appsettings.json`, below environment variables and the command line. Relative to the API's content root; in the container it is `/data/settings.json`. |
 | `Api:ApiKey` | empty | If set, `/api` requests need an `X-Api-Key` header **in addition to** the login. Optional; it keeps nobody out who can open the Blazor site, whose files contain it. |
 | `Api:AllowInsecureHttp` | `false` | Take logins over plain HTTP from other machines too. Otherwise only HTTPS (or this machine) is served. |
-| `Api:MaxLoginFailuresPerAddress`, `Api:MaxLoginFailuresPerUser`, `Api:LoginFailureWindow` | `10`, `30`, `00:15:00` | Lockout after failed logins (0 = no limit). |
+| `Api:MaxLoginFailuresPerAddress`, `Api:MaxLoginFailuresPerUser`, `Api:MaxLoginFailuresPerUserAnyAddress`, `Api:LoginFailureWindow` | `10`, `30`, `100`, `00:15:00` | Lockout after failed logins (0 = no limit). The per-user limit skips addresses the user signed in from; the any-address limit does not. |
+| `Api:TrustedProxies` | `[]` (loopback only) | Reverse proxies whose `X-Forwarded-*` headers are believed when `ASPNETCORE_FORWARDEDHEADERS_ENABLED` is on (addresses or networks). Name a proxy that runs in another container or on another machine. |
 | `AllowedHosts` | `*` (the first start proposes the address in use) | Host names the API answers to, separated by `;`. |
 | `Setup:KeyDirectory` | `keys` next to the settings file | Where the key for the encrypted passwords in the settings file lives. |
 | `Api:AllowedOrigins` | `[]` (dev: the Blazor dev URLs) | Browser origins allowed to call the API (CORS, with credentials, so that the browser may send its login). |
@@ -566,7 +567,7 @@ formats the slot is meant for (for the logos SVG, PNG, JPEG, GIF and BMP: what b
   Over plain HTTP the API refuses logins from other machines (`Api:AllowInsecureHttp` lifts that, on a network you trust only).
   Failed logins are counted: `Api:MaxLoginFailuresPerAddress` (10) from one address or `Api:MaxLoginFailuresPerUser` (30) as one
   user within `Api:LoginFailureWindow` (15 minutes) lock that address or name out for the rest of the window (answer 429; behind a
-  reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true`, else every visitor looks like the proxy). The Spond passwords in
+  reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and `Api:TrustedProxies`, else every visitor looks like the proxy). The Spond passwords in
   `settings.json` are encrypted; the key lives in `Setup:KeyDirectory` (default: `keys` next to the settings file, so keep that folder
   out of the data backups, e.g. a separate volume). Every response carries a content security policy and the usual browser protection
   headers. Requests for a host name other than `AllowedHosts` (asked on the first start, changeable on the settings page) are refused.

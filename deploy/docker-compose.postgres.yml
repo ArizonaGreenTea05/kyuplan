@@ -29,6 +29,8 @@ services:
       Accounts__ConnectionString: "Host=db;Database=kyuplan;Username=kyuplan;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the file .env}"
       # More settings (Spond login, reverse proxy, branding, ...): see docker-compose.yml.
       # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # Api__TrustedProxies__0: "172.18.0.0/16"   # the proxy's address or network: only it (and this machine) is believed, not the whole LAN
+      # (A proxy on this host that uses the published port reaches the container as the gateway of its Docker network, e.g. 172.18.0.1, not as 127.0.0.1: name that.)
 
   db:
     # 17 keeps its files in /var/lib/postgresql/data. Updating to another major version needs a dump and restore (docs/deployment.md).

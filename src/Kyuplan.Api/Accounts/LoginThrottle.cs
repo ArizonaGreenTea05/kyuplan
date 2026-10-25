@@ -7,6 +7,7 @@ namespace Kyuplan.Api.Accounts;
 /// <summary>
 /// Slows down guessing of passwords: failed logins are counted per network address and per user name within a window, and once a count is
 /// reached, further logins from that address (or as that user) are refused until the window has passed, whatever password they bring.
+/// The user's limit skips the addresses the user signed in from; a second, higher one (<c>MaxLoginFailuresPerUserAnyAddress</c>) does not, so a forged address cannot give unlimited guesses.
 /// The counts live in memory (they start over with the API, which is fine for a window of minutes). Behind a reverse proxy the address is only
 /// the real one when the proxy's forwarded headers are switched on (<c>ASPNETCORE_FORWARDEDHEADERS_ENABLED</c>).
 /// </summary>
@@ -29,8 +30,12 @@ public sealed class LoginThrottle(IOptions<ApiSecurityOptions> options, TimeProv
         // The lock of a user name does not keep out the user themself: whoever types a name wrong 30 times must not be able to lock its owner out.
         // An address the owner signed in from lately is let through (the lock of the address still counts).
         var userWait = IsKnown(address, userName) ? null : Wait(UserKey(userName), settings.MaxLoginFailuresPerUser, settings);
-        return wait is null ? userWait : userWait is null ? wait : wait > userWait ? wait : userWait;
+        // ...but not without end: a forged or rotating address (see TrustedProxies) must not turn the known addresses into unlimited guesses.
+        var anyAddressWait = Wait(UserKey(userName), settings.MaxLoginFailuresPerUserAnyAddress, settings);
+        return Longest(Longest(wait, userWait), anyAddressWait);
     }
+
+    private static TimeSpan? Longest(TimeSpan? a, TimeSpan? b) => a is null ? b : b is null ? a : a > b ? a : b;
 
     /// <summary>A login worked: this address is remembered as the user's.</summary>
     public void Succeeded(string? address, string userName)

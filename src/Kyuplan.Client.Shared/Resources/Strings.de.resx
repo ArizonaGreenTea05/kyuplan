@@ -3019,6 +3019,9 @@
   <data name="CalendarFeeds_Deleted" xml:space="preserve">
     <value>Kalender „{0}“ gelöscht.</value>
   </data>
+  <data name="CalendarFeeds_SourceBroken" xml:space="preserve">
+    <value>⚠ {0}: Gruppe existiert nicht mehr – Quelle wird im Kalender ausgelassen</value>
+  </data>
   <data name="CalendarFeeds_Regenerated" xml:space="preserve">
     <value>„{0}“ hat eine neue Adresse.</value>
   </data>

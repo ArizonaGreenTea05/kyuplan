@@ -272,6 +272,187 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal("Kids", Assert.Single(feed.Sources).SubGroupLabels!["sg-kids"]);
     }
 
+    /// <summary>A feed whose sources are stored as they are, i.e. without the check of the endpoints: this is how a group that vanished later looks.</summary>
+    private static async Task<CalendarFeed> StoreFeedAsync(WebApplicationFactory<Program> host, string name, params CalendarSourceDto[] sources)
+    {
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
+        var feed = new CalendarFeed
+        {
+            Name = name,
+            Token = $"token-{name}".Replace(' ', '-'),
+            SourcesJson = System.Text.Json.JsonSerializer.Serialize(sources, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)),
+            CreatedAt = PinnedNow,
+        };
+        db.CalendarFeeds.Add(feed);
+        await db.SaveChangesAsync();
+        return feed;
+    }
+
+    private static string PathOf(CalendarFeed feed) => $"http://localhost/calendar-feeds/{feed.Token}.ics";
+
+    [Fact]
+    public async Task A_source_whose_group_is_gone_is_left_out_and_the_other_sources_are_still_delivered()
+    {
+        var log = new List<string>();
+        using var host = CreateHost().WithWebHostBuilder(builder => builder.ConfigureLogging(logging => logging.AddProvider(new ListLoggerProvider(log))));
+        var healthy = await CreateAsync(host.CreateSignedInClient(), "Healthy", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var stale = await StoreFeedAsync(host, "Stale",
+            new CalendarSourceDto(CalendarSourceKinds.Events, "gone"),
+            new CalendarSourceDto(CalendarSourceKinds.Birthdays, "gone"),
+            new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var client = host.CreateClient();
+
+        var ics = await IcsAsync(client, PathOf(stale));
+
+        var expected = Count(await IcsAsync(client, healthy.Url), "BEGIN:VEVENT");
+        Assert.True(expected > 0);
+        Assert.Equal(expected, Count(ics, "BEGIN:VEVENT"));
+        Assert.Equal(Count(ics, "BEGIN:VEVENT"), Count(ics, "END:VEVENT"));
+        lock (log)
+        {
+            Assert.Single(log, l => l.Contains("'gone'") && l.Contains("Stale")); // once per render, however many sources are left out
+        }
+    }
+
+    [Fact]
+    public async Task A_feed_whose_groups_are_all_gone_is_an_empty_calendar_not_a_404()
+    {
+        using var host = CreateHost();
+        var stale = await StoreFeedAsync(host, "All gone", new CalendarSourceDto(CalendarSourceKinds.Events, "gone"), new CalendarSourceDto(CalendarSourceKinds.BeltAnniversaries, "also-gone"));
+
+        var ics = await IcsAsync(host.CreateClient(), PathOf(stale));
+
+        Assert.StartsWith("BEGIN:VCALENDAR\r\n", ics);
+        Assert.EndsWith("END:VCALENDAR\r\n", ics);
+        Assert.Contains("X-WR-CALNAME:All gone", ics);
+        Assert.Equal(0, Count(ics, "BEGIN:VEVENT"));
+    }
+
+    [Fact]
+    public async Task The_feed_list_names_the_sources_whose_group_is_gone()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var fine = await CreateAsync(admin, "Fine", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        Assert.Empty(fine.BrokenSources ?? []);
+        var stale = await StoreFeedAsync(host, "Stale",
+            new CalendarSourceDto(CalendarSourceKinds.Events, Group),
+            new CalendarSourceDto(CalendarSourceKinds.Birthdays, "gone"),
+            new CalendarSourceDto(CalendarSourceKinds.Events, "gone"));
+
+        var list = (await admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds"))!;
+        var one = (await admin.GetFromJsonAsync<CalendarFeedDto>($"/api/calendar-feeds/{stale.Id}"))!;
+        var renewed = (await (await admin.PostAsync($"/api/calendar-feeds/{stale.Id}/regenerate", null)).Content.ReadFromJsonAsync<CalendarFeedDto>())!;
+
+        Assert.Empty(list.Single(f => f.Name == "Fine").BrokenSources ?? []);
+        Assert.Equal([1, 2], list.Single(f => f.Name == "Stale").BrokenSources);
+        Assert.Equal([1, 2], one.BrokenSources);
+        Assert.Equal([1, 2], renewed.BrokenSources);
+    }
+
+    [Fact]
+    public async Task The_api_client_reads_the_broken_sources()
+    {
+        using var host = CreateHost();
+        var stale = await StoreFeedAsync(host, "Stale",
+            new CalendarSourceDto(CalendarSourceKinds.Events, Group),
+            new CalendarSourceDto(CalendarSourceKinds.Events, "gone"));
+        var api = new Kyuplan.Client.Api.PlannerApiClient(host.CreateSignedInClient());
+
+        var feed = Assert.Single(await api.GetCalendarFeedsAsync());
+
+        Assert.Equal(stale.Id, feed.Id);
+        Assert.Equal([1], feed.BrokenSources);
+    }
+
+    [Fact]
+    public async Task Fixing_the_group_of_a_broken_source_makes_it_whole_again()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var stale = await StoreFeedAsync(host, "Stale", new CalendarSourceDto(CalendarSourceKinds.Events, "gone"));
+
+        var response = await admin.PutAsJsonAsync($"/api/calendar-feeds/{stale.Id}", new CalendarFeedInputDto("Stale", [new CalendarSourceDto(CalendarSourceKinds.Events, Group)]));
+
+        response.EnsureSuccessStatusCode();
+        Assert.Empty((await response.Content.ReadFromJsonAsync<CalendarFeedDto>())!.BrokenSources ?? []);
+        Assert.Empty((await admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds"))!.Single().BrokenSources ?? []);
+        Assert.True(Count(await IcsAsync(host.CreateClient(), PathOf(stale)), "BEGIN:VEVENT") > 0);
+    }
+
+    private sealed class UnreachableSource : Kyuplan.Api.Spond.IDataSource
+    {
+        public bool IsDemo => false;
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
+            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
+            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+
+        public void InvalidateCache()
+        {
+        }
+    }
+
+    [Fact]
+    public async Task The_feed_list_still_works_when_the_data_source_is_unreachable()
+    {
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(s => s.AddSingleton<Kyuplan.Api.Spond.IDataSource>(new UnreachableSource())));
+        var stale = await StoreFeedAsync(host, "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var admin = host.CreateSignedInClient();
+
+        var list = (await admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds"))!;
+
+        Assert.Empty(Assert.Single(list).BrokenSources ?? []);
+        // A source that is down is no stale group: the feed answers 503 (calendar apps retry), not a 404 and not an empty calendar.
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, (await host.CreateClient().GetAsync(PathOf(stale))).StatusCode);
+    }
+
+    private sealed class HangingSource : Kyuplan.Api.Spond.IDataSource
+    {
+        public TaskCompletionSource<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> Groups { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool IsDemo => false;
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) => Groups.Task;
+
+        public Task<IReadOnlyList<Kyuplan.Api.Domain.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
+            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+
+        public void InvalidateCache()
+        {
+        }
+    }
+
+    [Fact]
+    public async Task The_feed_list_does_not_wait_for_a_slow_data_source()
+    {
+        var source = new HangingSource();
+        using var host = CreateHost().WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(s => s.AddSingleton<Kyuplan.Api.Spond.IDataSource>(source)));
+        await StoreFeedAsync(host, "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var admin = host.CreateSignedInClient();
+
+        var request = admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds");
+        // The wait is on the fake clock: move it on until the request has registered its timeout.
+        for (var i = 0; i < 500 && !request.IsCompleted; i++)
+        {
+            _time.Advance(CalendarFeedService.GroupCheckTimeout + TimeSpan.FromSeconds(1));
+            await Task.Delay(10);
+        }
+
+        Assert.True(request.IsCompleted, "the feed list waits for the data source");
+        Assert.Empty(Assert.Single((await request)!).BrokenSources ?? []);
+
+        // A load that finishes later (or fails) after the answer is gone must not blow up anything.
+        source.Groups.SetException(new Kyuplan.Api.Spond.SpondUnavailableException("down"));
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+    }
+
     [Fact]
     public void Ics_lines_are_folded_at_75_octets_without_cutting_a_character()
     {

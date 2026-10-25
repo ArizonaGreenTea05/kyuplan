@@ -18,9 +18,12 @@ public sealed class CalendarFeedRow(CalendarFeedDto feed, IReadOnlyList<GroupDto
     /// <summary>The address to give to calendar apps.</summary>
     public string Url => feed.Url;
 
-    /// <summary>"Events (Dojo), Birthdays (Dojo)": the kind of each source and its group.</summary>
-    public string SourcesText => string.Join(", ", feed.Sources.Select(s =>
-        $"{FeedSourceEditor.KindChoices.FirstOrDefault(k => k.Value == s.Kind)?.Text ?? s.Kind} ({groups.FirstOrDefault(g => g.Id == s.GroupId)?.Name ?? s.GroupId})"));
+    /// <summary>"Events (Dojo), Birthdays (Dojo)": the kind of each source and its group; a source whose group is gone gets a warning.</summary>
+    public string SourcesText => string.Join(", ", feed.Sources.Select((s, i) =>
+    {
+        var text = $"{FeedSourceEditor.KindChoices.FirstOrDefault(k => k.Value == s.Kind)?.Text ?? s.Kind} ({groups.FirstOrDefault(g => g.Id == s.GroupId)?.Name ?? s.GroupId})";
+        return feed.BrokenSources?.Contains(i) == true ? string.Format(Strings.CalendarFeeds_SourceBroken, text) : text;
+    }));
 
     public void Refresh() => OnPropertyChanged(string.Empty);
 }

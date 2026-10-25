@@ -46,6 +46,33 @@ public sealed class CalendarFeedsViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task A_source_whose_group_is_gone_is_marked_in_the_list_in_both_languages()
+    {
+        _api.CalendarFeeds.Add(new CalendarFeedDto(1, "Kids", "t", "u",
+            [new CalendarSourceDto(CalendarSourceKinds.Events, "g1"), new CalendarSourceDto(CalendarSourceKinds.Birthdays, "gone")],
+            DateTimeOffset.UnixEpoch, [1]));
+        await _vm.ActivateAsync();
+        var row = Assert.Single(_vm.Feeds);
+
+        Assert.Equal("Events (Dojo), ⚠ Birthdays (gone): group no longer exists – source is left out of the calendar", row.SourcesText);
+
+        _language.Select("de");
+        Assert.EndsWith(": Gruppe existiert nicht mehr – Quelle wird im Kalender ausgelassen", row.SourcesText);
+        Assert.Contains("⚠", row.SourcesText);
+    }
+
+    [Fact]
+    public async Task Sources_are_not_marked_when_no_position_is_reported_or_it_is_out_of_range()
+    {
+        _api.CalendarFeeds.Add(new CalendarFeedDto(1, "A", "t", "u", [new CalendarSourceDto(CalendarSourceKinds.Events, "g1")], DateTimeOffset.UnixEpoch, null));
+        _api.CalendarFeeds.Add(new CalendarFeedDto(2, "B", "t2", "u2", [new CalendarSourceDto(CalendarSourceKinds.Events, "g1")], DateTimeOffset.UnixEpoch, [5, -1]));
+
+        await _vm.ActivateAsync();
+
+        Assert.All(_vm.Feeds, f => Assert.Equal("Events (Dojo)", f.SourcesText));
+    }
+
+    [Fact]
     public async Task A_feed_is_made_from_sources_with_the_ticked_subgroups_and_members()
     {
         var anna = _api.AddMember("Anna");

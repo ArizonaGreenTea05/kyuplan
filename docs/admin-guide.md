@@ -676,6 +676,7 @@ belts of members, exams, comments and users must be entered again).
 | `400 Invalid Hostname` | `AllowedHosts` does not contain the address in use. Fix it (environment variable, or the Settings page if you can still reach it). |
 | `400 HTTPS required` | Plain HTTP from another machine. Use HTTPS via a proxy (and the forwarded-headers variable), or `Api__AllowInsecureHttp=true` on a trusted network. |
 | `429` on login | Lockout after failed logins; wait out the window. Behind a proxy without forwarded headers *every* visitor counts as one address. |
+| `503` on login | The accounts database cannot be read (down, locked, failing over). It is not a failed login and does not count towards the lockout; check the database and the log. |
 | A user sees no pages | They have no role. Give them one (Users page, needs `users.grant`). |
 | A setting "does not stick" | It is pinned by an environment variable or the command line; the page cannot override it. |
 | Branding looks different from the settings | The branding saved on the Branding page applies instead; use *Back to the settings of the API*. |

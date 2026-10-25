@@ -567,7 +567,7 @@ formats the slot is meant for (for the logos SVG, PNG, JPEG, GIF and BMP: what b
   Over plain HTTP the API refuses logins from other machines (`Api:AllowInsecureHttp` lifts that, on a network you trust only).
   Failed logins are counted: `Api:MaxLoginFailuresPerAddress` (10) from one address or `Api:MaxLoginFailuresPerUser` (30) as one
   user within `Api:LoginFailureWindow` (15 minutes) lock that address or name out for the rest of the window (answer 429; behind a
-  reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and `Api:TrustedProxies`, else every visitor looks like the proxy). The Spond passwords in
+  reverse proxy this needs `ASPNETCORE_FORWARDEDHEADERS_ENABLED=true` and `Api:TrustedProxies`, else every visitor looks like the proxy). A login that cannot be checked because the accounts database is unreachable answers 503 and a request the client aborted answers nothing: neither counts as a failed login. The Spond passwords in
   `settings.json` are encrypted; the key lives in `Setup:KeyDirectory` (default: `keys` next to the settings file, so keep that folder
   out of the data backups, e.g. a separate volume). Every response carries a content security policy and the usual browser protection
   headers. Requests for a host name other than `AllowedHosts` (asked on the first start, changeable on the settings page) are refused.

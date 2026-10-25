@@ -152,7 +152,7 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Token")
+                    b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -162,7 +162,7 @@ namespace Kyuplan.Api.Persistence.PostgresMigrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.HasIndex("Token")
+                    b.HasIndex("TokenHash")
                         .IsUnique();
 
                     b.ToTable("CalendarFeeds");

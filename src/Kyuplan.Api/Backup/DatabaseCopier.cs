@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Kyuplan.Api.Persistence;
 
 namespace Kyuplan.Api.Backup;
 
@@ -117,6 +118,11 @@ internal static class DatabaseCopier
 
     private static object? Convert(JsonObject row, IProperty property)
     {
+        // Backups made before the calendar feed tokens were hashed call the column "Token" and hold the token itself;
+        // BackupService.RestoreAsync hashes it right after the rows are in (CalendarFeedService.HashLegacyTokensAsync).
+        if (property.DeclaringType.ClrType == typeof(CalendarFeed) && property.Name == nameof(CalendarFeed.TokenHash) && !row.ContainsKey(property.Name))
+            row = new JsonObject { [property.Name] = row["Token"]?.DeepClone() };
+
         if (!row.TryGetPropertyValue(property.Name, out var node) || node is null)
             return property.ClrType.IsValueType && Nullable.GetUnderlyingType(property.ClrType) is null ? Activator.CreateInstance(property.ClrType) : null;
 

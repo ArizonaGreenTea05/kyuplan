@@ -284,7 +284,7 @@ public sealed class EventTrainerTests
                 [new CalendarSourceDto(CalendarSourceKinds.Events, group.Id, MemberIds: memberIds, Invitation: invitation)]));
             response.EnsureSuccessStatusCode();
             var feed = (await response.Content.ReadFromJsonAsync<CalendarFeedDto>())!;
-            var ics = await factory.CreateClient().GetStringAsync(new Uri(feed.Url).PathAndQuery);
+            var ics = await factory.CreateClient().GetStringAsync(new Uri(feed.Url!).PathAndQuery);
             return ics.Split("BEGIN:VEVENT").Length - 1;
         }
 

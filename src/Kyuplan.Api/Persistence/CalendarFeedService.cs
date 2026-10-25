@@ -25,48 +25,51 @@ public sealed class CalendarFeedService(
     /// <summary>How long the feed list waits for the groups before it shows the feeds without the check for broken sources.</summary>
     internal static readonly TimeSpan GroupCheckTimeout = TimeSpan.FromSeconds(3);
 
-    public async Task<IReadOnlyList<CalendarFeedDto>> ListAsync(string baseUrl, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CalendarFeedDto>> ListAsync(CancellationToken cancellationToken)
     {
         var feeds = await db.CalendarFeeds.AsNoTracking().ToListAsync(cancellationToken);
         var known = feeds.Count == 0 ? null : await KnownGroupIdsAsync(cancellationToken);
-        return [.. feeds.OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).Select(f => ToDto(f, baseUrl, known))];
+        return [.. feeds.OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase).Select(f => ToDto(f, known))];
     }
 
     /// <exception cref="CalendarFeedNotFoundException"/>
-    public async Task<CalendarFeedDto> GetAsync(int feedId, string baseUrl, CancellationToken cancellationToken)
+    public async Task<CalendarFeedDto> GetAsync(int feedId, CancellationToken cancellationToken)
     {
         var feed = await FindAsync(feedId, cancellationToken);
-        return ToDto(feed, baseUrl, await KnownGroupIdsAsync(cancellationToken));
+        return ToDto(feed, await KnownGroupIdsAsync(cancellationToken));
     }
 
+    /// <summary>Makes the feed; the answer is the only time its address (<see cref="CalendarFeedDto.Url"/>) is told.</summary>
     /// <exception cref="GroupNotFoundException"/>
     /// <exception cref="InvalidInputException">A subgroup is not one of the group.</exception>
     /// <exception cref="AlreadyExistsException">Another feed has the name.</exception>
     public async Task<CalendarFeedDto> CreateAsync(CalendarFeedInputDto input, string baseUrl, CancellationToken cancellationToken)
     {
-        var feed = new CalendarFeed { Token = NewToken(), CreatedAt = time.GetUtcNow() };
+        var token = NewToken();
+        var feed = new CalendarFeed { TokenHash = HashToken(token), CreatedAt = time.GetUtcNow() };
         await ApplyAsync(feed, input, cancellationToken);
         db.CalendarFeeds.Add(feed);
         await db.SaveChangesAsync(cancellationToken);
-        return ToDto(feed, baseUrl);
+        return ToDto(feed, null, AddressOf(baseUrl, token));
     }
 
-    /// <summary>Replaces the name and the sources; the address stays.</summary>
-    public async Task<CalendarFeedDto> UpdateAsync(int feedId, CalendarFeedInputDto input, string baseUrl, CancellationToken cancellationToken)
+    /// <summary>Replaces the name and the sources; the address stays (and is not told again).</summary>
+    public async Task<CalendarFeedDto> UpdateAsync(int feedId, CalendarFeedInputDto input, CancellationToken cancellationToken)
     {
         var feed = await FindAsync(feedId, cancellationToken);
         await ApplyAsync(feed, input, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        return ToDto(feed, baseUrl);
+        return ToDto(feed);
     }
 
-    /// <summary>Gives the feed a new secret: the old address stops working, e.g. because it got to somebody it should not have.</summary>
+    /// <summary>Gives the feed a new secret: the old address stops working, e.g. because it got to somebody it should not have. The answer is the only time the new address is told.</summary>
     public async Task<CalendarFeedDto> RegenerateTokenAsync(int feedId, string baseUrl, CancellationToken cancellationToken)
     {
         var feed = await FindAsync(feedId, cancellationToken);
-        feed.Token = NewToken();
+        var token = NewToken();
+        feed.TokenHash = HashToken(token);
         await db.SaveChangesAsync(cancellationToken);
-        return ToDto(feed, baseUrl, await KnownGroupIdsAsync(cancellationToken));
+        return ToDto(feed, await KnownGroupIdsAsync(cancellationToken), AddressOf(baseUrl, token));
     }
 
     public async Task DeleteAsync(int feedId, CancellationToken cancellationToken)
@@ -82,10 +85,11 @@ public sealed class CalendarFeedService(
     /// </summary>
     public async Task<(string Name, string Ics)?> RenderAsync(string token, CancellationToken cancellationToken)
     {
-        var feed = await db.CalendarFeeds.AsNoTracking().FirstOrDefaultAsync(f => f.Token == token, cancellationToken);
-        // The database may compare case-insensitively (collation); this exact, constant-time check makes sure only the precise token matches.
+        var hash = HashToken(token);
+        var feed = await db.CalendarFeeds.AsNoTracking().FirstOrDefaultAsync(f => f.TokenHash == hash, cancellationToken);
+        // The database may compare case-insensitively (collation); this exact, constant-time check makes sure only the precise hash matches.
         if (feed is null || !CryptographicOperations.FixedTimeEquals(
-                System.Text.Encoding.UTF8.GetBytes(feed.Token), System.Text.Encoding.UTF8.GetBytes(token))) return null;
+                System.Text.Encoding.UTF8.GetBytes(feed.TokenHash), System.Text.Encoding.UTF8.GetBytes(hash))) return null;
 
         var entries = new List<IcsEntry>();
         var missing = new SortedSet<string>(StringComparer.Ordinal);
@@ -260,13 +264,14 @@ public sealed class CalendarFeedService(
     }
 
     /// <param name="knownGroupIds">The groups that exist; <c>null</c> = not checked (no source is reported as broken).</param>
-    private static CalendarFeedDto ToDto(CalendarFeed feed, string baseUrl, HashSet<string>? knownGroupIds = null)
+    /// <param name="url">The address, only while the secret is known (right after it was made).</param>
+    private static CalendarFeedDto ToDto(CalendarFeed feed, HashSet<string>? knownGroupIds = null, string? url = null)
     {
         var sources = ReadSources(feed);
         var broken = knownGroupIds is null
             ? []
             : sources.Select((s, i) => (s, i)).Where(x => !knownGroupIds.Contains(x.s.GroupId)).Select(x => x.i).ToList();
-        return new(feed.Id, feed.Name, feed.Token, $"{baseUrl}/calendar-feeds/{feed.Token}.ics", sources, feed.CreatedAt, broken);
+        return new(feed.Id, feed.Name, url, sources, feed.CreatedAt, broken);
     }
 
     private static List<CalendarSourceDto> ReadSources(CalendarFeed feed) =>
@@ -291,4 +296,26 @@ public sealed class CalendarFeedService(
         string.IsNullOrWhiteSpace(text) ? [] : text.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static string NewToken() => Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(32));
+
+    private static string AddressOf(string baseUrl, string token) => $"{baseUrl}/calendar-feeds/{token}.ics";
+
+    private const int HashLength = 64;
+
+    /// <summary>
+    /// What is stored of a token: SHA-256 as 64 lower-case hex characters. A fast hash is enough because the token is 256 random bits, which
+    /// cannot be guessed or looked up in a table; the database, a backup or a mirror therefore does not hold anything that opens a feed.
+    /// </summary>
+    public static string HashToken(string token) => Convert.ToHexStringLower(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
+
+    /// <summary>
+    /// Feeds made before the tokens were hashed (or restored from a backup of those) still hold the token itself (43 characters, a hash has 64):
+    /// hashes them, so that their addresses go on working and the secret is gone from the database. Returns how many were converted.
+    /// </summary>
+    public static async Task<int> HashLegacyTokensAsync(PlannerDbContext db, CancellationToken cancellationToken)
+    {
+        var legacy = await db.CalendarFeeds.Where(f => f.TokenHash.Length != HashLength).ToListAsync(cancellationToken);
+        foreach (var feed in legacy) feed.TokenHash = HashToken(feed.TokenHash);
+        await db.SaveChangesAsync(cancellationToken);
+        return legacy.Count;
+    }
 }

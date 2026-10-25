@@ -200,6 +200,8 @@ static async Task<WebApplication> BuildAsync(string[] args)
 
         var planner = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
         var plannerIsNew = await planner.EnsureUpToDateAsync(CancellationToken.None);
+        if (await CalendarFeedService.HashLegacyTokensAsync(planner, CancellationToken.None) is > 0 and var hashed)
+            app.Logger.LogInformation("The addresses of {Count} calendar feeds were stored in clear text; only their hashes are kept now.", hashed);
         var accounts = scope.ServiceProvider.GetRequiredService<AccountsDbContext>();
         var accountsIsNew = await accounts.EnsureUpToDateAsync(CancellationToken.None);
 

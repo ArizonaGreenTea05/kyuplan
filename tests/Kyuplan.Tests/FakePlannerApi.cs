@@ -1416,8 +1416,8 @@ internal sealed class FakePlannerApi : IPlannerApi
             FeedCalls.Add($"create-feed:{feed.Name}");
             FeedInputs.Add(feed);
             var id = _nextId++;
-            var created = new CalendarFeedDto(id, feed.Name, $"token{id}", $"https://x/calendar-feeds/token{id}.ics", feed.Sources, Now);
-            CalendarFeeds.Add(created);
+            var created = new CalendarFeedDto(id, feed.Name, $"https://x/calendar-feeds/token{id}.ics", feed.Sources, Now);
+            CalendarFeeds.Add(created with { Url = null }); // the server tells the address only in this answer
             return created;
         });
 
@@ -1438,7 +1438,8 @@ internal sealed class FakePlannerApi : IPlannerApi
             var index = CalendarFeeds.FindIndex(f => f.Id == feedId);
             if (index < 0) throw NotFound();
             var token = $"new{_nextId++}";
-            return CalendarFeeds[index] = CalendarFeeds[index] with { Token = token, Url = $"https://x/calendar-feeds/{token}.ics" };
+            CalendarFeeds[index] = CalendarFeeds[index] with { Url = null };
+            return CalendarFeeds[index] with { Url = $"https://x/calendar-feeds/{token}.ics" };
         });
 
     public Task DeleteCalendarFeedAsync(int feedId, CancellationToken cancellationToken = default) =>

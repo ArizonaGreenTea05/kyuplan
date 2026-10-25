@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -65,7 +66,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         using var host = CreateHost();
         var feed = await CreateAsync(host.CreateSignedInClient(), "Everything", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
 
-        var ics = await IcsAsync(host.CreateClient(), feed.Url);
+        var ics = await IcsAsync(host.CreateClient(), feed.Url!);
 
         Assert.StartsWith("BEGIN:VCALENDAR\r\n", ics);
         Assert.EndsWith("END:VCALENDAR\r\n", ics);
@@ -88,12 +89,12 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         var labelled = await CreateAsync(admin, "Labelled", new CalendarSourceDto(CalendarSourceKinds.Events, Group, Label: "Dojo"));
 
         var client = host.CreateClient();
-        var all = Count(await IcsAsync(client, anyone.Url), "BEGIN:VEVENT");
+        var all = Count(await IcsAsync(client, anyone.Url!), "BEGIN:VEVENT");
 
-        Assert.InRange(Count(await IcsAsync(client, kids.Url), "BEGIN:VEVENT"), 1, all);
-        Assert.True(Count(await IcsAsync(client, onlyKids.Url), "BEGIN:VEVENT") <= Count(await IcsAsync(client, kids.Url), "BEGIN:VEVENT"));
-        Assert.Equal(0, Count(await IcsAsync(client, none.Url), "BEGIN:VEVENT"));
-        Assert.Contains("SUMMARY:Dojo: ", await IcsAsync(client, labelled.Url));
+        Assert.InRange(Count(await IcsAsync(client, kids.Url!), "BEGIN:VEVENT"), 1, all);
+        Assert.True(Count(await IcsAsync(client, onlyKids.Url!), "BEGIN:VEVENT") <= Count(await IcsAsync(client, kids.Url!), "BEGIN:VEVENT"));
+        Assert.Equal(0, Count(await IcsAsync(client, none.Url!), "BEGIN:VEVENT"));
+        Assert.Contains("SUMMARY:Dojo: ", await IcsAsync(client, labelled.Url!));
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         }
 
         var feed = await CreateAsync(host.CreateSignedInClient(), "Birthdays", new CalendarSourceDto(CalendarSourceKinds.Birthdays, Group));
-        var ics = await IcsAsync(host.CreateClient(), feed.Url);
+        var ics = await IcsAsync(host.CreateClient(), feed.Url!);
 
         Assert.Equal(3, Count(ics, "BEGIN:VEVENT")); // the year before, this year and the next
         Assert.Contains("DTSTART;VALUE=DATE:20250228", ics);
@@ -128,7 +129,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
             builder.ConfigureLogging(logging => logging.AddProvider(new ListLoggerProvider(log))));
         var feed = await CreateAsync(host.CreateSignedInClient(), "Logged", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
         var client = host.CreateClient();
-        var path = new Uri(feed.Url).PathAndQuery;
+        var path = new Uri(feed.Url!).PathAndQuery;
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(path)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/calendar-feeds/nope.ics")).StatusCode);
@@ -166,7 +167,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         });
         var feed = await CreateAsync(host.CreateSignedInClient(), "Shared", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
         var client = host.CreateClient();
-        var path = new Uri(feed.Url).PathAndQuery;
+        var path = new Uri(feed.Url!).PathAndQuery;
 
         async Task<HttpStatusCode> GetAs(string ip)
         {
@@ -201,6 +202,13 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         }
     }
 
+    /// <summary>The secret in the address of a feed (the answer of creating or regenerating).</summary>
+    internal static string TokenOf(CalendarFeedDto feed)
+    {
+        var name = new Uri(feed.Url!).Segments[^1];
+        return name[..^".ics".Length];
+    }
+
     [Fact]
     public async Task Tokens_are_long_unique_url_safe_and_only_the_exact_token_opens_a_feed()
     {
@@ -210,18 +218,19 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         var first = await CreateAsync(admin, "One", source);
         var second = await CreateAsync(admin, "Two", source);
 
-        Assert.NotEqual(first.Token, second.Token);
-        Assert.All(new[] { first.Token, second.Token }, t =>
+        var (firstToken, secondToken) = (TokenOf(first), TokenOf(second));
+        Assert.NotEqual(firstToken, secondToken);
+        Assert.All(new[] { firstToken, secondToken }, t =>
         {
             Assert.True(t.Length >= 43, "256 bits need 43 base64url characters");
             Assert.Matches("^[A-Za-z0-9_-]+$", t);
         });
 
         var client = host.CreateClient();
-        var swapped = new string(first.Token.Select(c => char.IsUpper(c) ? char.ToLowerInvariant(c) : char.ToUpperInvariant(c)).ToArray());
-        foreach (var wrong in new[] { swapped, first.Token[..^1], first.Token + "x", " " + first.Token })
+        var swapped = new string(firstToken.Select(c => char.IsUpper(c) ? char.ToLowerInvariant(c) : char.ToUpperInvariant(c)).ToArray());
+        foreach (var wrong in new[] { swapped, firstToken[..^1], firstToken + "x", " " + firstToken, CalendarFeedService.HashToken(firstToken) })
             Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/calendar-feeds/{Uri.EscapeDataString(wrong)}.ics")).StatusCode);
-        await IcsAsync(client, first.Url);
+        await IcsAsync(client, first.Url!);
     }
 
     [Fact]
@@ -233,12 +242,100 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
 
         var renewed = await (await admin.PostAsync($"/api/calendar-feeds/{feed.Id}/regenerate", null)).Content.ReadFromJsonAsync<CalendarFeedDto>();
 
-        Assert.NotEqual(feed.Token, renewed!.Token);
-        Assert.Equal(HttpStatusCode.NotFound, (await host.CreateClient().GetAsync(new Uri(feed.Url).PathAndQuery)).StatusCode);
-        await IcsAsync(host.CreateClient(), renewed.Url);
+        Assert.NotEqual(TokenOf(feed), TokenOf(renewed!));
+        Assert.Equal(HttpStatusCode.NotFound, (await host.CreateClient().GetAsync(new Uri(feed.Url!).PathAndQuery)).StatusCode);
+        await IcsAsync(host.CreateClient(), renewed!.Url!);
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync($"/api/calendar-feeds/{feed.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await host.CreateClient().GetAsync(new Uri(renewed.Url).PathAndQuery)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await host.CreateClient().GetAsync(new Uri(renewed.Url!).PathAndQuery)).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_address_is_told_only_when_a_feed_is_made_or_gets_a_new_one()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var source = new CalendarSourceDto(CalendarSourceKinds.Events, Group);
+        var created = await CreateAsync(admin, "Feed", source);
+        Assert.NotNull(created.Url);
+
+        var listed = (await admin.GetFromJsonAsync<List<CalendarFeedDto>>("/api/calendar-feeds"))!;
+        var one = (await admin.GetFromJsonAsync<CalendarFeedDto>($"/api/calendar-feeds/{created.Id}"))!;
+        var updated = (await (await admin.PutAsJsonAsync($"/api/calendar-feeds/{created.Id}", new CalendarFeedInputDto("Renamed", [source]))).Content.ReadFromJsonAsync<CalendarFeedDto>())!;
+        var renewed = (await (await admin.PostAsync($"/api/calendar-feeds/{created.Id}/regenerate", null)).Content.ReadFromJsonAsync<CalendarFeedDto>())!;
+
+        Assert.Null(Assert.Single(listed).Url);
+        Assert.Null(one.Url);
+        Assert.Null(updated.Url);
+        Assert.NotNull(renewed.Url);
+        Assert.NotEqual(created.Url, renewed.Url);
+
+        // Nothing else the API answers contains the secret.
+        var raw = await admin.GetStringAsync("/api/calendar-feeds");
+        Assert.DoesNotContain(TokenOf(renewed), raw);
+        Assert.DoesNotContain(TokenOf(created), raw);
+    }
+
+    [Fact]
+    public async Task The_database_holds_only_a_hash_of_the_token_and_the_address_still_works()
+    {
+        using var host = CreateHost();
+        var created = await CreateAsync(host.CreateSignedInClient(), "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        var token = TokenOf(created);
+
+        using (var scope = host.Services.CreateScope())
+        {
+            var stored = await scope.ServiceProvider.GetRequiredService<PlannerDbContext>().CalendarFeeds.AsNoTracking().SingleAsync();
+            Assert.NotEqual(token, stored.TokenHash);
+            Assert.DoesNotContain(token, stored.TokenHash + stored.Name + stored.SourcesJson);
+            Assert.Equal(CalendarFeedService.HashToken(token), stored.TokenHash);
+            Assert.Matches("^[0-9a-f]{64}$", stored.TokenHash);
+        }
+
+        await IcsAsync(host.CreateClient(), created.Url!);
+    }
+
+    [Fact]
+    public void Hashing_is_sha256_of_the_utf8_token_in_lower_case_hex()
+    {
+        Assert.Equal("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", CalendarFeedService.HashToken("abc"));
+        Assert.NotEqual(CalendarFeedService.HashToken("abc"), CalendarFeedService.HashToken("ABC"));
+        Assert.Equal(64, CalendarFeedService.HashToken("").Length);
+    }
+
+    [Fact]
+    public async Task Feeds_from_before_the_hashing_are_converted_and_their_address_goes_on_working()
+    {
+        using var host = CreateHost();
+        const string legacy = "LegacyTokenOf43CharactersLegacyTokenOf43Chars"; // as stored by the versions before
+        Assert.NotEqual(64, legacy.Length);
+        using (var scope = host.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
+            var sources = System.Text.Json.JsonSerializer.Serialize(new[] { new CalendarSourceDto(CalendarSourceKinds.Events, Group) }, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            var hashed = CalendarFeedService.HashToken("another");
+            db.CalendarFeeds.Add(new CalendarFeed { Name = "Old", TokenHash = legacy, SourcesJson = sources, CreatedAt = PinnedNow });
+            db.CalendarFeeds.Add(new CalendarFeed { Name = "New", TokenHash = hashed, SourcesJson = "[]", CreatedAt = PinnedNow });
+            await db.SaveChangesAsync();
+
+            Assert.Equal(HttpStatusCode.NotFound, (await host.CreateClient().GetAsync($"/calendar-feeds/{legacy}.ics")).StatusCode); // not yet
+
+            Assert.Equal(1, await CalendarFeedService.HashLegacyTokensAsync(db, CancellationToken.None));
+            Assert.Equal(0, await CalendarFeedService.HashLegacyTokensAsync(db, CancellationToken.None)); // once is enough
+            Assert.Equal(CalendarFeedService.HashToken(legacy), (await db.CalendarFeeds.AsNoTracking().SingleAsync(f => f.Name == "Old")).TokenHash);
+            Assert.Equal(hashed, (await db.CalendarFeeds.AsNoTracking().SingleAsync(f => f.Name == "New")).TokenHash);
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await host.CreateClient().GetAsync($"/calendar-feeds/{legacy}.ics")).StatusCode);
+    }
+
+    [Fact]
+    public async Task Without_any_feed_nothing_is_converted()
+    {
+        using var host = CreateHost();
+        using var scope = host.Services.CreateScope();
+
+        Assert.Equal(0, await CalendarFeedService.HashLegacyTokensAsync(scope.ServiceProvider.GetRequiredService<PlannerDbContext>(), CancellationToken.None));
     }
 
     [Fact]
@@ -266,7 +363,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         var feed = await CreateAsync(admin, "Words", new CalendarSourceDto(
             CalendarSourceKinds.Events, Group, ["sg-kids"], Label: "Dojo", SubGroupLabels: new Dictionary<string, string> { ["sg-kids"] = "Kids" }));
 
-        var ics = await IcsAsync(host.CreateClient(), feed.Url);
+        var ics = await IcsAsync(host.CreateClient(), feed.Url!);
 
         Assert.Contains("SUMMARY:Dojo / Kids: ", ics);
         Assert.Equal("Kids", Assert.Single(feed.Sources).SubGroupLabels!["sg-kids"]);
@@ -280,7 +377,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         var feed = new CalendarFeed
         {
             Name = name,
-            Token = $"token-{name}".Replace(' ', '-'),
+            TokenHash = CalendarFeedService.HashToken($"token-{name}".Replace(' ', '-')),
             SourcesJson = System.Text.Json.JsonSerializer.Serialize(sources, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)),
             CreatedAt = PinnedNow,
         };
@@ -289,7 +386,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         return feed;
     }
 
-    private static string PathOf(CalendarFeed feed) => $"http://localhost/calendar-feeds/{feed.Token}.ics";
+    private static string PathOf(CalendarFeed feed) => $"http://localhost/calendar-feeds/token-{feed.Name}.ics".Replace(' ', '-');
 
     [Fact]
     public async Task A_source_whose_group_is_gone_is_left_out_and_the_other_sources_are_still_delivered()
@@ -305,7 +402,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
 
         var ics = await IcsAsync(client, PathOf(stale));
 
-        var expected = Count(await IcsAsync(client, healthy.Url), "BEGIN:VEVENT");
+        var expected = Count(await IcsAsync(client, healthy.Url!), "BEGIN:VEVENT");
         Assert.True(expected > 0);
         Assert.Equal(expected, Count(ics, "BEGIN:VEVENT"));
         Assert.Equal(Count(ics, "BEGIN:VEVENT"), Count(ics, "END:VEVENT"));

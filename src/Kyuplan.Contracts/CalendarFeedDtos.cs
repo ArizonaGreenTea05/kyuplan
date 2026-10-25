@@ -64,14 +64,16 @@ public sealed record CalendarSourceDto(
 /// <param name="Name">Shown by the calendar app as the name of the calendar.</param>
 public sealed record CalendarFeedInputDto(string Name, IReadOnlyList<CalendarSourceDto> Sources);
 
-/// <param name="Token">The secret part of the address. Whoever knows the address sees the calendar without logging in; a new token (regenerate) makes the old address stop working.</param>
-/// <param name="Url">The address to subscribe to in a calendar app (ICS).</param>
+/// <param name="Url">
+/// The address to subscribe to in a calendar app (ICS). Whoever knows it sees the calendar without logging in, so the server keeps only a hash
+/// of its secret part: the address is in the answer of creating a feed and of giving it a new address (regenerate) and <c>null</c> everywhere
+/// else, i.e. it can be shown once. A new address makes the old one stop working.
+/// </param>
 /// <param name="BrokenSources">Positions in <paramref name="Sources"/> of the sources whose group does not exist any more; the feed leaves them out until somebody fixes or removes them. <c>null</c>/empty = all fine (or not checked).</param>
 public sealed record CalendarFeedDto(
     int Id,
     string Name,
-    string Token,
-    string Url,
+    string? Url,
     IReadOnlyList<CalendarSourceDto> Sources,
     DateTimeOffset CreatedAt,
     IReadOnlyList<int>? BrokenSources = null);

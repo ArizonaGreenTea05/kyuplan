@@ -372,9 +372,9 @@ public class PlannerDbContext : DbContext
         modelBuilder.Entity<CalendarFeed>(feed =>
         {
             feed.Property(f => f.Name).HasMaxLength(CalendarFeedRules.MaxNameLength).UseCollation(NoCase);
-            feed.Property(f => f.Token).HasMaxLength(TokenLength);
+            feed.Property(f => f.TokenHash).HasMaxLength(TokenLength);
             feed.HasIndex(f => f.Name).IsUnique();
-            feed.HasIndex(f => f.Token).IsUnique();
+            feed.HasIndex(f => f.TokenHash).IsUnique();
         });
 
         modelBuilder.Entity<CommentTag>(commentTag =>

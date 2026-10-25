@@ -12,12 +12,7 @@ internal static class CalendarFeedsPage
     {
         var list = Ui.BoxedList(page, () => page.Feeds, feed =>
         {
-            var row = Ui.Row(feed.Name, $"{feed.SourcesText}\n{feed.Url}");
-            row.AddSuffix(Ui.IconButton("edit-copy-symbolic", Strings.CalendarFeeds_ColAddress, () =>
-            {
-                Gdk.Display.GetDefault()?.GetClipboard().SetText(feed.Url);
-                context.Toast(Strings.CalendarFeeds_ColAddress);
-            }, "flat"));
+            var row = Ui.Row(feed.Name, feed.SourcesText);
             row.AddSuffix(Ui.IconButton("document-edit-symbolic", Strings.CalendarFeeds_Edit, page.BeginEditCommand, feed, "flat"));
             row.AddSuffix(Ui.IconButton("view-refresh-symbolic", Strings.CalendarFeeds_NewAddress, page.AskRegenerateCommand, feed, "flat"));
             row.AddSuffix(Ui.IconButton("user-trash-symbolic", Strings.CalendarFeeds_Delete, page.AskDeleteCommand, feed, "flat"));
@@ -28,12 +23,27 @@ internal static class CalendarFeedsPage
             Widgets.Header(page.Title, Ui.Muted(Strings.CalendarFeeds_Lede), Ui.Primary(Strings.CalendarFeeds_New, page.BeginCreateCommand)),
             Ui.Muted(Strings.CalendarFeeds_AddressHint).Css("caption"),
             Widgets.ErrorBanner(page, page.RetryCommand), Widgets.Notice(page),
+            Address(context, page),
             Editor(page.Editor),
             Widgets.ConfirmBar(page, nameof(CalendarFeedsViewModel.IsConfirming), nameof(CalendarFeedsViewModel.ConfirmText), page.ConfirmCommand, Strings.CalendarFeeds_ConfirmYes, page.CancelConfirmCommand, Strings.CalendarFeeds_Cancel),
             Ui.Label(Strings.CalendarFeeds_Empty, "dim-label").VisibleWhen(page, nameof(CalendarFeedsViewModel.IsEmpty)),
             list);
         return Widgets.PageFrame(page, body, 1000);
     }
+
+    /// <summary>The address of the calendar that was just made or got a new one: the server does not keep it, so this is the one chance to copy it.</summary>
+    private static Gtk.Widget Address(UiContext context, CalendarFeedsViewModel page) =>
+        Ui.VBox(8,
+            Ui.Label(page, nameof(CalendarFeedsViewModel.AddressText), "heading").Start(),
+            Ui.Entry(page, nameof(CalendarFeedsViewModel.Address), name: Strings.CalendarFeeds_ColAddress).Tap(e => e.Editable = false),
+            Ui.HBox(8,
+                Ui.Button(Strings.CalendarFeeds_CopyAddress, () =>
+                {
+                    Gdk.Display.GetDefault()?.GetClipboard().SetText(page.Address);
+                    context.Toast(Strings.CalendarFeeds_CopyAddress);
+                }),
+                Ui.Button(Strings.CalendarFeeds_DismissAddress, page.DismissAddressCommand)))
+            .Css("card").Padded(14).VisibleWhen(page, nameof(CalendarFeedsViewModel.HasAddress));
 
     private static Gtk.Widget Editor(CalendarFeedEditorViewModel editor)
     {

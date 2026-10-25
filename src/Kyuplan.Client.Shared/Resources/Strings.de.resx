@@ -3026,7 +3026,16 @@
     <value>„{0}“ hat eine neue Adresse.</value>
   </data>
   <data name="CalendarFeeds_AddressHint" xml:space="preserve">
-    <value>Abonniere diese Adresse in einer Kalender-App („Internetkalender hinzufügen“). Wer sie kennt, kann den Kalender ohne Anmeldung lesen – behandle sie wie ein Passwort.</value>
+    <value>Abonniere die Adresse eines Kalenders in einer Kalender-App („Internetkalender hinzufügen“). Wer sie kennt, kann den Kalender ohne Anmeldung lesen – behandle sie wie ein Passwort. Sie wird einmal angezeigt, wenn der Kalender angelegt wird oder eine neue Adresse bekommt; der Server speichert nur einen Hash davon. Hast du sie verloren, gib dem Kalender eine neue Adresse.</value>
+  </data>
+  <data name="CalendarFeeds_AddressOnce" xml:space="preserve">
+    <value>Adresse von „{0}“. Kopiere sie jetzt: Sie wird nicht noch einmal angezeigt.</value>
+  </data>
+  <data name="CalendarFeeds_CopyAddress" xml:space="preserve">
+    <value>Adresse kopieren</value>
+  </data>
+  <data name="CalendarFeeds_DismissAddress" xml:space="preserve">
+    <value>Ich habe sie kopiert</value>
   </data>
   <data name="CalendarFeeds_FormNew" xml:space="preserve">
     <value>Neuer Kalender</value>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>The interface of Kyuplan plugins: what a plugin implements to add endpoints, pages and data sources.</Description>
+    <PackageId>Kyuplan.Plugins.Abstractions</PackageId>
+    <RootNamespace>Kyuplan.Plugins</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+
+  <!-- A plugin adds endpoints to the API, so it needs the types of ASP.NET; the host provides them (they are not copied into a plugin). -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

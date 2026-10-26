@@ -56,22 +56,23 @@ public static partial class PluginRules
 
     public static readonly string[] Methods = ["POST", "PUT", "DELETE"];
 
-    [GeneratedRegex("^[a-z][a-z0-9-]{1,31}$")]
+    // \z, not $: in .NET a $ also matches before a trailing "\n", so "view\n" would pass.
+    [GeneratedRegex(@"^[a-z][a-z0-9-]{1,31}\z")]
     private static partial Regex IdPattern();
 
-    [GeneratedRegex("^[a-z][A-Za-z0-9]{0,31}$")]
+    [GeneratedRegex(@"^[a-z][A-Za-z0-9]{0,31}\z")]
     private static partial Regex NamePattern();
 
-    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,49}$")]
+    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9_]{0,49}\z")]
     private static partial Regex KeyPattern();
 
-    [GeneratedRegex(@"^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$")]
+    [GeneratedRegex(@"^[0-9]{1,5}(\.[0-9]{1,5}){0,3}\z")]
     private static partial Regex VersionPattern();
 
-    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,49}(:[A-Za-z][A-Za-z0-9_]{0,49}){0,3}$")]
+    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9_]{0,49}(:[A-Za-z][A-Za-z0-9_]{0,49}){0,3}\z")]
     private static partial Regex SectionPattern();
 
-    [GeneratedRegex(@"^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$")]
+    [GeneratedRegex(@"^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*\z")]
     private static partial Regex PathPattern();
 
     /// <summary>

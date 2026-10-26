@@ -40,6 +40,7 @@ public class PluginContractsTests
     [InlineData("-abc", false)]
     [InlineData("my_plugin", false)]
     [InlineData("my plugin", false)]
+    [InlineData("spond\n", false)] // a $ would match before the trailing newline
     [InlineData("members", false)] // the name of a domain of the permissions
     [InlineData("settings", false)]
     [InlineData("api", false)]
@@ -59,6 +60,7 @@ public class PluginContractsTests
     [InlineData("View", false)]
     [InlineData("1a", false)]
     [InlineData("edit-jobs", false)]
+    [InlineData("view\n", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void A_name_is_letters_and_digits_starting_with_a_lower_case_letter(string? name, bool fine) => Assert.Equal(fine, PluginRules.IsName(name));
@@ -70,6 +72,7 @@ public class PluginContractsTests
     [InlineData("_a", false)]
     [InlineData("a-b", false)]
     [InlineData("a b", false)]
+    [InlineData("Email\n", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void An_id_of_a_field_is_a_key_of_the_configuration(string? key, bool fine) => Assert.Equal(fine, PluginRules.IsKey(key));
@@ -94,6 +97,7 @@ public class PluginContractsTests
     [InlineData("1.", false)]
     [InlineData("1..2", false)]
     [InlineData("1.0-beta", false)]
+    [InlineData("1.2\n", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void A_version_is_dotted_numbers(string? version, bool fine) => Assert.Equal(fine, PluginRules.IsVersion(version));
@@ -104,6 +108,7 @@ public class PluginContractsTests
     [InlineData("custom", false)]
     [InlineData("manual", false)]
     [InlineData("Spond", false)]
+    [InlineData("spond\n", false)]
     [InlineData(null, false)]
     public void A_data_source_id_is_not_one_of_the_built_in_sources(string? id, bool fine) => Assert.Equal(fine, PluginRules.IsSourceId(id));
 
@@ -129,6 +134,7 @@ public class PluginContractsTests
     [InlineData("spond.", false)]
     [InlineData("spond.View", false)]
     [InlineData("spond.view.more", false)]
+    [InlineData("spond.view\n", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void A_permission_of_a_plugin_is_its_id_and_a_name(string? permission, bool fine) => Assert.Equal(fine, PluginRules.IsPluginPermission(permission));
@@ -161,6 +167,8 @@ public class PluginContractsTests
     [InlineData("a\\b", false)]
     [InlineData("jobs/refresh?x=1", false)]
     [InlineData("ümlaut.json", false)]
+    [InlineData("layout.json\n", false)]
+    [InlineData("jobs/refresh\n", false)]
     public void A_path_in_a_package_is_relative_and_stays_inside(string? path, bool fine)
     {
         Assert.Equal(fine, PluginRules.IsPackagePath(path));
@@ -196,6 +204,8 @@ public class PluginContractsTests
     [InlineData("a:", false)]
     [InlineData("a::b", false)]
     [InlineData("a:b:c:d:e", false)]
+    [InlineData("Spond\n", false)]
+    [InlineData("Plugins:myplugin\n", false)]
     [InlineData("", false)]
     [InlineData(null, false)]
     public void A_section_of_the_configuration_is_not_one_of_the_program(string? section, bool fine) => Assert.Equal(fine, PluginRules.IsSection(section));

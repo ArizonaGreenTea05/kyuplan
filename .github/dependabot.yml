@@ -35,6 +35,11 @@ updates:
     schedule:
       interval: weekly
     labels: [dependencies]
+    ignore:
+      # The documentation stage builds with the Node LTS line the workflows use: a new major is changed there and in every setup-node
+      # together (a bump of the image alone gave node:25, a line that is not LTS).
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
 
   # The Arch Linux container the screenshots of the Linux client are taken in (tests/linux).
   - package-ecosystem: docker

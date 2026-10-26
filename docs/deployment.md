@@ -182,7 +182,14 @@ git push origin v0.1
   workflow fail at once. (Tags of the earlier per-app releases, `api/v...` and `wpf/v...`, no longer start a workflow.)
 - The workflow first audits the dependencies (see [Dependency and supply-chain checks](#dependency-and-supply-chain-checks)), then runs the whole test suite (on Windows: it contains tests of the WPF client's encrypted login file), then
   publishes and packs the WPF client into the installer and builds the Android APK (every client has such a job), and builds the documentation (see [The documentation](#the-documentation)). Only when they worked, the Docker image (which contains the installer) is built,
-  scanned for vulnerabilities, pushed and the release published.
+  scanned for vulnerabilities and pushed (job `image`), and the release published (job `publish`).
+- **Token rights per job**: the workflow's token is read-only. Only `image` gets `packages: write` and only `publish` gets `contents: write`,
+  so the jobs that hold the signing secrets (`windows`, `android`, `linux`) cannot write to the repository or the registry.
+- **Signing is required**: the first step of the audit job fails the release when the secret `UPDATE_SIGNING_KEY` (the update signature of every
+  installer, see the client updates above) or `ANDROID_KEYSTORE` is missing, because an unsigned installer cannot update an installed client and the
+  clients then silently keep the old version. `WINDOWS_CERT_PFX` stays optional (it only silences SmartScreen). To release unsigned on purpose
+  (a fork, a first trial), set the repository variable `ALLOW_UNSIGNED_RELEASE` to `true` (*Settings → Secrets and variables → Actions → Variables*); the
+  missing secrets are then reported as warnings.
 - **The version of the tag is the version of everything**: it is passed to every build as `-p:Version=0.1`, so it becomes the assembly,
   file and informational version of the API, the clients and the installer. The API reports it (`GET /api/info`, shown in both clients);
   in the installer it is the version Windows lists under *Installed apps*, and it is the version the WPF client compares with the server's.
@@ -228,6 +235,11 @@ Every commit gets its package; old ones stay until you delete them under the rep
 - **Updates**: Dependabot (`.github/dependabot.yml`) opens one pull request a week per ecosystem for the NuGet packages
   (`Directory.Packages.props`), the npm packages of `website/` and `tests/ui/`, the base images of the Dockerfile and the Compose
   files in `deploy/` (the PostgreSQL image) and the GitHub Actions. A new `package.json`, Dockerfile, Compose folder or composite action needs an entry there (`SupplyChainConfigTests` fails otherwise).
+  Every GitHub Action in `.github/workflows` is pinned to the full commit SHA of a release (`uses: owner/action@<sha> # v1.2.3`), because a tag
+  can be moved and the release jobs hold the signing keys; Dependabot's `github-actions` entry keeps SHA and comment current. The base images of the
+  Dockerfile carry their digest (`node:22-alpine@sha256:...`) so that the image the release scans is the one that is rebuilt. The documentation
+  stage uses the same Node LTS line as the workflows (`setup-node`, Node 22); Dependabot does not propose a new Node major (`ignore` in
+  `dependabot.yml`), so moving to the next LTS is one change in the Dockerfile and every `node-version`, which `SupplyChainConfigTests` checks.
   Turn on *Dependabot security updates* under *Settings → Advanced Security* to get a pull request the moment an advisory is
   published, whatever the schedule says.
 - **Audit**: `.github/actions/audit-dependencies` fails on a known vulnerability in a NuGet package (server and WPF client, `dotnet list package --vulnerable
@@ -246,7 +258,7 @@ Every commit gets its package; old ones stay until you delete them under the rep
 ### GitHub settings
 
 Nothing has to be configured: the workflow uses the built-in `GITHUB_TOKEN` and asks for the rights it needs
-(`contents: write`, `packages: write`) itself. After the first image was pushed it shows up under the repository's
+(per job: `contents: write` for publishing the release, `packages: write` for pushing the image) itself. After the first image was pushed it shows up under the repository's
 *Packages* and is **private** if the repository is. A private image can only be pulled after `docker login ghcr.io`, with a
 [personal access token](https://github.com/settings/tokens) that has the `read:packages` scope; to avoid that, make the package
 public (*Package settings → Danger zone → Change visibility*). The image contains no secrets, only the program.
@@ -565,7 +577,8 @@ calendar, exams, members and account. The statistics and the administration page
   (`Api__AllowInsecureHttp`, see [HTTPS](#https-and-reverse-proxies)); prefer HTTPS.
 - **Signing**: Android installs an update only when it is signed with the **same key** as the installed app. The release workflow signs with
   your keystore when the repository secrets `ANDROID_KEYSTORE` (the `.keystore` file, Base64-encoded), `ANDROID_KEYSTORE_PASSWORD`,
-  `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` exist. Without them the APK is signed with a throw-away debug key: it installs, but the next release
+  `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` exist. A release without `ANDROID_KEYSTORE` fails (see [Releasing](#releasing)) unless the repository
+  variable `ALLOW_UNSIGNED_RELEASE` is `true`; then the APK is signed with a throw-away debug key: it installs, but the next release
   (another debug key) cannot update it. Create the keystore once and keep it safe; a lost key means everybody has to uninstall and install again:
   ```
   keytool -genkeypair -v -keystore kyuplan.keystore -alias kyuplan -keyalg RSA -keysize 4096 -validity 10000

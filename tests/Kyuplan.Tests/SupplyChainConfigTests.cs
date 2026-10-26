@@ -165,29 +165,151 @@ public partial class SupplyChainConfigTests
         Assert.Matches(@"cron: '[^']+ \* \* [0-7]'", workflow);
     }
 
+    /// <summary>The jobs of release.yml by name, in file order, each with its text (from its name to the next job).</summary>
+    private static List<(string Name, string Text)> ReleaseJobs()
+    {
+        var release = Read(".github/workflows/release.yml");
+        return [.. Regex.Split(release[release.IndexOf("\njobs:", StringComparison.Ordinal)..], @"^  (?=[a-z-]+:\s*$)", RegexOptions.Multiline)
+            .Skip(1).Select(job => (job[..job.IndexOf(':')], job))];
+    }
+
+    private static string ReleaseJob(string name) => ReleaseJobs().Single(j => j.Name == name).Text;
+
     [Fact]
     public void Every_job_of_the_release_waits_for_the_audit()
     {
-        var release = Read(".github/workflows/release.yml");
-        var jobs = Regex.Split(release[release.IndexOf("\njobs:", StringComparison.Ordinal)..], @"^  (?=[a-z-]+:\s*$)", RegexOptions.Multiline).Skip(1).ToList();
-        Assert.Equal("audit", jobs[0][..jobs[0].IndexOf(':')]);
-        Assert.Equal("image", jobs[^1][..jobs[^1].IndexOf(':')]);
-        var builders = jobs[1..^1];
+        var jobs = ReleaseJobs();
+        Assert.Equal("audit", jobs[0].Name);
+        // the image collects every build, the release is published last
+        Assert.Equal(["image", "publish"], jobs.TakeLast(2).Select(j => j.Name));
+        var builders = jobs[1..^2];
         Assert.NotEmpty(builders);
-        foreach (var job in builders) Assert.Matches(@"needs:\s*audit\b", job);
-        // the image waits for every job in between (a new client job has to be added to its needs)
-        var imageNeeds = Regex.Match(jobs[^1], @"needs:\s*\[([^\]]*)\]").Groups[1].Value.Split(',').Select(n => n.Trim());
-        Assert.Equal(builders.Select(j => j[..j.IndexOf(':')]).Order(), imageNeeds.Order());
+        foreach (var job in builders) Assert.Matches(@"needs:\s*audit\b", job.Text);
+        // the image waits for every build in between (a new client job has to be added to its needs)
+        var imageNeeds = Regex.Match(jobs[^2].Text, @"needs:\s*\[([^\]]*)\]").Groups[1].Value.Split(',').Select(n => n.Trim());
+        Assert.Equal(builders.Select(j => j.Name).Order(), imageNeeds.Order());
+        Assert.Matches(@"needs:\s*image\b", jobs[^1].Text);
     }
 
     [Fact]
     public void The_audit_job_of_the_release_only_reads_the_repository()
     {
-        // the workflow grants contents: write and packages: write to publish; the audit job needs neither
-        var release = Read(".github/workflows/release.yml");
-        var audit = release[release.IndexOf("\n  audit:", StringComparison.Ordinal)..release.IndexOf("\n  windows:", StringComparison.Ordinal)];
+        var audit = ReleaseJob("audit");
         Assert.Matches(@"permissions:\s*\n\s+contents: read\b", audit);
         Assert.DoesNotContain("write", audit);
+    }
+
+    [Fact]
+    public void The_release_token_is_read_only_except_for_the_image_push_and_the_publish_job()
+    {
+        var release = Read(".github/workflows/release.yml");
+        // the workflow-level default (before the jobs) is read-only
+        var header = release[..release.IndexOf("\njobs:", StringComparison.Ordinal)];
+        Assert.Matches(@"(?m)^permissions:\s*\n  contents: read\s*$", header);
+        Assert.DoesNotMatch(@"(?m)^\s+[a-z-]+: write", header);
+
+        // only the image job may write packages and only the publish job contents; the jobs with the signing secrets write nothing
+        foreach (var (name, text) in ReleaseJobs())
+        {
+            var permissions = Regex.Match(text, @"(?m)^    permissions:\s*\n((?:      \S.*\n)+)").Groups[1].Value;
+            var writes = Regex.Matches(permissions, @"^\s+([a-z-]+): write", RegexOptions.Multiline).Select(m => m.Groups[1].Value).ToList();
+            var expected = name switch { "image" => new[] { "packages" }, "publish" => ["contents"], _ => [] };
+            Assert.True(expected.SequenceEqual(writes), $"job {name} writes [{string.Join(",", writes)}], expected [{string.Join(",", expected)}]");
+        }
+
+        // the signing secrets sit in jobs that cannot write, never in the two that can
+        foreach (var name in new[] { "image", "publish" })
+        {
+            var text = ReleaseJob(name);
+            Assert.DoesNotContain("UPDATE_SIGNING_KEY", text);
+            Assert.DoesNotContain("WINDOWS_CERT", text);
+            Assert.DoesNotContain("ANDROID_KEY", text);
+        }
+        foreach (var name in new[] { "windows", "android", "linux" })
+            Assert.DoesNotContain("write", Regex.Match(ReleaseJob(name), @"(?m)^    permissions:\s*\n((?:      \S.*\n)+)").Groups[1].Value);
+
+        // the release is created from artifacts by the publish job; the image job hands over the SBOM and the image name
+        var image = ReleaseJob("image");
+        Assert.Contains("name: sbom", image);
+        Assert.Contains("name: ${{ steps.image.outputs.name }}", image);
+        Assert.DoesNotContain("uses: ./.github/actions/publish-release", image);
+        var publish = ReleaseJob("publish");
+        Assert.Contains("uses: ./.github/actions/publish-release", publish);
+        Assert.Contains("name: sbom", publish);
+        Assert.Contains("needs.image.outputs.name", publish);
+        Assert.DoesNotContain("steps.image.", publish);
+        Assert.DoesNotContain("push: true", publish);
+    }
+
+    [Fact]
+    public void A_release_without_the_update_key_or_the_android_keystore_fails_before_anything_is_built_unless_unsigned_is_allowed()
+    {
+        var audit = ReleaseJob("audit");
+        var start = audit.IndexOf("Check that the release can be signed", StringComparison.Ordinal);
+        Assert.True(start > 0);
+        var gate = audit[start..audit.IndexOf("actions/checkout@", StringComparison.Ordinal)];
+        // only whether a secret exists is passed on, never its value
+        Assert.Contains("HAS_UPDATE_KEY: ${{ secrets.UPDATE_SIGNING_KEY != '' }}", gate);
+        Assert.Contains("HAS_ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE != '' }}", gate);
+        Assert.DoesNotContain("WINDOWS_CERT", gate);
+        Assert.Contains("ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE }}", gate);
+        Assert.Contains("[ \"$ALLOW_UNSIGNED\" = true ]", gate);
+        Assert.Contains("exit 1", gate);
+        // the first step of the first job: nothing else runs before it
+        Assert.DoesNotContain("uses:", audit[..start]);
+        Assert.Contains("ALLOW_UNSIGNED_RELEASE", Read("docs/deployment.md"));
+    }
+
+    private static IEnumerable<string> WorkflowAndActionFiles() =>
+        Directory.EnumerateFiles(Path.Combine(Root, ".github"), "*.yml", SearchOption.AllDirectories).Where(f => !f.EndsWith("dependabot.yml"));
+
+    [Fact]
+    public void Every_action_of_the_workflows_and_composite_actions_is_pinned_to_a_commit_with_its_version_in_a_comment()
+    {
+        var external = new List<string>();
+        foreach (var file in WorkflowAndActionFiles())
+            foreach (var line in File.ReadAllLines(file).Where(l => Regex.IsMatch(l, @"^\s*(- )?uses:")))
+            {
+                var action = Regex.Match(line, @"uses:\s*(\S+)").Groups[1].Value;
+                if (action.StartsWith("./")) continue; // an action or workflow of this repository
+                external.Add(action);
+                Assert.Matches(@"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$", action);
+                Assert.Matches(@"@[0-9a-f]{40} # v\d+(\.\d+)*\s*$", line);
+            }
+        // guards the test itself against matching nothing
+        Assert.Contains(external, a => a.StartsWith("actions/checkout@"));
+        Assert.Contains(external, a => a.StartsWith("docker/login-action@"));
+        Assert.Contains(external, a => a.StartsWith("anthropics/claude-code-action@"));
+        Assert.Contains(external, a => a.StartsWith("aquasecurity/trivy-action@"));
+    }
+
+    [Fact]
+    public void The_documentation_stage_builds_with_the_node_lts_line_of_the_workflows_and_dependabot_leaves_the_major_alone()
+    {
+        var image = int.Parse(Regex.Match(Read("src/Kyuplan.Api/Dockerfile"), @"^FROM .*\bnode:(\d+)-", RegexOptions.Multiline).Groups[1].Value);
+        Assert.Equal(0, image % 2); // odd majors are never LTS
+        var versions = WorkflowAndActionFiles()
+            .SelectMany(f => Regex.Matches(File.ReadAllText(f), @"node-version:\s*(\d+)").Select(m => int.Parse(m.Groups[1].Value))).ToList();
+        Assert.NotEmpty(versions);
+        Assert.All(versions, v => Assert.Equal(image, v));
+        Assert.Contains($"Node {image}", Read("docs/developer-guide.md"));
+
+        Assert.Matches(@"dependency-name: node\s*\n\s*update-types: \['version-update:semver-major'\]", Read(".github/dependabot.yml"));
+    }
+
+    [Fact]
+    public void The_base_images_of_the_dockerfile_are_pinned_to_a_digest()
+    {
+        var stages = new List<string> { "scratch" };
+        var froms = Regex.Matches(Read("src/Kyuplan.Api/Dockerfile"), @"^FROM (?:--platform=\S+ )?(\S+)(?: AS (\S+))?", RegexOptions.Multiline);
+        Assert.Equal(4, froms.Count);
+        foreach (var from in froms.Cast<Match>())
+        {
+            var image = from.Groups[1].Value;
+            // a stage that continues an earlier one has no image of its own
+            if (!stages.Contains(image)) Assert.Matches(@"^[\w./-]+:[\w.-]+@sha256:[0-9a-f]{64}$", image);
+            if (from.Groups[2].Success) stages.Add(from.Groups[2].Value);
+        }
     }
 
     [Fact]

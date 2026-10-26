@@ -8,9 +8,10 @@ on:
   push:
     tags: ['v*']
 
+# Read-only by default: the jobs that hold the signing secrets (windows, android, linux) never get a token that can write. The one job that pushes
+# the image asks for packages: write and the one that publishes the release for contents: write.
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
   # A known vulnerability in a NuGet or npm dependency stops the release before anything is built (the image is scanned again below).
@@ -19,11 +20,32 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      # An unsigned installer cannot update itself and the clients then keep the old version without any error on the server, so a release
+      # without the update key (and the Android keystore) fails here, before anything is built. Only the repository variable
+      # ALLOW_UNSIGNED_RELEASE=true releases anyway. The expressions pass whether a secret exists, never its value.
+      - name: Check that the release can be signed
+        env:
+          HAS_UPDATE_KEY: ${{ secrets.UPDATE_SIGNING_KEY != '' }}
+          HAS_ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE != '' }}
+          ALLOW_UNSIGNED: ${{ vars.ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          missing=()
+          [ "$HAS_UPDATE_KEY" = true ] || missing+=("UPDATE_SIGNING_KEY (the update signature of every installer)")
+          [ "$HAS_ANDROID_KEYSTORE" = true ] || missing+=("ANDROID_KEYSTORE (the Android app would get a debug key and could not update an installed one)")
+          [ ${#missing[@]} -eq 0 ] && exit 0
+          if [ "$ALLOW_UNSIGNED" = true ]; then
+            for m in "${missing[@]}"; do echo "::warning::Releasing without the secret $m: ALLOW_UNSIGNED_RELEASE is set."; done
+            exit 0
+          fi
+          for m in "${missing[@]}"; do echo "::error::The secret $m is missing."; done
+          echo "::error::Add the secrets (docs/deployment.md#releasing) or set the repository variable ALLOW_UNSIGNED_RELEASE to true to release unsigned."
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
       - uses: ./.github/actions/audit-dependencies
@@ -36,8 +58,8 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
 
@@ -53,15 +75,15 @@ jobs:
           dotnet publish src/Kyuplan.Client.Wpf -c Release -r win-x64 --self-contained
           -p:Version=${{ steps.v.outputs.version }} -o artifacts/wpf
 
-      # Authenticode signing: the installed program only runs an update that is signed with its own certificate (WindowsClientUpdater), so a
-      # release without one cannot update itself. Secrets: WINDOWS_CERT_PFX (the .pfx file, Base64) and WINDOWS_CERT_PASSWORD.
+      # Authenticode signing (optional): it silences SmartScreen and lets the installed program run an update signed with its own certificate;
+      # the update key below is what every release needs. Secrets: WINDOWS_CERT_PFX (the .pfx file, Base64) and WINDOWS_CERT_PASSWORD.
       - name: Sign the program
         shell: pwsh
         env:
           CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
           CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
         run: |
-          if (-not $env:CERT_PFX) { Write-Warning 'No WINDOWS_CERT_PFX secret: the release is not signed and cannot update itself.'; exit 0 }
+          if (-not $env:CERT_PFX) { Write-Warning 'No WINDOWS_CERT_PFX secret: the installer is not code-signed (SmartScreen warns; the update key still signs it).'; exit 0 }
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\cert.pfx", [Convert]::FromBase64String($env:CERT_PFX))
           $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1).FullName
           & $signtool sign /f "$env:RUNNER_TEMP\cert.pfx" /p $env:CERT_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 artifacts\wpf\Kyuplan.exe
@@ -108,7 +130,7 @@ jobs:
           rm "$RUNNER_TEMP/update-key.pem"
 
       # Every client job uploads its installer as an artifact "installer-<platform>"; the image job collects them all.
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-windows
           path: |
@@ -117,17 +139,18 @@ jobs:
           if-no-files-found: error
 
   # The Android app: an APK, signed with the release keystore so that a phone accepts it as the update of the installed one. Secrets:
-  # ANDROID_KEYSTORE (the keystore file, Base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. Without them the APK is
-  # signed with a debug key, which installs but cannot update an app that was signed with another key (Android refuses that).
+  # ANDROID_KEYSTORE (the keystore file, Base64), ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. The audit job stops a release
+  # without them unless ALLOW_UNSIGNED_RELEASE is set; the APK is then signed with a debug key, which installs but cannot update an app that was
+  # signed with another key (Android refuses that).
   android:
     needs: audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 10.0.x
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 21
@@ -177,7 +200,7 @@ jobs:
           openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
           rm "$RUNNER_TEMP/update-key.pem"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-android
           path: |
@@ -194,7 +217,7 @@ jobs:
       - name: Install the build tools
         run: pacman -Syu --noconfirm --needed base-devel git dotnet-sdk openssl sudo github-cli jq
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - id: v
         uses: ./.github/actions/release-version
@@ -226,7 +249,7 @@ jobs:
           openssl dgst -sha256 -sign "$RUNNER_TEMP/update-key.pem" -out "$installer.sig" "$installer"
           rm "$RUNNER_TEMP/update-key.pem"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-linux
           path: |
@@ -240,12 +263,12 @@ jobs:
     needs: audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - id: v
         uses: ./.github/actions/release-version
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
 
@@ -264,28 +287,34 @@ jobs:
           mkdir -p artifacts/docs
           (cd website/build && zip -qr "$GITHUB_WORKSPACE/artifacts/docs/Kyuplan-docs-$VERSION.zip" .)
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: documentation
           path: artifacts/docs/Kyuplan-docs-${{ steps.v.outputs.version }}.zip
           if-no-files-found: error
 
+  # Builds, scans and pushes the image (the only job that may write packages) and keeps the SBOM for the publish job.
   image:
     needs: [windows, linux, android, docs] # add every further client job here
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      name: ${{ steps.image.outputs.name }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - id: v
         uses: ./.github/actions/release-version
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: installer-*
           merge-multiple: true
           path: artifacts/installer
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: documentation
           path: artifacts/docs
@@ -310,9 +339,9 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@v4
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -323,7 +352,7 @@ jobs:
       # and the .NET dependencies alike) stops the release. Without a fix there is nothing to update to, so those do not.
       # The push below finds everything in the build cache.
       - name: Build the image for the scan
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: src/Kyuplan.Api/Dockerfile
@@ -362,7 +391,7 @@ jobs:
           output: artifacts/sbom/Kyuplan-sbom-${{ steps.v.outputs.version }}.cdx.json
 
       # The Dockerfile's "installer" stage is empty; here it is the folder with the installer built above.
-      - uses: docker/build-push-action@v7
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: src/Kyuplan.Api/Dockerfile
@@ -382,14 +411,48 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom
+          path: artifacts/sbom/Kyuplan-sbom-${{ steps.v.outputs.version }}.cdx.json
+          if-no-files-found: error
+
+  # The GitHub release (the only job that may write the repository's contents; it holds no secret of its own and builds nothing).
+  publish:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: v
+        uses: ./.github/actions/release-version
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: artifacts/installer
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: documentation
+          path: artifacts/docs
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: sbom
+          path: artifacts/sbom
+
       - uses: ./.github/actions/publish-release
         with:
           title: Kyuplan ${{ steps.v.outputs.version }} "${{ steps.v.outputs.codename }}"
           notes: |-
-            Docker image (server, web client and the installers of the desktop apps in one): `${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}`
+            Docker image (server, web client and the installers of the desktop apps in one): `${{ needs.image.outputs.name }}:${{ steps.v.outputs.version }}`
 
             ```
-            docker pull ${{ steps.image.outputs.name }}:${{ steps.v.outputs.version }}
+            docker pull ${{ needs.image.outputs.name }}:${{ steps.v.outputs.version }}
             ```
 
             The web client offers the desktop apps (the installers attached below) for download, and an installed app updates itself from the server. `Kyuplan-sbom-${{ steps.v.outputs.version }}.cdx.json` is the software bill of materials of the image (CycloneDX). The documentation is part of the server (Help in the web client and the desktop app, each user sees the guides they may read) and is attached as well (`Kyuplan-docs-${{ steps.v.outputs.version }}.zip`: every guide, the developer guide too). Settings, volumes and the TrueNAS setup are described in [docs/deployment.md](${{ github.server_url }}/${{ github.repository }}/blob/${{ github.sha }}/docs/deployment.md).

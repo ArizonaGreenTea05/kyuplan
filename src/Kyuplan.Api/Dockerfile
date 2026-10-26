@@ -15,7 +15,9 @@
 #   docker buildx build --platform linux/amd64,linux/arm64 -f src/Kyuplan.Api/Dockerfile -t kyuplan .
 
 # The documentation: one Docusaurus site per audience (website/, from docs/), served under /docs by the API to the users who may read each.
-FROM --platform=$BUILDPLATFORM node:25-alpine AS docs
+# Node: the LTS line the workflows use (setup-node, node-version) and website/ is tested with; SupplyChainConfigTests keeps the two the same.
+# The base images are pinned to a digest (Dependabot keeps tag and digest current), so what the release scans and what is rebuilt is the same.
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS docs
 WORKDIR /repo/website
 COPY website/package.json website/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -26,7 +28,7 @@ ARG DOCS_REPO_REF=main
 RUN DOCS_REPO_REF=${DOCS_REPO_REF} node scripts/build-all.mjs user admin deployment
 
 # Always runs on the machine that builds; for the other CPU it cross-compiles (no emulation), TARGETARCH being the one of the image.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS build
 ARG TARGETARCH
 WORKDIR /src
 
@@ -56,7 +58,7 @@ RUN dotnet publish src/Kyuplan.Api -c Release -o /app --no-restore -p:Version=${
 FROM scratch AS installer
 
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee
 WORKDIR /app
 COPY --from=build /app .
 COPY --from=installer / /app/downloads/

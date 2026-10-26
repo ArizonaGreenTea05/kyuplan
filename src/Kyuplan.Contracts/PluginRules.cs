@@ -184,7 +184,8 @@ public static partial class PluginRules
         if (section is null || !SectionPattern().IsMatch(section)) return false;
 
         var first = section.Split(':')[0];
-        return first == "Plugins" ? section.Contains(':') : !ReservedSections.Contains(first);
+        // The keys of the configuration are not case sensitive: "database" is the section "Database".
+        return string.Equals(first, "Plugins", StringComparison.OrdinalIgnoreCase) ? section.Contains(':') : !ReservedSections.Contains(first, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>The problem with a layout, or <c>null</c>. A page can have <c>heading</c>, <c>text</c>, <c>table</c>, <c>button</c> and <c>form</c>; a settings form only <c>heading</c>, <c>text</c>, <c>field</c> and <c>list</c>.</summary>

@@ -11,7 +11,7 @@ namespace Kyuplan.Api.Infrastructure;
 /// <c>sources/index.json</c> of the themes folder (<see cref="ThemePackStore"/>), the themes each one offers in <c>sources/&lt;key&gt;.json</c>. The
 /// catalog follows these files by itself; a read that finds nothing new leaves them alone, so it does not make the clients load the catalog again.
 /// </summary>
-public sealed class ThemeSourceStore(ThemePackStore packs, TimeProvider time)
+public sealed class ThemeSourceStore(ThemePackStore packs, TimeProvider time, ILogger<ThemeSourceStore> log)
 {
     private readonly Lock _lock = new();
 
@@ -111,7 +111,20 @@ public sealed class ThemeSourceStore(ThemePackStore packs, TimeProvider time)
     private List<Stored> Load()
     {
         var path = IndexPath;
-        return File.Exists(path) ? JsonSerializer.Deserialize<List<Stored>>(File.ReadAllText(path, Encoding.UTF8), ThemePackStore.Write) ?? [] : [];
+        if (!File.Exists(path)) return [];
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<Stored>>(File.ReadAllText(path, Encoding.UTF8), ThemePackStore.Write) ?? [];
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            // Corrupt or edited by hand: keep the file as .bad (it may be repaired by hand) and start with no packs, so the page and the worker work again.
+            log.LogWarning("The theme pack index {File} cannot be read and is set aside as .bad: {Problem}", path, ex.Message);
+            try { File.Move(path, path + ".bad", overwrite: true); }
+            catch (Exception move) when (move is IOException or UnauthorizedAccessException) { log.LogWarning("The theme pack index could not be set aside: {Problem}", move.Message); }
+            return [];
+        }
     }
 
     private void Save(List<Stored> all) => Replace(IndexPath, JsonSerializer.Serialize(all, ThemePackStore.Write));

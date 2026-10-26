@@ -552,10 +552,43 @@ public sealed class ThemeSourceStoreTests : IDisposable
     {
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { [ThemePackStore.DirectorySetting] = _folder }).Build();
         _packs = new ThemePackStore(new SettingsFile(Path.Combine(_folder, "settings.json")), configuration, NullLogger<ThemePackStore>.Instance);
-        _store = new ThemeSourceStore(_packs, _time);
+        _store = new ThemeSourceStore(_packs, _time, NullLogger<ThemeSourceStore>.Instance);
     }
 
     public void Dispose() => Directory.Delete(_folder, recursive: true);
+
+    private string IndexFile => Path.Combine(_packs.Directory, ThemePackStore.SourcesFolder, ThemePackStore.SourcesIndex);
+
+    [Theory]
+    [InlineData("{ not json")]
+    [InlineData("")]
+    [InlineData("{\"a\":1}")]
+    public void A_corrupt_index_is_set_aside_and_the_store_starts_empty(string content)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(IndexFile)!);
+        File.WriteAllText(IndexFile, content);
+
+        Assert.Empty(_store.List());
+        Assert.Empty(_store.Due());
+        Assert.Null(_store.Find("abc123"));
+        Assert.False(_store.Delete("abc123"));
+        Assert.Equal(content, File.ReadAllText(IndexFile + ".bad"));
+
+        var added = _store.Add("https://github.com/o/r"); // repaired: adding works again
+        Assert.Equal([added.Id], _store.List().Select(s => s.Id));
+    }
+
+    [Fact]
+    public void A_second_corrupt_index_replaces_the_earlier_bad_copy_and_record_of_a_missing_pack_does_not_throw()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(IndexFile)!);
+        File.WriteAllText(IndexFile + ".bad", "old");
+        File.WriteAllText(IndexFile, "[[");
+
+        _store.Record("abc123", [], true, null);
+
+        Assert.Equal("[[", File.ReadAllText(IndexFile + ".bad"));
+    }
 
     [Fact]
     public void A_new_pack_is_due_at_once_and_after_a_success_only_when_the_interval_is_over()

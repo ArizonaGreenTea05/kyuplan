@@ -1,0 +1,234 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Controls.PluginItemsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Kyuplan.Client.ViewModels;assembly=Kyuplan.Client.Shared"
+             xmlns:ctl="clr-namespace:Kyuplan.Client.WpfApp.Controls"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization">
+
+    <!--
+      Draws what a plugin describes in JSON (the view models of Kyuplan.Client.Shared: headings, texts, fields, lists, tables, buttons, forms). One template for each
+      kind of element, the same for every plugin: used by the pages of plugins and, in the settings, for the form of a plugin's data source.
+    -->
+    <UserControl.Resources>
+        <DataTemplate DataType="{x:Type vm:PluginTextViewModel}">
+            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Margin="0,8,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsHeading}" Value="True">
+                                <Setter Property="Style" Value="{StaticResource SectionTitleText}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PluginFieldViewModel}">
+            <StackPanel Margin="0,10,0,0">
+                <!-- A check box is its own label. -->
+                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Label}">
+                    <CheckBox.Style>
+                        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCheckbox}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </CheckBox.Style>
+                </CheckBox>
+
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsCheckbox}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <TextBlock Text="{Binding Label}" Style="{StaticResource MutedText}" Margin="0,0,0,4" TextWrapping="Wrap" />
+
+                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding Label}"
+                             MaxLength="{Binding MaxLength, TargetNullValue=0}">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsText}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+
+                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding Label}"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinLines="4" MaxLines="12" VerticalScrollBarVisibility="Auto">
+                        <TextBox.Style>
+                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsMultiline}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+
+                    <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}" AutomationProperties.Name="{Binding Label}">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelect}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
+
+                    <ctl:RevealPasswordBox AutomationProperties.Name="{Binding Label}" PasswordChanged="OnPasswordChanged" Loaded="OnPasswordLoaded">
+                        <ctl:RevealPasswordBox.Style>
+                            <Style TargetType="ctl:RevealPasswordBox">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPassword}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ctl:RevealPasswordBox.Style>
+                    </ctl:RevealPasswordBox>
+
+                    <TextBlock Text="{Binding Problem}" Foreground="{DynamicResource DataRiskTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Problem}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding StoredSecretHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0">
+                        <TextBlock.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding StoredSecretHint}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Resources>
+                    </TextBlock>
+                    <TextBlock Text="{Binding Hint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0">
+                        <TextBlock.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Hint}" Value="{x:Null}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Resources>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PluginListViewModel}">
+            <StackPanel Margin="0,14,0,0">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource SectionTitleText}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Hint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource CardBorder}" Margin="0,8,0,0">
+                                <StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Fields}" />
+                                    <Button Content="{loc:Loc Plugin_ListRemove}" AutomationProperties.Name="{loc:Loc Plugin_ListRemove}" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                            Command="{Binding DataContext.RemoveRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Text="{Binding Problem}" Foreground="{DynamicResource DataRiskTextBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                <Button Content="{loc:Loc Plugin_ListAdd}" AutomationProperties.Name="{loc:Loc Plugin_ListAdd}" Command="{Binding AddRowCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PluginTableViewModel}">
+            <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,8" />
+                    <ItemsControl ItemsSource="{Binding Headers}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" Margin="0,0,8,4" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ItemsControl ItemsSource="{Binding}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <UniformGrid Rows="1" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,8,4" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding EmptyText}" Style="{StaticResource MutedText}" TextWrapping="Wrap">
+                        <TextBlock.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource MutedText}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Resources>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PluginButtonViewModel}">
+            <Button Content="{Binding Label}" AutomationProperties.Name="{Binding Label}" Command="{Binding Command}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type vm:PluginFormBlockViewModel}">
+            <Border Style="{StaticResource CardBorder}" Margin="0,14,0,0">
+                <StackPanel>
+                    <ctl:PluginItemsView Items="{Binding Form.Items}" />
+                    <Button Content="{Binding SubmitLabel}" AutomationProperties.Name="{Binding SubmitLabel}" Command="{Binding Submit}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ItemsControl x:Name="List" Focusable="False" />
+</UserControl>

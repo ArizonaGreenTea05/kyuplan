@@ -12,10 +12,12 @@ using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Endpoints;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Plugins;
 using Kyuplan.Api.Sources;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Scalar.AspNetCore;
@@ -30,6 +32,15 @@ do
 }
 while (AppRestarter.Requested);
 
+// A new installation gets the default plugins unless it is told not to (Plugins:InstallDefaults) or starts without the default data (DefaultData:Enabled=false,
+// which the tests use so that none of them reaches for GitHub).
+static PluginOptions PluginDefaults(IConfiguration configuration)
+{
+    var options = configuration.GetSection(PluginOptions.Section).Get<PluginOptions>() ?? new PluginOptions();
+    options.InstallDefaults &= configuration.GetValue("DefaultData:Enabled", true);
+    return options;
+}
+
 static async Task<WebApplication> BuildAsync(string[] args)
 {
     var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +49,17 @@ static async Task<WebApplication> BuildAsync(string[] args)
     // restarts. Saving it restarts the application (see AppRestarter), which builds this whole thing anew.
     var settingsFilePath = SettingsFile.Resolve(builder.Configuration, builder.Environment.ContentRootPath);
     var settingsFile = new SettingsFile(settingsFilePath, SettingsFile.CreateProtector(builder.Configuration, settingsFilePath));
+
+    // The plugins are installed (the default ones on a new installation) before the settings are read: the settings forms of their data sources say which of
+    // their values are secret, and the settings file encrypts those. The plugins themselves are loaded when the application is built (see PluginHost).
+    var pluginStore = new PluginStore(settingsFile, builder.Configuration, NullLogger<PluginStore>.Instance);
+    var bootstrap = await PluginBootstrap.InstallDefaultsAsync(
+        pluginStore,
+        new PluginInstaller(pluginStore, new GitHubPluginFetcher(new HttpClient { Timeout = TimeSpan.FromSeconds(60) }), TimeProvider.System, NullLogger<PluginInstaller>.Instance),
+        PluginDefaults(builder.Configuration),
+        builder.Environment.ContentRootPath,
+        CancellationToken.None);
+    settingsFile.AddSecretPaths(pluginStore.ReadInstalled().SelectMany(PluginSecrets.Of));
     settingsFile.AddTo(builder.Configuration);
     builder.Services.AddSingleton(settingsFile);
     builder.Services.AddSingleton<IAppRestarter, AppRestarter>();
@@ -49,6 +71,14 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Logging.AddConfiguredFile();
 
     builder.Services.Configure<SpondOptions>(builder.Configuration.GetSection(SpondOptions.Section));
+
+    // Plugins add endpoints, pages with permissions and data sources (see docs/plugin-development.md). They are loaded once, when the application starts.
+    builder.Services.Configure<PluginOptions>(builder.Configuration.GetSection(PluginOptions.Section));
+    builder.Services.AddSingleton<PluginStore>();
+    builder.Services.AddSingleton<IPluginFetcher>(_ => new GitHubPluginFetcher(new HttpClient { Timeout = TimeSpan.FromSeconds(60) }));
+    builder.Services.AddSingleton<PluginInstaller>();
+    builder.Services.AddSingleton<PluginHost>();
+    builder.Services.AddSingleton<PluginCatalogService>();
     builder.Services.Configure<StatisticsOptions>(builder.Configuration.GetSection(StatisticsOptions.Section));
     builder.Services.Configure<ApiSecurityOptions>(builder.Configuration.GetSection(ApiSecurityOptions.Section));
     builder.Services.AddSingleton<LoginThrottle>();
@@ -90,7 +120,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
             DataSourceKinds.Demo => ActivatorUtilities.CreateInstance<DemoDataSource>(sp),
             DataSourceKinds.Custom => ActivatorUtilities.CreateInstance<CustomScriptDataSource>(sp),
             DataSourceKinds.Manual => ActivatorUtilities.CreateInstance<ManualDataSource>(sp),
-            _ => ActivatorUtilities.CreateInstance<SpondApiDataSource>(sp),
+            var kind => PluginDataSources.Create(kind, sp),
         });
     builder.Services.AddSingleton<StatisticsService>();
 
@@ -193,6 +223,8 @@ static async Task<WebApplication> BuildAsync(string[] args)
     }));
 
     var app = builder.Build();
+    foreach (var (level, message) in bootstrap) app.Logger.Log(level, "{Message}", message);
+    app.Services.GetRequiredService<PluginHost>(); // the plugins are loaded now, so that what they say is in the log from the start
     if (TrustedProxies.NeedsWarning(app.Configuration["FORWARDEDHEADERS_ENABLED"], app.Configuration.GetSection("Api:TrustedProxies").Get<string[]>()))
         app.Logger.LogWarning("Forwarded headers are enabled but Api:TrustedProxies is empty: only X-Forwarded-* headers from this machine (loopback) are believed. Set Api:TrustedProxies to the address of your reverse proxy, else every visitor looks like the proxy.");
     app.Services.GetRequiredService<SyncStatusTracker>(); // its meter exists from the start, so /metrics lists the sync before the first run
@@ -295,6 +327,8 @@ static async Task<WebApplication> BuildAsync(string[] args)
 
     app.MapBrandingEndpoints();
     app.MapThemeEndpoints();
+    app.MapPluginEndpoints();
+    app.Services.GetRequiredService<PluginHost>().MapEndpoints(app);
     app.MapBackupEndpoints();
     app.MapPlannerEndpoints();
     app.MapClientDownloadEndpoints();

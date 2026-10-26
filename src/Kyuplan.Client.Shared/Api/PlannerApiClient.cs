@@ -72,6 +72,55 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
     public Task<UserDto> GetAccountAsync(CancellationToken cancellationToken = default) =>
         GetAsync("api/account", PlannerJsonContext.Default.UserDto, cancellationToken);
 
+    public Task<PluginCatalogDto> GetPluginsAsync(CancellationToken cancellationToken = default) =>
+        GetAsync("api/plugins", PlannerJsonContext.Default.PluginCatalogDto, cancellationToken);
+
+    public async Task<IReadOnlyList<PluginAdminDto>> GetInstalledPluginsAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/plugin-admin", PlannerJsonContext.Default.ListPluginAdminDto, cancellationToken);
+
+    public Task<PluginChangedDto> InstallPluginAsync(string url, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/plugin-admin", Json(new PluginInstallInputDto(url), PlannerJsonContext.Default.PluginInstallInputDto), cancellationToken),
+            PlannerJsonContext.Default.PluginChangedDto, cancellationToken);
+
+    public Task<PluginChangedDto> UpdatePluginAsync(string id, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/plugin-admin/{Uri.EscapeDataString(id)}/update", null, cancellationToken),
+            PlannerJsonContext.Default.PluginChangedDto, cancellationToken);
+
+    public Task<PluginChangedDto> RemovePluginAsync(string id, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.DeleteAsync($"api/plugin-admin/{Uri.EscapeDataString(id)}", cancellationToken),
+            PlannerJsonContext.Default.PluginChangedDto, cancellationToken);
+
+    public Task<System.Text.Json.JsonElement> GetPluginDataAsync(string pluginId, string path, CancellationToken cancellationToken = default) =>
+        SendPluginAsync(() => http.GetAsync(PluginUrl(pluginId, path), cancellationToken), cancellationToken);
+
+    public Task<System.Text.Json.JsonElement> SendPluginAsync(string pluginId, string method, string path, System.Text.Json.JsonElement? body, CancellationToken cancellationToken = default) =>
+        SendPluginAsync(() =>
+        {
+            var request = new HttpRequestMessage(new HttpMethod(method), PluginUrl(pluginId, path));
+            if (body is { } value) request.Content = JsonContent.Create(value, PlannerJsonContext.Default.JsonElement);
+            return http.SendAsync(request, cancellationToken);
+        }, cancellationToken);
+
+    // The path comes from the layout of a plugin, which the API has checked (no way out of the plugin's own addresses); it is escaped by part all the same.
+    private static string PluginUrl(string pluginId, string path) =>
+        $"api/plugins/{Uri.EscapeDataString(pluginId)}/{string.Join('/', path.Split('/').Select(Uri.EscapeDataString))}";
+
+    private async Task<System.Text.Json.JsonElement> SendPluginAsync(Func<Task<HttpResponseMessage>> send, CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(send);
+        await EnsureSuccessAsync(response, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NoContent || response.Content.Headers.ContentLength == 0) return default;
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync(PlannerJsonContext.Default.JsonElement, cancellationToken);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return default; // an answer that is no JSON (text) is a success all the same
+        }
+    }
+
     public Task<ThemeCatalogDto> GetThemesAsync(CancellationToken cancellationToken = default) =>
         GetAsync("api/themes", PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
 

@@ -1,4 +1,4 @@
-namespace Kyuplan.Api.Domain;
+namespace Kyuplan.Plugins;
 
 // Spond-agnostic model. Everything the statistics need, nothing more — so the calculator can be
 // tested without Spond and the demo data source can feed it just like the real one.

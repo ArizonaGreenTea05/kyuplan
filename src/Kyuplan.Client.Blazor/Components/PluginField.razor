@@ -1,0 +1,62 @@
+@* One field of a form a plugin describes: the control follows the field's input kind; what is wrong with the value is said under it. *@
+@if (Field.IsCheckbox)
+{
+    <label class="check">
+        <input type="checkbox" disabled="@Disabled" @bind="Field.IsChecked" />
+        <span>@Field.Label@if (Field.Hint is { } checkHint){<small>@checkHint</small>}</span>
+    </label>
+}
+else
+{
+    <label class="field">
+        <span>@Field.Label</span>
+        @if (Field.IsPassword)
+        {
+            <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="Field.Text" />
+        }
+        else if (Field.IsMultiline)
+        {
+            <textarea rows="6" spellcheck="false" autocomplete="off" disabled="@Disabled" @bind="Field.Text" @bind:event="oninput"></textarea>
+        }
+        else if (Field.IsSelect)
+        {
+            <select value="@Field.Text" disabled="@Disabled" @onchange="e => Field.Text = e.Value?.ToString() ?? string.Empty">
+                @if (!Field.IsRequired)
+                {
+                    <option value=""></option>
+                }
+                @foreach (var choice in Field.Choices)
+                {
+                    <option value="@choice.Value">@choice.Label</option>
+                }
+            </select>
+        }
+        else if (Field.IsNumber)
+        {
+            <input type="number" min="@Field.Min" max="@Field.Max" step="any" disabled="@Disabled" value="@Field.Text" @oninput="e => Field.Text = e.Value?.ToString() ?? string.Empty" />
+        }
+        else
+        {
+            <input type="text" autocomplete="off" spellcheck="false" maxlength="@Field.MaxLength" disabled="@Disabled" @bind="Field.Text" @bind:event="oninput" />
+        }
+
+        @if (Field.Problem is { } problem)
+        {
+            <p class="field-error" role="alert">@problem</p>
+        }
+        else if (Field.StoredSecretHint is { } stored)
+        {
+            <small>@stored</small>
+        }
+        else if (Field.Hint is { } hint)
+        {
+            <small>@hint</small>
+        }
+    </label>
+}
+
+@code {
+    [Parameter, EditorRequired] public PluginFieldViewModel Field { get; set; } = default!;
+
+    [Parameter] public bool Disabled { get; set; }
+}

@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
 using static Kyuplan.Tests.SyncTestClub;

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A plugin the tests load into the API (see PluginTestKit): it plays the Spond plugin and a plugin with pages, permissions and endpoints. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Kyuplan.Plugins.Abstractions\Kyuplan.Plugins.Abstractions.csproj" Private="false" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+</Project>

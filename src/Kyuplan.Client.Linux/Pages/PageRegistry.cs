@@ -26,6 +26,8 @@ internal static class PageRegistry
         BrandingAdminViewModel branding => BrandingPage.Build(context, branding),
         SettingsViewModel settings => SettingsPage.Build(context, settings),
         ManualDataViewModel manual => ManualDataPage.Build(context, manual),
+        PluginsViewModel plugins => PluginsPage.Build(context, plugins),
+        PluginPageViewModel pluginPage => PluginPage.Build(context, pluginPage),
         _ => Ui.Page(Ui.VBox(12, Ui.Heading(page.Title))),
     };
 }

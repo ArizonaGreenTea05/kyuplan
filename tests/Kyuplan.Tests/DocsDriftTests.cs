@@ -65,6 +65,13 @@ public partial class DocsDriftTests
             foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)) Add($"{section}:{property.Name}");
         }
 
+        // The settings of the Spond plugin: its options class is in the plugin's own repository, its settings form (a copy of it is the test kit's) names the keys.
+        foreach (var element in PluginTestKit.Layout(PluginTestKit.SpondForm).Elements)
+        {
+            Add($"Spond:{element.Id}");
+            foreach (var row in element.Elements ?? []) Add($"Spond:{element.Id}:{row.Id}");
+        }
+
         Add(SettingsFile.PathSetting);
         Add(SettingsFile.KeyDirectorySetting);
         Add(ThemePackStore.DirectorySetting);

@@ -6,6 +6,7 @@
 | **install** kyuplan on a server, in Docker, on a NAS or in the cloud | [Deployment guide](deployment.md) (start with the [step-by-step](deployment.md#step-by-step-your-first-deployment)) |
 | **manage** an instance: data source, users and roles, belts, branding, backups, updates | [Administrator guide](admin-guide.md) |
 | **change the code** or contribute | [Developer guide](developer-guide.md) |
+| **extend** kyuplan with a plugin (pages, permissions, data sources) | [Plugin development](plugin-development.md) |
 
 Background and reference:
 

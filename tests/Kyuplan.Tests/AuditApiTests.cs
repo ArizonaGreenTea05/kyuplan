@@ -30,7 +30,13 @@ public sealed class AuditApiTests(WebApplicationFactory<Program> factory) : ICla
         Directory.Delete(_folder, recursive: true);
     }
 
-    private WebApplicationFactory<Program> CreateHost() =>
+    private WebApplicationFactory<Program> CreateHost()
+    {
+        PluginTestKit.Install(Path.Combine(_folder, "settings.json"), PluginTestKit.SpondPackage()); // the plugin that has the settings of Spond
+        return CreateHostCore();
+    }
+
+    private WebApplicationFactory<Program> CreateHostCore() =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("Spond:UseDemoData", "true");
@@ -205,7 +211,7 @@ public sealed class AuditApiTests(WebApplicationFactory<Program> factory) : ICla
     {
         var s = (await admin.GetFromJsonAsync<SettingsDto>("/api/settings"))!;
         return new SettingsInputDto(
-            s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData, s.SpondEmail, s.SpondPhoneNumber, null,
+            s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData,
             s.TimeZone, s.ExamKeyword, s.DefaultMinAttendancePercent, s.DefaultMinInvitedEvents, s.SyncEnabled, s.SyncIntervalMinutes);
     }
 
@@ -219,13 +225,12 @@ public sealed class AuditApiTests(WebApplicationFactory<Program> factory) : ICla
 
         var response = await admin.PutAsJsonAsync("/api/settings", settings with
         {
-            SpondEmail = "trainer@example.org",
-            SpondPassword = "spond-pass-1",
+            PluginSettings = PluginTestKit.Settings("spond", ("Email", "trainer@example.org"), ("Password", "spond-pass-1"),
+                ("Accounts", new object[] { new { Email = "b@example.org", Password = "backup-pass-2" } })),
             MetricsEnabled = true,
             MetricsToken = "scrape-token-0123456789",
             CustomScript = script,
             ExamKeyword = "Pruefung",
-            BackupAccounts = [new SpondAccountInputDto("b@example.org", null, "backup-pass-2")],
         });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

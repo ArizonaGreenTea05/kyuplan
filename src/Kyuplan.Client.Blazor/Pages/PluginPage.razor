@@ -1,0 +1,110 @@
+@page "/plugin/{PluginId}/{PageId}"
+@implements IDisposable
+@using System.ComponentModel
+@inject ShellViewModel Shell
+
+@* A page a plugin added: the plugin describes it in JSON, PluginItems draws it. The view model comes from the shell's catalog, so the page waits for it. *@
+@if (_page is null)
+{
+    <BrandedTitle Title="@Strings.Shell_NotFoundTitle" />
+    <section class="page">
+        @if (Shell.IsInitialized)
+        {
+            <p class="empty">@Strings.Shell_NotFound <a href="">@Strings.Shell_BackToDashboard</a></p>
+        }
+        else
+        {
+            <p class="empty">@Strings.Setup_Checking</p>
+        }
+    </section>
+}
+else
+{
+    <BrandedTitle Title="@_page.Title" />
+
+    <section class="page">
+        <div class="progress @(_page.IsBusy ? "on" : "")" role="progressbar" aria-hidden="@(!_page.IsBusy)"></div>
+
+        <header class="page-head">
+            <div>
+                <h1>@_page.Title</h1>
+            </div>
+        </header>
+
+        <PageGate Page="_page">
+            <ErrorBanner Message="@_page.ErrorMessage" OnRetry="() => _page.RetryCommand.ExecuteAsync(null)" />
+
+            @if (_page.HasNotice)
+            {
+                <div class="banner ok" role="status">
+                    <Icon Name="check" />
+                    <span>@_page.Notice</span>
+                </div>
+            }
+
+            @if (_page.IsConfirming)
+            {
+                <div class="confirm" role="alertdialog" aria-label="@_page.Confirmation">
+                    <span>@_page.Confirmation</span>
+                    <button type="button" class="btn danger" @onclick="() => _page.ConfirmCommand.ExecuteAsync(null)"><span>@Strings.Plugin_Confirm</span></button>
+                    <button type="button" class="btn ghost" @onclick="() => _page.CancelConfirmationCommand.Execute(null)"><span>@Strings.Plugin_Cancel</span></button>
+                </div>
+            }
+
+            <PluginItems Items="_page.Items" Disabled="_page.IsBusy" />
+        </PageGate>
+    </section>
+}
+
+@code {
+    [Parameter] public string PluginId { get; set; } = "";
+
+    [Parameter] public string PageId { get; set; } = "";
+
+    private PluginPageViewModel? _page;
+
+    protected override void OnInitialized() => Shell.PropertyChanged += OnShellChanged;
+
+    protected override async Task OnParametersSetAsync() => await ResolveAsync();
+
+    // The catalog arrives with the shell's start, and again when plugins change: the page looks for its view model again.
+    private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ShellViewModel.PluginPages) or nameof(ShellViewModel.CurrentUser)) _ = InvokeAsync(ResolveAsync);
+    }
+
+    private async Task ResolveAsync()
+    {
+        var found = Shell.PluginPages.FirstOrDefault(p => p.PluginId == PluginId && p.PageId == PageId);
+        if (ReferenceEquals(found, _page))
+        {
+            StateHasChanged();
+            return;
+        }
+
+        if (_page is not null)
+        {
+            _page.PropertyChanged -= OnPageChanged;
+            _page.Deactivate();
+        }
+
+        _page = found;
+        StateHasChanged();
+        if (_page is null) return;
+
+        _page.PropertyChanged += OnPageChanged;
+        await _page.ActivateAsync();
+    }
+
+    private void OnPageChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Shell.PropertyChanged -= OnShellChanged;
+        if (_page is not null)
+        {
+            _page.PropertyChanged -= OnPageChanged;
+            _page.Deactivate();
+        }
+    }
+}

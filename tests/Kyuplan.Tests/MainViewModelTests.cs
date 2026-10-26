@@ -99,13 +99,14 @@ public sealed class MainViewModelTests : IDisposable
         _session.User = Boss;
 
         Assert.Equal(8, _main.Items.Count); // the manual data page waits for the server to say the source is manual
-        Assert.Equal(6, _main.AdminItems.Count);
+        Assert.Equal(7, _main.AdminItems.Count);
         Assert.IsType<UserAdminViewModel>(_main.AdminItems[0].Page);
         Assert.IsType<RolesViewModel>(_main.AdminItems[1].Page);
-        Assert.IsType<BrandingAdminViewModel>(_main.AdminItems[2].Page);
-        Assert.IsType<CalendarFeedsViewModel>(_main.AdminItems[3].Page);
-        Assert.IsType<BackupViewModel>(_main.AdminItems[4].Page);
-        Assert.IsType<SyncStatusViewModel>(_main.AdminItems[5].Page);
+        Assert.IsType<PluginsViewModel>(_main.AdminItems[2].Page);
+        Assert.IsType<BrandingAdminViewModel>(_main.AdminItems[3].Page);
+        Assert.IsType<CalendarFeedsViewModel>(_main.AdminItems[4].Page);
+        Assert.IsType<BackupViewModel>(_main.AdminItems[5].Page);
+        Assert.IsType<SyncStatusViewModel>(_main.AdminItems[6].Page);
         Assert.All(_main.Items.Concat(_main.AdminItems).Concat(_main.AccountItems), item => Assert.NotEmpty(item.Glyph));
     }
 
@@ -134,7 +135,7 @@ public sealed class MainViewModelTests : IDisposable
     {
         _session.User = Boss;
         _session.User = Boss with { UserName = "chief" }; // renamed: still an administrator
-        Assert.Equal(6, _main.AdminItems.Count);
+        Assert.Equal(7, _main.AdminItems.Count);
 
         _session.User = Anna;
         Assert.Equal(6, _main.Items.Count);
@@ -142,14 +143,14 @@ public sealed class MainViewModelTests : IDisposable
 
         _session.User = Boss;
         Assert.Equal(8, _main.Items.Count); // the manual data page waits for the server to say the source is manual
-        Assert.Equal(6, _main.AdminItems.Count);
+        Assert.Equal(7, _main.AdminItems.Count);
     }
 
     [Fact]
     public void A_page_that_is_open_gives_way_to_the_first_one_that_is_left_when_the_permission_is_gone()
     {
         _session.User = Boss;
-        _main.SelectedItem = _main.AdminItems[2];
+        _main.SelectedItem = _main.AdminItems[3];
         Assert.IsType<BrandingAdminViewModel>(_main.SelectedItem.Page);
 
         _session.User = Anna;
@@ -180,8 +181,46 @@ public sealed class MainViewModelTests : IDisposable
 
         Assert.Same(_services.GetRequiredService<UserAdminViewModel>(), _main.AdminItems[0].Page);
         Assert.Same(_services.GetRequiredService<RolesViewModel>(), _main.AdminItems[1].Page);
-        Assert.Same(_services.GetRequiredService<BrandingAdminViewModel>(), _main.AdminItems[2].Page);
+        Assert.Same(_services.GetRequiredService<BrandingAdminViewModel>(), _main.AdminItems[3].Page);
         Assert.Same(_session, _services.GetRequiredService<UserAdminViewModel>().Shell.Session);
+    }
+
+    [Fact]
+    public async Task The_pages_the_plugins_added_follow_the_main_pages_and_come_and_go_with_the_catalog()
+    {
+        _api.PluginCatalog = PluginTestKit.AcmeCatalog();
+        _api.Account = WithPermissions(5, "viewer", "acme.view");
+        _api.AccountGate!.SetResult();
+        var shell = _services.GetRequiredService<ShellViewModel>();
+
+        // The shell learns who is signed in itself. (The clients change the navigation on one thread; setting the user here while the
+        // start-up still runs in the background would make two threads do it at once.)
+        await shell.InitializeAsync();
+
+        var pluginPages = _main.Items.Select(i => i.Page).OfType<PluginPageViewModel>().ToList();
+        Assert.Equal(["acme/items", "acme/about"], pluginPages.Select(p => p.Key));
+        Assert.Same(pluginPages[1], _main.Items[^1].Page); // after the program's own pages
+        Assert.All(_main.Items.Where(i => i.Page is PluginPageViewModel), item => Assert.NotEmpty(item.Glyph));
+
+        // The open page gives way when its permission goes: somebody else signs in.
+        _main.SelectedItem = _main.Items[^2];
+        Assert.Same(pluginPages[0], _main.SelectedItem.Page);
+        _session.User = Nobody(6, "nobody");
+        await shell.RefreshPluginsAsync();
+
+        Assert.DoesNotContain(_main.Items.Select(i => i.Page), page => ReferenceEquals(page, pluginPages[0]));
+        Assert.False(ReferenceEquals(_main.SelectedItem.Page, pluginPages[0]));
+    }
+
+    [Fact]
+    public async Task The_plugins_page_is_in_the_administration_group_for_those_who_may_see_it()
+    {
+        _session.User = WithPermissions(7, "ops", Permission.PluginsView);
+        await Task.CompletedTask;
+
+        Assert.Contains(_main.AdminItems.Select(i => i.Page), page => page is PluginsViewModel);
+        _session.User = Nobody(8, "nobody");
+        Assert.DoesNotContain(_main.AdminItems.Select(i => i.Page), page => page is PluginsViewModel);
     }
 }
 

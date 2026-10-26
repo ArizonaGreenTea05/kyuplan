@@ -66,6 +66,10 @@ public static class Permission
 
     public const string ThemesEdit = "themes.edit";
 
+    public const string PluginsView = "plugins.view";
+    /// <summary>Install, update and remove plugins. A plugin is code that runs inside the API with all its rights, so this is for administrators who trust what they install.</summary>
+    public const string PluginsEdit = "plugins.edit";
+
     public const string BackupsView = "backups.view";
     /// <summary>Define the backup databases and run them.</summary>
     public const string BackupsEdit = "backups.edit";
@@ -109,6 +113,7 @@ public static class Permission
         new("tags", [TagsView, TagsEdit]),
         new("branding", [BrandingView, BrandingEdit]),
         new("themes", [ThemesEdit]),
+        new("plugins", [PluginsView, PluginsEdit]),
         new("backups", [BackupsView, BackupsEdit, BackupsDownload, BackupsRestore]),
         new("manualdata", [ManualDataEdit]),
         new("settings", [SettingsView, SettingsEdit]),
@@ -120,10 +125,18 @@ public static class Permission
 
     public static IReadOnlyList<string> All { get; } = [.. Groups.SelectMany(g => g.Permissions)];
 
-    public static bool IsKnown(string? permission) => permission is not null && All.Contains(permission);
+    /// <summary>
+    /// A permission of the catalogue, or one that can belong to a plugin (<see cref="PluginRules.IsPluginPermission"/>): which plugins are installed changes,
+    /// and a role keeps the permissions of a plugin that is removed for the day it is installed again.
+    /// </summary>
+    public static bool IsKnown(string? permission) => permission is not null && (All.Contains(permission) || PluginRules.IsPluginPermission(permission));
 
-    /// <summary>These permissions, each once, in the order of the catalogue; what is not in the catalogue is dropped.</summary>
-    public static List<string> InCatalogueOrder(IEnumerable<string> permissions) => [.. All.Where(permissions.ToHashSet().Contains)];
+    /// <summary>These permissions, each once, in the order of the catalogue followed by those of plugins; what is neither is dropped.</summary>
+    public static List<string> InCatalogueOrder(IEnumerable<string> permissions)
+    {
+        var wanted = permissions.ToHashSet();
+        return [.. All.Where(wanted.Contains), .. wanted.Where(p => !All.Contains(p) && PluginRules.IsPluginPermission(p)).Order(StringComparer.Ordinal)];
+    }
 
     /// <summary>Whoever holds any of these may read what Spond knows (groups and events); the pages that show it need it.</summary>
     public static IReadOnlyList<string> ReadsSpond { get; } = [DashboardView, StatisticsView, CalendarView, CalendarFeeds, ExamsView, MembersView, TagsView, ManualDataEdit];

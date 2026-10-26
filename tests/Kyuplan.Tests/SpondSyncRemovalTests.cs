@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using Kyuplan.Contracts;
@@ -480,7 +479,7 @@ public sealed class SpondSyncRemovalTests : IDisposable
         await Assert.ThrowsAsync<SyncRefusedException>(_club.SyncAsync);
 
         Spond.Unreachable = true;
-        await Assert.ThrowsAsync<SpondUnavailableException>(_club.SyncAsync);
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(_club.SyncAsync);
 
         var status = await StatusAsync();
         Assert.False(status.RemovalRefused);

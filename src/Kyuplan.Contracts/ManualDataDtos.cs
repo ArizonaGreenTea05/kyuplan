@@ -12,12 +12,14 @@ public static class DataSourceKinds
     public const string Custom = "custom";
     public const string Manual = "manual";
 
-    public static IReadOnlyList<string> All { get; } = [Spond, Custom, Manual, Demo];
+    /// <summary>The data sources the program has itself. The others come from plugins (the Spond plugin, installed by default, offers <see cref="Spond"/>).</summary>
+    public static IReadOnlyList<string> All { get; } = [Custom, Manual, Demo];
 
-    public static bool IsKnown(string? kind) => kind is not null && All.Contains(kind);
+    /// <summary>A data source of the program (<see cref="All"/>) or one a plugin could offer; whether that plugin is installed is another question.</summary>
+    public static bool IsKnown(string? kind) => kind is not null && (All.Contains(kind) || PluginRules.IsSourceId(kind));
 
-    /// <summary>The kind in the form it is stored in (<c>null</c> or unknown = <see cref="Spond"/>).</summary>
-    public static string Normalize(string? kind) => kind?.Trim().ToLowerInvariant() is { } k && All.Contains(k) ? k : Spond;
+    /// <summary>The kind in the form it is stored in (<c>null</c> or something that cannot be a kind = <see cref="Spond"/>).</summary>
+    public static string Normalize(string? kind) => kind?.Trim().ToLowerInvariant() is { } k && IsKnown(k) ? k : Spond;
 }
 
 /// <summary>What a member answered to an event invitation, as the manual data keeps it.</summary>

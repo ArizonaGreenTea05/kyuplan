@@ -2,7 +2,6 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
@@ -50,7 +49,7 @@ public sealed class SpondSync(
     /// group) or more than <see cref="SyncOptions.MaxRemovedMembers"/> is refused before anything is changed, unless
     /// <paramref name="confirmRemoval"/> says it is right.
     /// </summary>
-    /// <exception cref="SpondUnavailableException">Spond cannot be read at all; nothing was changed.</exception>
+    /// <exception cref="DataSourceUnavailableException">Spond cannot be read at all; nothing was changed.</exception>
     /// <exception cref="SyncRefusedException">The answer looks wrong and was not confirmed; nothing was changed.</exception>
     public async Task SyncAllAsync(CancellationToken cancellationToken, bool confirmRemoval = false)
     {
@@ -182,7 +181,7 @@ public sealed class SpondSync(
         {
             events = await statistics.GetWindowEventsAsync(group.Id, cancellationToken, includeHidden: true); // the members a user hid are kept up to date too
         }
-        catch (Exception ex) when (ex is SpondUnavailableException or GroupNotFoundException)
+        catch (Exception ex) when (ex is DataSourceUnavailableException or GroupNotFoundException)
         {
             logger.LogWarning(ex, "Could not read the events of group {GroupId} from Spond; the start dates of its members and its exams stay as they are.", group.Id);
             return;

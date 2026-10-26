@@ -14,7 +14,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger
         var (status, title) = exception switch
         {
             AccountsUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Accounts unavailable"),
-            SpondUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Spond is unavailable"),
+            DataSourceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "The data source is unavailable"),
             SyncRefusedException => (StatusCodes.Status409Conflict, "Sync refused"),
             GroupNotFoundException => (StatusCodes.Status404NotFound, "Group not found"),
             EventNotFoundException => (StatusCodes.Status404NotFound, "Event not found"),

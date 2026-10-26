@@ -85,6 +85,7 @@ public sealed partial class SetupViewModel : ViewModelBase
     public Task CheckAsync() => LoadAsync(async ct =>
     {
         var status = await _api.GetSetupAsync(ct);
+        Form.SetPlugins(status.Plugins);
         if (status.Settings is { } settings) Form.Load(settings);
         _loadedSettingsFilePath = SettingsFilePath = status.SettingsFilePath ?? "";
         SettingsFileLocked = status.SettingsFileLocked;

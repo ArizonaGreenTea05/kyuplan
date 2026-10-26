@@ -83,6 +83,13 @@
                     <Icon Name="members" /><span>@Strings.Nav_ManualData</span>
                 </NavLink>
             }
+            @* The pages the plugins added, for those who may open them. *@
+            @foreach (var plugin in Shell.PluginPages)
+            {
+                <NavLink class="nav-item" href="@($"plugin/{Uri.EscapeDataString(plugin.PluginId)}/{Uri.EscapeDataString(plugin.PageId)}")">
+                    <Icon Name="@(plugin.Icon ?? "puzzle")" /><span>@plugin.Title</span>
+                </NavLink>
+            }
         </nav>
 
         @* The documentation the user may read (the user guide for everybody, more for administrators), each in a tab of its own. *@
@@ -111,7 +118,7 @@
 
         @* Administration (what an administrator may use) above the account; signing out forgets the login held in memory. *@
         <nav class="nav-groups" aria-label="@Strings.Nav_Account">
-            @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView, Permission.BackupsView, Permission.CalendarFeeds, Permission.SyncView]))
+            @if (Shell.CanAny([Permission.UsersView, Permission.RolesView, Permission.SettingsView, Permission.BrandingView, Permission.BackupsView, Permission.CalendarFeeds, Permission.SyncView, Permission.PluginsView]))
             {
                 <div class="nav-group">
                     <button type="button" class="nav-item"><Icon Name="sliders" /><span>@Strings.Nav_Administration</span></button>
@@ -132,6 +139,12 @@
                     {
                         <NavLink class="nav-item" href="settings">
                             <Icon Name="sliders" /><span>@Strings.Nav_Settings</span>
+                        </NavLink>
+                    }
+                    @if (Shell.Can(Permission.PluginsView))
+                    {
+                        <NavLink class="nav-item" href="plugins">
+                            <Icon Name="puzzle" /><span>@Strings.Nav_Plugins</span>
                         </NavLink>
                     }
                     @if (Shell.Can(Permission.BrandingView))

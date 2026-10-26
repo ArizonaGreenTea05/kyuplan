@@ -42,8 +42,8 @@ The setup screen asks for:
 | --- | --- |
 | **Settings file** | Where the settings are kept (`data/settings.json`; fixed, and shown read-only, when the deployment pins it). |
 | **Planner / Accounts database** | The two SQLite files (only with SQLite; with PostgreSQL the connection strings are environment settings). Keep them as two different files. |
-| **Data source** | Where groups, members and events come from: **Spond**, **Custom (script)**, **Manual** or **Demo data**; see [Data sources](#data-sources). |
-| **Spond** | (Data source Spond.) Email (or phone number) and password of the Spond account. **Subgroup of members not registered yet** (`Spond:UnregisteredSubGroup`): name (or id, case-insensitive) of the Spond subgroup that holds the people who are in the group but not registered in the club yet; the Members page shows them as "not registered yet", and each sync keeps this in line with Spond. Empty, or no such subgroup in a group = everybody is registered. |
+| **Data source** | Where groups, members and events come from: **Spond** (or another data source a [plugin](#plugins) offers), **Custom (script)**, **Manual** or **Demo data**; see [Data sources](#data-sources). |
+| **Spond** | (Data source Spond, a plugin: shown as the form the plugin brings.) Email (or phone number) and password of the Spond account. **Subgroup of members not registered yet** (`Spond:UnregisteredSubGroup`): name (or id, case-insensitive) of the Spond subgroup that holds the people who are in the group but not registered in the club yet; the Members page shows them as "not registered yet", and each sync keeps this in line with Spond. Empty, or no such subgroup in a group = everybody is registered. |
 | **Time zone**, **Exam keyword**, **default minimum attendance**, **default minimum invited events** | See [Statistics settings](#statistics-and-exams). |
 | **Synchronisation** | Whether to sync with Spond automatically and how often. |
 | **Allowed host names** | The proposal is the address you opened. Requests to other host names are refused. |
@@ -77,7 +77,7 @@ information, so every page works the same with each of them.
 
 | Data source | Where the data comes from |
 | --- | --- |
-| **Spond** | A Spond account; see [Connecting Spond](#connecting-spond). |
+| **Spond** (and others from [plugins](#plugins)) | A Spond account; see [Connecting Spond](#connecting-spond). Spond is a plugin that a new installation gets by default; every other plugin's data source is listed here too, with the settings form the plugin brings. |
 | **Custom (script)** | A JavaScript you write that reads the data from any service; see [Custom data source](#custom-data-source). |
 | **Manual** | Users with the permission *Enter groups, members and events by hand* (`manualdata.edit`) keep everything on the **Manual data** page; see [Manual data](#manual-data). |
 | **Demo data** | Generated data of a fictional club, for training (`Spond:UseDemoData`, the older switch, also turns it on). |
@@ -192,6 +192,19 @@ permission `manualdata.edit`; give it to a role on the Roles page (administrator
 
 Every change is saved at once and the members and exams are brought in line right away, so the other pages show it immediately; no waiting for
 the next sync. The page tells you when the data source is not Manual (what you enter is then not used).
+
+## Plugins
+
+A **plugin** adds pages, permissions and data sources to kyuplan. Spond itself is a plugin: a new installation installs it by default. More plugins are public GitHub repositories whose latest *release* carries a `.kyuplugin` file; ask the plugin's author how to use it. The **Plugins** page (Administration; permission `plugins.view`) lists what is installed and whether it runs.
+
+- **Install**: paste the address of the repository (`https://github.com/owner/repo`) and press *Install* (needs `plugins.edit`). **Update** fetches the latest release of the repository a plugin came from. **Remove** takes it away. Each change **restarts the server** (a few seconds): plugins are loaded when it starts.
+- **A plugin is code that runs inside the server with all its rights**, can read the databases and reach your network. Install only plugins from authors you trust, and give `plugins.edit` only to administrators. The package is checked for its shape, not for what its code does.
+- **What a plugin adds.** A *page* appears in the navigation for the users who have the page's permission. A *permission* is `<plugin id>.<name>` and is listed in the role and user forms under the plugin's name. A *data source* appears in the **Data source** list of the Settings page; choosing it shows the settings form of the plugin (a password field is stored encrypted and never shown again).
+- **If a plugin does not run** the Plugins page says why (the assembly is broken, the plugin throws while it starts, ...). The server starts anyway. If the plugin of the chosen data source is missing, the pages that need data show a message that says so; install the plugin or choose another data source.
+- **Removing a plugin** keeps the permissions that roles and users had through it: they work again when it is installed again. Its settings stay in `settings.json`.
+- **Offline installations.** The default plugin is fetched from GitHub the first time the server starts, unless the container image carries it (`Plugins:BundledDirectory`); see the [deployment guide](deployment.md#plugins). Without it the settings page says that the plugin of the data source is not installed.
+
+How plugins are written: [Plugin development](plugin-development.md).
 
 ## Connecting Spond
 
@@ -321,6 +334,7 @@ The complete list of keys is in the [configuration table of the reference](refer
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | themes | `themes.edit` (install and delete themes, add and remove theme packs from GitHub) |
+| plugins | `plugins.view` (the Plugins page), `plugins.edit` (install, update and remove [plugins](#plugins): code that runs in the server with all its rights, so only for administrators) |
 | backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases: it makes the server copy **all data**, password hashes included, into a folder or a PostgreSQL database of the holder's choice, so it exposes as much as `backups.download`; grant both only to administrators), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |

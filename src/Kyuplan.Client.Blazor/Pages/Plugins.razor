@@ -1,0 +1,116 @@
+@page "/plugins"
+@inherits ViewModelComponent<PluginsViewModel>
+
+<BrandedTitle Title="@Vm.Title" />
+
+<section class="page">
+    <div class="progress @(Vm.IsBusy || Vm.IsRestarting ? "on" : "")" role="progressbar" aria-hidden="@(!(Vm.IsBusy || Vm.IsRestarting))"></div>
+
+    <header class="page-head">
+        <div>
+            <h1>@Vm.Title</h1>
+            <p class="lede">@Strings.Plugins_Lede</p>
+        </div>
+    </header>
+
+    <PageGate Page="Vm">
+        <ErrorBanner Message="@Vm.ErrorMessage" OnRetry="RetryLoading" />
+
+        @if (Vm.HasNotice)
+        {
+            <div class="banner ok" role="status" id="plugins-notice">
+                <Icon Name="check" />
+                <span>@Vm.NoticeText</span>
+            </div>
+        }
+
+        @if (Vm.CanEdit)
+        {
+            <section class="card card-form" aria-labelledby="plugins-install">
+                <h2 id="plugins-install">@Strings.Plugins_InstallTitle</h2>
+                <p class="hint">@Strings.Plugins_Warning</p>
+
+                <label class="field">
+                    <span>@Strings.Plugins_Url</span>
+                    <input type="url" autocomplete="off" spellcheck="false" id="plugins-url" disabled="@(Vm.IsBusy || Vm.IsRestarting)" @bind="Vm.Url" @bind:event="oninput" />
+                    @if (Vm.UrlProblem is { } problem)
+                    {
+                        <p class="field-error" role="alert">@problem</p>
+                    }
+                    else
+                    {
+                        <small>@Strings.Plugins_UrlHint</small>
+                    }
+                </label>
+
+                <div class="form-actions">
+                    <button type="button" class="btn" id="plugins-install-button" disabled="@(!Vm.InstallCommand.CanExecute(null))" @onclick="() => Vm.InstallCommand.ExecuteAsync(null)">
+                        <span>@Strings.Plugins_Install</span>
+                    </button>
+                </div>
+            </section>
+        }
+
+        @if (Vm.IsConfirmingRemoval)
+        {
+            <div class="confirm" role="alertdialog" aria-label="@Vm.RemovalQuestion">
+                <span>@Vm.RemovalQuestion</span>
+                <button type="button" class="btn danger" id="plugins-remove-yes" @onclick="() => Vm.RemoveCommand.ExecuteAsync(null)"><span>@Strings.Plugins_RemoveYes</span></button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.CancelRemovalCommand.Execute(null)"><span>@Strings.Plugin_Cancel</span></button>
+            </div>
+        }
+
+        <section class="card card-form" aria-labelledby="plugins-installed">
+            <h2 id="plugins-installed">@Strings.Plugins_InstalledTitle</h2>
+
+            @if (!Vm.HasPlugins)
+            {
+                <p class="note">@Strings.Plugins_None</p>
+            }
+
+            @foreach (var plugin in Vm.Plugins)
+            {
+                <div class="plugin-row" id="plugin-@plugin.Id">
+                    <h3>@plugin.Name</h3>
+                    <p class="note">@plugin.Details</p>
+                    @if (plugin.Description is { Length: > 0 } description)
+                    {
+                        <p>@description</p>
+                    }
+                    @if (plugin.HasOffers)
+                    {
+                        <p class="note">@plugin.Offers</p>
+                    }
+                    <p class="@(plugin.HasProblem ? "field-error" : "note")">@plugin.StatusText</p>
+
+                    @if (Vm.CanEdit)
+                    {
+                        <div class="form-actions">
+                            @if (plugin.CanUpdate)
+                            {
+                                <button type="button" class="btn secondary" disabled="@(!Vm.UpdateCommand.CanExecute(plugin))" @onclick="() => Vm.UpdateCommand.ExecuteAsync(plugin)">
+                                    <span>@Strings.Plugins_Update</span>
+                                </button>
+                            }
+                            <button type="button" class="btn secondary" disabled="@(!Vm.AskRemovalCommand.CanExecute(plugin))" @onclick="() => Vm.AskRemovalCommand.Execute(plugin)">
+                                <span>@Strings.Plugins_Remove</span>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </PageGate>
+</section>
+
+@code {
+    private EventCallback RetryLoading => EventCallback.Factory.Create(this, () => Vm.RetryCommand.ExecuteAsync(null));
+
+    protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Vm.Deactivate();
+    }
+}

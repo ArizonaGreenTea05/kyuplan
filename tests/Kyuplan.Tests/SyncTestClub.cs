@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;

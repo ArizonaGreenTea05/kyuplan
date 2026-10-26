@@ -17,8 +17,9 @@ public static class AuditAreas
     public const string Comments = "comments";
     public const string Branding = "branding";
     public const string Themes = "themes";
+    public const string Plugins = "plugins";
 
-    public static IReadOnlyList<string> All { get; } = [Exams, Payments, Belts, Members, Users, Roles, Settings, Backup, CalendarFeeds, Manual, Tags, Comments, Branding, Themes];
+    public static IReadOnlyList<string> All { get; } = [Exams, Payments, Belts, Members, Users, Roles, Settings, Backup, CalendarFeeds, Manual, Tags, Comments, Branding, Themes, Plugins];
 
     public static bool IsKnown(string? area) => area is not null && All.Contains(area);
 

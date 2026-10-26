@@ -1,4 +1,3 @@
-using Kyuplan.Api.Domain;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Tests;

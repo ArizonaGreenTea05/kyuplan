@@ -41,11 +41,15 @@ public sealed class UserAccount
     /// <summary>
     /// Everything the user may do, in the order of the catalogue: the administrator role has it all, otherwise the permissions of the
     /// user and of the roles. Keys that are no longer in the catalogue (an older version wrote them) are ignored. Needs <see cref="Roles"/> loaded.
+    /// <paramref name="pluginPermissions"/> are the permissions the plugins that run add: the administrator role has them too, others only when they were given them.
     /// </summary>
-    public IReadOnlyList<string> EffectivePermissions() =>
-        Roles.Any(r => r.IsSystem)
-            ? Permission.All
-            : [.. Permission.All.Where(p => Permissions.Contains(p) || Roles.Any(r => r.Permissions.Contains(p)))];
+    public IReadOnlyList<string> EffectivePermissions(IReadOnlyList<string>? pluginPermissions = null)
+    {
+        IEnumerable<string> catalogue = pluginPermissions is { Count: > 0 } ? [.. Permission.All, .. pluginPermissions] : Permission.All;
+        return Roles.Any(r => r.IsSystem)
+            ? [.. catalogue]
+            : [.. catalogue.Where(p => Permissions.Contains(p) || Roles.Any(r => r.Permissions.Contains(p)))];
+    }
 
     public bool IsAdministrator() => Roles.Any(r => r.IsSystem);
 }

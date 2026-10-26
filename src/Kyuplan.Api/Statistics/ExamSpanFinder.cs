@@ -1,5 +1,3 @@
-using Kyuplan.Api.Domain;
-
 namespace Kyuplan.Api.Statistics;
 
 /// <summary>

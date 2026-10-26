@@ -319,6 +319,16 @@ jobs:
           name: documentation
           path: artifacts/docs
 
+      # The plugins that come with the image: a new installation installs them at its first start without the network
+      # (Plugins:BundledDirectory, docs/deployment.md#plugins). The Spond plugin is the default data source, so its latest release is part of every image.
+      - name: Get the plugins that come with the image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/plugins
+          gh release download --repo ArizonaGreenTea05/kyuplan.plugins.spond --pattern '*.kyuplugin' --dir artifacts/plugins
+          ls -l artifacts/plugins
+
       - name: Work out the image tags
         id: image
         env:
@@ -356,7 +366,9 @@ jobs:
         with:
           context: .
           file: src/Kyuplan.Api/Dockerfile
-          build-contexts: installer=artifacts/installer
+          build-contexts: |
+            installer=artifacts/installer
+            plugins=artifacts/plugins
           platforms: linux/amd64
           load: true
           tags: kyuplan-scan:${{ steps.v.outputs.version }}
@@ -395,7 +407,9 @@ jobs:
         with:
           context: .
           file: src/Kyuplan.Api/Dockerfile
-          build-contexts: installer=artifacts/installer
+          build-contexts: |
+            installer=artifacts/installer
+            plugins=artifacts/plugins
           # The Dockerfile cross-compiles, so the second platform needs no emulation. One image for amd64 (PCs, servers, TrueNAS, Azure) and arm64 (Raspberry Pi, Apple silicon, Graviton/Cobalt).
           platforms: linux/amd64,linux/arm64
           push: true

@@ -1,5 +1,4 @@
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Statistics;

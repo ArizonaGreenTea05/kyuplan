@@ -302,7 +302,7 @@ public partial class SupplyChainConfigTests
     {
         var stages = new List<string> { "scratch" };
         var froms = Regex.Matches(Read("src/Kyuplan.Api/Dockerfile"), @"^FROM (?:--platform=\S+ )?(\S+)(?: AS (\S+))?", RegexOptions.Multiline);
-        Assert.Equal(4, froms.Count);
+        Assert.Equal(5, froms.Count); // docs, build, the empty stages for the installers and for the plugins, the runtime image
         foreach (var from in froms.Cast<Match>())
         {
             var image = from.Groups[1].Value;

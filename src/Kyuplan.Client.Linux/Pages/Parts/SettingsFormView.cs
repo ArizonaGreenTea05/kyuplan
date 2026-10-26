@@ -28,8 +28,8 @@ internal static class SettingsFormView
             Text(Strings.Settings_DatabasePath, nameof(SettingsForm.DatabasePath), () => form.DatabasePathProblem, nameof(SettingsForm.DatabasePathProblem)),
             Text(Strings.Settings_AccountsDatabasePath, nameof(SettingsForm.AccountsDatabasePath), () => form.AccountsDatabasePathProblem, nameof(SettingsForm.AccountsDatabasePathProblem)));
 
-        var dataSource = Ui.Choice(form, () => SettingsForm.DataSources, SettingsForm.DataSourceText, () => form.DataSource, kind => form.DataSource = kind,
-            [nameof(SettingsForm.DataSource)], Strings.Settings_DataSource);
+        var dataSource = Ui.Choice(form, () => form.DataSources, form.DataSourceText, () => form.DataSource, kind => form.DataSource = kind,
+            [nameof(SettingsForm.DataSource), nameof(SettingsForm.DataSources)], Strings.Settings_DataSource);
 
         var script = Ui.TextArea(form, nameof(SettingsForm.CustomScript), out var scriptView, 320, Strings.Settings_CustomScript);
         scriptView.AddCssClass("monospace");
@@ -49,28 +49,22 @@ internal static class SettingsFormView
             secrets)
             .VisibleWhen(form, nameof(SettingsForm.IsCustomSource));
 
-        var backup = Ui.VBox(8,
-            Ui.Label(Strings.Settings_BackupAccounts, "caption-heading").Start(),
-            Ui.Muted(Strings.Settings_BackupAccountsHint).Css("caption"),
-            Ui.Repeat(form, () => form.BackupAccounts, account => BackupAccount(form, account), [nameof(SettingsForm.BackupAccounts)], 8),
-            Ui.Label(form, () => form.BackupProblem, [nameof(SettingsForm.BackupProblem)], "error", "caption").VisibleWhen(form, () => form.BackupProblem is not null, nameof(SettingsForm.BackupProblem)),
-            Ui.Button(Strings.Settings_BackupAdd, form.AddBackupAccountCommand).Start());
+        // The settings of the data source of a plugin: the plugin describes the form in JSON, PluginView draws it (again when another data source is chosen).
+        var pluginForm = Ui.Repeat<PluginFormViewModel>(form, () => form.PluginForm is { } chosen ? [chosen] : [], chosen => PluginView.Build(chosen.Items),
+            [nameof(SettingsForm.PluginForm), nameof(SettingsForm.DataSource)], 10);
 
-        var spond = Ui.VBox(10,
-            Ui.Flow(
-                Ui.Field(Strings.Settings_SpondEmail, Ui.Entry(form, nameof(SettingsForm.SpondEmail), name: Strings.Settings_SpondEmail)),
-                Ui.Field(Strings.Settings_SpondPhone, Ui.Entry(form, nameof(SettingsForm.SpondPhoneNumber), name: Strings.Settings_SpondPhone))),
-            Field(Strings.Settings_SpondPassword, Ui.Password(form, nameof(SettingsForm.SpondPassword), Strings.Settings_SpondPassword), () => form.SpondProblem, nameof(SettingsForm.SpondProblem)),
-            backup,
+        var plugin = Ui.VBox(10,
+            Ui.Label(Strings.Settings_DataSourceHint_missing, "error", "caption").Start().VisibleWhen(form, () => form.IsMissingPlugin, nameof(SettingsForm.IsMissingPlugin), nameof(SettingsForm.DataSource)),
+            pluginForm,
             Ui.Field(Strings.Settings_UnregisteredSubGroup,
                 Ui.Choice(form, () => [string.Empty, .. form.SubGroupChoices], n => n.Length == 0 ? Strings.Settings_NoSubGroup : n, () => form.UnregisteredSubGroup, n => form.UnregisteredSubGroup = n,
                     [nameof(SettingsForm.UnregisteredSubGroup), nameof(SettingsForm.SubGroupChoices), nameof(SettingsForm.AvailableSubGroups)], Strings.Settings_UnregisteredSubGroup)))
-            .VisibleWhen(form, nameof(SettingsForm.IsSpondSource));
+            .VisibleWhen(form, nameof(SettingsForm.IsPluginSource));
 
         var source = Widgets.Section(Strings.Settings_DataSource,
             Ui.Field(Strings.Settings_DataSource, dataSource, null),
             Ui.Label(form, nameof(SettingsForm.DataSourceHint), "dim-label", "caption"),
-            custom, spond);
+            custom, plugin);
 
         var statistics = Widgets.Section(Strings.Settings_StatisticsTitle,
             Ui.Flow(
@@ -108,14 +102,5 @@ internal static class SettingsFormView
             Ui.Label(secret, () => Strings.Settings_ScriptSecretStored, [nameof(ScriptSecretForm.HasValue)], "dim-label", "caption")
                 .VisibleWhen(secret, () => secret.HasValue, nameof(ScriptSecretForm.HasValue)),
             Ui.Button(Strings.Settings_ScriptSecretRemove, form.RemoveScriptSecretCommand, secret).Start())
-            .Css("card").Padded(10);
-
-    private static Gtk.Widget BackupAccount(SettingsForm form, BackupAccountForm account) =>
-        Ui.VBox(6,
-            Ui.Flow(
-                Ui.Field(Strings.Settings_SpondEmail, Ui.Entry(account, nameof(BackupAccountForm.Email), name: Strings.Settings_SpondEmail)),
-                Ui.Field(Strings.Settings_SpondPhone, Ui.Entry(account, nameof(BackupAccountForm.PhoneNumber), name: Strings.Settings_SpondPhone)),
-                Ui.Field(Strings.Settings_SpondPassword, Ui.Password(account, nameof(BackupAccountForm.Password), Strings.Settings_SpondPassword))),
-            Ui.Button(Strings.Settings_BackupRemove, form.RemoveBackupAccountCommand, account).Start())
             .Css("card").Padded(10);
 }

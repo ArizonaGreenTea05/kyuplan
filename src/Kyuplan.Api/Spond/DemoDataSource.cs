@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
+using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Spond;
 
@@ -48,6 +48,8 @@ public sealed class DemoDataSource(ClubClock clock, IOptions<BrandingOptions> br
     private volatile Snapshot? _snapshot;
 
     public bool IsDemo => true;
+
+    public string Kind => DataSourceKinds.Demo;
 
     public Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
         Task.FromResult(Current().Groups);

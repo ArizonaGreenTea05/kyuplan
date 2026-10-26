@@ -24,7 +24,7 @@ client also remembers it locally for the screens before sign-in. The language de
 
 ## Run it
 
-Requires the **.NET 10 SDK** (the Spond.API package targets .NET 10). The WPF client needs Windows.
+Requires the **.NET 10 SDK**. The WPF client needs Windows.
 
 The API starts in **demo mode** in the `Development` environment: it serves generated data for a fictional club, so
 everything can be tried without Spond credentials. The UIs show a "Demo data" marker while this is the case.
@@ -76,6 +76,9 @@ The WPF client asks for the login when it starts, the browser asks when the Blaz
 
 ### Connect it to Spond
 
+Spond is a **plugin** (`spond`, from the repository `ArizonaGreenTea05/kyuplan.plugins.spond`) that a new installation gets by default; the keys below are its settings (the section
+`Spond`), which the settings page shows as the form of the data source *Spond*. See [Plugins](#plugins).
+
 Keep credentials out of source control: use user secrets (or environment variables such as `Spond__Password`).
 
 ```bash
@@ -109,11 +112,15 @@ dotnet user-secrets set "Spond:Password"    "…"                   --project sr
 | --- | --- | --- |
 | `Logging:File:Path` | `logs/kyuplan-.log` (in the Docker image `/data/logs/kyuplan-.log`) | Text files the log is written to, in addition to the console, with the levels of `Logging:LogLevel`. The date goes before the extension (`kyuplan-20261014.log`), a new file is started every day and the 31 newest are kept. A relative path is relative to the API's content root and its folder is created. Empty = no log files. |
 | `Spond:UseDemoData` | `false` (`true` in Development) | Serve generated sample data. |
-| `Spond:Email` / `PhoneNumber` / `Password` | – | Spond login (the first account). |
-| `Spond:Accounts` | `[]` | More Spond logins (each with `Email` or `PhoneNumber`, and `Password`), asked in this order when the one before yields no groups or events. |
-| `Spond:AccountCooldown` | `00:10:00` | How long an account that came back empty while another one delivered is asked after the others. |
-| `Spond:UnregisteredSubGroup` | empty | Name (or id) of the Spond subgroup of the people not registered in the club yet; its members are marked "not registered yet" on the Members page. Empty = everybody is registered. |
-| `Spond:LoginLifetime` / `CacheDuration` | `06:00:00` / `00:15:00` | Re-login interval, event cache lifetime. |
+| `Spond:Email` / `PhoneNumber` / `Password` | – | Spond login (the first account). Settings of the **Spond plugin** (see [Plugins](#plugins)); the password is stored encrypted. |
+| `Spond:Accounts` | `[]` | More Spond logins (each with `Email` or `PhoneNumber`, and `Password`), asked in this order when the one before yields no groups or events. Plugin setting. |
+| `Spond:AccountCooldown` | `00:10:00` | How long an account that came back empty while another one delivered is asked after the others. Plugin setting. |
+| `Spond:UnregisteredSubGroup` | empty | Name (or id) of the subgroup of the people not registered in the club yet; its members are marked "not registered yet" on the Members page. Empty = everybody is registered. Applies to every data source. |
+| `Spond:LoginLifetime` / `CacheDuration` | `06:00:00` / `00:15:00` | Re-login interval, event cache lifetime. Plugin settings. |
+| `Plugins:Directory` | `plugins` next to the settings file | Where the installed plugins are kept (`index.json` and one folder per plugin and version); see [Plugins](#plugins). |
+| `Plugins:InstallDefaults` | `true` | Whether an installation that never had a plugin gets the default ones (also off with `DefaultData:Enabled=false`). |
+| `Plugins:Defaults` | the Spond plugin's repository | The GitHub repositories whose latest release a new installation installs when it has none of the bundled packages. |
+| `Plugins:BundledDirectory` | `plugins` next to the program | A folder of `*.kyuplugin` files a new installation installs first (the container image puts the plugins that come with it there, so no network is needed). |
 | `Statistics:TimeZone` | `Europe/Berlin` | Time zone for days, weekdays and months (Spond delivers UTC). |
 | `Statistics:DefaultMinAttendancePercent` | `75` | Pre-selected threshold. |
 | `Statistics:DefaultMinInvitedEvents` | `3` | Pre-selected minimum number of invitations. |
@@ -159,7 +166,10 @@ The WPF client can also remember the **login**, encrypted (`login.dat` there, se
 | --- | --- |
 | *every `/api` endpoint* | needs a login: `Authorization: Basic …`. Without one, or with a wrong one, the answer is `401` with `WWW-Authenticate: Basic`. The one exception is *reading* the branding (next row). Apart from `/api/info`, `/api/refresh` and `/api/account` (every signed-in user) each endpoint also needs a **permission** of the user (`403` without it; the table below says which, see [Permissions and roles](#permissions-and-roles)). |
 | `GET /api/branding` · `GET /api/branding/{logo\|logo-on-dark\|icon}` | **Open to everybody**: no login and not even the `X-Api-Key` (the clients show it before anybody has signed in, and an `<img>` can send neither). The first is `{ productName, organizationName, accentColor, logoUrl, logoOnDarkUrl, iconUrl, defaultWebTheme, defaultWindowsTheme }` (the urls are relative to the API's address, `null` = the instance has no such image); the others are the image files (`404` when there is none; `Cache-Control: no-cache` with an `ETag`; a `Content-Security-Policy` that lets an SVG opened on its own run nothing). See [Branding](#branding). |
-| `GET /api/settings` · `PUT /api/settings` | **`settings.view`** to read, **`settings.edit`** to save (`SettingsDto` / `SettingsInputDto`). Passwords, the metrics token and the script's secrets are never returned: `hasSpondPassword`, `hasMetricsToken`, and `scriptSecrets` (the *names* of the secrets that have a value). `customScript` is only returned to **`settings.edit`**; for a user who may only view it is `""` with `customScriptHidden: true`. `PUT` takes `scriptSecrets: [{ name, value }]` as the **whole set** (`null` = leave the secrets alone; a missing or empty `value` keeps the stored one; a name that is left out is deleted; `400` for an invalid or duplicate name, a value with a line break or over 2000 characters, a new name without value, or more than 20). |
+| `GET /api/settings` · `PUT /api/settings` | **`settings.view`** to read, **`settings.edit`** to save (`SettingsDto` / `SettingsInputDto`). Passwords, the metrics token and the script's secrets are never returned: `hasMetricsToken`, `scriptSecrets` (the *names* of the secrets that have a value) and, for the settings of a plugin's data source (`pluginSettings`, by the id of the data source: `{ values, secretsSet }`), only *which* password fields have a value (`secretsSet`: `Password`, `Accounts/0/Password`). `customScript` is only returned to **`settings.edit`**; for a user who may only view it is `""` with `customScriptHidden: true`. `PUT` takes `scriptSecrets: [{ name, value }]` as the **whole set** (`null` = leave the secrets alone; a missing or empty `value` keeps the stored one; a name that is left out is deleted; `400` for an invalid or duplicate name, a value with a line break or over 2000 characters, a new name without value, or more than 20). |
+| `GET /api/plugins` | Every signed-in user: what the plugins that run add (`{ plugins: [{ id, name, nameDe, version, description, descriptionDe, permissions: [{ id, label, labelDe }], pages: [{ id, title, titleDe, icon, permission, layout }], dataSources: [{ id, name, nameDe, description, descriptionDe, form }] }] }`). A page, with its layout, is only listed for somebody who has its permission, and a data source's settings `form` only for somebody with `settings.view`. |
+| `GET /api/plugin-admin` · `POST /api/plugin-admin` · `POST /api/plugin-admin/{id}/update` · `DELETE /api/plugin-admin/{id}` | **`plugins.view`** for the list, **`plugins.edit`** for the rest: the installed plugins `[{ id, name, version, description, source, installedAt, isRunning, problem, dataSources, pageCount, sha256 }]`; install the plugin of a public GitHub repository (`{ "url": "https://github.com/owner/repo" }`: its latest release has to carry one `.kyuplugin` file; `400` with the reason when the address, the repository, the package or the plugin is no good); fetch the latest release of the repository a plugin came from; remove one. Each change answers `{ plugin, restarting }`: **a plugin is loaded when the API starts, so the API restarts itself** when something changed. |
+| `/api/plugins/{pluginId}/…` | The endpoints a plugin adds itself (they need a login, and whatever permission the plugin asks for). The pages of the plugin read and write them. |
 | `GET /api/themes` | **Open to everybody** (like the branding): `{ version, packs: [{ id, name, nameDe, scheme, highContrast, accent, colors, builtIn, source }] }`, the built-in, the uploaded and the GitHub theme pack themes (`source` = `owner/repo` for the last kind, else `null`); `version` is also `themesVersion` of the branding. |
 | `PUT /api/themes` · `DELETE /api/themes/{id}` | **`themes.edit`**. `PUT` takes the pack's JSON as the body (at most 16 KB; `400` with the reason for an invalid pack, too little contrast, a built-in or reserved id) and installs or replaces it; `DELETE` removes an uploaded pack (`404` unknown, `409` built-in or a theme of a GitHub theme pack). Both answer with the catalog. |
 | `GET /api/themes/sources` · `POST /api/themes/sources` · `POST /api/themes/sources/{id}/refresh` · `DELETE /api/themes/sources/{id}` | **`themes.edit`**: the GitHub theme packs. `GET` lists `[{ id, url, name, themeCount, lastSyncUtc, lastSucceeded, lastMessage }]`. `POST` takes `{ "url": "https://github.com/owner/repo" }`, reads the repository at once and answers with the pack; `400` with the reason for an address that is none, a pack added already or more than 10, a repository that cannot be read or has no valid theme (nothing is kept then). `…/refresh` reads again and answers with the pack (a failed read is `lastSucceeded: false` + `lastMessage`, not an error status; `404` unknown). `DELETE` removes the pack and its themes (`204`, `404` unknown). |
@@ -379,6 +389,7 @@ Every page needs its `.view` permission, and every change a permission of its ow
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
 | themes | `themes.edit` (install and delete themes, add, update and remove GitHub theme packs) |
+| plugins | `plugins.view` (the Plugins page), `plugins.edit` (install, update and remove plugins: a plugin is code that runs in the API with all its rights, so this is for administrators). The permissions a plugin adds (`<plugin id>.<name>`) are listed per plugin in the role and user forms. |
 | users | `users.view`, `users.edit` (create users, change names and passwords), `users.delete`, `users.grant` (give roles and permissions to users) |
 | roles | `roles.view`, `roles.edit` |
 
@@ -572,6 +583,17 @@ formats the slot is meant for (for the logos SVG, PNG, JPEG, GIF and BMP: what b
   build the WPF client for your own club.
 - `tools/Render-Branding.ps1` (needs Microsoft Edge) renders the program icon `assets/branding/app.ico` from the tab icon
   `favicon.svg`; run it after changing the icon and commit the result. The logos need no rendering: both clients draw the SVGs.
+
+## Plugins
+
+A plugin adds **endpoints** to the API, **pages** (with permissions of their own) and **data sources** to the clients. It is a `.kyuplugin` file (a zip) in the release of a public GitHub repository: a manifest `plugin.json`, the assembly with the code (an implementation of `IKyuplanPlugin` from `src/Kyuplan.Plugins.Abstractions`) and JSON files that describe the pages and the settings forms; the clients draw those, so no UI code is needed. How to write one: [Plugin development](plugin-development.md).
+
+- **Installing.** Administrators with `plugins.edit` install, update and remove plugins on the **Plugins** page (`/api/plugin-admin`). A new installation gets the default plugins (`Plugins:Defaults`: the Spond plugin) the first time it starts: the packages in `Plugins:BundledDirectory` first, else the latest release from GitHub; if that fails it is tried again at the next start.
+- **Where.** `Plugins:Directory` holds `index.json` (which plugin, which version, where it came from, the SHA-256 of the package) and `<id>/<version>-<hash>/` with the unpacked files. Files of an older version or of a removed plugin are deleted when the API starts the next time.
+- **When.** Plugins are loaded **once, when the API starts**, each in a load context of its own; installing, updating and removing therefore restarts the API (a few seconds, like saving the settings). A plugin that cannot be loaded does not run and the API starts anyway: the Plugins page says why (`problem`).
+- **Data sources.** A plugin's data source is chosen on the settings page like the built-in ones (`DataSource:Kind` is its id, e.g. `spond`). Its settings form is the plugin's own JSON (fields: text, password, number, checkbox, select, multiline; lists of such rows), stored in the section of the configuration the plugin names (`Spond` for the Spond plugin) in `settings.json`, the `password` fields **encrypted**. The data source reads them from its section when it is created. If the plugin of the chosen data source is missing, every request that needs data answers `503` with a message that says so.
+- **Permissions.** A plugin's permissions are `<plugin id>.<name>` (`acme.view`); they are listed in the role and user forms, and the administrator role has them. A role keeps the permissions of a plugin that is removed: they work again when it is installed again.
+- **Trust.** A plugin is code that runs in the API with all its rights (files, network, the databases). The package is checked (size, file names, JSON, the manifest) but its code cannot be; install plugins only from authors you trust. The release of a plugin should be reproducible; the hash of what is installed is shown by `GET /api/plugin-admin`.
 
 ## Security and privacy
 

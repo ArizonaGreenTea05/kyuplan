@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using Kyuplan.Client.Api;
@@ -475,9 +474,11 @@ public sealed class ExamApiTests(WebApplicationFactory<Program> factory) : IClas
 
         public bool IsDemo => true;
 
+        public string Kind => DataSourceKinds.Demo;
+
         public Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
             Down
-                ? Task.FromException<IReadOnlyList<GroupInfo>>(new SpondUnavailableException("Spond is down."))
+                ? Task.FromException<IReadOnlyList<GroupInfo>>(new DataSourceUnavailableException("Spond is down."))
                 : Task.FromResult<IReadOnlyList<GroupInfo>>([new GroupInfo("g1", "Group", [], [])]);
 
         public Task<IReadOnlyList<EventInfo>> GetEventsAsync(

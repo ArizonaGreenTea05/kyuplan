@@ -60,6 +60,12 @@
         <DataTemplate DataType="{x:Type vm:SyncStatusViewModel}">
             <views:SyncStatusView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PluginsViewModel}">
+            <views:PluginsView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:PluginPageViewModel}">
+            <views:PluginPageView />
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:ExamPricesViewModel}">
             <views:PricesView />
         </DataTemplate>

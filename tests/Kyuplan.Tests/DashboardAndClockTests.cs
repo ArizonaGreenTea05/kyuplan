@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;

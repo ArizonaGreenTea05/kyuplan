@@ -42,7 +42,7 @@ public sealed class SpondSyncWorker(
             await using var scope = scopes.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<SpondSync>().SyncAllAsync(cancellationToken);
         }
-        catch (SpondUnavailableException ex)
+        catch (DataSourceUnavailableException ex)
         {
             logger.LogWarning("Could not sync the members and exams with Spond: {Message}", ex.Message);
         }

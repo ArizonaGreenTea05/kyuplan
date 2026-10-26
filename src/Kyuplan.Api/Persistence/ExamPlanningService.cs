@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
@@ -151,7 +150,7 @@ public sealed class ExamPlanningService(
     /// </summary>
     /// <exception cref="ExamNotFoundException"/>
     /// <exception cref="InvalidInputException">The filter does not exist or was saved for another group.</exception>
-    /// <exception cref="Kyuplan.Api.Spond.SpondUnavailableException">Spond cannot be read.</exception>
+    /// <exception cref="Kyuplan.Api.Spond.DataSourceUnavailableException">Spond cannot be read.</exception>
     public async Task<ExamSuggestionsDto> SuggestAsync(int examId, int? filterId, CancellationToken cancellationToken)
     {
         var exam = await FindExamAsync(examId, cancellationToken);

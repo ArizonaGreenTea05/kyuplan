@@ -13,6 +13,7 @@ namespace Kyuplan.Contracts;
 /// <param name="Accent">The colour of links, focus and selection, <c>#RRGGBB</c>; <c>null</c> = the accent colour of the instance. High contrast themes carry their own, since the colour has to fit their surfaces.</param>
 /// <param name="Colors">Every key of <see cref="ThemePackRules.ColorKeys"/> as <c>#RRGGBB</c>.</param>
 /// <param name="BuiltIn">Ships with the program and cannot be deleted. Ignored in an upload.</param>
+/// <param name="Source">"owner/repo" of the GitHub theme pack (<see cref="ThemeSourceDto"/>) the theme comes from; such a theme follows its repository and is not deleted on its own. <c>null</c> for the others. Ignored in an upload.</param>
 public sealed record ThemePackDto(
     string Id,
     string Name,
@@ -21,7 +22,8 @@ public sealed record ThemePackDto(
     bool HighContrast,
     string? Accent,
     IReadOnlyDictionary<string, string> Colors,
-    bool BuiltIn = false)
+    bool BuiltIn = false,
+    string? Source = null)
 {
     public string Color(string key) => Colors.TryGetValue(key, out var value) ? value : "#808080";
 }

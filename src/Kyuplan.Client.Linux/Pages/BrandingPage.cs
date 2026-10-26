@@ -27,7 +27,7 @@ internal static class BrandingPage
             Widgets.Header(page.Title, Ui.Muted(Strings.Branding_Lede)),
             state,
             Widgets.ErrorBanner(page, page.RetryCommand), Widgets.Notice(page),
-            Texts(page), Images(context, page), Themes(context, page),
+            Texts(page), Images(context, page), Themes(context, page), ThemeSources(page),
             Reset(page));
         return Widgets.PageFrame(page, body, 1000);
     }
@@ -110,7 +110,7 @@ internal static class BrandingPage
         {
             var row = Ui.Row(pack.Name, pack.Details);
             var delete = Ui.IconButton("user-trash-symbolic", Strings.Themes_Delete, page.DeleteThemeCommand, pack, "flat");
-            delete.Visible = page.CanDeleteTheme(pack);
+            delete.Visible = page.CanDeleteTheme(pack); // not for the themes of a GitHub theme pack
             row.AddSuffix(delete);
             return row;
         }, [nameof(BrandingAdminViewModel.ThemePacks)]);
@@ -122,7 +122,27 @@ internal static class BrandingPage
             Ui.Button(Strings.Themes_Install, () => _ = InstallThemeAsync(context, page)).Start().VisibleWhen(page, nameof(BrandingAdminViewModel.CanManageThemes)));
     }
 
-    /// <summary>Lets the user pick the JSON file of a theme pack; the view model refuses one that is too large without reading it, and the API says what is wrong with the others.</summary>
+    /// <summary>The GitHub theme packs, with a field to add one; only for those who may manage themes.</summary>
+    private static Gtk.Widget ThemeSources(BrandingAdminViewModel page)
+    {
+        var sources = Ui.BoxedList(page, () => page.ThemeSources, source =>
+        {
+            var row = Ui.Row(source.Name, source.Problem is null ? source.Details : $"{source.Details}\n{source.Problem}");
+            row.AddSuffix(Ui.IconButton("view-refresh-symbolic", Strings.ThemeSources_Refresh, page.RefreshThemeSourceCommand, source, "flat"));
+            row.AddSuffix(Ui.IconButton("user-trash-symbolic", Strings.ThemeSources_Remove, page.DeleteThemeSourceCommand, source, "flat"));
+            return row;
+        }, [nameof(BrandingAdminViewModel.ThemeSources)]);
+
+        return Widgets.Section(Strings.ThemeSources_Title,
+            Ui.Muted(page.ThemeSourcesLede).Css("caption"),
+            sources,
+            Problem(page, Ui.Field(Strings.ThemeSources_Url, Ui.Entry(page, nameof(BrandingAdminViewModel.NewThemeSourceUrl), name: Strings.ThemeSources_Url)),
+                () => page.NewThemeSourceUrlProblem, nameof(BrandingAdminViewModel.NewThemeSourceUrlProblem)),
+            Ui.Primary(Strings.ThemeSources_Add, page.AddThemeSourceCommand).Start())
+            .VisibleWhen(page, nameof(BrandingAdminViewModel.CanManageThemes));
+    }
+
+    /// <summary>Lets the user pick the JSON file of a theme; the view model refuses one that is too large without reading it, and the API says what is wrong with the others.</summary>
     private static async Task InstallThemeAsync(UiContext context, BrandingAdminViewModel page)
     {
         if (await context.PickFileAsync(Strings.Themes_Install, (Strings.Themes_Title, "*.json")) is not { } file || file.GetPath() is not { } path) return;

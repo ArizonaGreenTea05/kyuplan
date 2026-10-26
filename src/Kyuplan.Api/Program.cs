@@ -65,6 +65,10 @@ static async Task<WebApplication> BuildAsync(string[] args)
     builder.Services.AddSingleton<BrandingDefaults>();
     builder.Services.AddScoped<BrandingService>();
     builder.Services.AddSingleton<ThemePackStore>(); // the theme packs: built-in and uploaded (see ThemeEndpoints)
+    builder.Services.AddSingleton<ThemeSourceStore>(); // the GitHub theme packs, read again every few hours by the worker
+    builder.Services.AddSingleton<IThemeSourceFetcher>(_ => new GitHubThemeFetcher(new HttpClient { Timeout = TimeSpan.FromSeconds(30) }));
+    builder.Services.AddSingleton<ThemeSourceSync>();
+    builder.Services.AddHostedService<ThemeSourceWorker>();
 
     // The installer of the Windows client lies next to the program in the container image (see ClientDownloadEndpoints).
     builder.Services.Configure<ClientDownloadOptions>(builder.Configuration.GetSection(ClientDownloadOptions.Section));

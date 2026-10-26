@@ -287,7 +287,7 @@
                                                     <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
                                                     <TextBlock Text="{Binding Details}" Style="{StaticResource MutedText}" />
                                                 </StackPanel>
-                                                <!-- Only an uploaded pack can be deleted; a built-in one has no button at all -->
+                                                <!-- Only an uploaded theme can be deleted; a built-in one and one of a GitHub theme pack have no button at all -->
                                                 <Button Grid.Column="1" VerticalAlignment="Center"
                                                         Command="{Binding DataContext.DeleteThemeCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                         CommandParameter="{Binding}">
@@ -295,7 +295,7 @@
                                                         <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                                             <Setter Property="Visibility" Value="Visible" />
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding BuiltIn}" Value="True">
+                                                                <DataTrigger Binding="{Binding IsUploaded}" Value="False">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
@@ -317,6 +317,63 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE898;" />
                                         <TextBlock Text="{loc:Loc Themes_Install}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- GitHub theme packs: repositories whose themes are read now and then (themes.edit) -->
+                        <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0"
+                                Visibility="{Binding CanManageThemes, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <TextBlock Text="{loc:Loc ThemeSources_Title}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,4" />
+                                <TextBlock Text="{Binding ThemeSourcesLede}" Style="{StaticResource MutedText}" Margin="0,0,0,14" TextWrapping="Wrap" />
+
+                                <ItemsControl ItemsSource="{Binding ThemeSources}" KeyboardNavigation.TabNavigation="Continue">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ThemeSourceRow}">
+                                            <Grid Margin="0,0,0,8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Details}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Problem}" Style="{StaticResource MutedText}" TextWrapping="Wrap"
+                                                               Visibility="{Binding Problem, Converter={StaticResource StringToVisibility}}" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                        Command="{Binding DataContext.RefreshThemeSourceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE72C;" />
+                                                        <TextBlock Text="{loc:Loc ThemeSources_Refresh}" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0"
+                                                        Command="{Binding DataContext.DeleteThemeSourceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE74D;" />
+                                                        <TextBlock Text="{loc:Loc ThemeSources_Remove}" />
+                                                    </StackPanel>
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <TextBlock Text="{loc:Loc ThemeSources_Url}" Style="{StaticResource FieldLabelText}" Margin="0,12,0,0" />
+                                <TextBox AutomationProperties.Name="{loc:Loc ThemeSources_Url}" IsEnabled="{Binding CanInstallTheme}"
+                                         Text="{Binding NewThemeSourceUrl, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="{Binding NewThemeSourceUrlProblem}" Style="{StaticResource ProblemText}"
+                                           Visibility="{Binding NewThemeSourceUrlProblem, Converter={StaticResource StringToVisibility}}" />
+                                <Button Command="{Binding AddThemeSourceCommand}" HorizontalAlignment="Left" Margin="0,12,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource IconTextBlock}" Text="&#xE710;" />
+                                        <TextBlock Text="{loc:Loc ThemeSources_Add}" />
                                     </StackPanel>
                                 </Button>
                             </StackPanel>

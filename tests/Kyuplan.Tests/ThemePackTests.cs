@@ -489,7 +489,7 @@ public sealed class ThemePackViewModelTests : IDisposable
         Assert.Equal(["install-theme:ocean"], _api.ThemeCalls);
         Assert.Contains(vm.ThemePacks, r => r.Id == "ocean" && !r.BuiltIn && r.Details.StartsWith("dark"));
         Assert.Contains(vm.WebThemes, c => c.Id == "ocean" && c.Name == "Ocean");
-        Assert.Equal("Theme pack \"Ocean\" installed.", vm.NoticeText);
+        Assert.Equal("Theme \"Ocean\" installed.", vm.NoticeText);
         Assert.NotEqual(versionBefore, _shell.Brand.ThemesVersion); // the branding was asked again
         Assert.False(vm.HasError);
     }
@@ -538,7 +538,7 @@ public sealed class ThemePackViewModelTests : IDisposable
         Assert.Equal(["install-theme:ocean", "delete-theme:ocean"], _api.ThemeCalls);
         Assert.DoesNotContain(vm.ThemePacks, r => r.Id == "ocean");
         Assert.Equal(ThemeIds.Default, vm.FormDefaultWebTheme);
-        Assert.Equal("Theme pack \"Ocean\" deleted.", vm.NoticeText);
+        Assert.Equal("Theme \"Ocean\" deleted.", vm.NoticeText);
     }
 
     [Fact]

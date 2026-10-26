@@ -320,7 +320,7 @@ The complete list of keys is in the [configuration table of the reference](refer
 | ratings | `ratings.view` (see every user's star evaluations of members), `ratings.viewOwn` (read the evaluations of the members one is oneself), `ratings.write` (evaluate members at an event, change and take back one's own) |
 | tags | `tags.view`, `tags.edit` |
 | branding | `branding.view`, `branding.edit` |
-| themes | `themes.edit` (install and delete theme packs) |
+| themes | `themes.edit` (install and delete themes, add and remove theme packs from GitHub) |
 | backups | `backups.view` (the page, the backup databases and their state), `backups.edit` (define, change, delete and run backup databases: it makes the server copy **all data**, password hashes included, into a folder or a PostgreSQL database of the holder's choice, so it exposes as much as `backups.download`; grant both only to administrators), `backups.download` (download a backup file: it holds every password hash), `backups.restore` (replace all data with a backup file) |
 | users | `users.view`, `users.edit` (create users, names, passwords), `users.delete`, `users.grant` (give roles and permissions) |
 | roles | `roles.view`, `roles.edit` |
@@ -443,8 +443,9 @@ to look, `branding.edit` to change). It affects both clients.
   pick their own in the navigation; *Server default* there follows this setting). Dracula, Catppuccin Latte/Mocha and Liquid Glass exist in
   both; Windows 10, Vista / 7 and native WPF only in the Windows client. Saved with the texts and the colour. The API's settings
   `Branding__DefaultWebTheme` / `Branding__DefaultWindowsTheme` are the basis until this is saved.
-- **Theme packs** (below the images; anybody who may see the page sees the list, `themes.edit` installs and deletes): see
-  [Theme packs](#theme-packs). The installed packs are also offered as default themes in the lists above.
+- **Themes** and **Theme packs from GitHub** (below the images; anybody who may see the page sees the list of themes, `themes.edit` installs,
+  deletes and adds packs): see [Themes and theme packs](#themes-and-theme-packs). The installed themes are also offered as default themes in
+  the lists above.
 - **Images**: *Logo* (on light surfaces), *Logo on dark* (optional; the light one is used if missing) and *Icon* (browser tab and, in the
   desktop app, the window icon). Prefer **SVG**; PNG, JPEG, GIF and BMP work for logos, PNG/SVG/ICO for the icon; at most **1 MB** each.
   The server looks at the file's bytes, not its name. The desktop app does not draw SVGs that refer to outside files or web addresses;
@@ -458,19 +459,20 @@ to look, `branding.edit` to change). It affects both clients.
 - **Not changeable at runtime**: the icon of the program file and the installer, and the publisher name. They are built in; see the
   [developer guide](developer-guide.md#branding-your-own-desktop-build).
 
-### Theme packs
+### Themes and theme packs
 
-More themes come as **theme packs**: a small JSON file of colours that adds a theme to **both** clients. Every installed pack is offered to
-all users (in their personal settings) and can be made the default theme above. Users who had chosen a pack that is deleted later see the
-default theme again; nothing else has to be cleaned up.
+More themes come as **themes**: a small JSON file of colours that adds a theme to **both** clients. Every installed theme is offered to
+all users (in their personal settings) and can be made the default theme above. Users who had chosen a theme that is deleted later see the
+default theme again; nothing else has to be cleaned up. A whole collection of themes is a **theme pack** (a GitHub repository, see
+[Theme packs from GitHub](#theme-packs-from-github)).
 
-The program ships with packs of its own (they show the format and cannot be deleted or replaced): three **high contrast** themes for people
+The program ships with themes of its own (they show the format and cannot be deleted or replaced): three **high contrast** themes for people
 who see less (*High contrast (dark)*, *High contrast (light)*, *High contrast (yellow on black)*: text with at least 7:1 contrast, strong
 borders, thick focus rings, underlined links) and some popular palettes (Nord, Solarized dark/light, Gruvbox dark/light, Tokyo Night).
 
-To add one, use **Install theme pack ...** on the Branding page (permission `themes.edit`) and pick the file; a pack with the id of an
+To add one, use **Install theme ...** on the Branding page (permission `themes.edit`) and pick the file; a theme with the id of an
 installed one replaces it. Or put `<id>.json` into the `themes` folder next to `settings.json` (in the container: `/data/themes`; the
-folder can be moved with `Themes__Directory`): it is picked up at once, without a restart, and a file that is no valid pack is skipped
+folder can be moved with `Themes__Directory`): it is picked up at once, without a restart, and a file that is no valid theme is skipped
 (and named in the log). Ready-made examples to install are in the repository folder `docs/examples` (Cyberpunk 2077, Matrix). The file:
 
 ```json
@@ -500,10 +502,35 @@ folder can be moved with `Themes__Directory`): it is picked up at once, without 
   things), `sidebar`, `text`, `muted` (secondary text), `rule` (thin lines), `ruleStrong` (borders of boxes and buttons), `amber` /
   `amberWash` (*below the bar / open*: text and background tint), `red` / `redWash` (trouble).
 
-The server refuses a pack whose text is hard to read, and says why: `text` needs a contrast of at least 4.5:1 on `ground`, `sheet` and
-`sidebar` (7:1 for a high contrast pack), `muted` at least 3:1 on `sheet` (4.5:1), an `accent` at least 3:1 on `sheet`. A file is at most 16 KB, and
-at most 50 packs can be installed. The desktop app draws a pack with its flat controls (the same colours, the rounded look of Dracula), so
+The server refuses a theme whose text is hard to read, and says why: `text` needs a contrast of at least 4.5:1 on `ground`, `sheet` and
+`sidebar` (7:1 for a high contrast theme), `muted` at least 3:1 on `sheet` (4.5:1), an `accent` at least 3:1 on `sheet`. A file is at most 16 KB, and
+at most 50 themes can be installed by hand. The desktop app draws a theme with its flat controls (the same colours, the rounded look of Dracula), so
 installing one never needs a new version of either client.
+
+#### Theme packs from GitHub
+
+A **theme pack** is a **public GitHub repository** with a folder `themes` that holds one theme file (the format above) per theme, for example
+[kyuplan.themes.cyberpunk](https://github.com/ArizonaGreenTea05/kyuplan.themes.cyberpunk). Add it under **Theme packs from GitHub** on the
+Branding page (permission `themes.edit`) with the address of the repository (`https://github.com/owner/repo`; a trailing slash or `.git` is
+fine, other hosts are refused). The API reads it at once and refuses it with the reason when it cannot (the repository does not exist or is
+private, GitHub does not answer, there is no usable theme in `themes`).
+
+- **Kept up to date**: every pack is read again every 6 hours, or half an hour after a read that failed; **Update now** does it at once. Only the
+  repository's default branch counts. A change in the repository (a colour, a new or removed theme) shows up in both clients without a restart or
+  a new version; users who chose a theme that is gone see the default theme. A read that fails (GitHub down, rate limit) keeps the themes
+  the pack offered so far, and the pack's row says why.
+- **Names are unique per pack**: of two theme files of one pack with the same `name` or the same `nameDe` (without one, the `name` stands for it;
+  case and blanks around do not matter, so a German client never lists two themes alike) or the same `id`, the one whose
+  file name comes first is used and the other is skipped; the row says which file and why. The same goes for a file that is not a valid theme
+  (too little contrast, a missing colour, more than 16 KB). The names of two *different* packs may be the same.
+- **Ids**: a theme of a pack gets the id `<key>-<id>` (the key is made of the repository's name), so two packs can both have a theme `matrix`
+  and none can replace a built-in or an uploaded theme. The `id` in the file can therefore be at most 25 characters. At most 10 packs with
+  50 themes each can be added; the themes of a pack are listed with the pack's name and are removed only with the pack (**Remove**).
+- **Network**: the server needs to reach `api.github.com` and `raw.githubusercontent.com` (HTTPS, no login: public repositories only).
+  Nothing is sent but the name of the repository. Whoever can change the repository can change the colours of your instance, so add only
+  packs you trust.
+- The list of packs is kept in `sources/index.json` and what each offers in `sources/<key>.json` of the `themes` folder, so they live on the
+  data volume. They are not part of a backup; after a restore, add the packs again (their themes come with the first read).
 
 ## Audit log
 
@@ -522,7 +549,7 @@ Kyuplan keeps a record of who changed what, so that payments and role changes ca
 | calendarfeeds | create, change, delete a calendar feed and give it a new address |
 | manual | add, change and delete the groups, subgroups, members and events kept by hand |
 | tags, comments | create, change and delete a tag; write, change and delete a comment (that a comment was written, not its text: the text keeps its own history) |
-| branding, themes | change the product name and colour, upload and remove an image, install and delete a theme pack |
+| branding, themes | change the product name and colour, upload and remove an image, install and delete a theme, add, update and remove a theme pack from GitHub |
 
 Each entry holds the time, the user who made the change (by the name shown to other users, kept as it was even if the user is deleted or renamed later), the area, what was done, the ids it concerned (such as `examId=3, memberId=12`) and what was sent, as JSON. **Secrets are never written to the log:** whatever is sent under a name that contains `password`, `passphrase`, `token`, `secret`, `connection`, `location`, `credential`, `apikey`, `authorization` or `cookie`, or that ends in `script`, is left out (the connection string of a backup database, the passphrase of a backup, the Spond logins, the metrics token). The **settings** are not logged as they were sent but as the list of settings that changed (`Metrics:Enabled: true`, `Spond:Password: changed`): the value is written only for settings that are no secret (statistics, sync, data source kind, allowed hosts); the **script** of a custom data source appears as its length and a short hash, so that two saves can be told apart without the code (it often holds tokens). A request that was refused or failed changes nothing and leaves no entry, and neither does a save of the settings that changes nothing. Nothing in the log can be changed or deleted through the API; it is part of the [backup file](#backup-file-download-and-restore) like all other data.
 

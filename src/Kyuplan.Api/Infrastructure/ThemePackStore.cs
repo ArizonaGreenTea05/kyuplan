@@ -11,11 +11,17 @@ namespace Kyuplan.Api.Infrastructure;
 /// The installed theme packs (<see cref="ThemePackDto"/>): the ones that ship with the program (<see cref="BuiltInThemePacks"/>) and the ones
 /// administrators uploaded, one <c>&lt;id&gt;.json</c> per pack in <c>Themes:Directory</c> (default: the folder <c>themes</c> next to the settings
 /// file, so it lives on the data volume). A file put there by hand is a pack too; one that is no valid pack is skipped and logged. The folder
-/// is looked at on every request (a few small files), so nothing needs a restart.
+/// is looked at on every request (a few small files), so nothing needs a restart. The themes of the GitHub theme packs (<see cref="ThemeSourceStore"/>)
+/// are read from <c>sources/&lt;key&gt;.json</c> in the same folder (a list of themes each, written by <see cref="ThemeSourceSync"/>).
 /// </summary>
 public sealed class ThemePackStore(SettingsFile settings, IConfiguration configuration, ILogger<ThemePackStore> log)
 {
     public const string DirectorySetting = "Themes:Directory";
+
+    /// <summary>The subfolder of <see cref="Directory"/> with what the GitHub theme packs offer: <c>index.json</c> (their definitions) and one <c>&lt;key&gt;.json</c> each.</summary>
+    public const string SourcesFolder = "sources";
+
+    public const string SourcesIndex = "index.json";
 
     /// <summary>Packs an administrator can have installed at most; the catalog goes to every client.</summary>
     public const int MaxPacks = 50;
@@ -23,13 +29,13 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
     public const int MaxBytes = ThemePackRules.MaxBytes;
 
     private static readonly JsonSerializerOptions Read = new(JsonSerializerDefaults.Web) { AllowTrailingCommas = true, ReadCommentHandling = JsonCommentHandling.Skip };
-    private static readonly JsonSerializerOptions Write = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    internal static readonly JsonSerializerOptions Write = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
     private readonly Lock _lock = new();
     private string _seen = "\0"; // the signature of the folder the cache was made from
     private ThemeCatalogDto _catalog = new("", BuiltInThemePacks.All);
 
-    private string Directory => configuration[DirectorySetting] is { Length: > 0 } configured
+    public string Directory => configuration[DirectorySetting] is { Length: > 0 } configured
         ? Path.GetFullPath(configured)
         : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settings.Path))!, "themes");
 
@@ -56,21 +62,25 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
     /// <summary>The pack as an administrator sent it: JSON text. Throws <see cref="InvalidInputException"/> when it cannot be installed.</summary>
     public ThemePackDto Parse(string json)
     {
+        var pack = Deserialize(json);
+        if (ThemePackRules.Check(pack) is { } problem) throw new InvalidInputException(problem);
+        if (BuiltInThemePacks.Contains(pack!.Id)) throw new InvalidInputException($"'{pack.Id}' is a built-in theme and cannot be replaced.");
+        return pack with { BuiltIn = false, Source = null };
+    }
+
+    /// <summary>The pack as the JSON says, not yet checked (<see cref="ThemePackRules.Check"/>). Throws <see cref="InvalidInputException"/> for text that is too large or no JSON.</summary>
+    public static ThemePackDto? Deserialize(string json)
+    {
         if (Encoding.UTF8.GetByteCount(json) > MaxBytes) throw new InvalidInputException($"The theme pack is larger than {MaxBytes / 1024} KB.");
 
-        ThemePackDto? pack;
         try
         {
-            pack = JsonSerializer.Deserialize<ThemePackDto>(json, Read);
+            return JsonSerializer.Deserialize<ThemePackDto>(json, Read);
         }
         catch (JsonException ex)
         {
             throw new InvalidInputException($"The theme pack is no valid JSON: {ex.Message}");
         }
-
-        if (ThemePackRules.Check(pack) is { } problem) throw new InvalidInputException(problem);
-        if (BuiltInThemePacks.Contains(pack!.Id)) throw new InvalidInputException($"'{pack.Id}' is a built-in theme and cannot be replaced.");
-        return pack with { BuiltIn = false };
     }
 
     /// <summary>Installs the pack, or replaces the one with the same id.</summary>
@@ -81,8 +91,8 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
             var directory = Directory;
             System.IO.Directory.CreateDirectory(directory);
             var path = FileOf(directory, pack.Id);
-            // Only packs that are installed count (files that are skipped as invalid do not).
-            if (!File.Exists(path) && Catalog().Packs.Count(p => !p.BuiltIn) >= MaxPacks)
+            // Only packs that are installed count (files that are skipped as invalid do not, nor do the themes of a GitHub theme pack).
+            if (!File.Exists(path) && Catalog().Packs.Count(p => !p.BuiltIn && p.Source is null) >= MaxPacks)
                 throw new InvalidInputException($"At most {MaxPacks} theme packs can be installed; delete one first.");
 
             // Written beside and moved over, so a request that reads at the same time never sees half a file.
@@ -128,10 +138,20 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
         if (!System.IO.Directory.Exists(directory)) return "";
 
         var parts = System.IO.Directory.EnumerateFiles(directory, "*.json")
+            .Concat(SourceFiles(directory))
             .Select(f => new FileInfo(f))
-            .OrderBy(f => f.Name, StringComparer.Ordinal)
+            .OrderBy(f => f.FullName, StringComparer.Ordinal)
             .Select(f => $"{f.Name}:{f.Length}:{f.LastWriteTimeUtc.Ticks}");
         return string.Join('|', parts);
+    }
+
+    /// <summary>The files the GitHub theme packs left, not their definitions (a read that changes nothing must not change the catalog's version).</summary>
+    private static IEnumerable<string> SourceFiles(string directory)
+    {
+        var folder = Path.Combine(directory, SourcesFolder);
+        return System.IO.Directory.Exists(folder)
+            ? System.IO.Directory.EnumerateFiles(folder, "*.json").Where(f => !string.Equals(Path.GetFileName(f), SourcesIndex, StringComparison.Ordinal))
+            : [];
     }
 
     private ThemeCatalogDto Build(string signature)
@@ -157,7 +177,31 @@ public sealed class ThemePackStore(SettingsFile settings, IConfiguration configu
             }
         }
 
+        if (signature.Length > 0) AddFromSources(packs);
+
         var version = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(signature)))[..12].ToLowerInvariant();
         return new ThemeCatalogDto(version, packs);
+    }
+
+    /// <summary>The themes the GitHub theme packs offer, after the uploaded ones: an id that is taken is not given twice.</summary>
+    private void AddFromSources(List<ThemePackDto> packs)
+    {
+        foreach (var file in SourceFiles(Directory).OrderBy(f => f, StringComparer.Ordinal))
+        {
+            try
+            {
+                var offered = JsonSerializer.Deserialize<List<ThemePackDto>>(File.ReadAllText(file, Encoding.UTF8), Read) ?? [];
+                foreach (var pack in offered)
+                {
+                    if (ThemePackRules.Check(pack) is not null || packs.Any(p => p.Id == pack.Id)) continue; // written by ThemeSourceSync, which checked
+
+                    packs.Add(pack with { BuiltIn = false });
+                }
+            }
+            catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+            {
+                log.LogWarning("The themes file {File} of a theme pack is skipped: {Problem}", Path.GetFileName(file), ex.Message);
+            }
+        }
     }
 }

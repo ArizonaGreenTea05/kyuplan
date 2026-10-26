@@ -58,6 +58,18 @@ public interface IPlannerApi
     /// <summary>Deletes an uploaded theme pack. Answers with the catalog.</summary>
     Task<ThemeCatalogDto> DeleteThemeAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>The GitHub theme packs and how reading each one went. Needs <c>themes.edit</c>.</summary>
+    Task<IReadOnlyList<ThemeSourceDto>> GetThemeSourcesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a GitHub theme pack (the address of its repository) and reads it. The API says what is wrong with one it refuses (400).</summary>
+    Task<ThemeSourceDto> AddThemeSourceAsync(string url, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads a GitHub theme pack again now. A failure is in the answer's <see cref="ThemeSourceDto.LastMessage"/>.</summary>
+    Task<ThemeSourceDto> RefreshThemeSourceAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a GitHub theme pack and its themes.</summary>
+    Task DeleteThemeSourceAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary>How the sync with the data source is doing. Needs <c>sync.view</c>.</summary>
     Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default);
 

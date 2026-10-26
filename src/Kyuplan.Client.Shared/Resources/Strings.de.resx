@@ -2567,13 +2567,13 @@
     <value>Standard des Servers ({0})</value>
   </data>
   <data name="Themes_Title" xml:space="preserve">
-    <value>Design-Pakete</value>
+    <value>Designs</value>
   </data>
   <data name="Themes_Lede" xml:space="preserve">
-    <value>Ein Design-Paket ist eine kleine JSON-Datei mit Farben, die beiden Clients ein Design hinzufügt (nach der Installation steht es allen Benutzern zur Wahl). Die eingebauten Pakete, darunter drei Designs mit hohem Kontrast, zeigen das Format; ein Paket mit der Kennung eines installierten ersetzt dieses. Benutzer, die ein gelöschtes Paket gewählt hatten, sehen das Standard-Design.</value>
+    <value>Ein Design ist eine kleine JSON-Datei mit Farben, die beiden Clients ein Design hinzufügt (nach der Installation steht es allen Benutzern zur Wahl). Die eingebauten Designs, darunter drei mit hohem Kontrast, zeigen das Format; ein Design mit der Kennung eines installierten ersetzt dieses. Benutzer, die ein gelöschtes Design gewählt hatten, sehen das Standard-Design. Ganze Sammlungen von Designs kommen als Design-Pakete von GitHub (siehe unten).</value>
   </data>
   <data name="Themes_Install" xml:space="preserve">
-    <value>Design-Paket installieren…</value>
+    <value>Design installieren…</value>
   </data>
   <data name="Themes_Delete" xml:space="preserve">
     <value>Löschen</value>
@@ -2591,13 +2591,61 @@
     <value>hoher Kontrast</value>
   </data>
   <data name="Themes_Installed" xml:space="preserve">
-    <value>Design-Paket „{0}“ installiert.</value>
+    <value>Design „{0}“ installiert.</value>
   </data>
   <data name="Themes_Deleted" xml:space="preserve">
-    <value>Design-Paket „{0}“ gelöscht.</value>
+    <value>Design „{0}“ gelöscht.</value>
   </data>
   <data name="Themes_TooLarge" xml:space="preserve">
-    <value>Die Datei ist größer als {0} KB und daher kein Design-Paket.</value>
+    <value>Die Datei ist größer als {0} KB und daher kein Design.</value>
+  </data>
+  <data name="ThemeSources_Title" xml:space="preserve">
+    <value>Design-Pakete von GitHub</value>
+  </data>
+  <data name="ThemeSources_Lede" xml:space="preserve">
+    <value>Ein Design-Paket ist ein öffentliches GitHub-Repository mit einem Ordner „{0}“, der pro Design eine .json-Datei enthält (im Format der Designs oben). Seine Designs stehen allen Benutzern zur Wahl und werden automatisch alle {1} Stunden aktualisiert; die Namen der Designs eines Pakets müssen eindeutig sein.</value>
+  </data>
+  <data name="ThemeSources_Url" xml:space="preserve">
+    <value>GitHub-Adresse des Design-Pakets, z. B. https://github.com/besitzer/repository</value>
+  </data>
+  <data name="ThemeSources_UrlInvalid" xml:space="preserve">
+    <value>Das ist keine Adresse eines GitHub-Repositorys (https://github.com/besitzer/repository).</value>
+  </data>
+  <data name="ThemeSources_Add" xml:space="preserve">
+    <value>Design-Paket hinzufügen</value>
+  </data>
+  <data name="ThemeSources_Refresh" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="ThemeSources_Remove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="ThemeSources_Empty" xml:space="preserve">
+    <value>Keine Design-Pakete hinzugefügt.</value>
+  </data>
+  <data name="ThemeSources_Count" xml:space="preserve">
+    <value>Designs: {0}</value>
+  </data>
+  <data name="ThemeSources_Updated" xml:space="preserve">
+    <value>aktualisiert {0}</value>
+  </data>
+  <data name="ThemeSources_NotUpdated" xml:space="preserve">
+    <value>noch nicht aktualisiert</value>
+  </data>
+  <data name="ThemeSources_Failed" xml:space="preserve">
+    <value>Aktualisierung fehlgeschlagen: {0}</value>
+  </data>
+  <data name="ThemeSources_Note" xml:space="preserve">
+    <value>Hinweis: {0}</value>
+  </data>
+  <data name="ThemeSources_Added" xml:space="preserve">
+    <value>Design-Paket „{0}“ hinzugefügt ({1} Designs).</value>
+  </data>
+  <data name="ThemeSources_Refreshed" xml:space="preserve">
+    <value>Design-Paket „{0}“ aktualisiert.</value>
+  </data>
+  <data name="ThemeSources_Removed" xml:space="preserve">
+    <value>Design-Paket „{0}“ entfernt.</value>
   </data>
   <data name="Calendar_Lede" xml:space="preserve">
     <value>Trainings, Prüfungen und andere Termine der gewählten Gruppe, nach Tag, Woche oder Monat.</value>

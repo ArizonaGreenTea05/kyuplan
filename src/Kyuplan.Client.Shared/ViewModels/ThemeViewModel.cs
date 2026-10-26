@@ -106,7 +106,12 @@ public sealed partial class ThemeViewModel : ObservableObject
             .. own.Skip(1),
             .. packs.Where(p => !p.HighContrast).Select(p => p.Id),
         ];
-        return [.. ids.Select(id => new ThemeChoice(id, NameOf(client, id, packs)))];
+        var named = ids.Select(id => (Id: id, Name: NameOf(client, id, packs))).ToList();
+        // The names of the themes of one GitHub theme pack are unique, those of two packs need not be: the repository tells them apart.
+        return [.. named.Select(n => new ThemeChoice(n.Id,
+            packs.FirstOrDefault(p => p.Id == n.Id) is { Source: { } source } && named.Count(o => string.Equals(o.Name, n.Name, StringComparison.OrdinalIgnoreCase)) > 1
+                ? $"{n.Name} ({source})"
+                : n.Name))];
     }
 
     /// <summary>What the last attempt to save a choice answered, or <c>null</c>.</summary>

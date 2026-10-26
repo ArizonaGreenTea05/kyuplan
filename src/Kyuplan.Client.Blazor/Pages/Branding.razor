@@ -223,7 +223,7 @@
                                 <strong>@pack.Name</strong>
                                 <small>@pack.Details</small>
                             </div>
-                            @if (Vm.CanManageThemes && !pack.BuiltIn)
+                            @if (Vm.CanManageThemes && !pack.BuiltIn && pack.Source is null)
                             {
                                 <div class="slot-actions">
                                     <button type="button" class="btn ghost danger" aria-label="@($"{Strings.Themes_Delete}: {pack.Name}")"
@@ -247,6 +247,66 @@
                     </div>
                 }
             </section>
+
+            @if (Vm.CanManageThemes)
+            {
+                <section class="card card-form" aria-labelledby="branding-sources">
+                    <div>
+                        <h2 id="branding-sources">@Strings.ThemeSources_Title</h2>
+                        <p class="note">@Vm.ThemeSourcesLede</p>
+                    </div>
+
+                    @if (Vm.ThemeSources.Count == 0)
+                    {
+                        <p class="note">@Strings.ThemeSources_Empty</p>
+                    }
+                    else
+                    {
+                        <ul class="slots" style="list-style: none; margin: 0; padding: 0;" aria-labelledby="branding-sources">
+                            @foreach (var source in Vm.ThemeSources)
+                            {
+                                <li class="slot">
+                                    <div class="slot-head">
+                                        <strong><a href="@source.Url" target="_blank" rel="noopener noreferrer">@source.Name</a></strong>
+                                        <small>@source.Details</small>
+                                        @if (source.Problem is { } sourceProblem)
+                                        {
+                                            <small>@sourceProblem</small>
+                                        }
+                                    </div>
+                                    <div class="slot-actions">
+                                        <button type="button" class="btn ghost" aria-label="@($"{Strings.ThemeSources_Refresh}: {source.Name}")"
+                                                disabled="@(!Vm.CanChangeThemeSource(source))" @onclick="() => Vm.RefreshThemeSourceCommand.ExecuteAsync(source)">
+                                            <Icon Name="refresh" /><span>@Strings.ThemeSources_Refresh</span>
+                                        </button>
+                                        <button type="button" class="btn ghost danger" aria-label="@($"{Strings.ThemeSources_Remove}: {source.Name}")"
+                                                disabled="@(!Vm.CanChangeThemeSource(source))" @onclick="() => Vm.DeleteThemeSourceCommand.ExecuteAsync(source)">
+                                            <Icon Name="trash" /><span>@Strings.ThemeSources_Remove</span>
+                                        </button>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <form @onsubmit="() => Vm.AddThemeSourceCommand.ExecuteAsync(null)" @onsubmit:preventDefault>
+                        <label class="field">
+                            <span>@Strings.ThemeSources_Url</span>
+                            <input type="url" autocomplete="off" spellcheck="false" disabled="@(!Vm.CanInstallTheme)"
+                                   @bind="Vm.NewThemeSourceUrl" @bind:event="oninput" />
+                            @if (Vm.NewThemeSourceUrlProblem is { } urlProblem)
+                            {
+                                <p class="field-error" role="alert">@urlProblem</p>
+                            }
+                        </label>
+                        <div class="form-actions">
+                            <button type="submit" class="btn" disabled="@(!Vm.CanAddThemeSource)">
+                                <Icon Name="plus" /><span>@Strings.ThemeSources_Add</span>
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            }
         }
     </PageGate>
 </section>

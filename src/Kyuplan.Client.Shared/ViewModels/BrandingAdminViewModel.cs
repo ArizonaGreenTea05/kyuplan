@@ -22,7 +22,18 @@ public sealed record BrandingImageRow(string Slot, string Title, string Hint, st
 
 /// <summary>One theme pack as the branding page lists it.</summary>
 /// <param name="Details">"dark · high contrast · built in".</param>
-public sealed record ThemePackRow(string Id, string Name, string Details, bool BuiltIn);
+/// <param name="Source">"owner/repo" of the GitHub theme pack the theme comes from; such a theme is removed with its pack, so it has no delete button.</param>
+public sealed record ThemePackRow(string Id, string Name, string Details, bool BuiltIn, string? Source = null)
+{
+    /// <summary>An uploaded theme: the only kind that can be deleted on its own.</summary>
+    public bool IsUploaded => !BuiltIn && Source is null;
+}
+
+/// <summary>One GitHub theme pack as the branding page lists it.</summary>
+/// <param name="Name">"owner/repo".</param>
+/// <param name="Details">"Themes: 2 · last update: 26.10.2026 12:00".</param>
+/// <param name="Problem">Why the last update failed, or which theme files it skipped; <c>null</c> when there is nothing to say.</param>
+public sealed record ThemeSourceRow(string Id, string Name, string Url, string Details, string? Problem);
 
 /// <summary>
 /// The administrators' page for the branding: the name, the organisation, the accent colour and the five images that both clients show.
@@ -145,7 +156,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     private IReadOnlyList<ThemePackDto> _packs = BuiltInThemePacks.All;
 
     /// <summary>The installed packs, for the list: built-in first (as the API sends them), then the uploaded ones.</summary>
-    public IReadOnlyList<ThemePackRow> ThemePacks => [.. _packs.Select(p => new ThemePackRow(p.Id, ThemeViewModel.PackName(p), Describe(p), p.BuiltIn))];
+    public IReadOnlyList<ThemePackRow> ThemePacks => [.. _packs.Select(p => new ThemePackRow(p.Id, ThemeViewModel.PackName(p), Describe(p), p.BuiltIn, p.Source))];
 
     /// <summary>Whether the signed-in user may install and delete theme packs.</summary>
     public bool CanManageThemes => Shell.Can(Permission.ThemesEdit);
@@ -153,15 +164,117 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
     /// <summary>Packs can be installed once the page is loaded, and while nothing else is being saved.</summary>
     public bool CanInstallTheme => CanManageThemes && !IsBusy && IsLoaded;
 
-    /// <summary>An uploaded pack can be deleted; a built-in one cannot, so there the button would change nothing.</summary>
-    public bool CanDeleteTheme(ThemePackRow? row) => CanManageThemes && !IsBusy && row is { BuiltIn: false };
+    /// <summary>An uploaded pack can be deleted; a built-in one cannot, and one of a GitHub theme pack goes with its pack, so there the button would change nothing.</summary>
+    public bool CanDeleteTheme(ThemePackRow? row) => CanManageThemes && !IsBusy && row is { IsUploaded: true };
 
     private static string Describe(ThemePackDto pack)
     {
         var parts = new List<string> { pack.Scheme == "dark" ? Strings.Themes_Dark : Strings.Themes_Light };
         if (pack.HighContrast) parts.Add(Strings.Themes_HighContrast);
         if (pack.BuiltIn) parts.Add(Strings.Themes_BuiltIn);
+        if (pack.Source is not null) parts.Add(pack.Source);
         return string.Join(" · ", parts);
+    }
+
+    // --- GitHub theme packs --------------------------------------------------------------------------------
+
+    /// <summary>The GitHub theme packs as the API last said (none until it has, and for a user who may not manage themes).</summary>
+    private IReadOnlyList<ThemeSourceDto> _sources = [];
+
+    public IReadOnlyList<ThemeSourceRow> ThemeSources => [.. _sources.Select(ToRow)];
+
+    /// <summary>"Updated every 6 hours, …": how often the packs are read again.</summary>
+    public string ThemeSourcesLede => string.Format(Strings.ThemeSources_Lede, ThemeSourceRules.Folder, ThemeSourceRules.RefreshInterval.TotalHours);
+
+    /// <summary>The address of the repository to add.</summary>
+    [ObservableProperty]
+    private string _newThemeSourceUrl = "";
+
+    /// <summary>The typed address is none of a GitHub repository; nothing while the field is empty.</summary>
+    public string? NewThemeSourceUrlProblem =>
+        NewThemeSourceUrl.Trim().Length > 0 && !ThemeSourceRules.IsValidUrl(NewThemeSourceUrl) ? Strings.ThemeSources_UrlInvalid : null;
+
+    public bool CanAddThemeSource => CanInstallTheme && ThemeSourceRules.IsValidUrl(NewThemeSourceUrl);
+
+    /// <summary>A pack can be updated or removed while nothing else is being saved.</summary>
+    public bool CanChangeThemeSource(ThemeSourceRow? row) => row is not null && CanInstallTheme;
+
+    partial void OnNewThemeSourceUrlChanged(string value)
+    {
+        if (IsLoaded) ErrorMessage = null;
+        OnPropertyChanged(nameof(NewThemeSourceUrlProblem));
+        NotifyStateChanged();
+    }
+
+    private ThemeSourceRow ToRow(ThemeSourceDto source)
+    {
+        var updated = source.LastSyncUtc is { } last ? string.Format(Strings.ThemeSources_Updated, Display.EventStart(last.ToLocalTime())) : Strings.ThemeSources_NotUpdated;
+        var problem = source.LastMessage is null ? null
+            : string.Format(source.LastSucceeded == true ? Strings.ThemeSources_Note : Strings.ThemeSources_Failed, source.LastMessage);
+        return new ThemeSourceRow(source.Id, source.Name, source.Url, $"{string.Format(Strings.ThemeSources_Count, source.ThemeCount)} · {updated}", problem);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanAddThemeSource))]
+    private async Task AddThemeSourceAsync()
+    {
+        if (!CanAddThemeSource) return;
+
+        SetNotice(null);
+        ThemeSourceDto? added = null;
+        await LoadAsync(async ct =>
+        {
+            added = await _api.AddThemeSourceAsync(NewThemeSourceUrl.Trim(), ct);
+            await ReadThemesAsync(ct);
+        });
+        if (added is null) return; // the reason is in ErrorMessage, and the address stays for a correction
+
+        NewThemeSourceUrl = "";
+        SetNotice(() => string.Format(Strings.ThemeSources_Added, added.Name, added.ThemeCount));
+        await ShowChangeAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanChangeThemeSource))]
+    private async Task RefreshThemeSourceAsync(ThemeSourceRow row)
+    {
+        if (!CanChangeThemeSource(row)) return;
+
+        SetNotice(null);
+        ThemeSourceDto? read = null;
+        await LoadAsync(async ct =>
+        {
+            read = await _api.RefreshThemeSourceAsync(row.Id, ct);
+            await ReadThemesAsync(ct);
+        });
+        if (read is null) return;
+
+        if (read.LastSucceeded == true) SetNotice(() => string.Format(Strings.ThemeSources_Refreshed, read.Name));
+        await ShowChangeAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanChangeThemeSource))]
+    private async Task DeleteThemeSourceAsync(ThemeSourceRow row)
+    {
+        if (!CanChangeThemeSource(row)) return;
+
+        SetNotice(null);
+        var done = false;
+        await LoadAsync(async ct =>
+        {
+            await _api.DeleteThemeSourceAsync(row.Id, ct);
+            done = true;
+            await ReadThemesAsync(ct);
+        });
+        if (!done) return;
+
+        SetNotice(() => string.Format(Strings.ThemeSources_Removed, row.Name));
+        await ShowChangeAsync();
+    }
+
+    /// <summary>Asks for the GitHub theme packs and the catalog (their themes come and go with them).</summary>
+    private async Task ReadThemesAsync(CancellationToken cancellationToken)
+    {
+        _sources = CanManageThemes ? await _api.GetThemeSourcesAsync(cancellationToken) : [];
+        AdoptPacks(await _api.GetThemesAsync(cancellationToken));
     }
 
     /// <summary>
@@ -234,6 +347,7 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         if (!WindowsThemes.Any(c => c.Id == FormDefaultWindowsTheme)) FormDefaultWindowsTheme = ThemeIds.Default;
 
         OnPropertyChanged(nameof(ThemePacks));
+        OnPropertyChanged(nameof(ThemeSources));
         OnPropertyChanged(nameof(WebThemes));
         OnPropertyChanged(nameof(WindowsThemes));
         OnPropertyChanged(nameof(SelectedWebTheme));
@@ -545,9 +659,11 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         {
             var settings = await _api.GetBrandingSettingsAsync(ct);
             _packs = (await _api.GetThemesAsync(ct)).Packs; // before the form is refilled: the defaults it holds may be packs
+            _sources = CanManageThemes ? await _api.GetThemeSourcesAsync(ct) : [];
             _staged.Clear(); // like the form, the pictures picked meanwhile give way to what the API says
             Adopt(settings, refillForm: true);
             OnPropertyChanged(nameof(ThemePacks));
+            OnPropertyChanged(nameof(ThemeSources));
             OnPropertyChanged(nameof(WebThemes));
             OnPropertyChanged(nameof(WindowsThemes));
             OnPropertyChanged(nameof(SelectedWebTheme));
@@ -607,6 +723,9 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         FormProductName = FormOrganizationName = FormAccentColor = "";
         FormCurrency = BrandingRules.DefaultCurrency;
         FormDefaultWebTheme = FormDefaultWindowsTheme = ThemeIds.Default;
+        _sources = [];
+        NewThemeSourceUrl = "";
+        OnPropertyChanged(nameof(ThemeSources));
         IsConfirmingReset = false;
         SetNotice(null);
         OnPropertyChanged(nameof(IsLoaded));
@@ -622,7 +741,11 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         OnPropertyChanged(nameof(CanSaveImages));
         OnPropertyChanged(nameof(CanManageThemes));
         OnPropertyChanged(nameof(CanInstallTheme));
+        OnPropertyChanged(nameof(CanAddThemeSource));
         DeleteThemeCommand.NotifyCanExecuteChanged();
+        AddThemeSourceCommand.NotifyCanExecuteChanged();
+        RefreshThemeSourceCommand.NotifyCanExecuteChanged();
+        DeleteThemeSourceCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ProductNameProblem));
         OnPropertyChanged(nameof(OrganizationNameProblem));
         OnPropertyChanged(nameof(AccentColorProblem));
@@ -666,6 +789,10 @@ public sealed partial class BrandingAdminViewModel : PageViewModel
         Images = BuildRows(); // the texts of the slots
         OnPropertyChanged(nameof(ImagesLede));
         OnPropertyChanged(nameof(NoticeText));
+        OnPropertyChanged(nameof(ThemePacks)); // their details
+        OnPropertyChanged(nameof(ThemeSources));
+        OnPropertyChanged(nameof(ThemeSourcesLede));
+        OnPropertyChanged(nameof(NewThemeSourceUrlProblem));
         OnPropertyChanged(nameof(WebThemes)); // the names of the themes
         OnPropertyChanged(nameof(WindowsThemes));
         OnPropertyChanged(nameof(SelectedWebTheme));

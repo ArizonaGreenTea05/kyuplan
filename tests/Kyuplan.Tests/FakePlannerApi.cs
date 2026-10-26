@@ -254,7 +254,20 @@ internal sealed class FakePlannerApi : IPlannerApi
 
     private int _themeRevision;
 
-    private ThemeCatalogDto ThemeCatalog => new($"t{_themeRevision}", [.. BuiltInThemePacks.All, .. UploadedPacks]);
+    private ThemeCatalogDto ThemeCatalog => new($"t{_themeRevision}", [.. BuiltInThemePacks.All, .. UploadedPacks, .. ThemeSources.SelectMany(s => SourcePacks.GetValueOrDefault(s.Id) ?? [])]);
+
+    /// <summary>The GitHub theme packs the server holds, and the themes each one offers.</summary>
+    public List<ThemeSourceDto> ThemeSources { get; } = [];
+
+    public Dictionary<string, List<ThemePackDto>> SourcePacks { get; } = [];
+
+    /// <summary>The themes the next theme pack that is added offers.</summary>
+    public List<ThemePackDto> NextSourceThemes { get; set; } = [];
+
+    /// <summary>When set, adding a theme pack is refused with this reason, and a refresh fails with it.</summary>
+    public string? SourceFailure { get; set; }
+
+    private int _nextSourceId = 1;
 
     private ThemeCatalogDto PublishThemes()
     {
@@ -290,6 +303,56 @@ internal sealed class FakePlannerApi : IPlannerApi
             ThemeCalls.Add("delete-theme:" + id);
             if (UploadedPacks.RemoveAll(p => p.Id == id) == 0) throw BadRequest("no such pack");
             return PublishThemes();
+        });
+
+    public Task<IReadOnlyList<ThemeSourceDto>> GetThemeSourcesAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<ThemeSourceDto>>(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            return [.. ThemeSources];
+        });
+
+    public Task<ThemeSourceDto> AddThemeSourceAsync(string url, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            if (ThemeSourceRules.Parse(url) is not var (owner, repo)) throw BadRequest("url must be the address of a public GitHub repository.");
+            if (SourceFailure is not null) throw BadRequest(SourceFailure);
+            if (ThemeSources.Any(s => s.Url == ThemeSourceRules.Url(owner, repo))) throw BadRequest("added already");
+
+            ThemeCalls.Add("add-source:" + url);
+            var id = $"s{_nextSourceId++}";
+            var packs = NextSourceThemes.Select(p => p with { Id = $"{id}-{p.Id}", Source = $"{owner}/{repo}" }).ToList();
+            var source = new ThemeSourceDto(id, ThemeSourceRules.Url(owner, repo), $"{owner}/{repo}", packs.Count, DateTimeOffset.UtcNow, true, null);
+            ThemeSources.Add(source);
+            SourcePacks[id] = packs;
+            PublishThemes();
+            return source;
+        });
+
+    public Task<ThemeSourceDto> RefreshThemeSourceAsync(string id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            if (ThemeSources.FirstOrDefault(s => s.Id == id) is not { } source) throw BadRequest("no such theme pack");
+
+            ThemeCalls.Add("refresh-source:" + id);
+            var read = source with { LastSyncUtc = DateTimeOffset.UtcNow, LastSucceeded = SourceFailure is null, LastMessage = SourceFailure };
+            ThemeSources[ThemeSources.IndexOf(source)] = read;
+            PublishThemes();
+            return read;
+        });
+
+    public Task DeleteThemeSourceAsync(string id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.ThemesEdit)) throw Forbidden();
+            if (ThemeSources.RemoveAll(s => s.Id == id) == 0) throw BadRequest("no such theme pack");
+
+            ThemeCalls.Add("delete-source:" + id);
+            SourcePacks.Remove(id);
+            PublishThemes();
+            return 0;
         });
 
     // --- Backups ---------------------------------------------------------------------------------------------

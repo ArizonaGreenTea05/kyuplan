@@ -2671,13 +2671,13 @@
     <value>Server default ({0})</value>
   </data>
   <data name="Themes_Title" xml:space="preserve">
-    <value>Theme packs</value>
+    <value>Themes</value>
   </data>
   <data name="Themes_Lede" xml:space="preserve">
-    <value>A theme pack is a small JSON file of colours that adds a theme to both clients (it is offered to every user once installed). The built-in packs, among them three high contrast themes, show the format; a pack with the id of an installed one replaces it. Users who chose a deleted pack see the default theme.</value>
+    <value>A theme is a small JSON file of colours that adds a theme to both clients (it is offered to every user once installed). The built-in themes, among them three high contrast themes, show the format; a theme with the id of an installed one replaces it. Users who chose a deleted theme see the default theme. Whole collections of themes come as theme packs from GitHub (see below).</value>
   </data>
   <data name="Themes_Install" xml:space="preserve">
-    <value>Install theme pack…</value>
+    <value>Install theme…</value>
   </data>
   <data name="Themes_Delete" xml:space="preserve">
     <value>Delete</value>
@@ -2695,13 +2695,61 @@
     <value>high contrast</value>
   </data>
   <data name="Themes_Installed" xml:space="preserve">
-    <value>Theme pack "{0}" installed.</value>
+    <value>Theme "{0}" installed.</value>
   </data>
   <data name="Themes_Deleted" xml:space="preserve">
-    <value>Theme pack "{0}" deleted.</value>
+    <value>Theme "{0}" deleted.</value>
   </data>
   <data name="Themes_TooLarge" xml:space="preserve">
-    <value>The file is larger than {0} KB, so it is no theme pack.</value>
+    <value>The file is larger than {0} KB, so it is no theme.</value>
+  </data>
+  <data name="ThemeSources_Title" xml:space="preserve">
+    <value>Theme packs from GitHub</value>
+  </data>
+  <data name="ThemeSources_Lede" xml:space="preserve">
+    <value>A theme pack is a public GitHub repository with a folder "{0}" that holds one .json file per theme (the format of the themes above). Its themes are offered to every user and updated automatically every {1} hours; the names of the themes of one pack must be unique.</value>
+  </data>
+  <data name="ThemeSources_Url" xml:space="preserve">
+    <value>GitHub address of the theme pack, e.g. https://github.com/owner/repo</value>
+  </data>
+  <data name="ThemeSources_UrlInvalid" xml:space="preserve">
+    <value>This is no address of a GitHub repository (https://github.com/owner/repo).</value>
+  </data>
+  <data name="ThemeSources_Add" xml:space="preserve">
+    <value>Add theme pack</value>
+  </data>
+  <data name="ThemeSources_Refresh" xml:space="preserve">
+    <value>Update now</value>
+  </data>
+  <data name="ThemeSources_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ThemeSources_Empty" xml:space="preserve">
+    <value>No theme packs added.</value>
+  </data>
+  <data name="ThemeSources_Count" xml:space="preserve">
+    <value>Themes: {0}</value>
+  </data>
+  <data name="ThemeSources_Updated" xml:space="preserve">
+    <value>updated {0}</value>
+  </data>
+  <data name="ThemeSources_NotUpdated" xml:space="preserve">
+    <value>not updated yet</value>
+  </data>
+  <data name="ThemeSources_Failed" xml:space="preserve">
+    <value>Update failed: {0}</value>
+  </data>
+  <data name="ThemeSources_Note" xml:space="preserve">
+    <value>Note: {0}</value>
+  </data>
+  <data name="ThemeSources_Added" xml:space="preserve">
+    <value>Theme pack "{0}" added ({1} themes).</value>
+  </data>
+  <data name="ThemeSources_Refreshed" xml:space="preserve">
+    <value>Theme pack "{0}" updated.</value>
+  </data>
+  <data name="ThemeSources_Removed" xml:space="preserve">
+    <value>Theme pack "{0}" removed.</value>
   </data>
   <data name="Calendar_Lede" xml:space="preserve">
     <value>Trainings, exams and other events of the selected group, by day, week or month.</value>

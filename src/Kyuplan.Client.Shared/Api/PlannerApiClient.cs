@@ -83,6 +83,20 @@ public sealed class PlannerApiClient(HttpClient http) : IPlannerApi
         SendJsonAsync(() => http.DeleteAsync($"api/themes/{Uri.EscapeDataString(id)}", cancellationToken),
             PlannerJsonContext.Default.ThemeCatalogDto, cancellationToken);
 
+    public async Task<IReadOnlyList<ThemeSourceDto>> GetThemeSourcesAsync(CancellationToken cancellationToken = default) =>
+        await GetAsync("api/themes/sources", PlannerJsonContext.Default.ListThemeSourceDto, cancellationToken);
+
+    public Task<ThemeSourceDto> AddThemeSourceAsync(string url, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync("api/themes/sources", Json(new ThemeSourceInputDto(url), PlannerJsonContext.Default.ThemeSourceInputDto), cancellationToken),
+            PlannerJsonContext.Default.ThemeSourceDto, cancellationToken);
+
+    public Task<ThemeSourceDto> RefreshThemeSourceAsync(string id, CancellationToken cancellationToken = default) =>
+        SendJsonAsync(() => http.PostAsync($"api/themes/sources/{Uri.EscapeDataString(id)}/refresh", null, cancellationToken),
+            PlannerJsonContext.Default.ThemeSourceDto, cancellationToken);
+
+    public Task DeleteThemeSourceAsync(string id, CancellationToken cancellationToken = default) =>
+        SendNoContentAsync(() => http.DeleteAsync($"api/themes/sources/{Uri.EscapeDataString(id)}", cancellationToken), cancellationToken);
+
     public async Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default) =>
         await GetAsync("api/sync/status", PlannerJsonContext.Default.SyncStatusDto, cancellationToken);
 

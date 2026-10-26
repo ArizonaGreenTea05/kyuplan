@@ -354,6 +354,152 @@ public class PluginRulesTests
         if (ok) Assert.Equal(expected, number);
     }
 
+    // --- Fields that belong together ----------------------------------------------------------------------------
+
+    private const string LoginRule = """{ "groups": [["Email", "PhoneNumber"], ["Password"]], "message": "A login needs both." }""";
+
+    private static string Login(string rule = LoginRule, string extra = "") => $$"""
+        { "elements": [
+            { "type": "field", "id": "Email", "label": "Email", "input": "text" },
+            { "type": "field", "id": "PhoneNumber", "label": "Phone", "input": "text" },
+            { "type": "field", "id": "Password", "label": "Password", "input": "password", "together": {{rule}} }{{extra}}
+        ] }
+        """;
+
+    [Fact]
+    public void A_rule_between_fields_is_a_valid_layout_even_when_it_names_fields_that_come_after_it_in_any_case()
+    {
+        Assert.Null(Check(Login(), PluginUiUse.DataSourceSettings));
+        Assert.Null(Check(Login("""{ "groups": [["email"], ["PASSWORD", "phonenumber"]], "message": "m", "messageDe": "n" }"""), PluginUiUse.DataSourceSettings));
+        Assert.Null(Check("""
+            { "elements": [ { "type": "field", "id": "A", "label": "A", "input": "text", "together": { "groups": [["A"], ["B"]], "message": "m" } },
+                            { "type": "field", "id": "B", "label": "B", "input": "text" } ] }
+            """, PluginUiUse.DataSourceSettings));
+    }
+
+    [Theory]
+    [InlineData("""{ "groups": [["Email"]], "message": "m" }""", "2 to 5 groups")]
+    [InlineData("""{ "groups": [["Email"], ["Password"], ["Email2"], ["x1"], ["x2"], ["x3"]], "message": "m" }""", "2 to 5 groups")]
+    [InlineData("""{ "message": "m" }""", "2 to 5 groups")]
+    [InlineData("""{ "groups": [["Email"], []], "message": "m" }""", "1 to 5 field ids")]
+    [InlineData("""{ "groups": [["Email"], ["1bad"]], "message": "m" }""", "1 to 5 field ids")]
+    [InlineData("""{ "groups": [["Email", "PhoneNumber", "a", "b", "c", "d"], ["Password"]], "message": "m" }""", "1 to 5 field ids")]
+    [InlineData("""{ "groups": [["Email"], ["email"]], "message": "m" }""", "two groups")]
+    [InlineData("""{ "groups": [["Email"], ["Password"]] }""", "needs a message")]
+    [InlineData("""{ "groups": [["Email"], ["Password"]], "message": "  " }""", "needs a message")]
+    [InlineData("""{ "groups": [["Email"], ["Nobody"]], "message": "m" }""", "no field next to it")]
+    public void A_rule_between_fields_that_is_not_well_formed_is_refused_with_the_reason(string rule, string reason)
+    {
+        var problem = Check(Login(rule), PluginUiUse.DataSourceSettings);
+
+        Assert.NotNull(problem);
+        Assert.Contains(reason, problem);
+    }
+
+    [Fact]
+    public void A_rule_between_fields_needs_fields_not_checkboxes_headings_or_fields_of_another_list_row()
+    {
+        var checkbox = """
+            { "elements": [ { "type": "field", "id": "Flag", "label": "F", "input": "checkbox" },
+                            { "type": "field", "id": "P", "label": "P", "input": "password", "together": { "groups": [["Flag"], ["P"]], "message": "m" } } ] }
+            """;
+        Assert.Contains("no field next to it", Check(checkbox, PluginUiUse.DataSourceSettings));
+        Assert.Contains("only for fields", Check("""{ "elements": [ { "type": "text", "text": "x", "together": { "groups": [["A"], ["B"]], "message": "m" } } ] }""", PluginUiUse.DataSourceSettings));
+        Assert.Contains("needs a message", Check(Login($$"""{ "groups": [["Email"], ["Password"]], "message": "{{new string('x', PluginRules.MaxLabelLength + 1)}}" }"""), PluginUiUse.DataSourceSettings));
+
+        // A row of a list only knows its own fields: the Email outside of the list is not one of them.
+        var row = """
+            { "elements": [ { "type": "field", "id": "Email", "label": "E", "input": "text" },
+                { "type": "list", "id": "L", "label": "L", "elements": [ { "type": "field", "id": "Password", "label": "P", "input": "password",
+                    "together": { "groups": [["Email"], ["Password"]], "message": "m" } } ] } ] }
+            """;
+        Assert.Contains("no field next to it", Check(row, PluginUiUse.DataSourceSettings));
+    }
+
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    public void A_rule_holds_when_every_group_has_a_value_or_none_has(bool first, bool second, bool holds)
+    {
+        var rule = new PluginUiTogether([["a", "b"], ["c"]], "m");
+
+        Assert.Equal(holds, PluginRules.TogetherHolds(rule, id => id switch { "a" => first, "b" => false, "c" => second, _ => false }));
+    }
+
+    [Fact]
+    public void A_group_has_a_value_when_any_of_its_fields_has_and_three_groups_are_all_or_none_too()
+    {
+        var rule = new PluginUiTogether([["a", "b"], ["c"], ["d"]], "m");
+
+        Assert.True(PluginRules.TogetherHolds(rule, id => id is "b" or "c" or "d"));
+        Assert.False(PluginRules.TogetherHolds(rule, id => id is "b" or "c"));
+        Assert.False(PluginRules.TogetherHolds(rule, id => id is "d"));
+        Assert.True(PluginRules.TogetherHolds(rule, _ => false));
+    }
+
+    private static string? CheckSpond(Func<IReadOnlyDictionary<string, JsonElement>> values, Func<string, bool>? hasSecret = null) =>
+        PluginRules.CheckValues(PluginTestKit.Layout(PluginTestKit.SpondForm), values(), hasSecret ?? (_ => false));
+
+    [Theory]
+    [InlineData("me@example.org", "", "pw", true)]
+    [InlineData("", "+491701234567", "pw", true)]
+    [InlineData("me@example.org", "+491701234567", "pw", true)]
+    [InlineData("", "", "", true)] // nothing: a login can be added later
+    [InlineData("me@example.org", "", "", false)]
+    [InlineData("", "+491701234567", "", false)]
+    [InlineData("", "", "pw", false)]
+    [InlineData("   ", "", "pw", false)] // blanks are no email
+    [InlineData("me@example.org", "", "   ", false)] // and no password
+    public void A_login_in_the_settings_needs_the_email_or_phone_number_together_with_the_password(string email, string phone, string password, bool fine)
+    {
+        var problem = CheckSpond(() => PluginTestKit.Values(("Email", email), ("PhoneNumber", phone), ("Password", password)));
+
+        if (fine) Assert.Null(problem);
+        else Assert.Equal("Password: A Spond login needs the email (or phone number) and the password.", problem);
+    }
+
+    [Fact]
+    public void A_stored_password_counts_for_the_login_and_alone_it_is_not_one()
+    {
+        IReadOnlyDictionary<string, JsonElement> Typed(string email) => PluginTestKit.Values(("Email", email), ("PhoneNumber", ""), ("Password", ""));
+
+        Assert.Null(CheckSpond(() => Typed("me@example.org"), path => path == "Password"));
+        Assert.NotNull(CheckSpond(() => Typed(""), path => path == "Password")); // the email was taken away: the password has nothing to go with
+        Assert.NotNull(CheckSpond(() => Typed("me@example.org"))); // the password never was there
+    }
+
+    [Fact]
+    public void A_login_that_is_missing_from_the_values_altogether_is_nothing_and_half_of_one_is_a_problem()
+    {
+        Assert.Null(CheckSpond(() => PluginTestKit.Values()));
+        Assert.NotNull(CheckSpond(() => PluginTestKit.Values(("Email", "me@example.org"))));
+        Assert.NotNull(CheckSpond(() => PluginTestKit.Values(("Email", null), ("PhoneNumber", "+49"), ("Password", null))));
+    }
+
+    [Fact]
+    public void Every_row_of_a_list_is_asked_the_rule_and_its_message_names_the_row_and_the_field()
+    {
+        Assert.Null(CheckSpond(() => PluginTestKit.Values(("Accounts", new object[] { new { Email = "a@x.org", Password = "pw" }, new { PhoneNumber = "+49", Password = "pw" }, new { Email = "", Password = "" } }))));
+        Assert.Equal("Accounts[2].Password: A backup Spond login needs the email (or phone number) and the password.",
+            CheckSpond(() => PluginTestKit.Values(("Accounts", new object[] { new { Email = "a@x.org", Password = "pw" }, new { Email = "b@x.org", Password = "" } }))));
+        Assert.Equal("Accounts[1].Password: A backup Spond login needs the email (or phone number) and the password.",
+            CheckSpond(() => PluginTestKit.Values(("Accounts", new object[] { new { Password = "pw" } }))));
+    }
+
+    [Fact]
+    public void A_row_that_says_which_stored_row_it_was_has_that_rows_password_and_one_that_does_not_has_none()
+    {
+        var stored = new[] { "Accounts/0/Password" };
+        IReadOnlyDictionary<string, JsonElement> Row(object row) => PluginTestKit.Values(("Accounts", new[] { row }));
+
+        Assert.Null(CheckSpond(() => Row(new { Email = "a@x.org", Password = "", _keep = 0 }), path => stored.Contains(path)));
+        Assert.NotNull(CheckSpond(() => Row(new { Email = "a@x.org", Password = "" }), path => stored.Contains(path))); // a new row does not take it
+        Assert.NotNull(CheckSpond(() => Row(new { Email = "a@x.org", Password = "", _keep = 1 }), path => stored.Contains(path))); // nothing is stored for the second row
+        Assert.NotNull(CheckSpond(() => Row(new { Email = "", Password = "", _keep = 0 }), path => stored.Contains(path))); // the login of the row was taken away
+    }
+
     // --- The data source kinds --------------------------------------------------------------------------------
 
     [Theory]

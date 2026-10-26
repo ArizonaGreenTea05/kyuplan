@@ -211,12 +211,54 @@ public static partial class PluginRules
             if (problem is not null) return $"{(element.Id ?? element.Type)}: {problem}";
         }
 
+        // A rule between fields names fields next to it (the same form or the same row), which may come after it.
+        foreach (var host in elements.Where(x => x.Together is not null))
+        {
+            foreach (var id in host.Together!.Groups.SelectMany(g => g))
+            {
+                var member = elements.FirstOrDefault(x => x.Type == "field" && string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase));
+                if (member is null || member.Input == "checkbox") return $"{host.Id}: together names '{id}', which is no field next to it (a checkbox does not count).";
+            }
+        }
+
         return null;
+    }
+
+    /// <summary>The problem with the shape of the rule <see cref="PluginUiElement.Together"/>, or <c>null</c>; which fields it names is checked with the fields next to it.</summary>
+    private static string? CheckTogether(PluginUiTogether rule)
+    {
+        if (rule.Groups is not { Count: >= 2 and <= MaxTogetherGroups }) return $"together needs 2 to {MaxTogetherGroups} groups.";
+        if (rule.Groups.Any(g => g is not { Count: >= 1 and <= MaxTogetherGroups } || g.Any(id => !IsKey(id)))) return $"a group of together needs 1 to {MaxTogetherGroups} field ids.";
+        if (rule.Groups.SelectMany(g => g).GroupBy(id => id, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) return "a field is in two groups of together.";
+        if (string.IsNullOrWhiteSpace(rule.Message) || rule.Message.Length > MaxLabelLength || rule.MessageDe?.Length > MaxLabelLength) return $"together needs a message (at most {MaxLabelLength} characters).";
+
+        return null;
+    }
+
+    /// <summary>
+    /// The ids of the fields of a row of a list that its stored passwords belong to: for a password field with a rule <see cref="PluginUiElement.Together"/>, the fields of the
+    /// other groups of the rule (the login the password is for). When one of them is changed, the row no longer is what the stored password was for, so it is not kept
+    /// and has to be typed again. A password without such a rule keeps its place in the list whatever else is changed in the row.
+    /// </summary>
+    public static IReadOnlyList<string> RowIdentity(IEnumerable<PluginUiElement> rowFields) =>
+        [.. rowFields.Where(f => f.Type == "field" && f.Input == "password" && f.Id is not null && f.Together is not null)
+            .SelectMany(password => password.Together!.Groups.Where(group => !group.Contains(password.Id!, StringComparer.OrdinalIgnoreCase)).SelectMany(group => group))
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>The most groups of a rule <see cref="PluginUiElement.Together"/>, and the most fields in a group.</summary>
+    public const int MaxTogetherGroups = 5;
+
+    /// <summary>Whether the rule holds: every group has a value (one of its fields has), or none has. <paramref name="hasValue"/> says whether the field with an id has one.</summary>
+    public static bool TogetherHolds(PluginUiTogether rule, Func<string, bool> hasValue)
+    {
+        var filled = rule.Groups.Select(group => group.Any(hasValue)).ToList();
+        return filled.All(f => f) || filled.All(f => !f);
     }
 
     private static string? CheckElement(PluginUiElement e, PluginUiUse use, int depth, ref int count, HashSet<string> scope, HashSet<string> all, bool inForm, bool inList)
     {
         if (!TextsFit(e)) return "a text is too long.";
+        if (e.Together is not null && e.Type != "field") return "together is only for fields.";
 
         switch (e.Type)
         {
@@ -245,6 +287,7 @@ public static partial class PluginRules
 
                 if (e.Input == "number" && e.Min > e.Max) return "min is larger than max.";
                 if (e.MaxLength is < 1 or > MaxTextLength) return $"maxLength must be between 1 and {MaxTextLength}.";
+                if (e.Together is { } together && CheckTogether(together) is { } togetherProblem) return togetherProblem;
                 if (e.Default is { } fallback)
                 {
                     var bad = e.Input == "checkbox" ? fallback is not ("true" or "false") : CheckValue(e, JsonSerializer.SerializeToElement(fallback)) is not null;
@@ -396,13 +439,43 @@ public static partial class PluginRules
                         if (CheckField(f, value, kept >= 0 && hasSecret($"{e.Id}/{kept}/{f.Id}")) is { } problem) return $"{e.Id}[{current + 1}].{f.Id}: {problem}";
                     }
 
+                    if (CheckTogetherValues(e.Elements ?? [], id => item.TryGetProperty(id, out var v) ? v : default, id => kept >= 0 && hasSecret($"{e.Id}/{kept}/{id}")) is { } broken)
+                        return $"{e.Id}[{current + 1}].{broken.Field}: {broken.Message}";
+
                     row++;
                 }
             }
         }
 
+        if (CheckTogetherValues(layout.Elements, id => values.GetValueOrDefault(id), hasSecret) is { } rule) return $"{rule.Field}: {rule.Message}";
+
         return null;
     }
+
+    /// <summary>
+    /// The first rule <see cref="PluginUiElement.Together"/> of these fields that does not hold for the values, as the id of the field it is on and its message; <c>null</c> when all hold.
+    /// <paramref name="valueOf"/> gives the JSON value of the field with an id, <paramref name="hasSecret"/> whether a password was stored for it.
+    /// </summary>
+    private static (string Field, string Message)? CheckTogetherValues(IReadOnlyList<PluginUiElement> fields, Func<string, JsonElement> valueOf, Func<string, bool> hasSecret)
+    {
+        foreach (var host in fields.Where(f => f.Type == "field" && f.Together is not null))
+        {
+            bool Filled(string id) => fields.FirstOrDefault(f => f.Type == "field" && string.Equals(f.Id, id, StringComparison.OrdinalIgnoreCase)) is { Id: { } own }
+                && (IsFilled(valueOf(own)) || hasSecret(own));
+
+            if (!TogetherHolds(host.Together!, Filled)) return (host.Id ?? "", host.Together!.Message);
+        }
+
+        return null;
+    }
+
+    /// <summary>A value somebody typed: text with something in it, or a number.</summary>
+    private static bool IsFilled(JsonElement value) => value.ValueKind switch
+    {
+        JsonValueKind.String => !string.IsNullOrWhiteSpace(value.GetString()),
+        JsonValueKind.Number => true,
+        _ => false,
+    };
 
     /// <summary>
     /// The property of a row of a list that says which stored row it was (its index): an empty password of the row then keeps the stored one. A new row has none.

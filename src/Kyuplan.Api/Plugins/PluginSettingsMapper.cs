@@ -79,7 +79,7 @@ public static class PluginSettingsMapper
                 var next = new List<Dictionary<string, string>>();
                 foreach (var item in value.EnumerateArray())
                 {
-                    var kept = item.TryGetProperty(PluginRules.KeepProperty, out var keep) && keep.ValueKind == JsonValueKind.Number && keep.TryGetInt32(out var index) && index >= 0 && index < stored.Count ? stored[index] : null;
+                    var kept = KeptRow(e, item, stored);
                     var row = new Dictionary<string, string>();
                     foreach (var f in e.Elements ?? [])
                     {
@@ -98,6 +98,52 @@ public static class PluginSettingsMapper
         }
 
         return changes;
+    }
+
+    /// <summary>
+    /// The stored row a row of <paramref name="list"/> that was sent comes from and whose passwords it keeps, or <c>null</c> (a new row, an index that is not there, or a
+    /// row whose login was changed). A password belongs to what the row says it is for: change the login of a row (the fields of <see cref="PluginRules.RowIdentity"/>) and
+    /// its stored password is not carried over to the new one.
+    /// </summary>
+    private static Dictionary<string, string>? KeptRow(PluginUiElement list, JsonElement item, List<Dictionary<string, string>> stored)
+    {
+        if (!item.TryGetProperty(PluginRules.KeepProperty, out var keep) || keep.ValueKind != JsonValueKind.Number || !keep.TryGetInt32(out var index) || index < 0 || index >= stored.Count) return null;
+
+        foreach (var id in PluginRules.RowIdentity(list.Elements ?? []))
+        {
+            if ((list.Elements ?? []).FirstOrDefault(x => x.Type == "field" && string.Equals(x.Id, id, StringComparison.OrdinalIgnoreCase)) is not { Id: not null } f) continue;
+
+            var sent = item.TryGetProperty(f.Id!, out var value) ? Text(f, value) : "";
+            if (!string.Equals(Normalized(f, sent), Normalized(f, stored[index].GetValueOrDefault(f.Id!)), StringComparison.OrdinalIgnoreCase)) return null;
+        }
+
+        return stored[index];
+    }
+
+    /// <summary>
+    /// The values as they were sent, but a row of a list whose login was changed no longer says which stored row it was (<see cref="PluginRules.KeepProperty"/>), so that it does not
+    /// count as having the passwords of that row (see <see cref="KeptRow"/>). The values are checked like this.
+    /// </summary>
+    public static IReadOnlyDictionary<string, JsonElement> WithoutStaleKeeps(PluginUiLayout form, IConfigurationSection current, IReadOnlyDictionary<string, JsonElement> values)
+    {
+        var result = new Dictionary<string, JsonElement>(values);
+        foreach (var list in form.Elements.Where(e => e.Type == "list" && e.Id is not null))
+        {
+            if (!values.TryGetValue(list.Id!, out var sent) || sent.ValueKind != JsonValueKind.Array) continue;
+
+            var stored = Rows(current, list.Id!);
+            var rows = new JsonArray();
+            foreach (var item in sent.EnumerateArray())
+            {
+                var row = JsonNode.Parse(item.GetRawText());
+                if (item.ValueKind == JsonValueKind.Object && item.TryGetProperty(PluginRules.KeepProperty, out _) && KeptRow(list, item, stored) is null) ((JsonObject)row!).Remove(PluginRules.KeepProperty);
+                rows.Add(row);
+            }
+
+            result[list.Id!] = JsonSerializer.SerializeToElement(rows);
+        }
+
+        return result;
     }
 
     /// <summary>The values as the form sends them with their stored secrets found (a password path of <see cref="PluginSettingsDto.SecretsSet"/>).</summary>

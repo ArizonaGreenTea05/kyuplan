@@ -278,6 +278,25 @@ public sealed class PluginSettingsFormTests : IDisposable
     }
 
     [Fact]
+    public void A_form_that_was_not_told_what_the_plugins_add_does_not_claim_that_a_plugin_is_missing()
+    {
+        var form = new SettingsForm();
+        form.SetPlugins(null); // the catalog could not be read (yet): the form does not know
+        form.Load(FakePlannerApi.DefaultSettings with { UseDemoData = false, DataSource = "spond" });
+
+        Assert.True(form.IsPluginSource);
+        Assert.False(form.IsMissingPlugin);
+        Assert.Equal("spond", form.DataSourceText("spond"));
+        Assert.Equal("", form.DataSourceHint);
+        Assert.Null(form.PluginForm);
+
+        form.SetPlugins(PluginTestKit.AcmeCatalog()); // and says so as soon as it does know
+        Assert.True(form.IsMissingPlugin);
+        Assert.Equal("spond (plugin not installed)", form.DataSourceText("spond"));
+        Assert.Equal(Strings.Settings_DataSourceHint_missing, form.DataSourceHint);
+    }
+
+    [Fact]
     public void The_builtin_sources_are_no_plugin_sources_and_have_no_plugin_form()
     {
         var form = Form(source: DataSourceKinds.Custom);
@@ -366,7 +385,7 @@ public sealed class PluginSettingsFormTests : IDisposable
 
         form.SetPlugins(PluginTestKit.AcmeCatalog());
         Assert.NotNull(form.PluginForm);
-        form.SetPlugins(null);
+        form.SetPlugins(new PluginCatalogDto([])); // no plugin runs any more
         Assert.Null(form.PluginForm);
         Assert.True(form.IsMissingPlugin);
     }

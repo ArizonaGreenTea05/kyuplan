@@ -86,7 +86,8 @@ public sealed class SettingsService(
             var matches = forms.Where(f => f.Source.Id == id).ToList();
             if (matches.Count == 0) return $"pluginSettings: no installed plugin has a data source '{id}' with settings.";
             var form = matches[0];
-            if (PluginRules.CheckValues(form.Form, values, PluginSettingsMapper.HasSecret(form.Form, configuration.GetSection(form.Section))) is { } problem)
+            var section = configuration.GetSection(form.Section);
+            if (PluginRules.CheckValues(form.Form, PluginSettingsMapper.WithoutStaleKeeps(form.Form, section, values), PluginSettingsMapper.HasSecret(form.Form, section)) is { } problem)
                 return $"pluginSettings.{id}: {problem}";
         }
 

@@ -64,14 +64,18 @@ public sealed partial class SettingsForm : ObservableObject
 
     public bool IsManualSource => DataSource == DataSourceKinds.Manual;
 
+    /// <summary>What the plugins add is known (the API answered). Until then the form cannot say that a plugin is missing: it only does not know.</summary>
+    private bool _pluginsKnown;
+
     /// <summary>The chosen data source is a plugin's, but no installed plugin offers it (the plugin was removed, or never installed): saving it would leave the API without data.</summary>
-    public bool IsMissingPlugin => IsPluginSource && _pluginSources.All(s => s.Id != DataSource);
+    public bool IsMissingPlugin => _pluginsKnown && IsPluginSource && _pluginSources.All(s => s.Id != DataSource);
 
     /// <summary>
     /// Takes the data sources the plugins offer (<see cref="PluginCatalogDto"/>) and builds the forms of their settings. Call it before <see cref="Load"/>, which fills the forms.
     /// </summary>
     public void SetPlugins(PluginCatalogDto? catalog)
     {
+        _pluginsKnown = catalog is not null;
         _pluginSources = [.. (catalog?.Plugins ?? []).SelectMany(p => p.DataSources)];
         foreach (var form in _pluginForms.Values) form.ValueChanged -= OnPluginFormChanged;
         _pluginForms.Clear();
@@ -105,6 +109,7 @@ public sealed partial class SettingsForm : ObservableObject
             DataSourceKinds.Custom => Strings.Settings_DataSource_custom,
             DataSourceKinds.Manual => Strings.Settings_DataSource_manual,
             DataSourceKinds.Demo => Strings.Settings_DataSource_demo,
+            _ when !_pluginsKnown => kind,
             _ => string.Format(Strings.Settings_DataSource_missing, kind),
         };
 
@@ -115,6 +120,7 @@ public sealed partial class SettingsForm : ObservableObject
         DataSourceKinds.Manual => Strings.Settings_DataSourceHint_manual,
         DataSourceKinds.Demo => Strings.Settings_UseDemoDataHint,
         _ when _pluginSources.FirstOrDefault(s => s.Id == DataSource) is { } source => PluginText.Pick(source.Description, source.DescriptionDe),
+        _ when !_pluginsKnown => "",
         _ => Strings.Settings_DataSourceHint_missing,
     };
 

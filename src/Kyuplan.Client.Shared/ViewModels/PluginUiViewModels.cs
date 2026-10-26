@@ -93,7 +93,7 @@ public sealed partial class PluginFieldViewModel(PluginUiElement element) : Plug
 
     /// <summary>What is typed (text, password, multiline, number) or chosen (select, the value of the option).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Problem), nameof(SelectedChoice), nameof(IsEmpty))]
+    [NotifyPropertyChangedFor(nameof(Problem), nameof(SelectedChoice), nameof(IsEmpty), nameof(HasValue))]
     private string _text = "";
 
     [ObservableProperty]
@@ -101,22 +101,66 @@ public sealed partial class PluginFieldViewModel(PluginUiElement element) : Plug
 
     /// <summary>A password is stored (it is never sent to the client): leaving the field empty keeps it.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Problem), nameof(StoredSecretHint))]
+    [NotifyPropertyChangedFor(nameof(Problem), nameof(StoredSecretHint), nameof(KeepsStoredSecret), nameof(HasValue))]
     private bool _hasStoredSecret;
 
-    public string? StoredSecretHint => IsPassword && HasStoredSecret ? Strings.Plugin_SecretStored : null;
+    /// <summary>
+    /// The row of a list that holds this field was changed, so the password stored for it is not meant for what it says now (see <see cref="PluginRowViewModel"/>):
+    /// the field has to be filled in again.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Problem), nameof(StoredSecretHint), nameof(KeepsStoredSecret), nameof(HasValue))]
+    private bool _secretDropped;
+
+    /// <summary>An empty password field keeps the stored password: one is stored, and what it belongs to was not changed.</summary>
+    public bool KeepsStoredSecret => IsPassword && HasStoredSecret && !SecretDropped;
+
+    public string? StoredSecretHint => KeepsStoredSecret ? Strings.Plugin_SecretStored : null;
 
     /// <summary>Nothing typed or chosen (a checkbox is never empty).</summary>
     public bool IsEmpty => !IsCheckbox && string.IsNullOrWhiteSpace(Text);
+
+    /// <summary>Something is typed, or a password that is kept stands for it (a checkbox has no value in this sense).</summary>
+    public bool HasValue => !IsCheckbox && (!IsEmpty || KeepsStoredSecret);
+
+    /// <summary>The fields next to this one (the same form or row), for the rule <see cref="PluginUiElement.Together"/>; <c>null</c> = not linked, the rule is not asked.</summary>
+    internal Func<IReadOnlyList<PluginFieldViewModel>>? Siblings { get; set; }
 
     /// <summary>What is wrong with the value, in words; <c>null</c> when it is fine.</summary>
     public string? Problem
     {
         get
         {
-            if (IsRequired && IsEmpty && !(IsPassword && HasStoredSecret)) return Strings.Plugin_FieldRequired;
+            if (IsRequired && IsEmpty && !KeepsStoredSecret) return Strings.Plugin_FieldRequired;
+            if (PluginRules.CheckValue(element, ToJson()) is not null) return Strings.Plugin_FieldInvalid;
 
-            return PluginRules.CheckValue(element, ToJson()) is null ? null : Strings.Plugin_FieldInvalid;
+            return element.Together is { } rule && Siblings?.Invoke() is { } siblings
+                && !PluginRules.TogetherHolds(rule, id => siblings.FirstOrDefault(f => string.Equals(f.Id, id, StringComparison.OrdinalIgnoreCase))?.HasValue == true)
+                ? PluginText.Pick(rule.Message, rule.MessageDe)
+                : null;
+        }
+    }
+
+    /// <summary>Another field changed: the rule on this one is asked again.</summary>
+    internal void RefreshProblem() => OnPropertyChanged(nameof(Problem));
+
+    /// <summary>
+    /// Lets the fields of one form or row see each other, which the rules between them need (<see cref="PluginUiElement.Together"/>), and has the field a rule is on
+    /// say so when another one of them changes.
+    /// </summary>
+    internal static void Link(IReadOnlyList<PluginFieldViewModel> fields)
+    {
+        foreach (var field in fields) field.Siblings = () => fields;
+
+        var hosts = fields.Where(f => f.Element.Together is not null).ToList();
+        if (hosts.Count == 0) return;
+
+        foreach (var field in fields)
+        {
+            field.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(HasValue) or "") foreach (var host in hosts) host.RefreshProblem();
+            };
         }
     }
 
@@ -182,10 +226,38 @@ public sealed class PluginRowViewModel(IReadOnlyList<PluginFieldViewModel> field
     /// <summary>The position of this row in the stored list; <c>null</c> for a row that was added now.</summary>
     public int? KeepIndex => keepIndex;
 
-    /// <summary>Nothing typed in any field and no stored password: a row nobody filled in is not saved.</summary>
-    public bool IsEmpty => fields.All(f => f.IsCheckbox ? !f.IsChecked : f.IsEmpty && !f.HasStoredSecret);
+    private string _loaded = "";
+
+    /// <summary>Nothing typed in any field and no stored password that still counts: a row nobody filled in is not saved.</summary>
+    public bool IsEmpty => fields.All(f => f.IsCheckbox ? !f.IsChecked : f.IsEmpty && !f.KeepsStoredSecret);
 
     public string? Problem => IsEmpty ? null : fields.Select(f => f.Problem).FirstOrDefault(p => p is not null);
+
+    /// <summary>What the stored passwords of the row belong to (<see cref="PluginRules.RowIdentity"/>), as the API compares it.</summary>
+    private string Identity()
+    {
+        var identity = PluginRules.RowIdentity(fields.Select(f => f.Element));
+        return string.Join('\u001f', fields.Where(f => identity.Contains(f.Id, StringComparer.OrdinalIgnoreCase)).Select(f => f.ToJson().GetRawText()));
+    }
+
+    /// <summary>Remembers what a stored row says: while it says that, its stored passwords are kept.</summary>
+    public void Capture()
+    {
+        _loaded = Identity();
+        foreach (var field in fields.Where(f => f.IsPassword)) field.SecretDropped = false;
+    }
+
+    /// <summary>
+    /// A stored row that was changed (another login, another address) does not keep its stored passwords: they were for what it said before, and the API does not
+    /// carry them over either. Changing it back gives them back.
+    /// </summary>
+    public void CheckStored()
+    {
+        if (keepIndex is null) return;
+
+        var changed = !string.Equals(Identity(), _loaded, StringComparison.OrdinalIgnoreCase);
+        foreach (var field in fields.Where(f => f.IsPassword)) field.SecretDropped = changed;
+    }
 
     public JsonElement ToJson()
     {
@@ -239,13 +311,20 @@ public sealed partial class PluginListViewModel : PluginItemViewModel
     private PluginRowViewModel NewRow(int? keepIndex)
     {
         var fields = (_element.Elements ?? []).Where(e => e.Type == "field").Select(e => new PluginFieldViewModel(e)).ToList();
+        foreach (var field in fields) field.Load(field.DefaultValue());
+
+        var row = new PluginRowViewModel(fields, keepIndex);
+        PluginFieldViewModel.Link(fields);
         foreach (var field in fields)
         {
-            field.Load(field.DefaultValue());
-            field.PropertyChanged += (_, _) => Changed();
+            field.PropertyChanged += (_, e) =>
+            {
+                if (!field.IsPassword && e.PropertyName is nameof(PluginFieldViewModel.Text) or nameof(PluginFieldViewModel.IsChecked)) row.CheckStored();
+                Changed();
+            };
         }
 
-        return new PluginRowViewModel(fields, keepIndex);
+        return row;
     }
 
     [RelayCommand(CanExecute = nameof(CanAdd))]
@@ -274,6 +353,7 @@ public sealed partial class PluginListViewModel : PluginItemViewModel
                 if (field.IsPassword) field.HasStoredSecret = secrets.Contains($"{Id}/{stored}/{field.Id}");
             }
 
+            row.Capture();
             Rows.Add(row);
             index++;
         }
@@ -299,6 +379,7 @@ public sealed class PluginFormViewModel : ObservableObject
     public PluginFormViewModel(IReadOnlyList<PluginUiElement> elements)
     {
         Items = [.. elements.Select(Create).OfType<PluginItemViewModel>()];
+        PluginFieldViewModel.Link([.. Items.OfType<PluginFieldViewModel>()]);
         foreach (var item in Items)
         {
             switch (item)

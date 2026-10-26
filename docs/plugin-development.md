@@ -121,13 +121,14 @@ A layout is `{ "elements": [ … ] }`. The elements, in order, are drawn one und
 | `type` | Properties | Where |
 | --- | --- | --- |
 | `heading`, `text` | `text` | everywhere |
-| `field` | `id`, `label`, `hint`, `input`, `required`, `default`, `options`, `min`, `max`, `maxLength` | settings form; on a page only inside a `form` |
+| `field` | `id`, `label`, `hint`, `input`, `required`, `default`, `options`, `min`, `max`, `maxLength`, `together` | settings form; on a page only inside a `form` |
 | `list` | `id`, `label`, `hint`, `max` (rows, at most 50), `elements` (fields of a row) | settings form |
 | `table` | `label` (title), `source`, `columns` (`key`, `label`), `text` (shown while empty) | page |
 | `button` | `label`, `action` | page |
 | `form` | `label` (the button's text), `elements` (fields, texts), `action` | page |
 
-- **`input`** of a field: `text`, `password`, `number` (`min`, `max`; typed with a point), `checkbox`, `select` (`options`: `value`, `label`, `labelDe`) and `multiline`. `default` is a text (`"true"` for a checkbox). A `password` is stored **encrypted** and never sent back to a client: the form shows that one is stored and an empty field keeps it. A list is saved as a whole; a row that is left out is gone, and a row keeps the passwords of the row it was.
+- **`input`** of a field: `text`, `password`, `number` (`min`, `max`; typed with a point), `checkbox`, `select` (`options`: `value`, `label`, `labelDe`) and `multiline`. `default` is a text (`"true"` for a checkbox). A `password` is stored **encrypted** and never sent back to a client: the form shows that one is stored and an empty field keeps it. A list is saved as a whole; a row that is left out is gone, and a row keeps the passwords of the row it was. Only a password with a `together` rule (below) is tied to its login: when a field of the other groups of that rule is changed in the row (the email of a login), the stored password is not carried over to the new login and has to be typed again.
+- **`together`**: a rule between the fields next to the one it is on (the same form, or the same row of a list): `{ "groups": [["Email", "PhoneNumber"], ["Password"]], "message": "A login needs the email (or phone number) and the password.", "messageDe": "…" }`. Either every group has a value (one of its fields is filled in; a stored password counts), or none has. Otherwise `message` is shown under the field the rule is on, the form cannot be saved and the API refuses it. 2 to 5 groups, up to 5 fields (not checkboxes) each.
 - **`table`**: `source` is the path of an endpoint of your plugin (`items`), called with `GET` whenever the page is shown or an action finished. It answers a JSON **array of objects**; `columns[].key` picks a property of each (a number, text or flag).
 - **`action`**: `{ "method": "POST" | "PUT" | "DELETE", "path": "items/add", "confirm": "Really?", "confirmDe": "Wirklich?" }`. The path is relative to `/api/plugins/<id>/`. A button calls it; a `form` sends its values as a **JSON object** (`{ "name": "…" }`, field id → value) as the body. `confirm` makes the client ask first. After a successful call the tables are read again.
 

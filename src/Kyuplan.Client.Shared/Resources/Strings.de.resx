@@ -3617,7 +3617,7 @@
     <value>Erledigt.</value>
   </data>
   <data name="Plugin_SecretStored" xml:space="preserve">
-    <value>Ein Wert ist gespeichert. Leer lassen, um ihn zu behalten.</value>
+    <value>Ein Passwort ist gespeichert. Leer lassen, um es zu behalten.</value>
   </data>
   <data name="Plugin_FieldRequired" xml:space="preserve">
     <value>Dieses Feld ist erforderlich.</value>

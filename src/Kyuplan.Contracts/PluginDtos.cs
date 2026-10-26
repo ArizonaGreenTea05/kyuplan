@@ -20,10 +20,19 @@ public sealed record PluginUiColumn(string Key, string Label, string? LabelDe = 
 public sealed record PluginUiAction(string Method, string Path, string? Confirm = null, string? ConfirmDe = null);
 
 /// <summary>
+/// A rule between fields of the same form (or of the same row of a list): either every group of fields has a value, or none has. A login is the example: the
+/// groups <c>[["Email", "PhoneNumber"], ["Password"]]</c> say that it needs the email or the phone number, and the password, or nothing at all. A password that
+/// is stored counts as a value. The rule is attached to one field (the one under which <see cref="Message"/> is shown).
+/// </summary>
+/// <param name="Groups">At least two groups of the ids of fields (not checkboxes) next to the field the rule is on; a group has a value when any of its fields has one.</param>
+/// <param name="Message">What is said when only some groups have a value; <paramref name="MessageDe"/> for a German client (none = <paramref name="Message"/>).</param>
+public sealed record PluginUiTogether(IReadOnlyList<IReadOnlyList<string>> Groups, string Message, string? MessageDe = null);
+
+/// <summary>
 /// One element of a <see cref="PluginUiLayout"/>. <see cref="Type"/> says what it is and which of the other properties it reads:
 /// <list type="bullet">
 /// <item><c>heading</c>, <c>text</c>: <see cref="Text"/>.</item>
-/// <item><c>field</c>: <see cref="Id"/>, <see cref="Input"/>, <see cref="Label"/>, <see cref="Hint"/>, <see cref="Required"/>, <see cref="Default"/>, <see cref="Options"/>, <see cref="Min"/>, <see cref="Max"/>, <see cref="MaxLength"/>.</item>
+/// <item><c>field</c>: <see cref="Id"/>, <see cref="Input"/>, <see cref="Label"/>, <see cref="Hint"/>, <see cref="Required"/>, <see cref="Default"/>, <see cref="Options"/>, <see cref="Min"/>, <see cref="Max"/>, <see cref="MaxLength"/>, <see cref="Together"/>.</item>
 /// <item><c>list</c> (a list of rows of fields the user can add to and remove from): <see cref="Id"/>, <see cref="Label"/>, <see cref="Hint"/>, <see cref="Max"/> (rows), <see cref="Elements"/> (the fields of a row).</item>
 /// <item><c>table</c>: <see cref="Label"/> (a title), <see cref="Source"/> (an endpoint of the plugin that answers a list of objects), <see cref="Columns"/>, <see cref="Text"/> (shown while it is empty).</item>
 /// <item><c>button</c>: <see cref="Label"/>, <see cref="Action"/>.</item>
@@ -50,7 +59,8 @@ public sealed record PluginUiElement(
     string? Source = null,
     IReadOnlyList<PluginUiColumn>? Columns = null,
     PluginUiAction? Action = null,
-    IReadOnlyList<PluginUiElement>? Elements = null);
+    IReadOnlyList<PluginUiElement>? Elements = null,
+    PluginUiTogether? Together = null);
 
 /// <summary>What a page of a plugin or the settings form of its data source looks like. The clients build the view from it; no UI code is in the plugin.</summary>
 public sealed record PluginUiLayout(IReadOnlyList<PluginUiElement> Elements);

@@ -585,6 +585,84 @@ public sealed class PluginShellTests : IDisposable
         Assert.Empty(shell.PluginPages);
         Assert.Null(shell.Plugins);
     }
+
+    [Fact]
+    public async Task A_data_source_that_cannot_deliver_the_groups_does_not_hide_the_plugins()
+    {
+        // No login for Spond yet, a wrong password, Spond is down: the groups fail with 503, and the settings page with the form of the plugin is where it is put right.
+        _api.Account = WithPermissions(1, "viewer", "acme.view", Permission.DashboardView);
+        _api.PluginCatalog = PluginTestKit.AcmeCatalog();
+        _api.GroupsFailWith = new PlannerApiException("Spond credentials are not configured.", System.Net.HttpStatusCode.ServiceUnavailable);
+        var shell = new ShellViewModel(_api, _language) { Session = { User = _api.Account } }; // signed in, as the login leaves it
+
+        await shell.InitializeAsync();
+
+        Assert.True(shell.HasError);
+        Assert.Equal("acme", shell.Plugins!.Plugins.Single().Id);
+        Assert.Equal(["acme/items", "acme/about"], shell.PluginPages.Select(p => p.Key));
+    }
+
+    [Fact]
+    public async Task A_refresh_after_the_groups_failed_still_has_the_plugins_and_a_later_one_brings_the_groups()
+    {
+        _api.Account = WithPermissions(1, "viewer", "acme.view", Permission.DashboardView);
+        _api.PluginCatalog = PluginTestKit.AcmeCatalog();
+        var shell = new ShellViewModel(_api, _language);
+        await shell.InitializeAsync();
+        Assert.Equal(2, shell.PluginPages.Count);
+
+        _api.PluginCatalog = PluginTestKit.SpondCatalog();
+        _api.GroupsFailWith = new PlannerApiException("Could not reach Spond.", System.Net.HttpStatusCode.ServiceUnavailable);
+        await shell.RefreshDataCommand.ExecuteAsync(null);
+
+        Assert.True(shell.HasError);
+        Assert.Equal("spond", shell.Plugins!.Plugins.Single().Id); // the catalog is the new one although the groups failed
+
+        _api.GroupsFailWith = null;
+        await shell.RefreshDataCommand.ExecuteAsync(null);
+        Assert.False(shell.HasError);
+        Assert.NotEmpty(shell.Groups);
+    }
+
+    [Fact]
+    public async Task A_catalog_that_cannot_be_read_does_not_keep_the_user_from_the_app()
+    {
+        _api.Account = WithPermissions(1, "viewer", Permission.DashboardView);
+        _api.PluginsFailWith = new PlannerApiException("The plugins are not available.", System.Net.HttpStatusCode.InternalServerError);
+        var shell = new ShellViewModel(_api, _language);
+
+        await shell.InitializeAsync();
+
+        Assert.False(shell.HasError);
+        Assert.NotEmpty(shell.Groups);
+        Assert.Null(shell.Plugins);
+        Assert.Empty(shell.PluginPages);
+
+        await shell.RefreshDataCommand.ExecuteAsync(null); // and neither does the refresh
+        Assert.False(shell.HasError);
+    }
+
+    [Fact]
+    public async Task The_settings_page_still_has_the_form_of_the_data_source_when_the_groups_cannot_be_read()
+    {
+        var api = new FakePlannerApi
+        {
+            Account = Dto(1, "admin", "admin", [], true), PluginCatalog = PluginTestKit.SpondCatalog(),
+            GroupsFailWith = new PlannerApiException("Spond credentials are not configured.", System.Net.HttpStatusCode.ServiceUnavailable),
+        };
+        api.Settings = FakePlannerApi.DefaultSettings with { UseDemoData = false, DataSource = "spond" };
+        var shell = new ShellViewModel(api, new LanguageService()) { Session = { User = api.Account } }; // signed in, as the login leaves it
+        var page = new SettingsViewModel(shell, api, new ApiRestartWatcher(api) { Delay = (_, _) => Task.CompletedTask });
+
+        await page.ActivateAsync();
+
+        Assert.False(page.Form.IsMissingPlugin);
+        Assert.NotNull(page.Form.PluginForm);
+        Assert.Equal("Spond", page.Form.DataSourceText("spond"));
+        page.Form.PluginForm!.Fields.Single(f => f.Id == "Email").Text = "me@example.org";
+        page.Form.PluginForm.Fields.Single(f => f.Id == "Password").Text = "pw";
+        Assert.True(page.CanSave); // the credentials can be typed in and saved although Spond answers nothing
+    }
 }
 
 /// <summary>The permissions a plugin adds are ticked like the program's own, and the ones of a plugin that is not there are kept.</summary>

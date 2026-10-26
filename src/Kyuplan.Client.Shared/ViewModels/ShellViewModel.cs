@@ -100,6 +100,22 @@ public sealed partial class ShellViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Asks what the plugins add. A failure leaves what is there (nothing at first) and does not stop the rest of the load: the plugins are no reason to keep the
+    /// user from the app, and the other way round, a data source that does not answer must not hide the plugins (the settings form of the data source is one of them).
+    /// </summary>
+    private async Task LoadPluginsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            SetPlugins(await _api.GetPluginsAsync(cancellationToken));
+        }
+        catch (PlannerApiException)
+        {
+            // The pages and forms of the plugins are missing until the next refresh; everything else works.
+        }
+    }
+
     private void SetPlugins(PluginCatalogDto catalog)
     {
         Plugins = catalog;
@@ -231,9 +247,9 @@ public sealed partial class ShellViewModel : ViewModelBase
             // Who the user is decides what they may ask for: somebody who may use no page that shows Spond's data is not shown its groups.
             var user = Session.User ?? await _api.GetAccountAsync(ct);
             Info = await _api.GetInfoAsync(ct);
+            await LoadPluginsAsync(ct); // before the groups: when the data source cannot deliver them (no login yet, Spond down), the settings page that puts it right still needs the forms of the plugins
             Groups = user.EffectivePermissions.Any(Permission.ReadsSpond.Contains) ? await _api.GetGroupsAsync(ct) : [];
             Session.User ??= user;
-            SetPlugins(await _api.GetPluginsAsync(ct));
             _initialized = true;
         });
 
@@ -261,9 +277,9 @@ public sealed partial class ShellViewModel : ViewModelBase
             {
                 await _api.RefreshAsync(ct);
                 var user = await _api.GetAccountAsync(ct);
+                await LoadPluginsAsync(ct);
                 Groups = user.EffectivePermissions.Any(Permission.ReadsSpond.Contains) ? await _api.GetGroupsAsync(ct) : [];
                 Session.User = user;
-                SetPlugins(await _api.GetPluginsAsync(ct));
             });
         }
         finally

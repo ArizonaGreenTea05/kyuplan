@@ -22,15 +22,21 @@ internal static class PluginTestKit
     public const string SpondForm = """
         {
           "elements": [
-            { "type": "field", "id": "Email", "label": "Spond email", "labelDe": "Spond-E-Mail", "input": "text", "maxLength": 200 },
+            { "type": "field", "id": "Email", "label": "Spond email", "labelDe": "Spond-E-Mail", "input": "text", "maxLength": 254 },
             { "type": "field", "id": "PhoneNumber", "label": "Spond phone number (instead of the email)", "input": "text", "maxLength": 50 },
-            { "type": "field", "id": "Password", "label": "Spond password", "input": "password", "maxLength": 200 },
+            {
+              "type": "field", "id": "Password", "label": "Spond password", "input": "password", "maxLength": 500,
+              "together": { "groups": [["Email", "PhoneNumber"], ["Password"]], "message": "A Spond login needs the email (or phone number) and the password.", "messageDe": "Ein Spond-Zugang braucht die E-Mail (oder Telefonnummer) und das Passwort." }
+            },
             {
               "type": "list", "id": "Accounts", "label": "Backup Spond accounts", "max": 10,
               "elements": [
-                { "type": "field", "id": "Email", "label": "Spond email", "input": "text", "maxLength": 200 },
+                { "type": "field", "id": "Email", "label": "Spond email", "input": "text", "maxLength": 254 },
                 { "type": "field", "id": "PhoneNumber", "label": "Spond phone number (instead of the email)", "input": "text", "maxLength": 50 },
-                { "type": "field", "id": "Password", "label": "Spond password", "input": "password", "maxLength": 200 }
+                {
+                  "type": "field", "id": "Password", "label": "Spond password", "input": "password", "maxLength": 500,
+                  "together": { "groups": [["Email", "PhoneNumber"], ["Password"]], "message": "A backup Spond login needs the email (or phone number) and the password.", "messageDe": "Ein Ersatz-Spond-Zugang braucht die E-Mail (oder Telefonnummer) und das Passwort." }
+                }
               ]
             }
           ]

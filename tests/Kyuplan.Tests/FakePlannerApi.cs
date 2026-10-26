@@ -320,8 +320,14 @@ internal sealed class FakePlannerApi : IPlannerApi
     /// <summary>What the next installation or update says (a plugin on its way, or a restart that is not needed).</summary>
     public bool PluginChangeRestarts { get; set; } = true;
 
+    /// <summary>When set, only the question for the plugin catalog fails with this exception (every call fails with <see cref="FailWith"/>).</summary>
+    public Exception? PluginsFailWith { get; set; }
+
+    /// <summary>When set, only the question for the groups fails with this exception: a data source that cannot be read (no login yet, the service is down).</summary>
+    public Exception? GroupsFailWith { get; set; }
+
     public Task<PluginCatalogDto> GetPluginsAsync(CancellationToken cancellationToken = default) =>
-        Run(() => PluginCatalog);
+        PluginsFailWith is { } ex ? Task.FromException<PluginCatalogDto>(ex) : Run(() => PluginCatalog);
 
     public Task<IReadOnlyList<PluginAdminDto>> GetInstalledPluginsAsync(CancellationToken cancellationToken = default) =>
         Run<IReadOnlyList<PluginAdminDto>>(() =>
@@ -837,7 +843,7 @@ internal sealed class FakePlannerApi : IPlannerApi
         });
 
     public Task<IReadOnlyList<GroupDto>> GetGroupsAsync(CancellationToken cancellationToken = default) =>
-        FailWith is { } ex ? Task.FromException<IReadOnlyList<GroupDto>>(ex) : Task.FromResult<IReadOnlyList<GroupDto>>(Groups);
+        (GroupsFailWith ?? FailWith) is { } ex ? Task.FromException<IReadOnlyList<GroupDto>>(ex) : Task.FromResult<IReadOnlyList<GroupDto>>(Groups);
 
     public Task<DashboardDto> GetDashboardAsync(
         string groupId, string? subGroupId = null, int? days = null, CancellationToken cancellationToken = default)

@@ -120,6 +120,7 @@ The button **Insert example script** puts a complete example into the box. Insid
   be at most 10 MB, and one request is given up after 30 seconds. A call of the script as a whole is stopped after 60 seconds, a request that is
   still waiting included.
 - `console.log(...)`, which writes to the server's log.
+- `secrets.get('NAME')`, the value of a **secret** of the script (see [Secrets](#secrets-of-the-script)): the place for tokens and passwords.
 - Everything of plain JavaScript (ECMAScript), and nothing else: no file system, no network but `http`, no .NET.
 
 > **Who can reach what.** The requests are made **by the server**, from its network position, and follow redirects. A script can therefore reach addresses only the server
@@ -127,7 +128,29 @@ The button **Insert example script** puts a complete example into the box. Insid
 > loopback, `0.0.0.0/8`, link-local (`169.254.x.x`, the cloud metadata service) and `fd00:ec2::/32` need `DataSource:AllowLocalAddresses` = `true`; the internal network (`10/8`, `172.16/12`, `192.168/16`,
 > `100.64/10`, `fc00::/7`, multicast and other non-public ranges, i.e. the LAN, the Docker host and sibling containers) needs `DataSource:AllowPrivateAddresses` = `true`. Set the latter if your source
 > lives inside your network. Requests never go through `HTTP_PROXY`/`HTTPS_PROXY`. Only give the permission to change the settings to people you trust with that, and never paste a script you did not read.
-> Credentials in the script are stored in `data/settings.json` and shown to everybody who may open the Settings page.
+> Credentials belong in [secrets](#secrets-of-the-script), not in the script text: the script itself is stored unencrypted in `data/settings.json`.
+
+#### Secrets of the script
+
+Tokens, API keys and passwords of the services the script asks are kept apart from the script, in the **Secrets of the script** list below the text box (or `DataSource:Secrets`
+in the configuration). Give each one a **name** (a letter, then letters, digits and underscores, at most 50 characters; not case sensitive; at most 20 secrets) and a
+**value** (one line, at most 2000 characters), and read it in the script:
+
+```js
+var auth = { Authorization: 'Bearer ' + secrets.get('API_TOKEN') };
+var groups = http.get('https://example.org/api/groups', auth).json();
+```
+
+- The values are stored **encrypted** in `data/settings.json`, like the Spond password (the key lives in `Setup:KeyDirectory`, see [Security settings](#security-settings)).
+  A copy of that file alone does not give them away.
+- They are **write-only**: neither the page nor `GET /api/settings` returns a value, only the names (a note "a value is stored" in the form). Leave the value empty to keep the stored one; removing the row deletes the secret.
+  The audit log records that secrets changed, never what they are.
+- A secret the script asks for but that is not set makes the script fail with a message that names it (`The script asks for the secret 'API_TOKEN', which is not set`).
+- The values are replaced by `***` in the error messages the pages show and in the server's log, also where the script put one into an address or an error text of its own. That only works
+  for the value as it is: a secret the script transforms (Base64 for Basic authentication, a hash) is not recognised, so do not log such a thing with `console.log`.
+- **Anything with `settings.edit` can use them**: a script can send a secret to any address the server may reach. Keep that permission to people you trust (see below).
+- A script that still holds a token or password as text (`Authorization: 'Bearer abc…'`, `apiKey: '…'`) keeps working, and the page **warns** about it: move the value into a secret.
+  Tokens that are already in the script are in `settings.json` and its backups in clear text until you do, so replace them at the service as well.
 
 Rules to know:
 
@@ -140,8 +163,9 @@ Rules to know:
   error message, with the seconds left, instead of starting the script again behind a service that does not answer. After a timeout (of the script, or of a single request, which is 30 seconds) that holds for all data, not only for the
   data that was asked, because the service answers for none of it.
 - **Treat the script like code of the server.** Whoever may save the settings (`settings.edit`) can make the server send requests to any address it
-  can reach (addresses inside your network only once `DataSource:AllowPrivateAddresses` / `AllowLocalAddresses` allow them). Keep that permission to people you trust. Tokens in the script are stored in `settings.json`
-  as plain text, so protect that file; the script is also part of backups of the settings file.
+  can reach (addresses inside your network only once `DataSource:AllowPrivateAddresses` / `AllowLocalAddresses` allow them). Keep that permission to people you trust. The script is stored in `settings.json`
+  as plain text and is part of backups of the settings file, so put **no token or password into it**: use [secrets](#secrets-of-the-script). Only users who may *change* the settings
+  (`settings.edit`) get the script from the server; `settings.view` shows everything else, and for the script only that it is kept back.
 - The settings page checks the **syntax** when you save; whether the functions return the right things shows when the data is read the next time.
   Try a change on a copy first, e.g. with `DataSource__Script` in the environment of a test container.
 - The members of a group are identified by the `id` you return. Keep ids stable, or members are seen as new people (belts and comments are lost

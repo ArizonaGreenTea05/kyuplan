@@ -33,9 +33,20 @@ internal static class SettingsFormView
 
         var script = Ui.TextArea(form, nameof(SettingsForm.CustomScript), out var scriptView, 320, Strings.Settings_CustomScript);
         scriptView.AddCssClass("monospace");
+        scriptView.EnabledWhen(form, () => !form.CustomScriptHidden, nameof(SettingsForm.CustomScriptHidden));
+        var secrets = Ui.VBox(8,
+            Ui.Label(Strings.Settings_ScriptSecrets, "caption-heading").Start(),
+            Ui.Muted(Strings.Settings_ScriptSecretsHint).Css("caption"),
+            Ui.Repeat(form, () => form.ScriptSecrets, secret => ScriptSecret(form, secret), [nameof(SettingsForm.ScriptSecrets)], 8),
+            Ui.Label(form, () => form.ScriptSecretsProblem, [nameof(SettingsForm.ScriptSecretsProblem)], "error", "caption").VisibleWhen(form, () => form.ScriptSecretsProblem is not null, nameof(SettingsForm.ScriptSecretsProblem)),
+            Ui.Button(Strings.Settings_ScriptSecretAdd, form.AddScriptSecretCommand).Start());
+
         var custom = Ui.VBox(8,
             Field(Strings.Settings_CustomScript, script, () => form.CustomScriptProblem, nameof(SettingsForm.CustomScriptProblem)),
-            Ui.Button(Strings.Settings_ScriptTemplate, form.InsertScriptTemplateCommand).Start())
+            Ui.Muted(Strings.Settings_ScriptHidden).Css("caption").VisibleWhen(form, () => form.CustomScriptHidden, nameof(SettingsForm.CustomScriptHidden)),
+            Ui.Label(form, () => form.CustomScriptWarning, [nameof(SettingsForm.CustomScriptWarning)], "error", "caption").VisibleWhen(form, () => form.CustomScriptWarning is not null, nameof(SettingsForm.CustomScriptWarning)),
+            Ui.Button(Strings.Settings_ScriptTemplate, form.InsertScriptTemplateCommand).Start(),
+            secrets)
             .VisibleWhen(form, nameof(SettingsForm.IsCustomSource));
 
         var backup = Ui.VBox(8,
@@ -88,6 +99,16 @@ internal static class SettingsFormView
 
         return Ui.VBox(14, databases, source, statistics, sync, security);
     }
+
+    private static Gtk.Widget ScriptSecret(SettingsForm form, ScriptSecretForm secret) =>
+        Ui.VBox(6,
+            Ui.Flow(
+                Ui.Field(Strings.Settings_ScriptSecretName, Ui.Entry(secret, nameof(ScriptSecretForm.Name), name: Strings.Settings_ScriptSecretName)),
+                Ui.Field(Strings.Settings_ScriptSecretValue, Ui.Password(secret, nameof(ScriptSecretForm.Value), Strings.Settings_ScriptSecretValue))),
+            Ui.Label(secret, () => Strings.Settings_ScriptSecretStored, [nameof(ScriptSecretForm.HasValue)], "dim-label", "caption")
+                .VisibleWhen(secret, () => secret.HasValue, nameof(ScriptSecretForm.HasValue)),
+            Ui.Button(Strings.Settings_ScriptSecretRemove, form.RemoveScriptSecretCommand, secret).Start())
+            .Css("card").Padded(10);
 
     private static Gtk.Widget BackupAccount(SettingsForm form, BackupAccountForm account) =>
         Ui.VBox(6,

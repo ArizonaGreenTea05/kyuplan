@@ -1546,6 +1546,36 @@
   <data name="Settings_CustomScriptHint" xml:space="preserve">
     <value>Define getGroups() and getEvents(groupId, from, to); the script can call other services with http.get and http.post. The API checks it for errors when you save.</value>
   </data>
+  <data name="Settings_ScriptSecrets" xml:space="preserve">
+    <value>Secrets of the script</value>
+  </data>
+  <data name="Settings_ScriptSecretsHint" xml:space="preserve">
+    <value>Tokens and passwords the script needs, read with secrets.get('NAME') (for example 'Authorization: Bearer ' + secrets.get('API_TOKEN')). They are stored encrypted and never shown again; leave a value empty to keep it.</value>
+  </data>
+  <data name="Settings_ScriptSecretName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Settings_ScriptSecretValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="Settings_ScriptSecretStored" xml:space="preserve">
+    <value>A value is stored.</value>
+  </data>
+  <data name="Settings_ScriptSecretAdd" xml:space="preserve">
+    <value>Add secret</value>
+  </data>
+  <data name="Settings_ScriptSecretRemove" xml:space="preserve">
+    <value>Remove secret</value>
+  </data>
+  <data name="Settings_ScriptSecretsInvalid" xml:space="preserve">
+    <value>Every secret needs a name (a letter, then letters, digits and underscores; each name once) and a value.</value>
+  </data>
+  <data name="Settings_ScriptCredentialsWarning" xml:space="preserve">
+    <value>The script seems to contain a token or password as text. Move it into a secret and read it with secrets.get('NAME'): the script is stored unencrypted and is part of every copy of the settings file.</value>
+  </data>
+  <data name="Settings_ScriptHidden" xml:space="preserve">
+    <value>The script is only shown to users who may change the settings.</value>
+  </data>
   <data name="Settings_ScriptTemplate" xml:space="preserve">
     <value>Insert example script</value>
   </data>

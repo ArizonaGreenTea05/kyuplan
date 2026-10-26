@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.DataProtection;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -40,7 +41,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     {
         Assert.StartsWith("enc:v1:", stored);
         var configuration = new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build();
-        return Api.Configuration.SettingsFile.CreateProtector(configuration, SettingsFile).Unprotect(stored["enc:v1:".Length..]);
+        return Api.Configuration.SettingsFile.CreateProtector(configuration, SettingsFile).Unprotect(stored!["enc:v1:".Length..])!;
     }
 
     private string SettingsFile => Path.Combine(_folder, "settings.json");
@@ -102,6 +103,26 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.True(status.NeedsSetup);
         Assert.NotNull(status.Settings); // what the form starts with
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/groups")).StatusCode); // nobody can sign in yet
+    }
+
+    [Fact]
+    public async Task The_setup_does_not_hand_a_script_that_is_already_configured_to_a_visitor_without_a_login()
+    {
+        using var host = CreateHost(configure: b => b.UseSetting("DataSource:Script", "var auth = 'Bearer abcdefghij0123';"));
+
+        var settings = (await StatusAsync(host.CreateClient())).Settings!;
+
+        Assert.Equal(("", true), (settings.CustomScript, settings.CustomScriptHidden));
+    }
+
+    [Fact]
+    public async Task The_setup_form_may_write_a_script_when_there_is_none_yet()
+    {
+        using var host = CreateHost();
+
+        var settings = (await StatusAsync(host.CreateClient())).Settings!;
+
+        Assert.Equal(("", false), (settings.CustomScript, settings.CustomScriptHidden));
     }
 
     [Fact]
@@ -610,6 +631,221 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         admin = manual.CreateSignedInClient();
         await admin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(admin)) with { UseDemoData = false, DataSource = DataSourceKinds.Spond });
         Assert.Equal("spond", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["DataSource"]!["Kind"]);
+    }
+
+    // --- Secrets of the custom script --------------------------------------------------------------------------
+
+    private const string ApiToken = "tok-api-0123456789";
+    private const string OtherKey = "key-other-9876543210";
+
+    private static ScriptSecretInputDto[] TwoSecrets => [new("API_TOKEN", ApiToken), new("Other", OtherKey)];
+
+    private JsonNode StoredSecrets() => JsonNode.Parse(File.ReadAllText(SettingsFile))!["DataSource"]!["Secrets"]!;
+
+    [Fact]
+    public async Task Script_secrets_are_stored_encrypted_and_only_their_names_are_given_back()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+
+        var saved = await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = TwoSecrets });
+
+        Assert.True((await saved.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
+        Assert.Equal(ApiToken, Plain((string?)StoredSecrets()["API_TOKEN"]));
+        Assert.Equal(OtherKey, Plain((string?)StoredSecrets()["Other"]));
+        Assert.DoesNotContain(ApiToken, File.ReadAllText(SettingsFile));
+        Assert.DoesNotContain(OtherKey, File.ReadAllText(SettingsFile));
+
+        // The next start gives the script the decrypted values and tells the page only that they are there.
+        using var restarted = CreateHost(withAdmin: true);
+        var again = restarted.CreateSignedInClient();
+        var raw = await (await again.GetAsync("/api/settings")).Content.ReadAsStringAsync();
+        Assert.DoesNotContain(ApiToken, raw);
+        Assert.DoesNotContain(OtherKey, raw);
+        Assert.Equal(["API_TOKEN", "Other"], (await SettingsOfAsync(again)).ScriptSecrets);
+        Assert.Equal(ApiToken, restarted.Services.GetRequiredService<IOptions<Api.Configuration.DataSourceOptions>>().Value.Secrets["api_token"]);
+    }
+
+    [Fact]
+    public async Task An_empty_value_keeps_a_stored_secret_and_one_that_is_left_out_is_deleted()
+    {
+        using var first = CreateHost(withAdmin: true);
+        await first.CreateSignedInClient().PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(first.CreateSignedInClient())) with { ScriptSecrets = TwoSecrets });
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var loaded = Unchanged(await SettingsOfAsync(admin));
+        var requests = _restarter.Requests;
+
+        // Nothing typed changes nothing: no restart, however the names are written, and a client that knows no secrets sends none.
+        var same = await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [new("api_token", null), new("OTHER", ""), new(" ", null)] });
+        Assert.False((await same.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = null })).StatusCode);
+        Assert.Equal(requests, _restarter.Requests);
+
+        // A secret that is not in the list is deleted, the other keeps its value.
+        await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [new("Other", "")] });
+        Assert.Null(StoredSecrets()["API_TOKEN"]);
+        Assert.Equal(OtherKey, Plain((string?)StoredSecrets()["Other"]));
+        Assert.Equal(requests + 1, _restarter.Requests);
+
+        // A value that is typed replaces the stored one; the new one is encrypted, too.
+        await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [new("API_TOKEN", "replacement-0123456"), new("Other", null)] });
+        Assert.Equal("replacement-0123456", Plain((string?)StoredSecrets()["API_TOKEN"]));
+        Assert.DoesNotContain("replacement-0123456", File.ReadAllText(SettingsFile));
+
+        // An empty list deletes them all.
+        await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [] });
+        Assert.Empty(StoredSecrets().AsObject());
+    }
+
+    [Theory]
+    [InlineData("1ABC", "value-0123456")] // starts with a digit
+    [InlineData("has space", "value-0123456")]
+    [InlineData("A-B", "value-0123456")]
+    [InlineData("Ümlaut", "value-0123456")]
+    [InlineData("NAME", "line\nbreak")]
+    [InlineData("NAME", "tab\there")]
+    [InlineData("NEW_ONE", "")] // a new secret needs a value
+    [InlineData("NEW_ONE", null)]
+    [InlineData("", "a value without a name")]
+    public async Task A_script_secret_that_cannot_be_used_is_refused_and_nothing_is_saved(string name, string? value)
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+
+        var response = await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new(name, value)] });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("scriptSecrets", await response.Content.ReadAsStringAsync());
+        Assert.Equal(0, _restarter.Requests);
+        Assert.False(File.Exists(SettingsFile));
+    }
+
+    [Fact]
+    public async Task The_limits_of_script_secrets_are_enforced_and_a_refusal_never_repeats_a_value()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        ScriptSecretInputDto[] Many(int count) => [.. Enumerable.Range(1, count).Select(i => new ScriptSecretInputDto("S" + i, "value-" + i))];
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = Many(SettingsRules.MaxScriptSecrets) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = Many(SettingsRules.MaxScriptSecrets + 1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new("Twice", "one-1234"), new("TWICE", "two-1234")] })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new(new string('N', SettingsRules.MaxSecretNameLength + 1), "value-1")] })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new(new string('N', SettingsRules.MaxSecretNameLength), new string('v', SettingsRules.MaxSecretValueLength))] })).StatusCode);
+
+        var tooLong = await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new("Long", "marker-" + new string('v', SettingsRules.MaxSecretValueLength))] });
+        var broken = await admin.PutAsJsonAsync("/api/settings", settings with { ScriptSecrets = [new("Broken", "marker-0123456\n")] });
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, broken.StatusCode);
+        Assert.DoesNotContain("marker-", await tooLong.Content.ReadAsStringAsync());
+        Assert.DoesNotContain("marker-", await broken.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task An_empty_entry_in_the_list_of_script_secrets_is_a_bad_request_not_an_error()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var body = JsonSerializer.SerializeToNode(Unchanged(await SettingsOfAsync(admin)), new JsonSerializerOptions(JsonSerializerDefaults.Web))!.AsObject();
+        body["scriptSecrets"] = new JsonArray((JsonNode?)null);
+
+        var response = await admin.PutAsync("/api/settings", JsonContent.Create(body));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task A_secret_whose_key_is_gone_counts_as_not_set_and_has_to_be_entered_again()
+    {
+        using var first = CreateHost(withAdmin: true);
+        var firstAdmin = first.CreateSignedInClient();
+        await firstAdmin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(firstAdmin)) with { ScriptSecrets = TwoSecrets });
+        Directory.Delete(Path.Combine(_folder, "keys"), recursive: true); // the key ring is lost
+
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var loaded = Unchanged(await SettingsOfAsync(admin));
+
+        Assert.Empty((await SettingsOfAsync(admin)).ScriptSecrets!);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [new("API_TOKEN", null)] })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", loaded with { ScriptSecrets = [new("API_TOKEN", "entered-again-0123")] })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_secret_an_earlier_version_or_a_hand_edit_left_in_plain_text_is_encrypted_at_the_next_start()
+    {
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(SettingsFile, "{ \"DataSource\": { \"Secrets\": { \"OLD_KEY\": \"old-secret-0123456\" } } }");
+
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+
+        Assert.Equal(["OLD_KEY"], (await SettingsOfAsync(admin)).ScriptSecrets);
+        Assert.DoesNotContain("old-secret-0123456", File.ReadAllText(SettingsFile));
+        Assert.Equal("old-secret-0123456", Plain((string?)StoredSecrets()["OLD_KEY"]));
+        Assert.Equal("old-secret-0123456", host.Services.GetRequiredService<IOptions<Api.Configuration.DataSourceOptions>>().Value.Secrets["OLD_KEY"]);
+    }
+
+    [Fact]
+    public async Task A_secret_that_is_not_text_in_a_hand_edited_file_does_not_keep_the_api_from_starting()
+    {
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(SettingsFile, "{ \"DataSource\": { \"Secrets\": { \"PIN\": 1234, \"OLD_KEY\": \"old-secret-0123456\" } } }");
+
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+
+        Assert.Equal(["OLD_KEY", "PIN"], (await SettingsOfAsync(admin)).ScriptSecrets);
+        Assert.DoesNotContain("old-secret-0123456", File.ReadAllText(SettingsFile));
+        Assert.Equal("1234", host.Services.GetRequiredService<IOptions<Api.Configuration.DataSourceOptions>>().Value.Secrets["PIN"]);
+    }
+
+    [Fact]
+    public async Task Only_users_who_may_change_the_settings_get_the_script_the_others_get_the_names_of_its_secrets()
+    {
+        using var first = CreateHost(withAdmin: true);
+        var firstAdmin = first.CreateSignedInClient();
+        const string script = "function getGroups() { return []; } // script-marker";
+        await firstAdmin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(firstAdmin)) with { CustomScript = script, ScriptSecrets = TwoSecrets });
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsJsonAsync("/api/users", new UserInputDto("viewer", GoodPassword, null, null, [], [Permission.SettingsView]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await admin.PostAsJsonAsync("/api/users", new UserInputDto("editor", GoodPassword, null, null, [], [Permission.SettingsView, Permission.SettingsEdit]))).StatusCode);
+
+        var asAdmin = await SettingsOfAsync(admin);
+        var viewerResponse = await host.CreateSignedInClient("viewer", GoodPassword).GetAsync("/api/settings");
+        var viewerRaw = await viewerResponse.Content.ReadAsStringAsync();
+        var viewer = JsonSerializer.Deserialize<SettingsDto>(viewerRaw, new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
+        var editor = await SettingsOfAsync(host.CreateSignedInClient("editor", GoodPassword));
+
+        Assert.Equal((script, false), (asAdmin.CustomScript, asAdmin.CustomScriptHidden));
+        Assert.Equal((script, false), (editor.CustomScript, editor.CustomScriptHidden));
+        Assert.Equal(("", true), (viewer.CustomScript, viewer.CustomScriptHidden));
+        Assert.Equal(["API_TOKEN", "Other"], viewer.ScriptSecrets);
+        Assert.DoesNotContain("script-marker", viewerRaw);
+        Assert.DoesNotContain(ApiToken, viewerRaw);
+        Assert.Equal(asAdmin.TimeZone, viewer.TimeZone); // the rest of the settings is shown as before
+    }
+
+    [Fact]
+    public async Task A_save_of_script_secrets_is_logged_by_name_never_by_value_and_the_setup_stores_them_too()
+    {
+        using var host = CreateHost();
+        var client = host.CreateClient();
+        var input = await SetupInputAsync(client, s => s with { ScriptSecrets = TwoSecrets });
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/setup", input)).StatusCode);
+
+        Assert.Equal(ApiToken, Plain((string?)StoredSecrets()["API_TOKEN"]));
+        var admin = host.CreateSignedInClient("boss", GoodPassword);
+        var entry = Assert.Single((await admin.GetFromJsonAsync<AuditPageDto>("/api/audit?area=" + AuditAreas.Settings))!.Entries);
+        Assert.Equal("changed", (string?)JsonNode.Parse(entry.Details!)!["changed"]!["DataSource:Secrets"]);
+        Assert.DoesNotContain(ApiToken, entry.Details);
+        Assert.DoesNotContain(OtherKey, entry.Details);
     }
 
     [Fact]

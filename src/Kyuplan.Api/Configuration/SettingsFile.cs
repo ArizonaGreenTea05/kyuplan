@@ -12,7 +12,7 @@ namespace Kyuplan.Api.Configuration;
 /// <c>appsettings.json</c>, holding only what was set in the client. It is read on top of <c>appsettings.json</c>, so it survives restarts and
 /// updates of the program files; environment variables and command line arguments still win over it. It lives apart from the databases,
 /// because it says where they are. In a container it belongs on the volume (<c>Setup__SettingsFile=/data/settings.json</c>).
-/// The Spond passwords in it are encrypted (ASP.NET Data Protection, see <see cref="CreateProtector"/>): a copy of the file alone, e.g. in a backup,
+/// The Spond passwords, the metrics token and the secrets of the custom script (<c>DataSource:Secrets</c>) in it are encrypted (ASP.NET Data Protection, see <see cref="CreateProtector"/>): a copy of the file alone, e.g. in a backup,
 /// does not give them away. The configuration sees them decrypted.
 /// </summary>
 public sealed class SettingsFile(string path, IDataProtector? protector = null)
@@ -121,7 +121,7 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
 
         foreach (var (key, holder, name) in PasswordsIn(root))
         {
-            if (holder[name]?.GetValue<string>() is not { } value || !value.StartsWith(Prefix, StringComparison.Ordinal)) continue;
+            if (TextOf(holder[name]) is not { } value || !value.StartsWith(Prefix, StringComparison.Ordinal)) continue;
 
             try
             {
@@ -137,10 +137,14 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
         return plain;
     }
 
-    /// <summary>The places in the file where a secret stands (the Spond passwords, the metrics token): the configuration key, the object that holds it and its name.</summary>
+    /// <summary>The places in the file where a secret stands (the Spond passwords, the metrics token, the script's secrets): the configuration key, the object that holds it and its name.</summary>
     private static IEnumerable<(string Key, JsonObject Holder, string Name)> PasswordsIn(JsonObject root)
     {
         if (root["Metrics"] is JsonObject metrics && metrics["Token"] is JsonValue) yield return ("Metrics:Token", metrics, "Token");
+        if (root["DataSource"] is JsonObject dataSource && dataSource["Secrets"] is JsonObject secrets)
+            foreach (var name in secrets.Select(s => s.Key).ToList())
+                if (secrets[name] is JsonValue) yield return ($"DataSource:Secrets:{name}", secrets, name);
+
         if (root["Spond"] is not JsonObject spond) yield break;
 
         if (spond["Password"] is JsonValue) yield return ("Spond:Password", spond, "Password");
@@ -150,6 +154,9 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
             if (accounts[i] is JsonObject account && account["Password"] is JsonValue)
                 yield return ($"Spond:Accounts:{i}:Password", account, "Password");
     }
+
+    /// <summary>The text of a secret in the file; <c>null</c> for anything else (a hand-edited number such as <c>"PIN": 1234</c> must not keep the API from starting).</summary>
+    private static string? TextOf(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
     /// <summary>Encrypts every password that is still in plain text, so that a file from an earlier version is protected from the first start on.</summary>
     private void EncryptInPlace()
@@ -164,7 +171,7 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
         var changed = false;
         foreach (var (_, holder, name) in PasswordsIn(root))
         {
-            if (holder[name]?.GetValue<string>() is not { Length: > 0 } value || value.StartsWith(Prefix, StringComparison.Ordinal)) continue;
+            if (TextOf(holder[name]) is not { Length: > 0 } value || value.StartsWith(Prefix, StringComparison.Ordinal)) continue;
 
             holder[name] = Prefix + protector!.Protect(value);
             changed = true;

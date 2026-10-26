@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Contracts;
@@ -34,9 +35,10 @@ public static class SettingsEndpoints
 
         var settings = app.MapGroup("/api/settings").WithTags("Settings");
 
-        settings.MapGet("/", (SettingsService service) => service.Get())
+        settings.MapGet("/", (SettingsService service, ClaimsPrincipal user) =>
+                user.Has(Permission.SettingsEdit) ? service.Get() : service.Get() with { CustomScript = "", CustomScriptHidden = true })
             .Produces<SettingsDto>()
-            .WithSummary("The settings the API runs with. The Spond password is not given, only whether there is one.")
+            .WithSummary("The settings the API runs with. Passwords, tokens and the secrets of the script are not given, only whether there are some (the names of the secrets); the script itself only to those who may change the settings (settings.edit).")
             .RequirePermission(Permission.SettingsView);
 
         settings.MapPut("/", async (SettingsInputDto input, SettingsService service, HttpContext context, CancellationToken ct) =>

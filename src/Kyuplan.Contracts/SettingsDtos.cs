@@ -22,6 +22,8 @@ namespace Kyuplan.Contracts;
 /// <param name="CustomScript">The JavaScript that reads the data when <paramref name="DataSource"/> is <see cref="DataSourceKinds.Custom"/> (see docs/admin-guide.md).</param>
 /// <param name="MetricsEnabled">Whether <c>GET /metrics</c> exists. Off unless an administrator switches it on.</param>
 /// <param name="HasMetricsToken">A metrics token is stored (the endpoint needs it as bearer token). The token itself is never sent back.</param>
+/// <param name="ScriptSecrets">The names of the secrets the script can read with <c>secrets.get('NAME')</c> and that have a value (the values are never sent back).</param>
+/// <param name="CustomScriptHidden">The script is left out (<see cref="CustomScript"/> is empty) because the user may view the settings but not change them: only <c>settings.edit</c> gets the code.</param>
 public sealed record SettingsDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -43,7 +45,14 @@ public sealed record SettingsDto(
     string DataSource = DataSourceKinds.Spond,
     string CustomScript = "",
     bool MetricsEnabled = false,
-    bool HasMetricsToken = false);
+    bool HasMetricsToken = false,
+    IReadOnlyList<string>? ScriptSecrets = null,
+    bool CustomScriptHidden = false);
+
+/// <summary>A secret of the custom script to save.</summary>
+/// <param name="Name">What the script asks for (<see cref="SettingsRules.IsSecretName"/>); names are not case sensitive.</param>
+/// <param name="Value"><c>null</c> or empty = keep the value stored for this name.</param>
+public sealed record ScriptSecretInputDto(string Name, string? Value);
 
 /// <summary>A backup Spond login as the settings show it; the password itself is never sent back.</summary>
 public sealed record SpondAccountDto(string? Email, string? PhoneNumber, bool HasPassword);
@@ -58,6 +67,7 @@ public sealed record SpondAccountInputDto(string? Email, string? PhoneNumber, st
 /// <param name="CustomScript"><c>null</c> = keep the stored script.</param>
 /// <param name="MetricsEnabled"><c>null</c> = an older client: keep what is set.</param>
 /// <param name="MetricsToken"><c>null</c> or empty = keep the stored token.</param>
+/// <param name="ScriptSecrets"><c>null</c> = keep the stored secrets; a list is the whole set: secrets that are not in it are deleted.</param>
 public sealed record SettingsInputDto(
     string DatabasePath,
     string AccountsDatabasePath,
@@ -79,7 +89,8 @@ public sealed record SettingsInputDto(
     string? DataSource = null,
     string? CustomScript = null,
     bool? MetricsEnabled = null,
-    string? MetricsToken = null);
+    string? MetricsToken = null,
+    IReadOnlyList<ScriptSecretInputDto>? ScriptSecrets = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>
@@ -108,6 +119,41 @@ public static class SettingsRules
     public const int MaxBackupAccounts = 10;
 
     public const int MaxScriptLength = 100_000;
+
+    public const int MaxScriptSecrets = 20;
+    public const int MaxSecretNameLength = 50;
+    public const int MaxSecretValueLength = 2000;
+
+    /// <summary>What a script can ask for with <c>secrets.get(name)</c>: a letter, then letters, digits and underscores (it is also a configuration key).</summary>
+    public static bool IsSecretName(string? name) =>
+        name is { Length: > 0 and <= MaxSecretNameLength } && char.IsAsciiLetter(name[0]) && name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_');
+
+    /// <summary>A secret as an HTTP header or a URL can carry it: one line of text, not too long.</summary>
+    public static bool IsSecretValue(string? value) =>
+        value is { Length: > 0 and <= MaxSecretValueLength } && !value.Any(char.IsControl);
+
+    private static readonly System.Text.RegularExpressions.Regex Credentials = new(
+        @"\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:authorization|api[-_]?key|token|passw(?:or)?d|secret)['""]?\s*[:=]\s*['""][^'""\s]{6,}['""]",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+
+    /// <summary>
+    /// The script seems to carry a token or password as text (<c>Authorization: 'Bearer abc…'</c>, <c>apiKey: '…'</c>): a guess, to warn about it. Such a
+    /// credential belongs in a secret (<c>secrets.get('NAME')</c>), which is stored encrypted and never shown again.
+    /// </summary>
+    public static bool MentionsCredentials(string? script)
+    {
+        if (string.IsNullOrEmpty(script)) return false;
+
+        try
+        {
+            return Credentials.IsMatch(script);
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            return false;
+        }
+    }
 
     public static bool IsDataSource(string? kind) => kind is null || DataSourceKinds.IsKnown(kind.Trim().ToLowerInvariant());
 

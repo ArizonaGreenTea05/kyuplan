@@ -18,6 +18,12 @@ public sealed class DataSourceOptions
     /// <summary>The JavaScript of the <see cref="DataSourceKinds.Custom"/> source (<see cref="Sources.CustomScriptDataSource"/>).</summary>
     public string Script { get; set; } = "";
 
+    /// <summary>
+    /// The secrets of the script by name (<c>secrets.get('NAME')</c>): tokens and passwords of the services it asks. Stored encrypted in the settings file
+    /// (<see cref="SettingsFile"/>), never sent to a client, and kept out of the script's error messages and log lines. Names are not case sensitive.
+    /// </summary>
+    public Dictionary<string, string?> Secrets { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>How long one call of the script may run, waiting for other services included.</summary>
     public TimeSpan ScriptTimeout { get; set; } = TimeSpan.FromSeconds(60);
 

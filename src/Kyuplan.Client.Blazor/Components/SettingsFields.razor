@@ -51,8 +51,12 @@
     {
         <label class="field">
             <span>@Strings.Settings_CustomScript</span>
-            <textarea class="script-box" rows="18" spellcheck="false" autocomplete="off" disabled="@Disabled" @bind="Form.CustomScript" @bind:event="oninput"></textarea>
-            @if (Form.CustomScriptProblem is { } scriptProblem)
+            <textarea class="script-box" rows="18" spellcheck="false" autocomplete="off" disabled="@(Disabled || Form.CustomScriptHidden)" @bind="Form.CustomScript" @bind:event="oninput"></textarea>
+            @if (Form.CustomScriptHidden)
+            {
+                <small>@Strings.Settings_ScriptHidden</small>
+            }
+            else if (Form.CustomScriptProblem is { } scriptProblem)
             {
                 <p class="field-error" role="alert">@scriptProblem</p>
             }
@@ -61,8 +65,47 @@
                 <small>@Strings.Settings_CustomScriptHint</small>
             }
         </label>
+        @if (Form.CustomScriptWarning is { } scriptWarning)
+        {
+            <p class="hint" role="status">@scriptWarning</p>
+        }
         <div class="form-actions">
-            <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => Form.InsertScriptTemplateCommand.Execute(null)">@Strings.Settings_ScriptTemplate</button>
+            <button type="button" class="btn secondary" disabled="@(Disabled || Form.CustomScriptHidden)" @onclick="() => Form.InsertScriptTemplateCommand.Execute(null)">@Strings.Settings_ScriptTemplate</button>
+        </div>
+
+        <h3>@Strings.Settings_ScriptSecrets</h3>
+        <p class="hint">@Strings.Settings_ScriptSecretsHint</p>
+
+        @foreach (var secret in Form.ScriptSecrets)
+        {
+            <div class="grid two">
+                <label class="field">
+                    <span>@Strings.Settings_ScriptSecretName</span>
+                    <input type="text" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="secret.Name" @bind:event="oninput" />
+                </label>
+
+                <label class="field">
+                    <span>@Strings.Settings_ScriptSecretValue</span>
+                    <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="secret.Value" />
+                    @if (secret.HasValue)
+                    {
+                        <small>@Strings.Settings_ScriptSecretStored</small>
+                    }
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => Form.RemoveScriptSecretCommand.Execute(secret)">@Strings.Settings_ScriptSecretRemove</button>
+            </div>
+        }
+
+        @if (Form.ScriptSecretsProblem is { } secretsProblem)
+        {
+            <p class="field-error" role="alert">@secretsProblem</p>
+        }
+
+        <div class="form-actions">
+            <button type="button" class="btn secondary" disabled="@(Disabled || Form.ScriptSecrets.Count >= SettingsRules.MaxScriptSecrets)" @onclick="() => Form.AddScriptSecretCommand.Execute(null)">@Strings.Settings_ScriptSecretAdd</button>
         </div>
     }
 

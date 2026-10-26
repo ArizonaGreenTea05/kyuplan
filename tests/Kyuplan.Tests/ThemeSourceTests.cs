@@ -590,6 +590,56 @@ public sealed class ThemeSourceStoreTests : IDisposable
         Assert.Equal("[[", File.ReadAllText(IndexFile + ".bad"));
     }
 
+    /// <summary>Holds every read of one repository until released.</summary>
+    private sealed class GatedFetcher(string held) : IThemeSourceFetcher
+    {
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _running;
+        public int MostRunningOfHeld { get; private set; }
+
+        public async Task<ThemeSourceFetch> FetchAsync(string owner, string repo, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (repo == held)
+                {
+                    MostRunningOfHeld = Math.Max(MostRunningOfHeld, Interlocked.Increment(ref _running));
+                    Started.TrySetResult();
+                    await Release.Task.WaitAsync(cancellationToken);
+                }
+
+                return FakeThemeFetcher.Fetch(FakeThemeFetcher.File("a.json", Packs.Valid("a")));
+            }
+            finally
+            {
+                if (repo == held) Interlocked.Decrement(ref _running);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task A_slow_pack_does_not_make_another_pack_wait_but_two_reads_of_the_same_pack_take_turns()
+    {
+        var fetcher = new GatedFetcher("slow");
+        var sync = new ThemeSourceSync(_store, fetcher, NullLogger<ThemeSourceSync>.Instance);
+        var slow = _store.Add("https://github.com/o/slow");
+        var fast = _store.Add("https://github.com/o/fast");
+
+        var first = sync.SyncAsync(slow.Id, CancellationToken.None);
+        await fetcher.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var second = sync.SyncAsync(slow.Id, CancellationToken.None);
+
+        var other = await sync.SyncAsync(fast.Id, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5)); // not blocked by the slow pack
+        Assert.True(other!.LastSucceeded);
+        Assert.False(first.IsCompleted);
+        Assert.False(second.IsCompleted);
+
+        fetcher.Release.SetResult();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal(1, fetcher.MostRunningOfHeld); // the slow pack was never read twice at once
+    }
+
     [Fact]
     public void A_new_pack_is_due_at_once_and_after_a_success_only_when_the_interval_is_over()
     {

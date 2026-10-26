@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 
@@ -5,16 +6,18 @@ namespace Kyuplan.Api.Infrastructure;
 
 /// <summary>
 /// Reads the repository of a GitHub theme pack and makes its themes the pack's offer (<see cref="ThemeSourceStore.Record"/>). A failure is not
-/// thrown: it is the pack's last result, and the themes it offered so far stay. One read at a time.
+/// thrown: it is the pack's last result, and the themes it offered so far stay. One read at a time for each pack, so a slow pack never makes
+/// an admin wait for another one.
 /// </summary>
 public sealed class ThemeSourceSync(ThemeSourceStore store, IThemeSourceFetcher fetcher, ILogger<ThemeSourceSync> log)
 {
-    private readonly SemaphoreSlim _one = new(1, 1);
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
 
     /// <summary>Reads the pack again. <c>null</c> when there is no such pack.</summary>
     public async Task<ThemeSourceDto?> SyncAsync(string id, CancellationToken cancellationToken)
     {
-        await _one.WaitAsync(cancellationToken);
+        var one = _locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+        await one.WaitAsync(cancellationToken);
         try
         {
             if (store.Find(id) is not { } source || ThemeSourceRules.Parse(source.Url) is not var (owner, repo)) return null;
@@ -48,7 +51,7 @@ public sealed class ThemeSourceSync(ThemeSourceStore store, IThemeSourceFetcher 
         }
         finally
         {
-            _one.Release();
+            one.Release();
         }
     }
 

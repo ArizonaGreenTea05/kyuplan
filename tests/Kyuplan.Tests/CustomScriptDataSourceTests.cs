@@ -20,8 +20,8 @@ public sealed class CustomScriptDataSourceTests
     private static readonly ClubClock Clock = new(new FakeTimeProvider(new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero)), TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin"));
 
     private static CustomScriptDataSource Source(string script, TimeSpan? timeout = null, bool allowLocal = true, int? maxStatements = null, ILogger<CustomScriptDataSource>? logger = null, bool allowPrivate = false,
-        TimeSpan? failureCache = null, ClubClock? clock = null) =>
-        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, AllowPrivateAddresses = allowPrivate, ScriptMaxStatements = maxStatements ?? 10_000_000,
+        TimeSpan? failureCache = null, ClubClock? clock = null, Dictionary<string, string?>? secrets = null) =>
+        new(Options.Create(new DataSourceOptions { Kind = "custom", Script = script, Secrets = new(secrets ?? [], StringComparer.OrdinalIgnoreCase), ScriptTimeout = timeout ?? TimeSpan.FromSeconds(20), AllowLocalAddresses = allowLocal, AllowPrivateAddresses = allowPrivate, ScriptMaxStatements = maxStatements ?? 10_000_000,
             FailureCacheDuration = failureCache ?? TimeSpan.FromSeconds(30) }), clock ?? Clock, logger ?? NullLogger<CustomScriptDataSource>.Instance);
 
     private sealed class ListLogger : ILogger<CustomScriptDataSource>
@@ -674,6 +674,108 @@ public sealed class CustomScriptDataSourceTests
         var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("not an http or https address", ex.Message);
+    }
+
+    // --- Secrets of the script ---------------------------------------------------------------------------------
+
+    private const string Token = "tok-live-0123456789";
+
+    [Fact]
+    public async Task A_secret_is_read_by_name_without_regard_to_case()
+    {
+        using var source = Source("function getGroups() { return [{ id: secrets.get('API_TOKEN') + '|' + secrets.get('api_token'), name: 'G' }]; }",
+            secrets: new() { ["Api_Token"] = Token });
+
+        Assert.Equal($"{Token}|{Token}", Assert.Single(await source.GetGroupsAsync(CancellationToken.None)).Id);
+    }
+
+    [Fact]
+    public async Task A_secret_goes_into_the_header_of_a_request()
+    {
+        await using var service = await StartServiceAsync();
+        using var source = Source($$"""
+            function getGroups() {
+              http.get('{{service.Url}}/groups', { 'X-Token': 'Bearer ' + secrets.get('API_TOKEN') });
+              return [{ id: 'g', name: 'G' }];
+            }
+            """, secrets: new() { ["API_TOKEN"] = Token });
+
+        await source.GetGroupsAsync(CancellationToken.None);
+
+        Assert.Equal("Bearer " + Token, service.LastToken);
+    }
+
+    [Theory]
+    [InlineData("secrets.get('MISSING')")]
+    [InlineData("secrets.get('EMPTY')")] // no value is no secret
+    [InlineData("secrets.get('')")]
+    [InlineData("secrets.get()")]
+    public async Task A_secret_that_is_not_set_is_an_error_of_the_script_that_names_it_and_gives_nothing_else_away(string call)
+    {
+        using var source = Source($"function getGroups() {{ var s = {call}; return [{{ id: s, name: 'G' }}]; }}", secrets: new() { ["EMPTY"] = "", ["OTHER"] = Token });
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("asks for the secret", ex.Message);
+        Assert.DoesNotContain(Token, ex.Message);
+    }
+
+    [Fact]
+    public async Task The_values_of_secrets_are_kept_out_of_errors_and_logs()
+    {
+        var logger = new ListLogger();
+        using var source = Source("""
+            function getGroups() {
+              console.log('using ' + secrets.get('API_TOKEN'));
+              throw new Error('refused: ' + secrets.get('API_TOKEN') + ' / ' + secrets.get('LONGER'));
+            }
+            """, logger: logger, secrets: new() { ["API_TOKEN"] = Token, ["LONGER"] = Token + "-extra" });
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("refused: *** / ***", ex.Message); // the longer value goes whole, not as the shorter one with "-extra" left
+        Assert.Contains(logger.Messages, m => m == "Custom data script: using ***");
+        Assert.DoesNotContain(logger.Messages.Append(ex.Message).Append(ex.ToString()), m => m.Contains(Token));
+        Assert.Null(ex.InnerException);
+    }
+
+    [Fact]
+    public async Task A_secret_that_ends_up_in_an_address_is_not_given_away_by_the_error_about_the_address()
+    {
+        var logger = new ListLogger();
+        using var source = Source("function getGroups() { http.get('ftp://example.org/?key=' + secrets.get('API_TOKEN')); return []; }",
+            logger: logger, secrets: new() { ["API_TOKEN"] = Token });
+
+        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+
+        Assert.Contains("not an http or https address", ex.Message);
+        Assert.Contains("ftp://example.org/?key=***", ex.Message);
+        Assert.DoesNotContain(logger.Messages.Append(ex.Message), m => m.Contains(Token));
+    }
+
+    [Fact]
+    public async Task A_script_cannot_list_the_secrets_or_reach_the_options()
+    {
+        using var source = Source("function getGroups() { return [{ id: typeof secrets.list + '|' + typeof secrets.all + '|' + Object.keys(secrets).join(','), name: 'G' }]; }",
+            secrets: new() { ["API_TOKEN"] = Token });
+
+        Assert.Equal("undefined|undefined|get", Assert.Single(await source.GetGroupsAsync(CancellationToken.None)).Id);
+    }
+
+    [Fact]
+    public async Task A_failure_that_is_not_a_timeout_stays_an_ordinary_failure_and_a_request_timeout_is_still_recognised()
+    {
+        await using var service = await StartServiceAsync();
+        service.Delay = TimeSpan.FromSeconds(10);
+        using var source = Source($"function getGroups() {{ http.get('{service.Url}/hit/200?key=' + secrets.get('API_TOKEN')); return []; }}",
+            secrets: new() { ["API_TOKEN"] = Token });
+        source.RequestTimeout = TimeSpan.FromMilliseconds(200);
+
+        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("g", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddDays(1), CancellationToken.None));
+
+        Assert.DoesNotContain(Token, first.Message);
+        Assert.Contains("not asked again", second.Message); // a timeout holds for all data
     }
 
     private sealed class Service(WebApplication app) : IAsyncDisposable

@@ -314,4 +314,163 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.Equal("", form.MetricsToken);
         Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { MetricsEnabled = true, HasMetricsToken = true }));
     }
+
+    private static SettingsForm CustomForm(params string[] stored)
+    {
+        var form = new SettingsForm();
+        form.Load(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = "function getGroups() { return []; }", ScriptSecrets = stored });
+        return form;
+    }
+
+    [Fact]
+    public void The_stored_script_secrets_are_listed_by_name_and_their_values_are_sent_only_when_typed()
+    {
+        var form = CustomForm("API_TOKEN", "Other");
+
+        Assert.Equal(["API_TOKEN", "Other"], form.ScriptSecrets.Select(s => s.Name));
+        Assert.All(form.ScriptSecrets, s => Assert.True(s.HasValue));
+        Assert.All(form.ScriptSecrets, s => Assert.Equal("", s.Value));
+        Assert.Null(form.ScriptSecretsProblem);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = form.CustomScript, ScriptSecrets = ["other", "API_TOKEN"] }));
+        Assert.Equal(new[] { new ScriptSecretInputDto("API_TOKEN", null), new ScriptSecretInputDto("Other", null) }, form.ToInput().ScriptSecrets);
+
+        form.ScriptSecrets[0].Value = "new-value-0123";
+        Assert.Equal(new ScriptSecretInputDto("API_TOKEN", "new-value-0123"), form.ToInput().ScriptSecrets![0]);
+        Assert.False(form.Matches(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = form.CustomScript, ScriptSecrets = ["API_TOKEN", "Other"] }));
+    }
+
+    [Fact]
+    public void Script_secrets_are_added_removed_and_checked_while_they_are_typed()
+    {
+        var form = CustomForm("API_TOKEN");
+        var changes = new List<string?>();
+        form.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+
+        form.AddScriptSecretCommand.Execute(null);
+        var added = form.ScriptSecrets[^1];
+        Assert.Contains(nameof(SettingsForm.ScriptSecrets), changes);
+        Assert.True(added.IsEmpty);
+        Assert.Null(form.ScriptSecretsProblem); // an empty row is nothing
+        Assert.Single(form.ToInput().ScriptSecrets!);
+
+        Assert.Contains(nameof(SettingsForm.ScriptSecretsProblem), changes); // the Linux label watches the problem by name
+        changes.Clear();
+        added.Name = "1bad";
+        Assert.Contains(nameof(SettingsForm.ScriptSecretsProblem), changes);
+        Assert.Equal(Strings.Settings_ScriptSecretsInvalid, form.ScriptSecretsProblem);
+        Assert.False(form.IsValid);
+
+        added.Name = "New_One";
+        Assert.True(added.IsInvalid); // a new secret needs a value
+        added.Value = "line\nbreak";
+        Assert.True(added.IsInvalid);
+        added.Value = "good-value-0123";
+        Assert.Null(form.ScriptSecretsProblem);
+        Assert.True(form.IsValid);
+        Assert.False(form.Matches(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = form.CustomScript, ScriptSecrets = ["API_TOKEN"] }));
+
+        added.Name = "api_token"; // the same name as a stored one, written otherwise
+        Assert.Equal(Strings.Settings_ScriptSecretsInvalid, form.ScriptSecretsProblem);
+
+        form.RemoveScriptSecretCommand.Execute(added);
+        Assert.Null(form.ScriptSecretsProblem);
+        Assert.Single(form.ScriptSecrets);
+    }
+
+    [Fact]
+    public void A_renamed_stored_secret_has_no_value_any_more_and_needs_one()
+    {
+        var form = CustomForm("API_TOKEN");
+        var secret = form.ScriptSecrets[0];
+
+        secret.Name = "api_token"; // the case does not matter
+        Assert.True(secret.HasValue);
+        Assert.False(secret.IsInvalid);
+
+        secret.Name = "TOKEN_2";
+        Assert.False(secret.HasValue);
+        Assert.True(secret.IsInvalid);
+        Assert.Equal(Strings.Settings_ScriptSecretsInvalid, form.ScriptSecretsProblem);
+
+        secret.Value = "typed-value-0123";
+        Assert.Null(form.ScriptSecretsProblem);
+    }
+
+    [Fact]
+    public void There_are_at_most_as_many_script_secrets_as_the_api_takes()
+    {
+        var form = CustomForm();
+        for (var i = 0; i <= SettingsRules.MaxScriptSecrets; i++)
+        {
+            form.AddScriptSecretCommand.Execute(null);
+            form.ScriptSecrets[^1].Name = "S" + i;
+            form.ScriptSecrets[^1].Value = "value-" + i;
+            Assert.Equal(i < SettingsRules.MaxScriptSecrets, form.ScriptSecretsProblem is null);
+        }
+    }
+
+    [Fact]
+    public void Another_data_source_neither_checks_nor_sends_the_script_secrets()
+    {
+        var form = CustomForm("API_TOKEN");
+        form.AddScriptSecretCommand.Execute(null);
+        form.ScriptSecrets[^1].Name = "1bad";
+        Assert.NotNull(form.ScriptSecretsProblem);
+
+        form.DataSource = DataSourceKinds.Spond;
+
+        Assert.Null(form.ScriptSecretsProblem);
+        Assert.Null(form.ToInput().ScriptSecrets); // the stored ones stay
+    }
+
+    [Fact]
+    public void A_script_with_a_token_in_it_is_warned_about_but_can_still_be_saved()
+    {
+        var form = CustomForm();
+        Assert.Null(form.CustomScriptWarning);
+
+        form.CustomScript = "function getGroups() { return http.get(url, { Authorization: 'Bearer abcdef0123456789' }).json(); }";
+        Assert.Equal(Strings.Settings_ScriptCredentialsWarning, form.CustomScriptWarning);
+        Assert.True(form.IsValid);
+
+        form.CustomScript = "function getGroups() { return http.get(url, { Authorization: 'Bearer ' + secrets.get('T') }).json(); }";
+        Assert.Null(form.CustomScriptWarning);
+
+        form.CustomScript = "var token = 'abcdef0123456789';";
+        form.DataSource = DataSourceKinds.Spond;
+        Assert.Null(form.CustomScriptWarning); // the script is not in use
+    }
+
+    [Fact]
+    public void A_script_that_was_kept_back_is_neither_checked_compared_nor_sent_back()
+    {
+        var hidden = FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = "", CustomScriptHidden = true, ScriptSecrets = ["API_TOKEN"] };
+        var form = new SettingsForm();
+
+        form.Load(hidden);
+
+        Assert.True(form.CustomScriptHidden);
+        Assert.Null(form.CustomScriptProblem); // an empty script is not a mistake here
+        Assert.Null(form.CustomScriptWarning);
+        Assert.Null(form.ToInput().CustomScript); // it would erase the script
+        Assert.True(form.Matches(hidden));
+
+        form.Load(hidden with { CustomScriptHidden = false, CustomScript = "function getGroups() { return []; }" });
+        Assert.False(form.CustomScriptHidden);
+        Assert.Equal("function getGroups() { return []; }", form.ToInput().CustomScript);
+    }
+
+    [Fact]
+    public void The_example_script_cannot_be_inserted_while_the_script_is_kept_back()
+    {
+        var form = new SettingsForm();
+        form.Load(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = "", CustomScriptHidden = true });
+        Assert.False(form.InsertScriptTemplateCommand.CanExecute(null));
+
+        form.Load(FakePlannerApi.DefaultSettings with { DataSource = DataSourceKinds.Custom, UseDemoData = false, CustomScript = "", CustomScriptHidden = false });
+        Assert.True(form.InsertScriptTemplateCommand.CanExecute(null));
+        form.InsertScriptTemplateCommand.Execute(null);
+        Assert.Equal(CustomScriptTemplate.Text, form.CustomScript);
+        Assert.Null(form.CustomScriptWarning); // the shipped example holds no credentials itself
+    }
 }

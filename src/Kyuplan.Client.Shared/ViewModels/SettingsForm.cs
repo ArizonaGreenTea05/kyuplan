@@ -12,7 +12,21 @@ namespace Kyuplan.Client.ViewModels;
 /// </summary>
 public sealed partial class SettingsForm : ObservableObject
 {
-    public SettingsForm() => BackupAccounts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(BackupAccounts));
+    public SettingsForm()
+    {
+        BackupAccounts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(BackupAccounts));
+        ScriptSecrets.CollectionChanged += (_, _) => SecretsChanged();
+    }
+
+    // The error label of the Linux client is bound to the problem by name, so it has to be announced as well.
+    private void SecretsChanged()
+    {
+        OnPropertyChanged(nameof(ScriptSecrets));
+        OnPropertyChanged(nameof(ScriptSecretsProblem));
+    }
+
+    /// <summary>The secrets the custom script reads with <c>secrets.get('NAME')</c>; a stored value is never shown, only typed to set or change it.</summary>
+    public ObservableCollection<ScriptSecretForm> ScriptSecrets { get; } = [];
 
     /// <summary>More Spond logins, tried in this order after the first one.</summary>
     public ObservableCollection<BackupAccountForm> BackupAccounts { get; } = [];
@@ -22,13 +36,19 @@ public sealed partial class SettingsForm : ObservableObject
 
     /// <summary>Where groups, members and events come from, one of <see cref="DataSourceKinds"/>.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UseDemoData), nameof(IsSpondSource), nameof(IsCustomSource), nameof(IsManualSource), nameof(SpondProblem), nameof(BackupProblem), nameof(CustomScriptProblem))]
+    [NotifyPropertyChangedFor(nameof(UseDemoData), nameof(IsSpondSource), nameof(IsCustomSource), nameof(IsManualSource), nameof(SpondProblem), nameof(BackupProblem), nameof(CustomScriptProblem), nameof(CustomScriptWarning), nameof(ScriptSecretsProblem))]
     private string _dataSource = DataSourceKinds.Spond;
 
     /// <summary>The JavaScript of the custom data source.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CustomScriptProblem))]
+    [NotifyPropertyChangedFor(nameof(CustomScriptProblem), nameof(CustomScriptWarning))]
     private string _customScript = "";
+
+    /// <summary>The API left the script out because this user may look at the settings but not change them.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CustomScriptProblem), nameof(CustomScriptWarning))]
+    [NotifyCanExecuteChangedFor(nameof(InsertScriptTemplateCommand))]
+    private bool _customScriptHidden;
 
     /// <summary>The demo data is one of the data sources; this is the older way to ask for it.</summary>
     public bool UseDemoData
@@ -102,6 +122,7 @@ public sealed partial class SettingsForm : ObservableObject
         AccountsDatabasePath = settings.AccountsDatabasePath;
         DataSource = DataSourceKinds.Normalize(settings.UseDemoData ? DataSourceKinds.Demo : settings.DataSource);
         CustomScript = settings.CustomScript;
+        CustomScriptHidden = settings.CustomScriptHidden;
         SpondEmail = settings.SpondEmail ?? "";
         SpondPhoneNumber = settings.SpondPhoneNumber ?? "";
         SpondPassword = "";
@@ -121,6 +142,8 @@ public sealed partial class SettingsForm : ObservableObject
         HasMetricsToken = settings.HasMetricsToken;
         BackupAccounts.Clear();
         foreach (var account in settings.BackupAccounts ?? []) AddBackup(new BackupAccountForm(account));
+        ScriptSecrets.Clear();
+        foreach (var name in settings.ScriptSecrets ?? []) AddSecret(new ScriptSecretForm(name));
         OnPropertyChanged(string.Empty);
     }
 
@@ -129,11 +152,27 @@ public sealed partial class SettingsForm : ObservableObject
         SpondPassword.Length == 0 ? null : SpondPassword, TimeZone.Trim(), ExamKeyword.Trim(),
         DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
         [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
-        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScript,
-        MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken);
+        DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScriptHidden ? null : CustomScript,
+        MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken,
+        IsCustomSource ? [.. ScriptSecrets.Where(s => !s.IsEmpty).Select(s => s.ToInput())] : null); // another source leaves the stored secrets alone
+
+    // A script the API kept back is never sent, so a template put there would be dropped silently.
+    [RelayCommand(CanExecute = nameof(CanInsertScriptTemplate))]
+    private void InsertScriptTemplate() => CustomScript = CustomScriptTemplate.Text;
+
+    private bool CanInsertScriptTemplate() => !CustomScriptHidden;
 
     [RelayCommand]
-    private void InsertScriptTemplate() => CustomScript = CustomScriptTemplate.Text;
+    private void AddScriptSecret() => AddSecret(new ScriptSecretForm());
+
+    [RelayCommand]
+    private void RemoveScriptSecret(ScriptSecretForm secret) => ScriptSecrets.Remove(secret);
+
+    private void AddSecret(ScriptSecretForm secret)
+    {
+        secret.PropertyChanged += (_, _) => SecretsChanged();
+        ScriptSecrets.Add(secret);
+    }
 
     [RelayCommand]
     private void AddBackupAccount() => AddBackup(new BackupAccountForm());
@@ -149,7 +188,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     /// <summary>Everything typed is what the API runs with (and no new Spond password was typed).</summary>
     public bool Matches(SettingsDto s) =>
-        DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && DataSource == DataSourceKinds.Normalize(s.UseDemoData ? DataSourceKinds.Demo : s.DataSource) && CustomScript == s.CustomScript &&
+        DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && DataSource == DataSourceKinds.Normalize(s.UseDemoData ? DataSourceKinds.Demo : s.DataSource) && (CustomScriptHidden || CustomScript == s.CustomScript) && SecretsMatch(s.ScriptSecrets ?? []) &&
         SpondEmail.Trim() == (s.SpondEmail ?? "") && SpondPhoneNumber.Trim() == (s.SpondPhoneNumber ?? "") && SpondPassword.Length == 0 &&
         TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
@@ -157,6 +196,12 @@ public sealed partial class SettingsForm : ObservableObject
         UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&
         SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) &&
         MetricsEnabled == s.MetricsEnabled && MetricsToken.Length == 0 && BackupMatches(s.BackupAccounts ?? []);
+
+    private bool SecretsMatch(IReadOnlyList<string> saved)
+    {
+        var typed = ScriptSecrets.Where(s => !s.IsEmpty).ToList();
+        return typed.Count == saved.Count && typed.All(s => s.Value.Length == 0 && saved.Contains(s.Name.Trim(), StringComparer.OrdinalIgnoreCase));
+    }
 
     private bool BackupMatches(IReadOnlyList<SpondAccountDto> saved)
     {
@@ -180,10 +225,22 @@ public sealed partial class SettingsForm : ObservableObject
         IsSpondSource && BackupAccounts.Any(a => a.IsIncomplete) ? Strings.Settings_BackupIncomplete : null;
 
     public string? CustomScriptProblem =>
-        !IsCustomSource ? null
+        !IsCustomSource || CustomScriptHidden ? null
         : string.IsNullOrWhiteSpace(CustomScript) ? Strings.Settings_ScriptEmpty
         : CustomScript.Length > SettingsRules.MaxScriptLength ? string.Format(Strings.Settings_ScriptTooLong, SettingsRules.MaxScriptLength)
         : null;
+
+    /// <summary>Something that looks like a token or password is written into the script as text (a warning, it can still be saved).</summary>
+    public string? CustomScriptWarning =>
+        IsCustomSource && !CustomScriptHidden && SettingsRules.MentionsCredentials(CustomScript) ? Strings.Settings_ScriptCredentialsWarning : null;
+
+    public string? ScriptSecretsProblem =>
+        !IsCustomSource ? null
+        : ScriptSecrets.Any(s => s.IsInvalid) || HasDuplicateSecretName || ScriptSecrets.Count(s => !s.IsEmpty) > SettingsRules.MaxScriptSecrets ? Strings.Settings_ScriptSecretsInvalid
+        : null;
+
+    private bool HasDuplicateSecretName =>
+        ScriptSecrets.Where(s => !s.IsEmpty).GroupBy(s => s.Name.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1);
 
     public string? TimeZoneProblem => string.IsNullOrWhiteSpace(TimeZone) ? Strings.Settings_TimeZoneInvalid : null;
 
@@ -207,8 +264,44 @@ public sealed partial class SettingsForm : ObservableObject
         : null;
 
     public bool IsValid =>
-        DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && CustomScriptProblem is null && TimeZoneProblem is null &&
+        DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && CustomScriptProblem is null && ScriptSecretsProblem is null && TimeZoneProblem is null &&
         PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null && MetricsTokenProblem is null;
+}
+
+/// <summary>One secret of the custom script as it is typed: the value is only filled in to set or change it.</summary>
+public sealed partial class ScriptSecretForm : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValue), nameof(IsInvalid))]
+    private string _name = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInvalid))]
+    private string _value = "";
+
+    private readonly string? _storedName;
+
+    public ScriptSecretForm()
+    {
+    }
+
+    /// <summary>A secret that has a value stored under <paramref name="storedName"/>.</summary>
+    public ScriptSecretForm(string storedName)
+    {
+        _storedName = storedName;
+        _name = storedName;
+    }
+
+    /// <summary>A value is stored for this name, so an empty value keeps it (a renamed secret has none: it needs a value).</summary>
+    public bool HasValue => _storedName is not null && string.Equals(Name.Trim(), _storedName, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsEmpty => Name.Trim().Length == 0 && Value.Length == 0;
+
+    /// <summary>Something typed, but not a whole secret: a name that cannot be one, a value that cannot be sent, or no value at all.</summary>
+    public bool IsInvalid =>
+        !IsEmpty && (!SettingsRules.IsSecretName(Name.Trim()) || (Value.Length > 0 ? !SettingsRules.IsSecretValue(Value) : !HasValue));
+
+    public ScriptSecretInputDto ToInput() => new(Name.Trim(), Value.Length == 0 ? null : Value);
 }
 
 /// <summary>One backup Spond login as it is typed: the password is only filled in to set or change it.</summary>

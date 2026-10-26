@@ -63,8 +63,43 @@ public sealed class SettingsService(
             CurrentKind,
             dataSource.Value.Script,
             metrics.Value.Enabled,
-            !string.IsNullOrEmpty(metrics.Value.Token));
+            !string.IsNullOrEmpty(metrics.Value.Token),
+            [.. dataSource.Value.Secrets.Where(s => !string.IsNullOrEmpty(s.Value)).Select(s => s.Key).Order(StringComparer.OrdinalIgnoreCase)]);
     }
+
+    /// <summary>The value stored for the script secret <paramref name="name"/>, or <c>null</c>.</summary>
+    private string? StoredSecret(string name) =>
+        dataSource.Value.Secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value) ? value : null;
+
+    private static bool IsEmpty(ScriptSecretInputDto secret) => string.IsNullOrWhiteSpace(secret.Name) && string.IsNullOrEmpty(secret.Value);
+
+    /// <summary>What is wrong with the script secrets as typed (never quoting a value), or <c>null</c>.</summary>
+    private string? SecretsProblem(IReadOnlyList<ScriptSecretInputDto>? secrets)
+    {
+        if (secrets is null) return null;
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var secret in secrets)
+        {
+            if (secret is null) return "scriptSecrets must not contain empty entries.";
+            if (IsEmpty(secret)) continue;
+
+            var name = secret.Name?.Trim() ?? "";
+            if (!SettingsRules.IsSecretName(name))
+                return $"scriptSecrets: a name is a letter followed by letters, digits and underscores, at most {SettingsRules.MaxSecretNameLength} characters.";
+            if (!names.Add(name)) return $"scriptSecrets: the name {name} is used twice (names are not case sensitive).";
+            if (!string.IsNullOrEmpty(secret.Value) && !SettingsRules.IsSecretValue(secret.Value))
+                return $"scriptSecrets: the value of {name} must be one line of text, at most {SettingsRules.MaxSecretValueLength} characters.";
+            if (string.IsNullOrEmpty(secret.Value) && StoredSecret(name) is null) return $"scriptSecrets: {name} needs a value.";
+        }
+
+        return names.Count > SettingsRules.MaxScriptSecrets ? $"scriptSecrets: at most {SettingsRules.MaxScriptSecrets} secrets." : null;
+    }
+
+    /// <summary>The script secrets as saved (an empty value keeps the stored one), or <c>null</c> when the client sent none (an older one: they stay).</summary>
+    private Dictionary<string, string>? ScriptSecretsOf(SettingsInputDto input) =>
+        input.ScriptSecrets?.Where(s => s is not null && !IsEmpty(s)).ToDictionary(
+            s => s.Name.Trim(), s => !string.IsNullOrEmpty(s.Value) ? s.Value! : StoredSecret(s.Name.Trim()) ?? "", StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The data source the API runs with (the demo data included).</summary>
     private string CurrentKind => dataSource.Value.Resolve(spond.Value);
@@ -85,7 +120,11 @@ public sealed class SettingsService(
     public const string AllowedHostsKey = "AllowedHosts";
 
     public SetupStatusDto GetStatus() => new(
-        state.NeedsSetup, state.NeedsSetup ? Get() : null, state.NeedsSetup ? file.Path : null, SettingsFile.IsConfigured(configuration));
+        state.NeedsSetup, state.NeedsSetup ? ForSetup(Get()) : null, state.NeedsSetup ? file.Path : null, SettingsFile.IsConfigured(configuration));
+
+    /// <summary>The setup needs no login: a script that is already there (from the configuration) may hold a token and is not given to whoever asks. The form leaves it alone.</summary>
+    private static SettingsDto ForSetup(SettingsDto settings) =>
+        settings.CustomScript.Length > 0 ? settings with { CustomScript = "", CustomScriptHidden = true } : settings;
 
     /// <summary>The problem with the settings file location typed in the setup, or <c>null</c>.</summary>
     public string? ValidateSettingsFile(string? path, bool isLocalRequest = true)
@@ -116,6 +155,8 @@ public sealed class SettingsService(
         var script = input.CustomScript ?? dataSource.Value.Script;
         if (script.Length > SettingsRules.MaxScriptLength) Fail("customScript", $"customScript is too long (at most {SettingsRules.MaxScriptLength} characters).");
         else if (RequestedKind(input) == DataSourceKinds.Custom && CustomScriptDataSource.CheckSyntax(script) is { } problem) Fail("customScript", $"customScript: {problem}");
+
+        if (SecretsProblem(input.ScriptSecrets) is { } secretsProblem) Fail("scriptSecrets", secretsProblem);
 
         if (RequestedKind(input) == DataSourceKinds.Spond &&
             SettingsRules.HasHalfCredentials(input.SpondEmail, input.SpondPhoneNumber, !string.IsNullOrEmpty(input.SpondPassword) || Get().HasSpondPassword))
@@ -258,6 +299,9 @@ public sealed class SettingsService(
         Set("Spond:UseDemoData", Flag(now.UseDemoData), Flag(kind == DataSourceKinds.Demo));
         // An older client that does not know the field sends none: that keeps the script.
         if (input.CustomScript is not null) Set("DataSource:Script", dataSource.Value.Script, input.CustomScript);
+        // Written as a whole: a secret that is not in the list is gone. The values are encrypted by the settings file.
+        if (ScriptSecretsOf(input) is { } secrets && !SameSecrets(secrets, dataSource.Value.Secrets))
+            changes["DataSource:Secrets"] = new JsonObject([.. secrets.OrderBy(s => s.Key, StringComparer.OrdinalIgnoreCase).Select(s => KeyValuePair.Create(s.Key, (JsonNode?)JsonValue.Create(s.Value)))]);
         Set("Spond:Email", now.SpondEmail ?? "", input.SpondEmail?.Trim() ?? "");
         Set("Spond:PhoneNumber", now.SpondPhoneNumber ?? "", input.SpondPhoneNumber?.Trim() ?? "");
         if (!string.IsNullOrEmpty(input.SpondPassword) && input.SpondPassword != spond.Value.Password) changes["Spond:Password"] = input.SpondPassword;
@@ -308,6 +352,12 @@ public sealed class SettingsService(
             PhoneNumber = b.PhoneNumber?.Trim() is { Length: > 0 } phone ? phone : null,
             Password = !string.IsNullOrEmpty(b.Password) ? b.Password : StoredPassword(spond.Value.Accounts, b),
         }).ToList();
+
+    private static bool SameSecrets(Dictionary<string, string> next, Dictionary<string, string?> current)
+    {
+        var stored = current.Where(s => !string.IsNullOrEmpty(s.Value)).ToList();
+        return next.Count == stored.Count && stored.All(s => next.TryGetValue(s.Key, out var value) && value == s.Value);
+    }
 
     private static bool SameAccounts(List<SpondAccount> next, List<SpondAccount> current) =>
         next.Count == current.Count && next.Zip(current).All(p =>

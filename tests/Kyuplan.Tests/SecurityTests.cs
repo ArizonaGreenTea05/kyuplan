@@ -526,4 +526,74 @@ public sealed class SecurityTests(WebApplicationFactory<Program> factory) : ICla
         Assert.True(SettingsRules.IsMetricsToken(new string('a', SettingsRules.MaxMetricsTokenLength)));
         Assert.False(SettingsRules.IsMetricsToken(new string('a', SettingsRules.MaxMetricsTokenLength + 1)));
     }
+
+    [Theory]
+    [InlineData("API_TOKEN", true)]
+    [InlineData("a", true)]
+    [InlineData("Token2", true)]
+    [InlineData("a_b_c", true)]
+    [InlineData("_token", false)] // starts with a letter
+    [InlineData("2token", false)]
+    [InlineData("to-ken", false)]
+    [InlineData("to ken", false)]
+    [InlineData("to:ken", false)] // it is a configuration key: no separators
+    [InlineData("tökén", false)]
+    [InlineData(" API", false)] // callers trim what was typed
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void A_secret_name_is_a_letter_then_letters_digits_and_underscores(string? name, bool valid) =>
+        Assert.Equal(valid, SettingsRules.IsSecretName(name));
+
+    [Fact]
+    public void A_secret_name_and_value_have_a_maximum_length()
+    {
+        Assert.True(SettingsRules.IsSecretName(new string('a', SettingsRules.MaxSecretNameLength)));
+        Assert.False(SettingsRules.IsSecretName(new string('a', SettingsRules.MaxSecretNameLength + 1)));
+        Assert.True(SettingsRules.IsSecretValue(new string('v', SettingsRules.MaxSecretValueLength)));
+        Assert.False(SettingsRules.IsSecretValue(new string('v', SettingsRules.MaxSecretValueLength + 1)));
+    }
+
+    [Theory]
+    [InlineData("abc", true)]
+    [InlineData("with spaces and ünïcödé", true)] // a password may have them
+    [InlineData("a\nb", false)]
+    [InlineData("a\rb", false)]
+    [InlineData("a\tb", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void A_secret_value_is_one_line_of_text(string? value, bool valid) =>
+        Assert.Equal(valid, SettingsRules.IsSecretValue(value));
+
+    [Theory]
+    [InlineData("var auth = { Authorization: 'Bearer abcdef0123456789' };", true)]
+    [InlineData("headers['Authorization'] = \"Bearer eyJhbGciOi.payload.sig\";", true)]
+    [InlineData("var h = { 'X-Api-Key': 'abc123456' };", true)]
+    [InlineData("var apiKey = \"abc123456\";", true)]
+    [InlineData("const password = 'hunter2hunter2';", true)]
+    [InlineData("var token = 'abcdefgh';", true)]
+    [InlineData("var auth = { Authorization: 'Bearer ' + secrets.get('API_TOKEN') };", false)]
+    [InlineData("var h = { 'X-Api-Key': secrets.get('KEY') };", false)]
+    [InlineData("// a token is needed here: ask the admin", false)]
+    [InlineData("var token = '';", false)]
+    [InlineData("var token = 'abc';", false)] // too short to be one
+    [InlineData("function getGroups() { return []; }", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void A_script_that_holds_a_credential_as_text_is_recognised_for_the_warning(string? script, bool expected) =>
+        Assert.Equal(expected, SettingsRules.MentionsCredentials(script));
+
+    [Fact]
+    public void Looking_for_credentials_in_a_huge_script_neither_hangs_nor_throws()
+    {
+        var script = string.Concat(Enumerable.Repeat("token = ' ", 10_000)) + new string('a', 100_000);
+
+        Assert.False(SettingsRules.MentionsCredentials(script)); // false whether it finished or gave up
+    }
+
+    [Fact]
+    public void The_example_script_does_not_carry_a_credential()
+    {
+        Assert.False(SettingsRules.MentionsCredentials(Kyuplan.Client.ViewModels.CustomScriptTemplate.Text));
+        Assert.Contains("secrets.get(", Kyuplan.Client.ViewModels.CustomScriptTemplate.Text);
+    }
 }

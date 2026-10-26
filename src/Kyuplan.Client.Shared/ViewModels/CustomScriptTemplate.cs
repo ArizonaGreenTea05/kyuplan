@@ -6,9 +6,10 @@ public static class CustomScriptTemplate
     public const string Text = """
         // The two functions below are called by the API. What they return is kept for a few minutes.
         // http.get(url, headers) / http.post(url, body, headers) answer { status, ok, text, json() }; console.log(...) writes to the API's log.
+        // secrets.get('NAME') is a token or password stored encrypted under "Secrets of the script" (add API_TOKEN there): never write one into the script itself.
 
         var base = 'https://example.org/api';
-        var auth = { Authorization: 'Bearer YOUR-TOKEN' };
+        var auth = { Authorization: 'Bearer ' + secrets.get('API_TOKEN') };
 
         // All groups with their subgroups and members. birthDate is optional ("2012-05-31").
         function getGroups() {

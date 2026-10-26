@@ -23,8 +23,9 @@ namespace Kyuplan.Api.Sources;
 /// </code>
 /// <c>from</c> and <c>to</c> are ISO 8601 strings; <c>start</c> and <c>end</c> may be ISO 8601 strings (without an offset: UTC), Date objects or epoch
 /// milliseconds; an answer is <c>accepted</c>, <c>declined</c>, <c>unanswered</c> or <c>other</c>; the members in <c>responses</c> are the invited ones.
-/// The script gets <c>http.get/post/put/delete(url, [body,] headers)</c> (answering <c>{ status, ok, text, json() }</c>) and <c>console.log</c>, nothing else:
-/// no file system, no .NET. It runs in a fresh engine for every call, one call at a time, with a time, memory, statement and recursion limit; every run is logged with its duration. What it returns is cached
+/// The script gets <c>http.get/post/put/delete(url, [body,] headers)</c> (answering <c>{ status, ok, text, json() }</c>), <c>console.log</c> and
+/// <c>secrets.get('NAME')</c> (a token or password the administrator stored encrypted, <see cref="DataSourceOptions.Secrets"/>), nothing else:
+/// no file system, no .NET. The secrets' values are replaced by <c>***</c> in the script's error messages and log lines. It runs in a fresh engine for every call, one call at a time, with a time, memory, statement and recursion limit; every run is logged with its duration. What it returns is cached
 /// for <see cref="DataSourceOptions.CacheDuration"/>; callers waiting for the same data share one run, and a failure is remembered for
 /// <see cref="DataSourceOptions.FailureCacheDuration"/>.
 /// </summary>
@@ -166,7 +167,7 @@ public sealed class CustomScriptDataSource(
     /// <summary>The script ran out of time, or the HTTP client did (it reports that as a cancelled task caused by a <see cref="TimeoutException"/>).</summary>
     private static bool IsTimeout(Exception error)
     {
-        for (var inner = error.InnerException; inner is not null; inner = inner.InnerException)
+        for (var inner = error; inner is not null; inner = inner.InnerException)
             if (inner is TimeoutException) return true;
 
         return false;
@@ -211,8 +212,13 @@ public sealed class CustomScriptDataSource(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "The custom data script failed.");
-                throw new SpondUnavailableException($"The custom data script failed: {ex.Message}", ex);
+                // The message of the failure may hold what the script put together from a secret (an address with a key in it): neither the message, the log
+                // nor the cause (which whoever catches this may log) gets it. A failure without one is kept as the cause as it is.
+                var text = ex.ToString();
+                var safe = Redact(text);
+                if (safe == text) logger.LogWarning(ex, "The custom data script failed.");
+                else logger.LogWarning("The custom data script failed: {Error}", safe);
+                throw new SpondUnavailableException($"The custom data script failed: {Redact(ex.Message)}", safe == text ? ex : IsTimeout(ex) ? new TimeoutException() : null);
             }
             finally
             {
@@ -231,9 +237,25 @@ public sealed class CustomScriptDataSource(
             .CancellationToken(cancellationToken));
 
         engine.SetValue("__request", new Func<string, string, string?, string?, string>((method, url, body, headers) => Request(method, url, body, headers, cancellationToken)));
-        engine.SetValue("__log", new Action<string>(message => logger.LogInformation("Custom data script: {Message}", message)));
+        engine.SetValue("__log", new Action<string>(message => logger.LogInformation("Custom data script: {Message}", Redact(message))));
+        engine.SetValue("__secret", new Func<string, string>(Secret));
         engine.Execute(Prelude);
         return engine;
+    }
+
+    /// <summary>The value of the secret <paramref name="name"/> (<c>secrets.get</c>); a name that is not set is an error of the script, not an empty text.</summary>
+    private string Secret(string name) =>
+        options.Value.Secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value)
+            ? value
+            : throw new InvalidOperationException($"The script asks for the secret '{name}', which is not set (Settings page, secrets of the script).");
+
+    /// <summary><paramref name="text"/> without the values of the secrets (longest first, so that one that contains another goes whole).</summary>
+    private string Redact(string text)
+    {
+        foreach (var value in options.Value.Secrets.Values.Where(v => !string.IsNullOrEmpty(v)).OrderByDescending(v => v!.Length))
+            text = text.Replace(value!, "***", StringComparison.Ordinal);
+
+        return text;
     }
 
     private static string Call(Engine engine, string function, params object[] arguments)
@@ -319,6 +341,7 @@ public sealed class CustomScriptDataSource(
 
     private const string Prelude = """
         var console = { log: function () { __log(Array.prototype.slice.call(arguments).map(String).join(' ')); } };
+        var secrets = { get: function (name) { return __secret(String(name)); } };
         var http = (function () {
             function call(method, url, body, headers) {
                 var h = {};

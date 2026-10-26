@@ -1465,6 +1465,36 @@
   <data name="Settings_CustomScriptHint" xml:space="preserve">
     <value>Definiere getGroups() und getEvents(groupId, from, to); mit http.get und http.post kann das Skript andere Dienste aufrufen. Die API prüft es beim Speichern auf Fehler.</value>
   </data>
+  <data name="Settings_ScriptSecrets" xml:space="preserve">
+    <value>Geheimnisse des Skripts</value>
+  </data>
+  <data name="Settings_ScriptSecretsHint" xml:space="preserve">
+    <value>Tokens und Passwörter, die das Skript braucht; es liest sie mit secrets.get('NAME') (zum Beispiel 'Authorization: Bearer ' + secrets.get('API_TOKEN')). Sie werden verschlüsselt gespeichert und nie wieder angezeigt; ein leerer Wert behält den gespeicherten.</value>
+  </data>
+  <data name="Settings_ScriptSecretName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Settings_ScriptSecretValue" xml:space="preserve">
+    <value>Wert</value>
+  </data>
+  <data name="Settings_ScriptSecretStored" xml:space="preserve">
+    <value>Ein Wert ist gespeichert.</value>
+  </data>
+  <data name="Settings_ScriptSecretAdd" xml:space="preserve">
+    <value>Geheimnis hinzufügen</value>
+  </data>
+  <data name="Settings_ScriptSecretRemove" xml:space="preserve">
+    <value>Geheimnis entfernen</value>
+  </data>
+  <data name="Settings_ScriptSecretsInvalid" xml:space="preserve">
+    <value>Jedes Geheimnis braucht einen Namen (ein Buchstabe, dann Buchstaben, Ziffern und Unterstriche; jeder Name nur einmal) und einen Wert.</value>
+  </data>
+  <data name="Settings_ScriptCredentialsWarning" xml:space="preserve">
+    <value>Das Skript scheint ein Token oder Passwort als Text zu enthalten. Lege es als Geheimnis an und lies es mit secrets.get('NAME'): das Skript wird unverschlüsselt gespeichert und steckt in jeder Kopie der Einstellungsdatei.</value>
+  </data>
+  <data name="Settings_ScriptHidden" xml:space="preserve">
+    <value>Das Skript sehen nur Benutzer, die die Einstellungen ändern dürfen.</value>
+  </data>
   <data name="Settings_ScriptTemplate" xml:space="preserve">
     <value>Beispielskript einfügen</value>
   </data>

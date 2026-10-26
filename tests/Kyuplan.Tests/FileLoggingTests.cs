@@ -19,7 +19,27 @@ public sealed class FileLoggingTests(WebApplicationFactory<Program> factory) : I
     {
         _planner.Dispose();
         _accounts.Dispose();
-        Directory.Delete(_folder, recursive: true);
+        DeleteFolder();
+    }
+
+    /// <summary>
+    /// A log file can stay locked for a moment after the host is gone (the file sink closing it, a virus scanner or indexer on the
+    /// Windows runner), which made the cleanup throw "being used by another process" on a loaded machine.
+    /// </summary>
+    private void DeleteFolder()
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                Directory.Delete(_folder, recursive: true);
+                return;
+            }
+            catch (IOException) when (attempt < 10)
+            {
+                Thread.Sleep(100 * attempt);
+            }
+        }
     }
 
     private WebApplicationFactory<Program> CreateHost(string logPath) =>

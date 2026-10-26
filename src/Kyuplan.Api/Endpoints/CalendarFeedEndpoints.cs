@@ -38,10 +38,10 @@ public static class CalendarFeedEndpoints
 
         var feeds = app.MapGroup("/api/calendar-feeds").WithTags("Calendar feeds").RequirePermission(Permission.CalendarFeeds);
 
-        feeds.MapGet("/", (HttpRequest request, CalendarFeedService service, CancellationToken ct) => service.ListAsync(BaseUrl(request), ct))
-            .WithSummary("All calendar feeds with their ICS address and sources; brokenSources lists the positions of the sources whose group does not exist any more (the ICS leaves them out).");
+        feeds.MapGet("/", (CalendarFeedService service, CancellationToken ct) => service.ListAsync(ct))
+            .WithSummary("All calendar feeds with their sources (not their address: it is told only in the answers of POST and regenerate); brokenSources lists the positions of the sources whose group does not exist any more (the ICS leaves them out).");
 
-        feeds.MapGet("/{id:int}", (int id, HttpRequest request, CalendarFeedService service, CancellationToken ct) => service.GetAsync(id, BaseUrl(request), ct))
+        feeds.MapGet("/{id:int}", (int id, CalendarFeedService service, CancellationToken ct) => service.GetAsync(id, ct))
             .WithSummary("One calendar feed.");
 
         feeds.MapPost("/", async (CalendarFeedInputDto input, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
@@ -52,22 +52,22 @@ public static class CalendarFeedEndpoints
                 return Results.Ok(await service.CreateAsync(input, BaseUrl(request), ct));
             })
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Create)
-            .WithSummary("Make a calendar feed from sources: events of a group (narrowed by subgroups, members, invitation, name, exams, cancelled), birthdays, club anniversaries or belt anniversaries of members. The answer has the address (url) to give to calendar apps.");
+            .WithSummary("Make a calendar feed from sources: events of a group (narrowed by subgroups, members, invitation, name, exams, cancelled), birthdays, club anniversaries or belt anniversaries of members. The answer has the address (url) to give to calendar apps; it is told only this once, the server keeps just a hash of its secret.");
 
-        feeds.MapPut("/{id:int}", async (int id, CalendarFeedInputDto input, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
+        feeds.MapPut("/{id:int}", async (int id, CalendarFeedInputDto input, CalendarFeedService service, CancellationToken ct) =>
             {
                 var errors = CalendarFeedRules.Check(input);
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
-                return Results.Ok(await service.UpdateAsync(id, input, BaseUrl(request), ct));
+                return Results.Ok(await service.UpdateAsync(id, input, ct));
             })
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Update)
-            .WithSummary("Replace the name and sources of a feed. The address stays the same.");
+            .WithSummary("Replace the name and sources of a feed. The address stays the same (and is not in the answer).");
 
         feeds.MapPost("/{id:int}/regenerate", (int id, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
                 service.RegenerateTokenAsync(id, BaseUrl(request), ct))
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Regenerate)
-            .WithSummary("Give a feed a new secret address; the old one stops working (apps that subscribed must be given the new one).");
+            .WithSummary("Give a feed a new secret address; the old one stops working (apps that subscribed must be given the new one). The new address (url) is told only in this answer.");
 
         feeds.MapDelete("/{id:int}", async (int id, CalendarFeedService service, CancellationToken ct) =>
             {

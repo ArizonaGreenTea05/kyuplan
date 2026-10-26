@@ -386,8 +386,11 @@ public sealed class CalendarFeed
     /// <summary>Unique regardless of case.</summary>
     public string Name { get; set; } = "";
 
-    /// <summary>The secret in the address; whoever knows it may read the calendar without logging in. Unique.</summary>
-    public string Token { get; set; } = "";
+    /// <summary>
+    /// SHA-256 (lower-case hex) of the secret in the address; whoever knows the secret may read the calendar without logging in, so the
+    /// secret itself is never stored (<see cref="CalendarFeedService.HashToken"/>). Unique.
+    /// </summary>
+    public string TokenHash { get; set; } = "";
 
     /// <summary>The sources as a JSON array, in one column: they are only ever read and written together with the feed.</summary>
     public string SourcesJson { get; set; } = "[]";

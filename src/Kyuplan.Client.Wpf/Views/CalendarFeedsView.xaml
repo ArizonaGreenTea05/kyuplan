@@ -171,7 +171,20 @@
                     </DockPanel>
                 </Border>
 
-                <!-- The calendars, each with the address to give to calendar apps -->
+                <!-- The address of a calendar that was just made or got a new one: the server does not keep it, so this is the only time it can be copied -->
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0" Visibility="{Binding HasAddress, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding AddressText}" TextWrapping="Wrap" />
+                        <TextBox Margin="0,8,0,0" IsReadOnly="True" Text="{Binding Address, Mode=OneWay}"
+                                 AutomationProperties.Name="{loc:Loc CalendarFeeds_ColAddress}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="{loc:Loc CalendarFeeds_CopyAddress}" Click="OnCopyAddress" />
+                            <Button Content="{loc:Loc CalendarFeeds_DismissAddress}" Margin="8,0,0,0" Command="{Binding DismissAddressCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- The calendars -->
                 <TextBlock Text="{loc:Loc CalendarFeeds_AddressHint}" Style="{StaticResource MutedText}" Margin="0,16,0,0" TextWrapping="Wrap" />
                 <ItemsControl ItemsSource="{Binding Feeds}" Margin="0,8,0,0">
                     <ItemsControl.ItemTemplate>
@@ -180,8 +193,6 @@
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" />
                                     <TextBlock Text="{Binding SourcesText}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
-                                    <TextBox Margin="0,8,0,0" IsReadOnly="True" Text="{Binding Url, Mode=OneWay}"
-                                             AutomationProperties.Name="{loc:Loc CalendarFeeds_ColAddress}" />
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                         <Button Content="{loc:Loc CalendarFeeds_Edit}" CommandParameter="{Binding}"
                                                 Command="{Binding DataContext.BeginEditCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />

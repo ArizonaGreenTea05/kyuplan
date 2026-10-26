@@ -3130,7 +3130,16 @@
     <value>“{0}” has a new address.</value>
   </data>
   <data name="CalendarFeeds_AddressHint" xml:space="preserve">
-    <value>Subscribe to this address in a calendar app (“add internet calendar”). Whoever has it can read the calendar without a login, so treat it like a password.</value>
+    <value>Subscribe to a calendar’s address in a calendar app (“add internet calendar”). Whoever has it can read the calendar without a login, so treat it like a password. It is shown once, when the calendar is made or gets a new address; the server keeps only a hash of it. If you lost it, give the calendar a new address.</value>
+  </data>
+  <data name="CalendarFeeds_AddressOnce" xml:space="preserve">
+    <value>Address of “{0}”. Copy it now: it is not shown again.</value>
+  </data>
+  <data name="CalendarFeeds_CopyAddress" xml:space="preserve">
+    <value>Copy address</value>
+  </data>
+  <data name="CalendarFeeds_DismissAddress" xml:space="preserve">
+    <value>I have copied it</value>
   </data>
   <data name="CalendarFeeds_FormNew" xml:space="preserve">
     <value>New calendar</value>

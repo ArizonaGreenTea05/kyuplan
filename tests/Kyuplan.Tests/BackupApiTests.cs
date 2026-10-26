@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Backup;
@@ -159,6 +160,99 @@ public sealed class BackupApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Equal(["White"], await BeltNamesAsync(admin));
         Assert.Equal(0, _restarter.Requests);
     }
+
+    private static async Task<string> TableOfBackupAsync(byte[] file, string entryName)
+    {
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(file));
+        using var reader = new StreamReader(zip.GetEntry(entryName)!.Open());
+        return await reader.ReadToEndAsync();
+    }
+
+    [Fact]
+    public async Task A_backup_holds_the_hash_of_a_calendar_feed_token_and_never_the_token()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var group = (await admin.GetFromJsonAsync<List<GroupDto>>("/api/groups"))![0].Id;
+        var created = await ReadAsync<CalendarFeedDto>(await admin.PostAsJsonAsync("/api/calendar-feeds",
+            new CalendarFeedInputDto("Everything", [new CalendarSourceDto(CalendarSourceKinds.Events, group)])));
+
+        var token = CalendarFeedTests.TokenOf(created);
+        var table = await TableOfBackupAsync(await DownloadAsync(admin), "planner/CalendarFeed.json");
+
+        Assert.Contains(CalendarFeedService.HashToken(token), table);
+        Assert.DoesNotContain(token, table);
+    }
+
+    [Fact]
+    public async Task A_backup_made_before_the_tokens_were_hashed_restores_and_its_feed_address_goes_on_working()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var group = (await admin.GetFromJsonAsync<List<GroupDto>>("/api/groups"))![0].Id;
+        var created = await ReadAsync<CalendarFeedDto>(await admin.PostAsJsonAsync("/api/calendar-feeds",
+            new CalendarFeedInputDto("Everything", [new CalendarSourceDto(CalendarSourceKinds.Events, group)])));
+        var file = await DownloadAsync(admin);
+
+        // What the versions before wrote: the column is called Token and holds the token itself.
+        const string legacy = "LegacyTokenOf43CharactersLegacyTokenOf43Chars";
+        var hash = CalendarFeedService.HashToken(CalendarFeedTests.TokenOf(created));
+        using var old = new MemoryStream();
+        using (var source = new System.IO.Compression.ZipArchive(new MemoryStream(file)))
+        using (var zip = new System.IO.Compression.ZipArchive(old, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var entry in source.Entries)
+            {
+                using var reader = new StreamReader(entry.Open());
+                var text = await reader.ReadToEndAsync();
+                if (entry.FullName == "planner/CalendarFeed.json")
+                {
+                    Assert.Contains($"\"TokenHash\":\"{hash}\"", text);
+                    text = text.Replace($"\"TokenHash\":\"{hash}\"", $"\"Token\":\"{legacy}\"");
+                }
+
+                await using var writer = new StreamWriter(zip.CreateEntry(entry.FullName).Open());
+                await writer.WriteAsync(text);
+            }
+        }
+
+        await ReadAsync<BackupRestoredDto>(await UploadAsync(admin, old.ToArray()));
+
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PlannerDbContext>();
+        Assert.Equal(CalendarFeedService.HashToken(legacy), (await db.CalendarFeeds.AsNoTracking().SingleAsync()).TokenHash); // converted by the restore itself
+        Assert.Equal(0, await CalendarFeedService.HashLegacyTokensAsync(db, CancellationToken.None));
+        Assert.Equal(HttpStatusCode.OK, (await host.CreateClient().GetAsync($"/calendar-feeds/{legacy}.ics")).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_initial_data_file_of_a_version_before_the_hashing_is_converted_too()
+    {
+        byte[] file;
+        using (var source = CreateHost())
+        {
+            var admin = source.CreateSignedInClient();
+            var group = (await admin.GetFromJsonAsync<List<GroupDto>>("/api/groups"))![0].Id;
+            var created = await ReadAsync<CalendarFeedDto>(await admin.PostAsJsonAsync("/api/calendar-feeds",
+                new CalendarFeedInputDto("Everything", [new CalendarSourceDto(CalendarSourceKinds.Events, group)])));
+            file = Rewrite(await DownloadAsync(admin), "planner/CalendarFeed.json",
+                text => text.Replace($"\"TokenHash\":\"{CalendarFeedService.HashToken(CalendarFeedTests.TokenOf(created))}\"", $"\"Token\":\"{LegacyToken}\""));
+        }
+
+        var path = Path.Combine(_folder, "legacy.kyubackup");
+        await File.WriteAllBytesAsync(path, file);
+        using var newPlanner = new InMemoryDatabase();
+        using var newAccounts = new InMemoryDatabase();
+
+        using var fresh = CreateHost(newPlanner, newAccounts, builder => builder.UseSetting("Backup:InitialDataFile", path));
+
+        using var scope = fresh.Services.CreateScope();
+        var stored = await scope.ServiceProvider.GetRequiredService<PlannerDbContext>().CalendarFeeds.AsNoTracking().SingleAsync();
+        Assert.Equal(CalendarFeedService.HashToken(LegacyToken), stored.TokenHash);
+        Assert.Equal(HttpStatusCode.OK, (await fresh.CreateClient().GetAsync($"/calendar-feeds/{LegacyToken}.ics")).StatusCode);
+    }
+
+    private const string LegacyToken = "LegacyTokenOf43CharactersLegacyTokenOf43Chars";
 
     [Fact]
     public async Task A_backup_of_a_newer_program_is_refused()

@@ -1,5 +1,6 @@
 @page "/calendar-feeds"
 @inherits ViewModelComponent<CalendarFeedsViewModel>
+@inject IJSRuntime Js
 
 <BrandedTitle Title="@Vm.Title" />
 
@@ -173,6 +174,16 @@
             </div>
         }
 
+        @if (Vm.HasAddress)
+        {
+            <div class="confirm" role="status" aria-label="@Vm.AddressText">
+                <span>@Vm.AddressText</span>
+                <input type="text" class="feed-url" readonly value="@Vm.Address" aria-label="@Strings.CalendarFeeds_ColAddress" />
+                <button type="button" class="btn" @onclick="CopyAddressAsync"><span>@Strings.CalendarFeeds_CopyAddress</span></button>
+                <button type="button" class="btn ghost" @onclick="() => Vm.DismissAddressCommand.Execute(null)"><span>@Strings.CalendarFeeds_DismissAddress</span></button>
+            </div>
+        }
+
         @if (Vm.IsEmpty)
         {
             <p class="empty">@Strings.CalendarFeeds_Empty</p>
@@ -187,7 +198,6 @@
                             <tr>
                                 <th>@Strings.CalendarFeeds_ColName</th>
                                 <th>@Strings.CalendarFeeds_ColSources</th>
-                                <th>@Strings.CalendarFeeds_ColAddress</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -197,7 +207,6 @@
                                 <tr @key="feed.Id">
                                     <td><strong>@feed.Name</strong></td>
                                     <td>@feed.SourcesText</td>
-                                    <td><input type="text" class="feed-url" readonly value="@feed.Url" aria-label="@($"{Strings.CalendarFeeds_ColAddress}: {feed.Name}")" /></td>
                                     <td class="row-actions">
                                         <button type="button" class="btn ghost" disabled="@(!Vm.BeginEditCommand.CanExecute(feed))" @onclick="() => Vm.BeginEditCommand.Execute(feed)">
                                             <Icon Name="edit" /><span>@Strings.CalendarFeeds_Edit</span>
@@ -221,6 +230,18 @@
 
 @code {
     protected override async Task OnInitializedAsync() => await Vm.ActivateAsync();
+
+    private async Task CopyAddressAsync()
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", Vm.Address);
+        }
+        catch (JSException)
+        {
+            // No clipboard permission: the address is in the field above, to select and copy by hand.
+        }
+    }
 
     protected override IEnumerable<System.ComponentModel.INotifyPropertyChanged> ObservedSources => [Vm, Vm.Editor];
 

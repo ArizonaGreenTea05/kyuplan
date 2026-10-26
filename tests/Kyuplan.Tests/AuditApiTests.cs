@@ -431,9 +431,9 @@ public sealed class AuditApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Equal([AuditActions.Delete, AuditActions.Regenerate, AuditActions.Update, AuditActions.Create], log.Select(e => e.Action));
         Assert.Equal([$"id={created.Id}", $"id={created.Id}", $"id={created.Id}", $"id={created.Id}"], log.Select(e => e.Target));
         Assert.Contains("Renamed", log[2].Details);
-        Assert.NotEqual(created.Token, regenerated.Token);
+        Assert.NotEqual(created.Url, regenerated.Url);
         foreach (var feed in new[] { created, regenerated })
-            Assert.All(log, e => Assert.DoesNotContain(feed.Token, e.Details ?? ""));
+            Assert.All(log, e => Assert.DoesNotContain(CalendarFeedTests.TokenOf(feed), e.Details ?? ""));
     }
 
     // --- Tags, branding, themes ---------------------------------------------------------------------------------------

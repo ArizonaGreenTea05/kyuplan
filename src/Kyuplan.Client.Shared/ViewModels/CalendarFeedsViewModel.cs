@@ -6,7 +6,7 @@ using Kyuplan.Contracts;
 
 namespace Kyuplan.Client.ViewModels;
 
-/// <summary>One line of the feed list: the feed, its address and what its sources are about in one line.</summary>
+/// <summary>One line of the feed list: the feed and what its sources are about in one line. Its address is not here: the server only tells it when the feed is made or gets a new one.</summary>
 public sealed class CalendarFeedRow(CalendarFeedDto feed, IReadOnlyList<GroupDto> groups) : ObservableObject
 {
     public CalendarFeedDto Feed => feed;
@@ -14,9 +14,6 @@ public sealed class CalendarFeedRow(CalendarFeedDto feed, IReadOnlyList<GroupDto
     public int Id => feed.Id;
 
     public string Name => feed.Name;
-
-    /// <summary>The address to give to calendar apps.</summary>
-    public string Url => feed.Url;
 
     /// <summary>"Events (Dojo), Birthdays (Dojo)": the kind of each source and its group; a source whose group is gone gets a warning.</summary>
     public string SourcesText => string.Join(", ", feed.Sources.Select((s, i) =>
@@ -130,7 +127,37 @@ public sealed partial class CalendarFeedsViewModel : PageViewModel
     {
         var name = e.Feed.Name;
         SetNotice(() => string.Format(e.Created ? Strings.CalendarFeeds_Created : Strings.CalendarFeeds_Saved, name));
+        if (e.Created) RevealAddress(e.Feed);
         await LoadAsync(async ct => Feeds = await RowsAsync(ct));
+    }
+
+    // --- The address: told once -------------------------------------------------------------------------------
+
+    private string? _addressFeedName;
+    private int _addressFeedId;
+
+    /// <summary>The address of the feed that was just made or got a new one; the server keeps only a hash, so this is the one chance to copy it. Empty when there is none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAddress), nameof(AddressText))]
+    private string _address = "";
+
+    public bool HasAddress => Address.Length > 0;
+
+    /// <summary>Says whose address it is and that it is not shown again.</summary>
+    public string AddressText => HasAddress ? string.Format(Strings.CalendarFeeds_AddressOnce, _addressFeedName) : "";
+
+    private void RevealAddress(CalendarFeedDto feed)
+    {
+        _addressFeedName = feed.Name;
+        _addressFeedId = feed.Id;
+        Address = feed.Url ?? "";
+    }
+
+    [RelayCommand]
+    private void DismissAddress()
+    {
+        _addressFeedName = null;
+        Address = "";
     }
 
     // --- New address and deleting: both ask first -------------------------------------------------------------
@@ -185,14 +212,18 @@ public sealed partial class CalendarFeedsViewModel : PageViewModel
         await LoadAsync(async ct =>
         {
             if (delete) await _api.DeleteCalendarFeedAsync(feed.Id, ct);
-            else await _api.RegenerateCalendarFeedAsync(feed.Id, ct);
+            else RevealAddress(await _api.RegenerateCalendarFeedAsync(feed.Id, ct));
             done = true;
             Feeds = await RowsAsync(ct);
         });
 
         if (!done) return;
 
-        if (delete && Editor.Editing?.Id == feed.Id) Editor.CancelCommand.Execute(null);
+        if (delete)
+        {
+            if (HasAddress && _addressFeedId == feed.Id) DismissAddress();
+            if (Editor.Editing?.Id == feed.Id) Editor.CancelCommand.Execute(null);
+        }
         SetNotice(() => string.Format(delete ? Strings.CalendarFeeds_Deleted : Strings.CalendarFeeds_Regenerated, feed.Name));
     }
 
@@ -234,5 +265,6 @@ public sealed partial class CalendarFeedsViewModel : PageViewModel
         Editor.Refresh();
         OnPropertyChanged(nameof(ConfirmText));
         OnPropertyChanged(nameof(NoticeText));
+        OnPropertyChanged(nameof(AddressText));
     }
 }

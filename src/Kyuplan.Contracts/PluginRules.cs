@@ -56,22 +56,23 @@ public static partial class PluginRules
 
     public static readonly string[] Methods = ["POST", "PUT", "DELETE"];
 
-    [GeneratedRegex("^[a-z][a-z0-9-]{1,31}$")]
+    // \z, not $: in .NET a $ also matches before a trailing "\n", so "view\n" would pass.
+    [GeneratedRegex(@"^[a-z][a-z0-9-]{1,31}\z")]
     private static partial Regex IdPattern();
 
-    [GeneratedRegex("^[a-z][A-Za-z0-9]{0,31}$")]
+    [GeneratedRegex(@"^[a-z][A-Za-z0-9]{0,31}\z")]
     private static partial Regex NamePattern();
 
-    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,49}$")]
+    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9_]{0,49}\z")]
     private static partial Regex KeyPattern();
 
-    [GeneratedRegex(@"^[0-9]{1,5}(\.[0-9]{1,5}){0,3}$")]
+    [GeneratedRegex(@"^[0-9]{1,5}(\.[0-9]{1,5}){0,3}\z")]
     private static partial Regex VersionPattern();
 
-    [GeneratedRegex("^[A-Za-z][A-Za-z0-9_]{0,49}(:[A-Za-z][A-Za-z0-9_]{0,49}){0,3}$")]
+    [GeneratedRegex(@"^[A-Za-z][A-Za-z0-9_]{0,49}(:[A-Za-z][A-Za-z0-9_]{0,49}){0,3}\z")]
     private static partial Regex SectionPattern();
 
-    [GeneratedRegex(@"^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$")]
+    [GeneratedRegex(@"^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*\z")]
     private static partial Regex PathPattern();
 
     /// <summary>
@@ -184,7 +185,8 @@ public static partial class PluginRules
         if (section is null || !SectionPattern().IsMatch(section)) return false;
 
         var first = section.Split(':')[0];
-        return first == "Plugins" ? section.Contains(':') : !ReservedSections.Contains(first);
+        // The keys of the configuration are not case sensitive: "database" is the section "Database".
+        return string.Equals(first, "Plugins", StringComparison.OrdinalIgnoreCase) ? section.Contains(':') : !ReservedSections.Contains(first, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>The problem with a layout, or <c>null</c>. A page can have <c>heading</c>, <c>text</c>, <c>table</c>, <c>button</c> and <c>form</c>; a settings form only <c>heading</c>, <c>text</c>, <c>field</c> and <c>list</c>.</summary>

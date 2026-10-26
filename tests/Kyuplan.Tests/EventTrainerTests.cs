@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Contracts;
@@ -198,6 +201,9 @@ public sealed class EventTrainerTests
     [Fact]
     public async Task The_calendar_names_the_trainers_of_an_event_by_name_and_does_not_count_them_as_invited()
     {
+        // The clock is pinned to midday: with the real one, a run in the first hour after the club's midnight would put the event
+        // (which started an hour ago) on the day before, and the day view would not list it.
+        var now = new DateTimeOffset(2026, 10, 13, 10, 0, 0, TimeSpan.Zero);
         using var database = new InMemoryDatabase();
         using var accounts = new InMemoryDatabase();
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
@@ -207,6 +213,7 @@ public sealed class EventTrainerTests
             builder.UseSetting("DefaultData:Enabled", "false");
             builder.UseSetting("Database:ConnectionString", database.ConnectionString);
             TestAccounts.Configure(builder, accounts);
+            builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(new FakeTimeProvider(now)));
         });
         var admin = factory.CreateSignedInClient();
 
@@ -221,7 +228,7 @@ public sealed class EventTrainerTests
         var anna = await Post<ManualMemberDto>($"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Anna", null, null));
         var tina = await Post<ManualMemberDto>($"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("Tina", null, null));
         var ben = await Post<ManualMemberDto>($"/api/manual/groups/{group.Id}/members", new ManualMemberInputDto("ben", null, null));
-        var start = DateTimeOffset.UtcNow.AddHours(-1);
+        var start = now.AddHours(-1);
         ManualInvitationDto[] invitations = [new(anna.Id, ManualRsvp.Accepted), new(tina.Id, ManualRsvp.Accepted)];
         var hosted = await Post<ManualEventDto>($"/api/manual/groups/{group.Id}/events",
             new ManualEventInputDto("Training", start, start.AddHours(2), false, invitations, [tina.Id, ben.Id]));

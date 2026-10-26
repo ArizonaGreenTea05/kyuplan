@@ -6,6 +6,7 @@ Read this instead of exploring. Open `docs/reference.md` (config keys, API, tabl
 ## Layout (`src/`)
 - `Contracts`: wire DTOs and shared rules (`*Rules.cs`). Change here first when the API shape changes.
 - `Api`: ASP.NET minimal API. `Endpoints/` routes, `Persistence/` services + EF (SQLite), `Accounts/` users, `Spond/` Spond access, `Statistics/` engine, `Domain/`.
+- `Plugins.Abstractions`: what a plugin compiles against (`IKyuplanPlugin`, `IPluginBuilder`, `IDataSource` and its model `GroupInfo`/`MemberInfo`/`EventInfo`, `PluginEndpointExtensions`). Not referenced by the Api yet (it still uses its own copies in `Spond/` and `Domain/`); namespace `Kyuplan.Plugins`.
 - `Client.Shared`: typed API client, **all view models**, **all UI texts** (`Resources/Strings.resx` + `Strings.de.resx`). No UI-framework code.
 - `Client.Blazor` (WASM) and `Client.Wpf` (Windows only): markup only; bind to the shared view models.
 - `Client.Linux` (GTK 4 / libadwaita through Gir.Core; builds on every OS, runs where GTK is): the native Linux client for Arch, widgets built in code (`Pages/`, `Stages/`, `Kit/`: `Bind.Watch`, `Ui.*`), sidebar = `NavigationViewModel`, themes = `Services/ThemePalette.cs` (colour sets over libadwaita's named colours). Package: `deploy/arch/PKGBUILD`. Look at it with `tests/linux` (Docker: Arch + Xvfb + screenshots, `docs/developer-guide.md#linux-screenshots`). Texts from the shared `Strings` as everywhere.

@@ -35,12 +35,14 @@ WORKDIR /src
 # Restore on the project files alone, so that this layer is reused until a package changes.
 COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/Kyuplan.Contracts/Kyuplan.Contracts.csproj src/Kyuplan.Contracts/
+COPY src/Kyuplan.Plugins.Abstractions/Kyuplan.Plugins.Abstractions.csproj src/Kyuplan.Plugins.Abstractions/
 COPY src/Kyuplan.Client.Shared/Kyuplan.Client.Shared.csproj src/Kyuplan.Client.Shared/
 COPY src/Kyuplan.Client.Blazor/Kyuplan.Client.Blazor.csproj src/Kyuplan.Client.Blazor/
 COPY src/Kyuplan.Api/Kyuplan.Api.csproj src/Kyuplan.Api/
 RUN dotnet restore src/Kyuplan.Api -a "$([ "$TARGETARCH" = arm64 ] && echo arm64 || echo x64)"
 
 COPY src/Kyuplan.Contracts src/Kyuplan.Contracts
+COPY src/Kyuplan.Plugins.Abstractions src/Kyuplan.Plugins.Abstractions
 COPY src/Kyuplan.Client.Shared src/Kyuplan.Client.Shared
 COPY src/Kyuplan.Client.Blazor src/Kyuplan.Client.Blazor
 COPY src/Kyuplan.Api src/Kyuplan.Api
@@ -57,11 +59,17 @@ RUN dotnet publish src/Kyuplan.Api -c Release -o /app --no-restore -p:Version=${
 # Empty unless a build context of this name is given (see above).
 FROM scratch AS installer
 
+# The plugins that come with the image: *.kyuplugin files, which a new installation installs at its first start without needing the
+# network (Plugins:BundledDirectory, docs/deployment.md#plugins). Empty unless a build context of this name is given; the release
+# workflow passes the latest release of the Spond plugin.
+FROM scratch AS plugins
+
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0@sha256:de0ee358cdd672f7017a003bed21e9ac9ed48a27c922a59b18175b6e82fa7fee
 WORKDIR /app
 COPY --from=build /app .
 COPY --from=installer / /app/downloads/
+COPY --from=plugins / /app/plugins/
 COPY --from=docs /repo/website/build /app/docs
 
 # The default is SQLite: both databases, the settings file and the log files live in /data. Mount a volume there, or they are lost

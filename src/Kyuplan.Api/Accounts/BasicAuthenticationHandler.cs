@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using Kyuplan.Api.Plugins;
 using Kyuplan.Contracts;
 
 namespace Kyuplan.Api.Accounts;
@@ -18,7 +19,8 @@ public sealed class BasicAuthenticationHandler(
     ILoggerFactory logger,
     UrlEncoder encoder,
     AccountService accounts,
-    LoginThrottle throttle)
+    LoginThrottle throttle,
+    PluginHost plugins)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "Basic";
@@ -60,7 +62,7 @@ public sealed class BasicAuthenticationHandler(
         identity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()));
         // The name other users get to see (it is what ends up written under comments), not the one that was typed to sign in.
         identity.AddClaim(new Claim(ClaimTypes.Name, user.DisplayName));
-        identity.AddClaims(user.EffectivePermissions().Select(p => new Claim(Permission.ClaimType, p)));
+        identity.AddClaims(user.EffectivePermissions(plugins.PermissionIds).Select(p => new Claim(Permission.ClaimType, p)));
 
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }

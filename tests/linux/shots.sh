@@ -17,7 +17,7 @@ echo "== build"
 
 echo "== API (demo data)"
 mkdir -p /tmp/api && cd /tmp/api
-ASPNETCORE_URLS=http://127.0.0.1:5100 Accounts__InitialAdminPassword="$PASSWORD" Spond__UseDemoData=true \
+ASPNETCORE_URLS=http://127.0.0.1:5100 Accounts__InitialAdminPassword="$PASSWORD" Spond__UseDemoData=true Plugins__InstallDefaults=false \
   dotnet "$WORK/src/Kyuplan.Api/bin/Debug/net10.0/Kyuplan.Api.dll" > /tmp/api.log 2>&1 &
 for _ in $(seq 1 60); do curl -fs http://127.0.0.1:5100/healthz > /dev/null && break; sleep 1; done
 curl -fs http://127.0.0.1:5100/healthz > /dev/null || { cat /tmp/api.log; exit 1; }
@@ -43,8 +43,8 @@ sleep 8
 # The rows of the sidebar for the administrator of the demo data (the window is 1360 x 860).
 declare -A PAGES=(
   [01-dashboard]=80 [02-statistics]=118 [03-calendar]=156 [04-exams]=194 [05-members]=232 [06-belts]=270 [07-prices]=308 [08-tags]=346
-  [09-users]=431 [10-roles]=469 [11-settings]=507 [12-branding]=545 [13-calendar-feeds]=583 [14-backup]=621 [15-sync-status]=659
-  [16-account]=744 [17-preferences]=782
+  [09-users]=431 [10-roles]=469 [11-settings]=507 [12-plugins]=545 [13-branding]=583 [14-calendar-feeds]=621 [15-backup]=659 [16-sync-status]=697
+  [17-account]=782 [18-preferences]=820
 )
 for name in $(printf '%s\n' "${!PAGES[@]}" | sort); do
   xdotool mousemove 130 "${PAGES[$name]}" click 1

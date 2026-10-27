@@ -1,0 +1,147 @@
+@implements IDisposable
+@using System.ComponentModel
+
+@* Draws what a plugin describes in JSON (headings, texts, fields, lists, tables, buttons, forms): one control per kind of element, the same for every plugin. *@
+@foreach (var item in Items)
+{
+    switch (item)
+    {
+        case PluginTextViewModel text when text.IsHeading:
+            <h3>@text.Text</h3>
+            break;
+
+        case PluginTextViewModel text:
+            <p class="hint">@text.Text</p>
+            break;
+
+        case PluginFieldViewModel input:
+            <PluginField Field="input" Disabled="Disabled" />
+            break;
+
+        case PluginListViewModel list:
+            <h3>@list.Label</h3>
+            if (list.Hint is { } listHint)
+            {
+                <p class="hint">@listHint</p>
+            }
+
+            foreach (var row in list.Rows)
+            {
+                <div class="grid two">
+                    @foreach (var cell in row.Fields)
+                    {
+                        <PluginField Field="cell" Disabled="Disabled" />
+                    }
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => list.RemoveRowCommand.Execute(row)">@Strings.Plugin_ListRemove</button>
+                </div>
+            }
+
+            if (list.Problem is { } listProblem)
+            {
+                <p class="field-error" role="alert">@listProblem</p>
+            }
+
+            <div class="form-actions">
+                <button type="button" class="btn secondary" disabled="@(Disabled || !list.CanAdd)" @onclick="() => list.AddRowCommand.Execute(null)">@Strings.Plugin_ListAdd</button>
+            </div>
+            break;
+
+        case PluginTableViewModel table:
+            if (table.Title is { } title)
+            {
+                <h3>@title</h3>
+            }
+
+            if (table.IsEmpty)
+            {
+                <p class="empty">@table.EmptyText</p>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="data">
+                        <thead>
+                            <tr>
+                                @foreach (var header in table.Headers)
+                                {
+                                    <th scope="col">@header</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in table.Rows)
+                            {
+                                <tr>
+                                    @foreach (var cell in row)
+                                    {
+                                        <td>@cell</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            break;
+
+        case PluginButtonViewModel button:
+            <div class="form-actions">
+                <button type="button" class="btn" disabled="@Disabled" @onclick="() => button.Command.ExecuteAsync(null)">@button.Label</button>
+            </div>
+            break;
+
+        case PluginFormBlockViewModel block:
+            <section class="card card-form">
+                <PluginItems Items="block.Form.Items" Disabled="Disabled" />
+                <div class="form-actions">
+                    <button type="button" class="btn" disabled="@(Disabled || !block.Submit.CanExecute(null))" @onclick="() => block.Submit.ExecuteAsync(null)">@block.SubmitLabel</button>
+                </div>
+            </section>
+            break;
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PluginItemViewModel> Items { get; set; } = [];
+
+    [Parameter] public bool Disabled { get; set; }
+
+    private readonly List<INotifyPropertyChanged> _observed = [];
+
+    // The view models of the items and of the rows of a list are their own objects: each one tells when something typed or loaded changed.
+    protected override void OnParametersSet()
+    {
+        Unobserve();
+        foreach (var item in Items)
+        {
+            Observe(item);
+            if (item is PluginListViewModel list)
+            {
+                Observe(list.Rows);
+                foreach (var cell in list.Rows.SelectMany(r => r.Fields)) Observe(cell);
+            }
+            else if (item is PluginFormBlockViewModel block)
+            {
+                Observe(block.Form);
+            }
+        }
+    }
+
+    private void Observe(INotifyPropertyChanged source)
+    {
+        source.PropertyChanged += OnChanged;
+        _observed.Add(source);
+    }
+
+    private void Unobserve()
+    {
+        foreach (var source in _observed) source.PropertyChanged -= OnChanged;
+        _observed.Clear();
+    }
+
+    private void OnChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Unobserve();
+}

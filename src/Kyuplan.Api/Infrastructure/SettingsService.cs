@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Kyuplan.Api.Accounts;
 using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Persistence;
+using Kyuplan.Api.Plugins;
 using Kyuplan.Api.Sources;
 using Kyuplan.Contracts;
 
@@ -37,7 +38,9 @@ public sealed class SettingsService(
     TimeProvider time,
     IHostEnvironment environment,
     ILoggerFactory loggers,
-    IConfiguration configuration)
+    IConfiguration configuration,
+    PluginHost plugins,
+    PluginCatalogService catalog)
 {
     public SettingsDto Get()
     {
@@ -46,16 +49,12 @@ public sealed class SettingsService(
             ManagesDatabaseFiles ? DataSource(database.Value.ConnectionString) : "",
             ManagesDatabaseFiles ? DataSource(accounts.Value.ConnectionString) : "",
             first.UseDemoData,
-            first.Email,
-            first.PhoneNumber,
-            !string.IsNullOrEmpty(first.Password),
             statistics.Value.TimeZone,
             statistics.Value.ExamKeyword,
             statistics.Value.DefaultMinAttendancePercent,
             statistics.Value.DefaultMinInvitedEvents,
             sync.Value.Enabled,
             Math.Max(0, (int)Math.Round(sync.Value.Interval.TotalMinutes)),
-            [.. first.Accounts.Select(a => new SpondAccountDto(a.Email, a.PhoneNumber, !string.IsNullOrEmpty(a.Password)))],
             configuration[AllowedHostsKey] is { Length: > 0 } hosts ? hosts : SettingsRules.AnyHost,
             statistics.Value.DefaultEventStars,
             statistics.Value.ExamMinAverageStars,
@@ -64,7 +63,39 @@ public sealed class SettingsService(
             dataSource.Value.Script,
             metrics.Value.Enabled,
             !string.IsNullOrEmpty(metrics.Value.Token),
-            [.. dataSource.Value.Secrets.Where(s => !string.IsNullOrEmpty(s.Value)).Select(s => s.Key).Order(StringComparer.OrdinalIgnoreCase)]);
+            [.. dataSource.Value.Secrets.Where(s => !string.IsNullOrEmpty(s.Value)).Select(s => s.Key).Order(StringComparer.OrdinalIgnoreCase)],
+            PluginSettings: Forms().ToDictionary(f => f.Source.Id, f => PluginSettingsMapper.Read(f.Form, configuration.GetSection(f.Section))));
+    }
+
+    /// <summary>
+    /// The settings forms of the data sources of the installed plugins: the form, and the section of the configuration its values are kept in. A data source id that two
+    /// installed plugins claim (a hand-edited index; installing refuses it) has one form: the one of the plugin that runs.
+    /// </summary>
+    private IEnumerable<(PluginDataSourceDef Source, PluginUiLayout Form, string Section)> Forms() =>
+        plugins.Plugins.OrderByDescending(p => p.IsRunning).SelectMany(p => (p.Manifest.DataSources ?? [])
+                .Select(source => (Source: source, Form: p.Installed.FormOf(source), Section: p.Installed.SectionOf(source)))
+                .Where(f => f.Form is not null)
+                .Select(f => (f.Source, f.Form!, f.Section)))
+            .DistinctBy(f => f.Source.Id);
+
+    /// <summary>What is wrong with the settings of the plugin data sources that were sent, or <c>null</c>. A data source that was not sent is left alone.</summary>
+    private string? PluginSettingsProblem(SettingsInputDto input)
+    {
+        if (input.PluginSettings is not { Count: > 0 } sent) return null;
+
+        var forms = Forms().ToList();
+        foreach (var (id, values) in sent)
+        {
+            if (values is null) return $"pluginSettings: the settings of '{id}' are empty.";
+            var matches = forms.Where(f => f.Source.Id == id).ToList();
+            if (matches.Count == 0) return $"pluginSettings: no installed plugin has a data source '{id}' with settings.";
+            var form = matches[0];
+            var section = configuration.GetSection(form.Section);
+            if (PluginRules.CheckValues(form.Form, PluginSettingsMapper.WithoutStaleKeeps(form.Form, section, values), PluginSettingsMapper.HasSecret(form.Form, section)) is { } problem)
+                return $"pluginSettings.{id}: {problem}";
+        }
+
+        return null;
     }
 
     /// <summary>The value stored for the script secret <paramref name="name"/>, or <c>null</c>.</summary>
@@ -120,7 +151,8 @@ public sealed class SettingsService(
     public const string AllowedHostsKey = "AllowedHosts";
 
     public SetupStatusDto GetStatus() => new(
-        state.NeedsSetup, state.NeedsSetup ? ForSetup(Get()) : null, state.NeedsSetup ? file.Path : null, SettingsFile.IsConfigured(configuration));
+        state.NeedsSetup, state.NeedsSetup ? ForSetup(Get()) : null, state.NeedsSetup ? file.Path : null, SettingsFile.IsConfigured(configuration),
+        state.NeedsSetup ? catalog.ForSetup() : null);
 
     /// <summary>The setup needs no login: a script that is already there (from the configuration) may hold a token and is not given to whoever asks. The form leaves it alone.</summary>
     private static SettingsDto ForSetup(SettingsDto settings) =>
@@ -151,24 +183,14 @@ public sealed class SettingsService(
                 Fail("accountsDatabasePath", "The accounts database must be another file than the planner database.");
         }
 
-        if (!SettingsRules.IsDataSource(input.DataSource)) Fail("dataSource", $"dataSource must be one of: {string.Join(", ", DataSourceKinds.All)}.");
+        if (!SettingsRules.IsDataSource(input.DataSource)) Fail("dataSource", $"dataSource must be one of: {string.Join(", ", DataSourceKinds.All)}, or the id of a data source of a plugin (lower case letters, digits and hyphens).");
         var script = input.CustomScript ?? dataSource.Value.Script;
         if (script.Length > SettingsRules.MaxScriptLength) Fail("customScript", $"customScript is too long (at most {SettingsRules.MaxScriptLength} characters).");
         else if (RequestedKind(input) == DataSourceKinds.Custom && CustomScriptDataSource.CheckSyntax(script) is { } problem) Fail("customScript", $"customScript: {problem}");
 
         if (SecretsProblem(input.ScriptSecrets) is { } secretsProblem) Fail("scriptSecrets", secretsProblem);
 
-        if (RequestedKind(input) == DataSourceKinds.Spond &&
-            SettingsRules.HasHalfCredentials(input.SpondEmail, input.SpondPhoneNumber, !string.IsNullOrEmpty(input.SpondPassword) || Get().HasSpondPassword))
-            Fail("spondPassword", "A Spond login needs the email (or phone number) and the password.");
-
-        if (input.BackupAccounts is { } backups)
-        {
-            var current = spond.Value.Accounts;
-            if (backups.Count > SettingsRules.MaxBackupAccounts) Fail("backupAccounts", $"backupAccounts: at most {SettingsRules.MaxBackupAccounts} accounts.");
-            else if (backups.Any(b => !IsEmpty(b) && SettingsRules.HasHalfCredentials(b.Email, b.PhoneNumber, !string.IsNullOrEmpty(b.Password) || StoredPassword(current, b) is not null)))
-                Fail("backupAccounts", "A backup Spond login needs the email (or phone number) and the password.");
-        }
+        if (PluginSettingsProblem(input) is { } pluginProblem) Fail("pluginSettings", pluginProblem);
 
         if (!string.IsNullOrEmpty(input.MetricsToken) && !SettingsRules.IsMetricsToken(input.MetricsToken))
             Fail("metricsToken", $"metricsToken must be {SettingsRules.MinMetricsTokenLength} to {SettingsRules.MaxMetricsTokenLength} characters without spaces.");
@@ -302,9 +324,10 @@ public sealed class SettingsService(
         // Written as a whole: a secret that is not in the list is gone. The values are encrypted by the settings file.
         if (ScriptSecretsOf(input) is { } secrets && !SameSecrets(secrets, dataSource.Value.Secrets))
             changes["DataSource:Secrets"] = new JsonObject([.. secrets.OrderBy(s => s.Key, StringComparer.OrdinalIgnoreCase).Select(s => KeyValuePair.Create(s.Key, (JsonNode?)JsonValue.Create(s.Value)))]);
-        Set("Spond:Email", now.SpondEmail ?? "", input.SpondEmail?.Trim() ?? "");
-        Set("Spond:PhoneNumber", now.SpondPhoneNumber ?? "", input.SpondPhoneNumber?.Trim() ?? "");
-        if (!string.IsNullOrEmpty(input.SpondPassword) && input.SpondPassword != spond.Value.Password) changes["Spond:Password"] = input.SpondPassword;
+        // The settings of the data sources of plugins: only those the client sent.
+        foreach (var form in Forms().Where(f => input.PluginSettings?.ContainsKey(f.Source.Id) == true))
+            foreach (var (key, value) in PluginSettingsMapper.Changes(form.Form, form.Section, input.PluginSettings![form.Source.Id], configuration.GetSection(form.Section)))
+                changes[key] = value;
         // An older client that does not know the field sends none: that keeps what is set.
         if (input.UnregisteredSubGroup is not null) Set("Spond:UnregisteredSubGroup", now.UnregisteredSubGroup ?? "", input.UnregisteredSubGroup.Trim());
         Set("Statistics:TimeZone", now.TimeZone, input.TimeZone.Trim());
@@ -322,47 +345,14 @@ public sealed class SettingsService(
         if (input.MetricsEnabled is { } metricsOn) Set("Metrics:Enabled", Flag(now.MetricsEnabled), Flag(metricsOn));
         if (!string.IsNullOrEmpty(input.MetricsToken) && input.MetricsToken != metrics.Value.Token) changes["Metrics:Token"] = input.MetricsToken;
 
-        var backups = BackupAccountsOf(input);
-        if (backups is not null && !SameAccounts(backups, spond.Value.Accounts))
-            changes["Spond:Accounts"] = new JsonArray([.. backups.Select(a => (JsonNode)new JsonObject
-            {
-                ["Email"] = a.Email,
-                ["PhoneNumber"] = a.PhoneNumber,
-                ["Password"] = a.Password,
-            })]);
         return changes;
     }
-
-    private static bool IsEmpty(SpondAccountInputDto a) =>
-        string.IsNullOrWhiteSpace(a.Email) && string.IsNullOrWhiteSpace(a.PhoneNumber) && string.IsNullOrEmpty(a.Password);
-
-    private static bool SameLogin(SpondAccount a, SpondAccountInputDto b) =>
-        !string.IsNullOrWhiteSpace(b.Email)
-            ? string.Equals(a.Email, b.Email.Trim(), StringComparison.OrdinalIgnoreCase)
-            : string.IsNullOrWhiteSpace(a.Email) && !string.IsNullOrWhiteSpace(b.PhoneNumber) && a.PhoneNumber == b.PhoneNumber.Trim();
-
-    private static string? StoredPassword(IEnumerable<SpondAccount> current, SpondAccountInputDto b) =>
-        current.FirstOrDefault(a => SameLogin(a, b))?.Password is { Length: > 0 } password ? password : null;
-
-    /// <summary>The backup accounts as typed (blank rows dropped; an empty password keeps the stored one), or <c>null</c> when the client sent none.</summary>
-    private List<SpondAccount>? BackupAccountsOf(SettingsInputDto input) =>
-        input.BackupAccounts?.Where(b => !IsEmpty(b)).Select(b => new SpondAccount
-        {
-            Email = b.Email?.Trim() is { Length: > 0 } email ? email : null,
-            PhoneNumber = b.PhoneNumber?.Trim() is { Length: > 0 } phone ? phone : null,
-            Password = !string.IsNullOrEmpty(b.Password) ? b.Password : StoredPassword(spond.Value.Accounts, b),
-        }).ToList();
 
     private static bool SameSecrets(Dictionary<string, string> next, Dictionary<string, string?> current)
     {
         var stored = current.Where(s => !string.IsNullOrEmpty(s.Value)).ToList();
         return next.Count == stored.Count && stored.All(s => next.TryGetValue(s.Key, out var value) && value == s.Value);
     }
-
-    private static bool SameAccounts(List<SpondAccount> next, List<SpondAccount> current) =>
-        next.Count == current.Count && next.Zip(current).All(p =>
-            (p.First.Email ?? "") == (p.Second.Email ?? "") && (p.First.PhoneNumber ?? "") == (p.Second.PhoneNumber ?? "") &&
-            (p.First.Password ?? "") == (p.Second.Password ?? ""));
 
     /// <summary>The full path the settings file is to move to, or <c>null</c> when none was given or it stays where it is.</summary>
     private string? MovedSettingsFile(string? path)

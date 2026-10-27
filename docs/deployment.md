@@ -323,7 +323,7 @@ because every user is only meant to see the guides that apply to them:
   silicon, AWS Graviton, Azure Cobalt, ...). Not available: Windows containers, 32-bit ARM.
 - **Port**: **8080**, plain HTTP. Change the *published* port (`-p 30100:8080`), not the one in the container.
 - **Volume**: `/data` is the only place that has to survive: the SQLite databases (with SQLite), the settings file `settings.json`, the key for the
-  passwords in it (`keys/`), the uploaded themes and GitHub theme packs (`themes/`, small JSON files) and the logs (`logs/`, one file per day, the 31 newest kept; also on the console, i.e. `docker logs`).
+  passwords in it (`keys/`), the uploaded themes and GitHub theme packs (`themes/`, small JSON files), the installed plugins (`plugins/`) and the logs (`logs/`, one file per day, the 31 newest kept; also on the console, i.e. `docker logs`).
 - **User**: not root (UID 1654, name `app`). A Docker-managed volume is writable for it. For a folder you mount yourself, give that UID the rights or run the container as the folder's owner (`--user 568:568`).
 - **Health check**: `GET /healthz` answers `200 ok` without a login while the database can be reached (`503` otherwise), also over plain HTTP from other machines, so load balancers and platform probes can use it. The image has a Docker `HEALTHCHECK` that uses it (see `docker ps`).
 - **Metrics and logs**: `GET /metrics` (Prometheus text format, OpenTelemetry; off by default, `Metrics__Enabled=true` or the settings page switches it on, and it then needs `Metrics__Token` as bearer token) and JSON console logs with `Logging__Console__FormatterName=json`; the metrics and an alert example are in the [admin guide](admin-guide.md#day-to-day-operation).
@@ -358,6 +358,16 @@ because every user is only meant to see the guides that apply to them:
 - **The Settings page and the database**: with SQLite the page can move the two database files (within the data folder). With PostgreSQL the
   connection strings contain passwords and are **only set through the environment** (or `appsettings`); the two path fields are empty and ignored.
 - The log warns that data protection keys are not persisted. Nothing in the API uses them (there are no cookies or tokens), so that is harmless.
+
+## Plugins
+
+Plugins (the Spond data source is one) are installed by an administrator on the Plugins page, or come with the installation:
+
+- **New installation.** The first start installs the default plugins (`Plugins__Defaults`, the Spond plugin): first the `*.kyuplugin` files in `Plugins__BundledDirectory` (default `plugins` next to the program, `/app/plugins` in the image, which carries the latest release of the Spond plugin from when it was built; put files there in your own image or mount them), then, if there are none, the latest release of the repositories of `Plugins__Defaults` from GitHub. The container needs **internet access to `api.github.com` and `github.com`** for that (GitHub sends the download on to a host below `githubusercontent.com`, over https; a redirect to any other host is refused), or the packages in the bundled folder; if neither works the server starts without the plugin, the log says so, the first start after the network is back tries again, and administrators can install it on the Plugins page. An installation that already has a plugin (or `Plugins__InstallDefaults=false`, or `DefaultData__Enabled=false`) installs nothing by itself.
+- **Where they live.** `Plugins__Directory` (default `plugins` next to the settings file, i.e. `/data/plugins` in the image, on the volume). The folder is part of what you back up with the volume; the [backup file](admin-guide.md#backup-file-download-and-restore) holds the databases only, so install the plugins again after a restore (their settings are in `settings.json`).
+- **Changes restart the application** (inside the container: it keeps running); several instances behind a balancer must be changed one by one.
+- **Running third-party code.** A plugin runs with the rights of the server's user. Run the container as non-root (the image does) and do not give it more than it needs.
+- A new release of the Spond plugin is picked up by *Update* on the Plugins page; the server never updates a plugin by itself. The copy that comes with the image is *bundled*, not from GitHub, so it has no *Update* until it is installed once from its repository (`https://github.com/ArizonaGreenTea05/kyuplan.plugins.spond` on the Plugins page), which replaces the bundled copy.
 
 ## Choosing the database
 
@@ -608,4 +618,5 @@ docker build -f src/Kyuplan.Api/Dockerfile --build-arg VERSION=1.2.3 --build-arg
 docker buildx build --platform linux/amd64,linux/arm64 -f src/Kyuplan.Api/Dockerfile --build-context installer=artifacts/installer -t kyuplan .
 ```
 
-Without `--build-context installer=...` the image has no installer (and the server offers no download).
+Without `--build-context installer=...` the image has no installer (and the server offers no download). Without `--build-context plugins=<folder with *.kyuplugin files>`
+(the release workflow passes the latest release of the Spond plugin) the image carries no [plugin](#plugins): a new installation then fetches the Spond plugin from GitHub at its first start.

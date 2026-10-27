@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Sources;
 using Kyuplan.Api.Spond;
@@ -138,7 +137,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source($"function getGroups() {{ http.get('{url}'); return []; }}", allowLocal: false);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("local address", ex.Message);
     }
@@ -154,7 +153,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source($"function getGroups() {{ http.get('{url}'); return []; }}", allowLocal: true, allowPrivate: false);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("private address", ex.Message);
         Assert.Contains("AllowPrivateAddresses", ex.Message);
@@ -166,7 +165,7 @@ public sealed class CustomScriptDataSourceTests
         await using var service = await StartServiceAsync();
         using var source = Source($"function getGroups() {{ http.get('{service.Url}/to-lan'); return []; }}", allowLocal: true, allowPrivate: false);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("private address", ex.Message);
     }
@@ -176,7 +175,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { http.get('http://127.0.0.1:1/'); return []; }", allowLocal: false, allowPrivate: true);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("local address", ex.Message);
     }
@@ -187,7 +186,7 @@ public sealed class CustomScriptDataSourceTests
         // Nothing answers at a unique-local address of a test machine: the request fails by connect or timeout, not by the guard.
         using var source = Source("function getGroups() { http.get('http://[fd12:3456::1]:1/'); return []; }", TimeSpan.FromSeconds(2), allowLocal: false, allowPrivate: true);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.DoesNotContain("private address", ex.Message);
         Assert.DoesNotContain("local address", ex.Message);
@@ -320,7 +319,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source(script);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains(reason, ex.Message);
     }
@@ -330,7 +329,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { while (true) { } }", TimeSpan.FromMilliseconds(300), maxStatements: 0);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("took longer", ex.Message);
     }
@@ -340,7 +339,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { var i = 0; while (true) { i++; } }", maxStatements: 10_000);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.IsType<Jint.Runtime.StatementsCountOverflowException>(ex.InnerException);
     }
@@ -350,7 +349,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { var s = 'xxxxxxxxxxxxxxxx'; while (true) { s = s + s; } }", maxStatements: 0);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.IsType<Jint.Runtime.MemoryLimitExceededException>(ex.InnerException);
     }
@@ -360,7 +359,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { var a = []; while (true) { a.push(new Array(100000).fill(1)); } }", maxStatements: 0);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.IsType<Jint.Runtime.MemoryLimitExceededException>(ex.InnerException);
     }
@@ -370,7 +369,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function f(n) { return f(n + 1) + 1; } function getGroups() { return f(0); }");
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.IsType<Jint.Runtime.RecursionDepthOverflowException>(ex.InnerException);
     }
@@ -380,9 +379,9 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { while (true) { } }", maxStatements: 10_000, failureCache: TimeSpan.Zero);
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         // The gate is released and the engine is fresh: the second call is stopped the same way instead of hanging.
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
     }
 
     private static string CountingScript(string url, int status) => $$"""
@@ -413,8 +412,8 @@ public sealed class CustomScriptDataSourceTests
         using var source = Source(CountingScript(service.Url, 503));
 
         var calls = Enumerable.Range(0, 5).Select(_ => source.GetGroupsAsync(CancellationToken.None)).ToList();
-        var errors = new List<SpondUnavailableException>();
-        foreach (var call in calls) errors.Add(await Assert.ThrowsAsync<SpondUnavailableException>(() => call));
+        var errors = new List<DataSourceUnavailableException>();
+        foreach (var call in calls) errors.Add(await Assert.ThrowsAsync<DataSourceUnavailableException>(() => call));
 
         Assert.Equal(1, service.Hits);
         Assert.All(errors, e => Assert.Contains("upstream answered 503", e.Message));
@@ -427,9 +426,9 @@ public sealed class CustomScriptDataSourceTests
         await using var service = await StartServiceAsync();
         using var source = Source(CountingScript(service.Url, 500), clock: new ClubClock(time, Clock.Zone), failureCache: TimeSpan.FromSeconds(30));
 
-        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var first = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         time.Advance(TimeSpan.FromSeconds(10));
-        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var second = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Equal(1, service.Hits);
         Assert.Contains("upstream answered 500", first.Message);
@@ -447,9 +446,9 @@ public sealed class CustomScriptDataSourceTests
         service.Status = 500;
         using var source = Source(CountingScript(service.Url, 0), clock: new ClubClock(time, Clock.Zone), failureCache: TimeSpan.FromSeconds(30));
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         time.Advance(TimeSpan.FromSeconds(29));
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         Assert.Equal(1, service.Hits);
 
         service.Status = 200;
@@ -467,9 +466,9 @@ public sealed class CustomScriptDataSourceTests
         service.Delay = TimeSpan.FromSeconds(5);
         using var source = Source(CountingScript(service.Url, 200), TimeSpan.FromMilliseconds(300));
 
-        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var first = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var second = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("took longer", first.Message);
         Assert.Contains("took longer", second.Message);
@@ -488,10 +487,10 @@ public sealed class CustomScriptDataSourceTests
         var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
         var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        var other = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
-        var groups = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var other = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
+        var groups = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("took longer", other.Message);
         Assert.Contains("took longer", groups.Message);
@@ -512,10 +511,10 @@ public sealed class CustomScriptDataSourceTests
         var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
         var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("a", from, to, CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("b", from, to, CancellationToken.None));
 
         Assert.Equal(1, service.Hits);
         Assert.True(watch.Elapsed < TimeSpan.FromMilliseconds(250), "no further call may wait out the request timeout");
@@ -530,8 +529,8 @@ public sealed class CustomScriptDataSourceTests
             service.Hits = 0;
             using var source = Source(CountingScript(service.Url, 500), failureCache: window);
 
-            await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
-            await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+            await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+            await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
             Assert.Equal(2, service.Hits);
         }
@@ -544,9 +543,9 @@ public sealed class CustomScriptDataSourceTests
         service.Status = 500;
         using var source = Source(CountingScript(service.Url, 0));
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
         service.Status = 200;
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None)); // still remembered
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None)); // still remembered
         source.InvalidateCache();
 
         Assert.Single(await source.GetGroupsAsync(CancellationToken.None));
@@ -563,12 +562,12 @@ public sealed class CustomScriptDataSourceTests
         var from = DateTimeOffset.Parse("2026-09-01T00:00:00Z");
         var to = DateTimeOffset.Parse("2026-10-01T00:00:00Z");
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("bad", from, to, CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("bad", from, to, CancellationToken.None));
 
         Assert.Empty(await source.GetEventsAsync("good", from, to, CancellationToken.None));
         // Another window of the failing group is another key and is tried by itself.
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("bad", from.AddYears(1), to.AddYears(1), CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("bad", from.AddYears(1), to.AddYears(1), CancellationToken.None));
     }
 
     [Fact]
@@ -610,7 +609,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source(script);
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.IsType<Jint.Runtime.JavaScriptException>(ex.InnerException);
     }
@@ -624,8 +623,8 @@ public sealed class CustomScriptDataSourceTests
         using var slow = Source("function getGroups() { while (true) { } }", TimeSpan.FromMilliseconds(200), maxStatements: 0, logger: logger);
 
         await ok.GetGroupsAsync(CancellationToken.None);
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => bad.GetGroupsAsync(CancellationToken.None));
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => slow.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => bad.GetGroupsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => slow.GetGroupsAsync(CancellationToken.None));
 
         Assert.Single(logger.Messages, m => m.StartsWith("The custom data script succeeded after ") && m.EndsWith(" ms."));
         Assert.Single(logger.Messages, m => m.StartsWith("The custom data script failed after "));
@@ -671,7 +670,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source("function getGroups() { http.get('file:///etc/passwd'); return []; }");
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("not an http or https address", ex.Message);
     }
@@ -714,7 +713,7 @@ public sealed class CustomScriptDataSourceTests
     {
         using var source = Source($"function getGroups() {{ var s = {call}; return [{{ id: s, name: 'G' }}]; }}", secrets: new() { ["EMPTY"] = "", ["OTHER"] = Token });
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("asks for the secret", ex.Message);
         Assert.DoesNotContain(Token, ex.Message);
@@ -731,7 +730,7 @@ public sealed class CustomScriptDataSourceTests
             }
             """, logger: logger, secrets: new() { ["API_TOKEN"] = Token, ["LONGER"] = Token + "-extra" });
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("refused: *** / ***", ex.Message); // the longer value goes whole, not as the shorter one with "-extra" left
         Assert.Contains(logger.Messages, m => m == "Custom data script: using ***");
@@ -746,7 +745,7 @@ public sealed class CustomScriptDataSourceTests
         using var source = Source("function getGroups() { http.get('ftp://example.org/?key=' + secrets.get('API_TOKEN')); return []; }",
             logger: logger, secrets: new() { ["API_TOKEN"] = Token });
 
-        var ex = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var ex = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
 
         Assert.Contains("not an http or https address", ex.Message);
         Assert.Contains("ftp://example.org/?key=***", ex.Message);
@@ -771,8 +770,8 @@ public sealed class CustomScriptDataSourceTests
             secrets: new() { ["API_TOKEN"] = Token });
         source.RequestTimeout = TimeSpan.FromMilliseconds(200);
 
-        var first = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
-        var second = await Assert.ThrowsAsync<SpondUnavailableException>(() => source.GetEventsAsync("g", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddDays(1), CancellationToken.None));
+        var first = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetGroupsAsync(CancellationToken.None));
+        var second = await Assert.ThrowsAsync<DataSourceUnavailableException>(() => source.GetEventsAsync("g", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch.AddDays(1), CancellationToken.None));
 
         Assert.DoesNotContain(Token, first.Message);
         Assert.Contains("not asked again", second.Message); // a timeout holds for all data

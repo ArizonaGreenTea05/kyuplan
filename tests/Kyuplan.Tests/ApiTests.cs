@@ -333,14 +333,15 @@ public sealed class ApiTests(WebApplicationFactory<Program> factory) : IClassFix
     }
 
     [Fact]
-    public async Task Missing_spond_configuration_is_reported_as_503_not_a_crash()
+    public async Task A_data_source_whose_plugin_is_not_installed_is_reported_as_503_not_a_crash()
     {
         var api = CreateApi(b => b.UseSetting("Spond:UseDemoData", "false"));
 
         var ex = await Assert.ThrowsAsync<PlannerApiException>(() => api.GetGroupsAsync());
 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-        Assert.Contains("credentials", ex.Message);
+        Assert.Contains("plugin that is not installed", ex.Message);
+        Assert.Contains("spond", ex.Message);
     }
 
     [Fact]

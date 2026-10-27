@@ -20,13 +20,14 @@ public sealed partial class NavigationViewModel : ObservableObject
     private readonly LoginSession _session;
     private readonly NavigationItem[] _main, _admin, _account;
     private readonly ObservableCollection<NavigationItem> _items = [], _adminItems = [], _accountItems = [];
+    private readonly Dictionary<PluginPageViewModel, NavigationItem> _pluginItems = [];
     private NavigationItem _selectedItem = null!; // assigned in the constructor
 
     public NavigationViewModel(
         ShellViewModel shell, ExamsViewModel exams, DashboardViewModel dashboard, AttendanceStatisticsViewModel statistics,
         MembersViewModel members, BeltsViewModel belts, TagsViewModel tags, AccountViewModel account, PreferencesViewModel preferences,
         UserAdminViewModel users, RolesViewModel roles, BrandingAdminViewModel branding, BackupViewModel backup, SyncStatusViewModel syncStatus,
-        ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, ManualDataViewModel manualData, SettingsViewModel settings,
+        ExamPricesViewModel prices, CalendarFeedsViewModel calendarFeeds, ManualDataViewModel manualData, SettingsViewModel settings, PluginsViewModel plugins,
         LoginSession session, ClientUpdateViewModel update, CalendarViewModel calendar, EventBannerViewModel banner)
     {
         Shell = shell;
@@ -53,12 +54,13 @@ public sealed partial class NavigationViewModel : ObservableObject
             new(prices, "accessories-calculator-symbolic"),
             new(calendarFeeds, "network-wireless-symbolic"),
             new(manualData, "document-edit-symbolic"),
+            new(plugins, "application-x-addon-symbolic"),
         };
         NavigationItem Item(PageViewModel page) => all.First(i => ReferenceEquals(i.Page, page));
 
         // The order of the sidebar: the dashboard first (it is what opens), the groups Administration and Account at the bottom.
         _main = [Item(dashboard), Item(statistics), Item(calendar), Item(exams), Item(members), Item(belts), Item(prices), Item(tags), Item(manualData)];
-        _admin = [Item(users), Item(roles), Item(settings), Item(branding), Item(calendarFeeds), Item(backup), Item(syncStatus)];
+        _admin = [Item(users), Item(roles), Item(settings), Item(plugins), Item(branding), Item(calendarFeeds), Item(backup), Item(syncStatus)];
         _account = [Item(account), Item(preferences)];
         Items = new ReadOnlyObservableCollection<NavigationItem>(_items);
         AdminItems = new ReadOnlyObservableCollection<NavigationItem>(_adminItems);
@@ -67,6 +69,7 @@ public sealed partial class NavigationViewModel : ObservableObject
 
         ShowPermittedPages();
         shell.PermissionsChanged += (_, _) => ShowPermittedPages();
+        shell.PluginsChanged += (_, _) => ShowPermittedPages(); // the pages the plugins added
         shell.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ShellViewModel.Info)) ShowPermittedPages(); // the data source decides on the manual data page
@@ -115,13 +118,21 @@ public sealed partial class NavigationViewModel : ObservableObject
     /// </summary>
     private void ShowPermittedPages()
     {
-        var visible = _main.Concat(_admin).Concat(_account).Where(i => i.Page.CanView).ToList();
+        var main = Main();
+        var visible = main.Concat(_admin).Concat(_account).Where(i => i.Page.CanView).ToList();
         if (!visible.Contains(SelectedItem)) SelectedItem = visible[0];
 
-        Sync(_main, _items);
+        Sync(main, _items);
         Sync(_admin, _adminItems);
         Sync(_account, _accountItems);
     }
+
+    /// <summary>The pages of the main group: the program's own, then the ones the plugins added (an item per page view model, so that the selection survives a refresh).</summary>
+    private NavigationItem[] Main() =>
+    [
+        .. _main,
+        .. Shell.PluginPages.Select(page => _pluginItems.TryGetValue(page, out var item) ? item : _pluginItems[page] = new NavigationItem(page, "application-x-addon-symbolic")),
+    ];
 
     private static void Sync(NavigationItem[] source, ObservableCollection<NavigationItem> target)
     {

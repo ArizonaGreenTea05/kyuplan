@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
 using Kyuplan.Contracts;
@@ -329,7 +328,7 @@ public sealed class ExamPlanningTests : IDisposable
         var w = await BuildAsync();
         Spond.Unreachable = true;
 
-        await Assert.ThrowsAsync<SpondUnavailableException>(() => Planning(s => s.SuggestAsync(w.Next.Id, null, CancellationToken.None)));
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(() => Planning(s => s.SuggestAsync(w.Next.Id, null, CancellationToken.None)));
 
         // What the planner holds itself is there to read whatever Spond does.
         Assert.NotEmpty(await Planning(s => s.GetMembersAsync(w.Past.Id, CancellationToken.None)));

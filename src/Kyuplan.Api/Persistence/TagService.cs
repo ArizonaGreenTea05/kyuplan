@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Spond;
 using Kyuplan.Api.Statistics;
 using Kyuplan.Api.Infrastructure;
@@ -151,7 +150,7 @@ public sealed class TagService(PlannerDbContext db, StatisticsService statistics
             {
                 events = await statistics.GetWindowEventsAsync(group.Key, cancellationToken);
             }
-            catch (Exception ex) when (ex is SpondUnavailableException or GroupNotFoundException)
+            catch (Exception ex) when (ex is DataSourceUnavailableException or GroupNotFoundException)
             {
                 logger.LogWarning(ex, "Could not read the events of group {GroupId} from Spond; its tags keep the event name and start stored.", group.Key);
                 continue;

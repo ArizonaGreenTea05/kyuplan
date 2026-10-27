@@ -1,4 +1,3 @@
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Spond;
 
 namespace Kyuplan.Tests;
@@ -14,7 +13,7 @@ internal sealed class FakeSpondDataSource : IDataSource
     private Dictionary<string, IReadOnlyList<EventInfo>> _events = [];
     private int _groupsCalls;
 
-    public bool IsDemo => false;
+    public string Kind => "spond";
 
     /// <summary>How often the groups were asked for. A sync asks more than once, so this tells whether anything ran, not how often.</summary>
     public int GroupsCalls => Volatile.Read(ref _groupsCalls);
@@ -58,5 +57,5 @@ internal sealed class FakeSpondDataSource : IDataSource
     {
     }
 
-    private static SpondUnavailableException Down() => new("Spond is unreachable (test).");
+    private static DataSourceUnavailableException Down() => new("Spond is unreachable (test).");
 }

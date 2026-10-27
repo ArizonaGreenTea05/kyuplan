@@ -1,0 +1,87 @@
+<UserControl x:Class="Kyuplan.Client.WpfApp.Views.PluginsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:Kyuplan.Client.WpfApp.Localization">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="24,6,24,32">
+
+            <StackPanel>
+                <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitleText}" />
+                <TextBlock Text="{loc:Loc Plugins_Lede}" Style="{StaticResource LedeText}" />
+            </StackPanel>
+
+            <TextBlock Margin="0,40,0,0" HorizontalAlignment="Center" Style="{StaticResource LedeText}" TextAlignment="Center" MaxWidth="560"
+                       Text="{loc:Loc Page_NotAllowed}"
+                       Visibility="{Binding CanView, Converter={StaticResource InverseBoolToVisibility}}" />
+
+            <StackPanel Visibility="{Binding CanView, Converter={StaticResource BoolToVisibility}}">
+                <ProgressBar IsIndeterminate="True" AutomationProperties.Name="{loc:Loc Shell_Loading}" Height="3" Margin="0,8,0,0"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+
+                <Border Style="{StaticResource BannerBorder}" Margin="0,16,0,0"
+                        Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock Text="{Binding NoticeText}" TextWrapping="Wrap" Margin="0,12,0,0"
+                           Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}" />
+
+                <!-- Nothing is removed before this question is answered -->
+                <Border Style="{StaticResource BannerBorder}" Margin="0,12,0,0"
+                        Visibility="{Binding IsConfirmingRemoval, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0">
+                            <Button Command="{Binding RemoveCommand}" Content="{loc:Loc Plugins_RemoveYes}" AutomationProperties.Name="{loc:Loc Plugins_RemoveYes}" />
+                            <Button Command="{Binding CancelRemovalCommand}" Content="{loc:Loc Plugin_Cancel}" AutomationProperties.Name="{loc:Loc Plugin_Cancel}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding RemovalQuestion}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0" Visibility="{Binding CanEdit, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Plugins_InstallTitle}" Style="{StaticResource SectionTitleText}" />
+                        <TextBlock Text="{loc:Loc Plugins_Warning}" Foreground="{DynamicResource DataRiskTextBrush}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                        <TextBlock Text="{loc:Loc Plugins_Url}" Style="{StaticResource MutedText}" Margin="0,0,0,4" />
+                        <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{loc:Loc Plugins_Url}" />
+                        <TextBlock Text="{Binding UrlProblem}" Foreground="{DynamicResource DataRiskTextBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="{loc:Loc Plugins_UrlHint}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <Button Command="{Binding InstallCommand}" Content="{loc:Loc Plugins_Install}" AutomationProperties.Name="{loc:Loc Plugins_Install}"
+                                HorizontalAlignment="Left" Margin="0,12,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardBorder}" Margin="0,16,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{loc:Loc Plugins_InstalledTitle}" Style="{StaticResource SectionTitleText}" Margin="0,0,0,8" />
+                        <TextBlock Text="{loc:Loc Plugins_None}" Style="{StaticResource MutedText}"
+                                   Visibility="{Binding HasPlugins, Converter={StaticResource InverseBoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding Plugins}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <TextBlock Text="{Binding Name}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock Text="{Binding Details}" Style="{StaticResource MutedText}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <TextBlock Text="{Binding Offers}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Visibility="{Binding HasOffers, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding StatusText}" Style="{StaticResource MutedText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                                    Visibility="{Binding DataContext.CanEdit, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVisibility}}">
+                                            <Button Content="{loc:Loc Plugins_Update}" AutomationProperties.Name="{loc:Loc Plugins_Update}" CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.UpdateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    Visibility="{Binding CanUpdate, Converter={StaticResource BoolToVisibility}}" Margin="0,0,8,0" />
+                                            <Button Content="{loc:Loc Plugins_Remove}" AutomationProperties.Name="{loc:Loc Plugins_Remove}" CommandParameter="{Binding}"
+                                                    Command="{Binding DataContext.AskRemovalCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

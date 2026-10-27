@@ -57,7 +57,13 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     private static void SqliteConnectionsCleanup() => Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
 
     /// <summary>An API with nobody in it unless <paramref name="withAdmin"/>; the settings file is this test's own.</summary>
-    private WebApplicationFactory<Program> CreateHost(bool withAdmin = false, Action<IWebHostBuilder>? configure = null) =>
+    private WebApplicationFactory<Program> CreateHost(bool withAdmin = false, Action<IWebHostBuilder>? configure = null)
+    {
+        PluginTestKit.Install(SettingsFile, PluginTestKit.SpondPackage()); // the plugin that has the settings of Spond
+        return CreateHostCore(withAdmin, configure);
+    }
+
+    private WebApplicationFactory<Program> CreateHostCore(bool withAdmin, Action<IWebHostBuilder>? configure) =>
         factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("Spond:UseDemoData", "true");
@@ -77,7 +83,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
 
     /// <summary>The input that changes nothing: what the API runs with.</summary>
     private static SettingsInputDto Unchanged(SettingsDto s) => new(
-        s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData, s.SpondEmail, s.SpondPhoneNumber, null,
+        s.DatabasePath, s.AccountsDatabasePath, s.UseDemoData,
         s.TimeZone, s.ExamKeyword, s.DefaultMinAttendancePercent, s.DefaultMinInvitedEvents, s.SyncEnabled, s.SyncIntervalMinutes);
 
     private static async Task<SetupStatusDto> StatusAsync(HttpClient client) =>
@@ -161,7 +167,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     {
         using var host = CreateHost();
         var client = host.CreateClient();
-        var input = await SetupInputAsync(client, s => s with { MetricsEnabled = true, MetricsToken = "scrape-token-0123456789", SpondPassword = "spond-pass-1", CustomScript = "token('abc');" });
+        var input = await SetupInputAsync(client, s => s with { MetricsEnabled = true, MetricsToken = "scrape-token-0123456789", PluginSettings = PluginTestKit.Settings("spond", ("Email", "me@example.org"), ("Password", "spond-pass-1")), CustomScript = "token('abc');" });
 
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/setup", input)).StatusCode);
 
@@ -226,7 +232,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         var client = first.CreateClient();
 
         var response = await client.PostAsJsonAsync("/api/setup",
-            await SetupInputAsync(client, s => s with { TimeZone = "UTC", ExamKeyword = "Pruefung", SyncIntervalMinutes = 90, SpondPassword = "secret", SpondEmail = "me@example.org" }));
+            await SetupInputAsync(client, s => s with { TimeZone = "UTC", ExamKeyword = "Pruefung", SyncIntervalMinutes = 90, PluginSettings = PluginTestKit.Settings("spond", ("Password", "secret"), ("Email", "me@example.org")) }));
 
         Assert.True((await response.Content.ReadFromJsonAsync<SettingsSavedDto>())!.Restarting);
         Assert.Equal(1, _restarter.Requests);
@@ -243,8 +249,9 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Equal("UTC", settings.TimeZone);
         Assert.Equal("Pruefung", settings.ExamKeyword);
         Assert.Equal(90, settings.SyncIntervalMinutes);
-        Assert.Equal("me@example.org", settings.SpondEmail);
-        Assert.True(settings.HasSpondPassword);
+        var spond = settings.PluginSettings!["spond"];
+        Assert.Equal("me@example.org", spond.Values["Email"].GetString());
+        Assert.Contains("Password", spond.SecretsSet);
     }
 
     [Fact]
@@ -258,9 +265,9 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         var colon = await client.PostAsJsonAsync("/api/setup", good with { AdminUserName = "a:b" });
         var zone = await client.PostAsJsonAsync("/api/setup", good with { Settings = good.Settings with { TimeZone = "Mars/Olympus" } });
         var sameFile = await client.PostAsJsonAsync("/api/setup", good with { Settings = good.Settings with { AccountsDatabasePath = good.Settings.DatabasePath } });
-        var halfLogin = await client.PostAsJsonAsync("/api/setup", good with { Settings = good.Settings with { UseDemoData = false, SpondEmail = "me@example.org" } });
+        var badPluginValue = await client.PostAsJsonAsync("/api/setup", good with { Settings = good.Settings with { PluginSettings = PluginTestKit.Settings("spond", ("Email", new string('x', 300))) } });
 
-        Assert.All([shortPassword, colon, zone, sameFile, halfLogin], r => Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode));
+        Assert.All([shortPassword, colon, zone, sameFile, badPluginValue], r => Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode));
         Assert.True((await StatusAsync(client)).NeedsSetup);
         Assert.Equal(0, _restarter.Requests);
     }
@@ -363,15 +370,18 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         using var host = CreateHost(withAdmin: true);
         var admin = host.CreateSignedInClient();
         var settings = Unchanged(await SettingsOfAsync(admin));
-        await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, SpondEmail = "me@example.org", SpondPassword = "secret" });
+        await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, PluginSettings = PluginTestKit.Settings("spond", ("Email", "me@example.org"), ("Password", "pw-4711")) });
 
         var raw = await (await admin.GetAsync("/api/settings")).Content.ReadAsStringAsync();
-        await admin.PutAsJsonAsync("/api/settings", settings with { SpondEmail = "other@example.org", SpondPassword = "" });
+        using var restarted = CreateHost(withAdmin: true); // saving restarts the API, which is what makes it know the stored password
+        admin = restarted.CreateSignedInClient();
+        var again = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("spond", ("Email", "other@example.org"), ("Password", "")) });
 
-        Assert.DoesNotContain("secret", raw);
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        Assert.DoesNotContain("pw-4711", raw);
         var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!;
-        Assert.Equal("secret", Plain((string?)written["Spond"]!["Password"]));
-        Assert.DoesNotContain("secret", File.ReadAllText(SettingsFile)); // the password is encrypted in the file
+        Assert.Equal("pw-4711", Plain((string?)written["Spond"]!["Password"]));
+        Assert.DoesNotContain("pw-4711", File.ReadAllText(SettingsFile)); // the password is encrypted in the file
         Assert.Equal("other@example.org", (string?)written["Spond"]!["Email"]);
     }
 
@@ -473,10 +483,10 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         using var host = CreateHost(withAdmin: true);
         var settings = await SettingsOfAsync(host.CreateSignedInClient());
 
-        Assert.True(settings.HasSpondPassword);
+        Assert.Contains("Password", settings.PluginSettings!["spond"].SecretsSet);
         Assert.DoesNotContain("old-secret", File.ReadAllText(SettingsFile));
         Assert.Equal("old-secret", Plain((string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["Password"]));
-        Assert.Equal("old-secret", host.Services.GetRequiredService<IOptions<Api.Configuration.SpondOptions>>().Value.Password);
+        Assert.Equal("old-secret", host.Services.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>()["Spond:Password"]); // what the plugin reads is decrypted
     }
 
     [Fact]
@@ -486,7 +496,10 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         var admin = host.CreateSignedInClient();
         var settings = Unchanged(await SettingsOfAsync(admin));
 
-        await admin.PutAsJsonAsync("/api/settings", settings with { BackupAccounts = [new("one@example.org", null, "pw1"), new(null, "+491234", "pw2")] });
+        await admin.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "one@example.org", Password = "pw1" }, new { PhoneNumber = "+491234", Password = "pw2" } })),
+        });
         var raw = await (await admin.GetAsync("/api/settings")).Content.ReadAsStringAsync();
         var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!;
 
@@ -495,13 +508,16 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Equal("pw2", Plain((string?)written["Spond"]!["Accounts"]![1]!["Password"]));
         Assert.DoesNotContain("pw1", File.ReadAllText(SettingsFile));
 
-        // An empty password keeps the stored one (an account is known by its email / phone number); a blank row is ignored.
+        // The settings page sends the rows it got back, each with the place it had (_keep): an empty password keeps the one stored there. A blank row is ignored.
         using var restarted = CreateHost(withAdmin: true);
         var again = restarted.CreateSignedInClient();
-        var loaded = await SettingsOfAsync(again);
-        Assert.Equal(2, loaded.BackupAccounts!.Count);
-        Assert.All(loaded.BackupAccounts, a => Assert.True(a.HasPassword));
-        var kept = await again.PutAsJsonAsync("/api/settings", Unchanged(loaded) with { BackupAccounts = [new("one@example.org", null, ""), new(null, null, null)] });
+        var loaded = (await SettingsOfAsync(again)).PluginSettings!["spond"];
+        Assert.Equal(2, loaded.Values["Accounts"].GetArrayLength());
+        Assert.Equal(["Accounts/0/Password", "Accounts/1/Password"], loaded.SecretsSet.Where(s => s.StartsWith("Accounts/")).Order());
+        var kept = await again.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(again)) with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "one@example.org", Password = "", _keep = 0 }, new { Email = "", Password = "" } })),
+        });
         Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
         written = JsonNode.Parse(File.ReadAllText(SettingsFile))!;
         Assert.Single(written["Spond"]!["Accounts"]!.AsArray());
@@ -509,16 +525,142 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
-    public async Task A_backup_account_without_a_password_is_refused()
+    public async Task A_row_that_moves_up_the_list_takes_the_password_of_the_row_it_was()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        await admin.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "one@example.org", Password = "pw1" }, new { Email = "two@example.org", Password = "pw2" } })),
+        });
+
+        // The first row was deleted in the form: the second one is the only one left and keeps the password stored for it (index 1), not the one of the first.
+        using var restarted = CreateHost(withAdmin: true); // saving restarts the API, which is what makes it know the stored rows
+        admin = restarted.CreateSignedInClient();
+        await admin.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "two@example.org", Password = "", _keep = 1 } })),
+        });
+
+        var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!;
+        Assert.Equal("pw2", Plain((string?)written["Spond"]!["Accounts"]![0]!["Password"]));
+    }
+
+    [Fact]
+    public async Task More_rows_than_a_list_allows_and_values_that_do_not_fit_are_refused()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        var tooMany = Enumerable.Range(0, 11).Select(i => (object)new { Email = $"a{i}@example.org", Password = "pw" }).ToArray();
+
+        var rows = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("spond", ("Accounts", tooMany)) });
+        var type = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("spond", ("Email", 5)) });
+        var unknown = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("nothing", ("Email", "x")) });
+
+        Assert.All([rows, type, unknown], r => Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode));
+        Assert.Equal(0, _restarter.Requests);
+    }
+
+    [Theory]
+    [InlineData("me@example.org", "", "")]
+    [InlineData("", "+491701234567", "")]
+    [InlineData("", "", "pw")]
+    [InlineData("   ", "", "pw")]
+    public async Task Half_a_spond_login_is_refused_and_nothing_is_saved(string email, string phone, string password)
     {
         using var host = CreateHost(withAdmin: true);
         var admin = host.CreateSignedInClient();
         var settings = Unchanged(await SettingsOfAsync(admin));
 
-        var response = await admin.PutAsJsonAsync("/api/settings", settings with { BackupAccounts = [new("one@example.org", null, null)] });
+        var response = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("spond", ("Email", email), ("PhoneNumber", phone), ("Password", password)) });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("A Spond login needs the email (or phone number) and the password.", await response.Content.ReadAsStringAsync());
         Assert.Equal(0, _restarter.Requests);
+        Assert.False(File.Exists(SettingsFile) && File.ReadAllText(SettingsFile).Contains("Spond"));
+    }
+
+    [Fact]
+    public async Task A_whole_spond_login_is_saved_and_the_stored_password_goes_with_a_changed_main_email_as_before()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        var phone = await admin.PutAsJsonAsync("/api/settings", settings with { PluginSettings = PluginTestKit.Settings("spond", ("Email", ""), ("PhoneNumber", "+491701234567"), ("Password", "pw1")) });
+        Assert.Equal(HttpStatusCode.OK, phone.StatusCode);
+
+        using var restarted = CreateHost(withAdmin: true);
+        var again = restarted.CreateSignedInClient();
+        var changed = await again.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(again)) with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Email", "me@example.org"), ("PhoneNumber", "+491701234567"), ("Password", "")), // nothing typed: the stored password stays
+        });
+
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        var written = JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!;
+        Assert.Equal("me@example.org", (string?)written["Email"]);
+        Assert.Equal("pw1", Plain((string?)written["Password"]));
+    }
+
+    [Fact]
+    public async Task A_backup_login_with_half_of_it_missing_is_refused_with_the_row_named()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+
+        var response = await admin.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "one@example.org", Password = "pw1" }, new { Email = "two@example.org", Password = "" } })),
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Accounts[2].Password: A backup Spond login needs the email (or phone number) and the password.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_backup_row_whose_login_was_changed_does_not_take_the_password_stored_for_the_old_one()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        await admin.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(admin)) with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "one@example.org", Password = "pw1" } })),
+        });
+
+        using var restarted = CreateHost(withAdmin: true);
+        var again = restarted.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(again));
+
+        // Another email, no password typed: a row that says it is the first one (_keep) would carry pw1 over to an account it was not meant for.
+        var moved = await again.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "other@example.org", Password = "", _keep = 0 } })),
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, moved.StatusCode);
+        Assert.Contains("Accounts[1].Password", await moved.Content.ReadAsStringAsync());
+        Assert.Equal("pw1", Plain((string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["Accounts"]![0]!["Password"]));
+        Assert.Equal("one@example.org", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["Accounts"]![0]!["Email"]);
+
+        // With a password typed for it the new login is saved; the same email in other letters is still the login it was.
+        var typed = await again.PutAsJsonAsync("/api/settings", settings with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "other@example.org", Password = "pw2", _keep = 0 } })),
+        });
+        Assert.Equal(HttpStatusCode.OK, typed.StatusCode);
+        var accounts = JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["Accounts"]!.AsArray();
+        Assert.Equal(("other@example.org", "pw2"), ((string?)accounts[0]!["Email"], Plain((string?)accounts[0]!["Password"])));
+
+        using var third = CreateHost(withAdmin: true);
+        var last = third.CreateSignedInClient();
+        var sameLogin = await last.PutAsJsonAsync("/api/settings", Unchanged(await SettingsOfAsync(last)) with
+        {
+            PluginSettings = PluginTestKit.Settings("spond", ("Accounts", new object[] { new { Email = "OTHER@example.org", Password = "", _keep = 0 } })),
+        });
+        Assert.Equal(HttpStatusCode.OK, sameLogin.StatusCode);
+        Assert.Equal("pw2", Plain((string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Spond"]!["Accounts"]![0]!["Password"]));
     }
 
     [Fact]
@@ -597,11 +739,12 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
 
         var broken = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = DataSourceKinds.Custom, CustomScript = "function getGroups( {" });
         var empty = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = DataSourceKinds.Custom, CustomScript = "" });
-        var unknown = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = "carrier-pigeon" });
+        var unknown = await admin.PutAsJsonAsync("/api/settings", settings with { UseDemoData = false, DataSource = "Carrier Pigeon!" });
         Assert.Equal(HttpStatusCode.BadRequest, broken.StatusCode);
         Assert.Contains("customScript", await broken.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Contains("id of a data source of a plugin", await unknown.Content.ReadAsStringAsync()); // the plugins' data sources are not in the list of the built-in ones
         Assert.Equal(0, _restarter.Requests);
 
         const string script = "function getGroups() { return []; } function getEvents() { return []; }";

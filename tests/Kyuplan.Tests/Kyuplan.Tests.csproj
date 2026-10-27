@@ -44,11 +44,12 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Kyuplan.Api\Kyuplan.Api.csproj" />
     <ProjectReference Include="..\..\src\Kyuplan.Client.Shared\Kyuplan.Client.Shared.csproj" />
-    <ProjectReference Include="..\..\src\Kyuplan.Plugins.Abstractions\Kyuplan.Plugins.Abstractions.csproj" />
+    <ProjectReference Include="..\Kyuplan.TestPlugin\Kyuplan.TestPlugin.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Kyuplan.Plugins" />
   </ItemGroup>
 
 </Project>

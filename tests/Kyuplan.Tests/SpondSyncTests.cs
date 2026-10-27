@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
@@ -321,7 +320,7 @@ public sealed class SpondSyncTests : IDisposable
         await _club.SyncAsync();
 
         Spond.Unreachable = true;
-        await Assert.ThrowsAsync<SpondUnavailableException>(_club.SyncAsync);
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(_club.SyncAsync);
 
         Assert.Equal(2, (await _club.MembersAsync()).Count);
     }

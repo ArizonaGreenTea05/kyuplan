@@ -217,7 +217,7 @@ public sealed class SyncStatusTrackerTests : IDisposable
         Assert.NotNull(tracker.Snapshot(true, Interval).LastSuccess);
 
         club.Spond.Unreachable = true;
-        await Assert.ThrowsAsync<SpondUnavailableException>(club.SyncAsync);
+        await Assert.ThrowsAsync<DataSourceUnavailableException>(club.SyncAsync);
 
         var status = tracker.Snapshot(true, Interval);
         Assert.Equal(1, status.ConsecutiveFailures);

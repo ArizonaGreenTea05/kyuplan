@@ -14,7 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spond.API" />
     <PackageReference Include="Jint" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Scalar.AspNetCore" />
@@ -32,12 +31,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kyuplan.Contracts\Kyuplan.Contracts.csproj" />
+    <ProjectReference Include="..\Kyuplan.Plugins.Abstractions\Kyuplan.Plugins.Abstractions.csproj" />
     <!-- The API serves the web client (Blazor WebAssembly) itself, from the same address, so that it needs no API address. -->
     <ProjectReference Include="..\Kyuplan.Client.Blazor\Kyuplan.Client.Blazor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="$(InternalsVisibleTo)" />
+    <Using Include="Kyuplan.Plugins" />
   </ItemGroup>
 
   <!--

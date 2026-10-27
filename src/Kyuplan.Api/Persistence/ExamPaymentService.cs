@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Contracts;
 

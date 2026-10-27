@@ -33,6 +33,7 @@ public sealed class DefaultDataTests(WebApplicationFactory<Program> factory) : I
             builder.UseSetting("Spond:UseDemoData", "true");
             builder.UseSetting("Sync:Enabled", "false"); // a background write would collide with the test's own reads of the shared in-memory database
             builder.UseSetting("DefaultData:Enabled", defaults ? "true" : "false");
+            builder.UseSetting("Plugins:InstallDefaults", "false"); // the default data are belts and roles; the default plugins would come from GitHub and stay in the folder all the test hosts share
             builder.UseSetting("Database:ConnectionString", _database.ConnectionString);
             TestAccounts.Configure(builder, _accounts);
         }).CreateSignedInClient();

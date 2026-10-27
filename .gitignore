@@ -436,6 +436,9 @@ FodyWeavers.xsd
 *.db-wal
 /src/Kyuplan.Api/data/settings.json
 
+# The plugins an API started from here installed (index and unpacked packages)
+/src/Kyuplan.Api/data/plugins/
+
 # Keys that encrypt the passwords in the settings file
 /src/Kyuplan.Api/data/keys/
 

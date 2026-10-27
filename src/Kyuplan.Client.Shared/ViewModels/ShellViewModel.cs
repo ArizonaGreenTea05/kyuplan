@@ -25,6 +25,7 @@ public sealed partial class ShellViewModel : ViewModelBase
     {
         _api = api;
         _baseAddress = options?.Value.BaseUri;
+        PluginPages = [];
         Language = language ?? new LanguageService();
         Session = session ?? new LoginSession();
         Brand = brand ?? new BrandingViewModel(api);
@@ -47,6 +48,7 @@ public sealed partial class ShellViewModel : ViewModelBase
             _knownPermissions = permissions;
             OnPropertyChanged(nameof(UsesSpond));
             OnPropertyChanged(nameof(HelpLinks));
+            ShowPluginPages();
             PermissionsChanged?.Invoke(this, EventArgs.Empty);
         };
     }
@@ -73,6 +75,79 @@ public sealed partial class ShellViewModel : ViewModelBase
 
     /// <summary>Whether the signed-in user may do at least one of these.</summary>
     public bool CanAny(IEnumerable<string> permissions) => permissions.Any(Can);
+
+    /// <summary>What the plugins that run add, as the API told the signed-in user (<c>null</c> until it did).</summary>
+    public PluginCatalogDto? Plugins { get; private set; }
+
+    /// <summary>The pages the plugins added that the signed-in user may open. The navigation of a client lists them.</summary>
+    public IReadOnlyList<PluginPageViewModel> PluginPages { get; private set; }
+
+    /// <summary>Raised when <see cref="Plugins"/> or <see cref="PluginPages"/> changed.</summary>
+    public event EventHandler? PluginsChanged;
+
+    private readonly Dictionary<string, (string Signature, PluginPageViewModel Page)> _pluginPages = [];
+
+    /// <summary>Reads what the plugins add again (after a plugin was installed or removed). A failure leaves what is there.</summary>
+    public async Task RefreshPluginsAsync()
+    {
+        try
+        {
+            SetPlugins(await _api.GetPluginsAsync());
+        }
+        catch (PlannerApiException)
+        {
+            // The pages stay as they are; the next refresh tries again.
+        }
+    }
+
+    /// <summary>
+    /// Asks what the plugins add. A failure leaves what is there (nothing at first) and does not stop the rest of the load: the plugins are no reason to keep the
+    /// user from the app, and the other way round, a data source that does not answer must not hide the plugins (the settings form of the data source is one of them).
+    /// </summary>
+    private async Task LoadPluginsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            SetPlugins(await _api.GetPluginsAsync(cancellationToken));
+        }
+        catch (PlannerApiException)
+        {
+            // The pages and forms of the plugins are missing until the next refresh; everything else works.
+        }
+    }
+
+    private void SetPlugins(PluginCatalogDto catalog)
+    {
+        Plugins = catalog;
+        ShowPluginPages();
+    }
+
+    /// <summary>
+    /// Makes the page view models of the plugins' pages the user may open. A page whose layout did not change keeps its view model (the pages listen to the
+    /// shell, so a new one for every refresh would pile up).
+    /// </summary>
+    private void ShowPluginPages()
+    {
+        var pages = new List<PluginPageViewModel>();
+        foreach (var plugin in Plugins?.Plugins ?? [])
+        {
+            foreach (var page in plugin.Pages.Where(p => p.Permission is null || Can(p.Permission)))
+            {
+                var key = $"{plugin.Id}/{page.Id}";
+                var signature = System.Text.Json.JsonSerializer.Serialize(page, PluginJson);
+                if (!_pluginPages.TryGetValue(key, out var known) || known.Signature != signature)
+                    _pluginPages[key] = known = (signature, new PluginPageViewModel(this, _api, plugin, page));
+
+                pages.Add(known.Page);
+            }
+        }
+
+        PluginPages = pages;
+        OnPropertyChanged(nameof(PluginPages));
+        PluginsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions PluginJson = new(System.Text.Json.JsonSerializerDefaults.Web);
 
     /// <summary>Whether the signed-in user may read what Spond knows (groups, events): only then the group picker is of any use.</summary>
     public bool UsesSpond => CanAny(Permission.ReadsSpond);
@@ -172,6 +247,7 @@ public sealed partial class ShellViewModel : ViewModelBase
             // Who the user is decides what they may ask for: somebody who may use no page that shows Spond's data is not shown its groups.
             var user = Session.User ?? await _api.GetAccountAsync(ct);
             Info = await _api.GetInfoAsync(ct);
+            await LoadPluginsAsync(ct); // before the groups: when the data source cannot deliver them (no login yet, Spond down), the settings page that puts it right still needs the forms of the plugins
             Groups = user.EffectivePermissions.Any(Permission.ReadsSpond.Contains) ? await _api.GetGroupsAsync(ct) : [];
             Session.User ??= user;
             _initialized = true;
@@ -201,6 +277,7 @@ public sealed partial class ShellViewModel : ViewModelBase
             {
                 await _api.RefreshAsync(ct);
                 var user = await _api.GetAccountAsync(ct);
+                await LoadPluginsAsync(ct);
                 Groups = user.EffectivePermissions.Any(Permission.ReadsSpond.Contains) ? await _api.GetGroupsAsync(ct) : [];
                 Session.User = user;
             });

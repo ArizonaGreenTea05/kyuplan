@@ -24,6 +24,7 @@ export const audiences = {
     files: [
       { source: 'docs/developer-guide.md', page: 'developer-guide' },
       { source: 'docs/reference.md', page: 'reference' },
+      { source: 'docs/plugin-development.md', page: 'plugin-development' },
     ],
   },
 };

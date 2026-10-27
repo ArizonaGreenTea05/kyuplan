@@ -48,6 +48,9 @@ public sealed partial class RolesViewModel : PageViewModel
         _api = api;
 
         Picker.Changed += (_, _) => FormEdited();
+        // The permissions the plugins add are ticked like the program's own.
+        Picker.SetPlugins(shell.Plugins);
+        shell.PluginsChanged += (_, _) => Picker.SetPlugins(shell.Plugins);
         PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(IsBusy)) NotifyStateChanged();

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Kyuplan.Client.Resources;
 using Kyuplan.Contracts;
@@ -9,17 +10,21 @@ public sealed partial class PermissionRow : ObservableObject
 {
     private readonly PermissionPickerViewModel _owner;
 
-    internal PermissionRow(PermissionPickerViewModel owner, string key)
+    private readonly Func<string>? _label;
+
+    /// <param name="label">What the permission says, for a permission a plugin added (the texts of the program's own are in the language files).</param>
+    internal PermissionRow(PermissionPickerViewModel owner, string key, Func<string>? label = null)
     {
         _owner = owner;
         Key = key;
+        _label = label;
     }
 
     /// <summary>The key in <see cref="Permission"/>, e.g. <c>members.edit</c>.</summary>
     public string Key { get; }
 
     /// <summary>What the permission allows, in the user's language.</summary>
-    public string Label => Strings.ResourceManager.GetString(Permission.ResourceKey(Key)) ?? Key;
+    public string Label => _label?.Invoke() ?? Strings.ResourceManager.GetString(Permission.ResourceKey(Key)) ?? Key;
 
     [ObservableProperty]
     private bool _isSelected;
@@ -33,6 +38,7 @@ public sealed partial class PermissionRow : ObservableObject
 public sealed partial class PermissionGroupRow : ObservableObject
 {
     private readonly string _name;
+    private readonly Func<string>? _label;
 
     internal PermissionGroupRow(PermissionPickerViewModel owner, PermissionGroup group)
     {
@@ -40,8 +46,18 @@ public sealed partial class PermissionGroupRow : ObservableObject
         Permissions = [.. group.Permissions.Select(key => new PermissionRow(owner, key))];
     }
 
+    /// <summary>The permissions a plugin added, listed under the plugin's name.</summary>
+    internal PermissionGroupRow(PermissionPickerViewModel owner, PluginDto plugin)
+    {
+        _name = plugin.Id;
+        _label = () => PluginText.Pick(plugin.Name, plugin.NameDe);
+        Permissions = [.. plugin.Permissions.Select(p => new PermissionRow(owner, p.Id, () => PluginText.Pick(p.Label, p.LabelDe)))];
+    }
+
+    internal bool IsPlugin => _label is not null;
+
     /// <summary>The domain, in the user's language.</summary>
-    public string Label => Strings.ResourceManager.GetString("PermissionGroup_" + _name) ?? _name;
+    public string Label => _label?.Invoke() ?? Strings.ResourceManager.GetString("PermissionGroup_" + _name) ?? _name;
 
     public IReadOnlyList<PermissionRow> Permissions { get; }
 
@@ -62,12 +78,32 @@ public sealed partial class PermissionPickerViewModel : ObservableObject
 {
     private bool _quiet;
 
+    private HashSet<string> _unknown = [];
+
     public PermissionPickerViewModel() => Groups = [.. Permission.Groups.Select(group => new PermissionGroupRow(this, group))];
 
-    public IReadOnlyList<PermissionGroupRow> Groups { get; }
+    /// <summary>The domains with their permissions: the program's own, then one for each plugin that adds some (<see cref="SetPlugins"/>).</summary>
+    public ObservableCollection<PermissionGroupRow> Groups { get; }
 
-    /// <summary>The ticked permissions in the order of the catalogue.</summary>
-    public IReadOnlyList<string> Selected => [.. Groups.SelectMany(g => g.Permissions).Where(p => p.IsSelected).Select(p => p.Key)];
+    /// <summary>
+    /// The ticked permissions in the order of the catalogue. A permission that has no tick box here (it belongs to a plugin that is not installed) and was set stays
+    /// in the list, so that saving a role does not take it away.
+    /// </summary>
+    public IReadOnlyList<string> Selected => [.. Groups.SelectMany(g => g.Permissions).Where(p => p.IsSelected).Select(p => p.Key), .. _unknown.Order(StringComparer.Ordinal)];
+
+    /// <summary>
+    /// Offers the permissions the plugins that run added. What was ticked stays ticked; ticks of permissions that are no longer offered are kept as they are
+    /// (see <see cref="Selected"/>).
+    /// </summary>
+    public void SetPlugins(PluginCatalogDto? catalog)
+    {
+        var selected = Selected.ToHashSet();
+        foreach (var group in Groups.Where(g => g.IsPlugin).ToList()) Groups.Remove(group);
+        foreach (var plugin in (catalog?.Plugins ?? []).Where(p => p.Permissions.Count > 0)) Groups.Add(new PermissionGroupRow(this, plugin));
+
+        Set(selected);
+        OnPropertyChanged(nameof(Selected));
+    }
 
     /// <summary>The ticks can be changed: the user may edit what is shown, and it is not the administrator role (which has them all).</summary>
     [ObservableProperty]
@@ -84,6 +120,7 @@ public sealed partial class PermissionPickerViewModel : ObservableObject
         try
         {
             foreach (var row in Groups.SelectMany(g => g.Permissions)) row.IsSelected = wanted.Contains(row.Key);
+            _unknown = [.. wanted.Where(p => Groups.SelectMany(g => g.Permissions).All(r => r.Key != p) && PluginRules.IsPluginPermission(p))];
         }
         finally
         {

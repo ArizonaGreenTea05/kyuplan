@@ -6,7 +6,6 @@ using Jint;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Kyuplan.Api.Configuration;
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Api.Spond;
@@ -119,7 +118,7 @@ public sealed class CustomScriptDataSource(
                 _cache.Set(key, fresh, options.Value.CacheDuration);
                 return fresh;
             }
-            catch (SpondUnavailableException ex)
+            catch (DataSourceUnavailableException ex)
             {
                 RememberFailure(key, ex);
                 throw;
@@ -142,7 +141,7 @@ public sealed class CustomScriptDataSource(
 
             var remaining = failure.Until - clock.Now;
             if (remaining > TimeSpan.Zero)
-                throw new SpondUnavailableException(
+                throw new DataSourceUnavailableException(
                     $"{failure.Error.Message} (not asked again for another {Math.Ceiling(remaining.TotalSeconds):0} seconds)", failure.Error.InnerException);
             // Only this very entry: another caller may have stored a newer failure meanwhile.
             _failures.TryRemove(new KeyValuePair<string, Failure>(failureKey, failure));
@@ -151,7 +150,7 @@ public sealed class CustomScriptDataSource(
         return false;
     }
 
-    private void RememberFailure(string key, SpondUnavailableException error)
+    private void RememberFailure(string key, DataSourceUnavailableException error)
     {
         var duration = options.Value.FailureCacheDuration;
         if (duration <= TimeSpan.Zero) return;
@@ -173,13 +172,13 @@ public sealed class CustomScriptDataSource(
         return false;
     }
 
-    private sealed record Failure(SpondUnavailableException Error, DateTimeOffset Until);
+    private sealed record Failure(DataSourceUnavailableException Error, DateTimeOffset Until);
 
     private Task<T> RunAsync<T>(Func<Engine, T> work, CancellationToken cancellationToken)
     {
         var script = options.Value.Script;
         if (string.IsNullOrWhiteSpace(script))
-            throw new SpondUnavailableException("The data source is a custom script, but there is none (DataSource:Script; the settings page saves it).");
+            throw new DataSourceUnavailableException("The data source is a custom script, but there is none (DataSource:Script; the settings page saves it).");
 
         // The script asks over HTTP synchronously, so it runs on a thread of its own and never blocks a request thread.
         return Task.Run(() =>
@@ -201,7 +200,7 @@ public sealed class CustomScriptDataSource(
             {
                 // Jint reports its own timeout and a cancelled token with exceptions of its own, so they are told apart by the token, not by the type.
                 outcome = "timed out";
-                throw new SpondUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.", new TimeoutException());
+                throw new DataSourceUnavailableException($"The custom data script took longer than {options.Value.ScriptTimeout.TotalSeconds:0} seconds.", new TimeoutException());
             }
             catch (Exception ex) when (cancellationToken.IsCancellationRequested)
             {
@@ -218,7 +217,7 @@ public sealed class CustomScriptDataSource(
                 var safe = Redact(text);
                 if (safe == text) logger.LogWarning(ex, "The custom data script failed.");
                 else logger.LogWarning("The custom data script failed: {Error}", safe);
-                throw new SpondUnavailableException($"The custom data script failed: {Redact(ex.Message)}", safe == text ? ex : IsTimeout(ex) ? new TimeoutException() : null);
+                throw new DataSourceUnavailableException($"The custom data script failed: {Redact(ex.Message)}", safe == text ? ex : IsTimeout(ex) ? new TimeoutException() : null);
             }
             finally
             {

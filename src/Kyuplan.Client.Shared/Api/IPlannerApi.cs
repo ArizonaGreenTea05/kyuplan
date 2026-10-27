@@ -70,6 +70,27 @@ public interface IPlannerApi
     /// <summary>Removes a GitHub theme pack and its themes.</summary>
     Task DeleteThemeSourceAsync(string id, CancellationToken cancellationToken = default);
 
+    /// <summary>What the plugins that run add: their pages the user may open, their permissions, their data sources (the forms only for those who may see the settings).</summary>
+    Task<PluginCatalogDto> GetPluginsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The installed plugins and whether they run. Needs <c>plugins.view</c>.</summary>
+    Task<IReadOnlyList<PluginAdminDto>> GetInstalledPluginsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Installs the plugin of a public GitHub repository (its latest release). The API restarts itself when something changed; it says what is wrong with a plugin it refuses (400). Needs <c>plugins.edit</c>.</summary>
+    Task<PluginChangedDto> InstallPluginAsync(string url, CancellationToken cancellationToken = default);
+
+    /// <summary>Fetches the latest release of the repository the plugin came from.</summary>
+    Task<PluginChangedDto> UpdatePluginAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a plugin; the API restarts itself.</summary>
+    Task<PluginChangedDto> RemovePluginAsync(string id, CancellationToken cancellationToken = default);
+
+    /// <summary>Reads an endpoint of a plugin (<c>api/plugins/&lt;id&gt;/&lt;path&gt;</c>) as JSON.</summary>
+    Task<System.Text.Json.JsonElement> GetPluginDataAsync(string pluginId, string path, CancellationToken cancellationToken = default);
+
+    /// <summary>Calls an endpoint of a plugin (<c>POST</c>, <c>PUT</c> or <c>DELETE</c>) with an optional JSON body. The answer is the JSON the endpoint returned; a default <see cref="System.Text.Json.JsonElement"/> when it returned none.</summary>
+    Task<System.Text.Json.JsonElement> SendPluginAsync(string pluginId, string method, string path, System.Text.Json.JsonElement? body, CancellationToken cancellationToken = default);
+
     /// <summary>How the sync with the data source is doing. Needs <c>sync.view</c>.</summary>
     Task<SyncStatusDto> GetSyncStatusAsync(CancellationToken cancellationToken = default);
 

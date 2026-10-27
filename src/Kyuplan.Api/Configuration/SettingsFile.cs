@@ -12,8 +12,8 @@ namespace Kyuplan.Api.Configuration;
 /// <c>appsettings.json</c>, holding only what was set in the client. It is read on top of <c>appsettings.json</c>, so it survives restarts and
 /// updates of the program files; environment variables and command line arguments still win over it. It lives apart from the databases,
 /// because it says where they are. In a container it belongs on the volume (<c>Setup__SettingsFile=/data/settings.json</c>).
-/// The Spond passwords, the metrics token and the secrets of the custom script (<c>DataSource:Secrets</c>) in it are encrypted (ASP.NET Data Protection, see <see cref="CreateProtector"/>): a copy of the file alone, e.g. in a backup,
-/// does not give them away. The configuration sees them decrypted.
+/// The passwords of the data sources (the <c>password</c> fields of their settings forms, see <see cref="AddSecretPaths"/>), the metrics token and the secrets of the custom script (<c>DataSource:Secrets</c>) in it are encrypted
+/// (ASP.NET Data Protection, see <see cref="CreateProtector"/>): a copy of the file alone, e.g. in a backup, does not give them away. The configuration sees them decrypted.
 /// </summary>
 public sealed class SettingsFile(string path, IDataProtector? protector = null)
 {
@@ -55,6 +55,29 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
         if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         return DataProtectionProvider.Create(new DirectoryInfo(directory), options => options.SetApplicationName("kyuplan")).CreateProtector("Kyuplan.SettingsFile.v1");
+    }
+
+    /// <summary>
+    /// Where secrets stand in the file, as configuration keys with <c>*</c> for "every entry of this list or object". The ones of the data sources of plugins
+    /// are added when the plugins are known (<see cref="AddSecretPaths"/>). The Spond ones were here before Spond was a plugin: a file from then stays encrypted
+    /// even when the plugin is not installed.
+    /// </summary>
+    private readonly List<string[]> _secretPaths =
+    [
+        ["Metrics", "Token"],
+        ["DataSource", "Secrets", "*"],
+        ["Spond", "Password"],
+        ["Spond", "Accounts", "*", "Password"],
+    ];
+
+    /// <summary>Marks more places in the file as secret (<c>Section:Password</c>, <c>Section:Accounts:*:Password</c>): their values are encrypted from now on.</summary>
+    public void AddSecretPaths(IEnumerable<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            var parts = path.Split(':');
+            if (!_secretPaths.Any(known => known.SequenceEqual(parts))) _secretPaths.Add(parts);
+        }
     }
 
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -137,22 +160,42 @@ public sealed class SettingsFile(string path, IDataProtector? protector = null)
         return plain;
     }
 
-    /// <summary>The places in the file where a secret stands (the Spond passwords, the metrics token, the script's secrets): the configuration key, the object that holds it and its name.</summary>
-    private static IEnumerable<(string Key, JsonObject Holder, string Name)> PasswordsIn(JsonObject root)
+    /// <summary>The places in the file where a secret stands (see <see cref="AddSecretPaths"/>): the configuration key, the object that holds it and its name.</summary>
+    private IEnumerable<(string Key, JsonObject Holder, string Name)> PasswordsIn(JsonObject root)
     {
-        if (root["Metrics"] is JsonObject metrics && metrics["Token"] is JsonValue) yield return ("Metrics:Token", metrics, "Token");
-        if (root["DataSource"] is JsonObject dataSource && dataSource["Secrets"] is JsonObject secrets)
-            foreach (var name in secrets.Select(s => s.Key).ToList())
-                if (secrets[name] is JsonValue) yield return ($"DataSource:Secrets:{name}", secrets, name);
+        foreach (var path in _secretPaths)
+            foreach (var found in Walk(root, path, 0, ""))
+                yield return found;
+    }
 
-        if (root["Spond"] is not JsonObject spond) yield break;
+    private static IEnumerable<(string Key, JsonObject Holder, string Name)> Walk(JsonObject holder, string[] path, int at, string prefix)
+    {
+        var part = path[at];
+        var last = at == path.Length - 1;
+        var names = part == "*" ? holder.Select(p => p.Key).ToList() : [part];
+        foreach (var name in names)
+        {
+            var key = prefix + name;
+            if (last)
+            {
+                if (holder[name] is JsonValue) yield return (key, holder, name);
+            }
+            else if (holder[name] is JsonObject child)
+            {
+                foreach (var found in Walk(child, path, at + 1, key + ":")) yield return found;
+            }
+            else if (holder[name] is JsonArray array && path[at + 1] == "*")
+            {
+                // "Accounts:*:Password": the entries of a list are the objects 0, 1, 2 ...
+                for (var i = 0; i < array.Count; i++)
+                {
+                    if (array[i] is not JsonObject row) continue;
 
-        if (spond["Password"] is JsonValue) yield return ("Spond:Password", spond, "Password");
-        if (spond["Accounts"] is not JsonArray accounts) yield break;
-
-        for (var i = 0; i < accounts.Count; i++)
-            if (accounts[i] is JsonObject account && account["Password"] is JsonValue)
-                yield return ($"Spond:Accounts:{i}:Password", account, "Password");
+                    foreach (var found in at + 2 < path.Length ? Walk(row, path, at + 2, $"{key}:{i}:") : [])
+                        yield return found;
+                }
+            }
+        }
     }
 
     /// <summary>The text of a secret in the file; <c>null</c> for anything else (a hand-edited number such as <c>"PIN": 1234</c> must not keep the API from starting).</summary>

@@ -94,20 +94,20 @@ public sealed class SetupViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task A_half_spond_login_is_a_problem_but_no_login_at_all_is_not()
+    public async Task The_form_of_a_plugin_data_source_is_checked_with_the_rules_the_plugin_gave_it()
     {
+        _api.PluginCatalog = PluginTestKit.AcmeCatalog();
         var vm = await CheckedAsync(Setup());
-        Assert.Null(vm.Form.SpondProblem);
+        vm.Form.DataSource = "acme";
+        Assert.Equal(Strings.Plugin_FieldRequired, vm.Form.PluginFormProblem); // the API key is required
 
-        vm.Form.SpondEmail = "me@example.org";
-        Assert.Equal(Strings.Settings_SpondIncomplete, vm.Form.SpondProblem);
+        var apiKey = vm.Form.PluginForm!.Fields.Single(f => f.Id == "ApiKey");
+        apiKey.Text = "secret";
+        Assert.Null(vm.Form.PluginFormProblem);
 
-        vm.Form.SpondPassword = "secret";
-        Assert.Null(vm.Form.SpondProblem);
-
-        vm.Form.SpondPassword = "";
-        vm.Form.UseDemoData = true; // the demo does not ask Spond
-        Assert.Null(vm.Form.SpondProblem);
+        apiKey.Text = "";
+        vm.Form.UseDemoData = true; // the demo does not need the plugin's settings
+        Assert.Null(vm.Form.PluginFormProblem);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.Equal("boss", call.AdminUserName);
         Assert.Equal("a good password", call.AdminPassword);
         Assert.Equal("UTC", call.Settings.TimeZone);
-        Assert.Null(call.Settings.SpondPassword); // nothing typed = keep
+        Assert.Null(call.Settings.PluginSettings); // the data source has no plugin form
         Assert.True(vm.IsDone);
         Assert.False(vm.FinishCommand.CanExecute(null)); // no second setup
     }
@@ -206,8 +206,7 @@ public sealed class SetupViewModelTests : IDisposable
         page.Form.TimeZone = "Europe/Berlin"; // typed back: nothing to save again
         Assert.False(page.CanSave);
 
-        page.Form.SpondEmail = "me@example.org";
-        page.Form.SpondPassword = "secret"; // a password is a change though the stored one is not shown
+        page.Form.TimeZone = "UTC";
         Assert.True(page.SaveCommand.CanExecute(null));
     }
 

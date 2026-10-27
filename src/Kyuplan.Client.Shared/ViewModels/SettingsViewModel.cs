@@ -62,7 +62,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         if (!CanView)
         {
             _loaded = null;
-            Form.Load(new SettingsDto("", "", false, null, null, false, "", "", 0, 0, false, 0));
+            Form.Load(new SettingsDto("", "", false, "", "", 0, 0, false, 0));
         }
 
         base.OnPermissionsChanged();
@@ -73,11 +73,13 @@ public sealed partial class SettingsViewModel : PageViewModel
     {
         base.OnLanguageChanged();
         OnPropertyChanged(nameof(NoticeText));
+        Form.LanguageChanged();
     }
 
     protected override Task ReloadAsync() => LoadAsync(async ct =>
     {
         _loaded = await _api.GetSettingsAsync(ct);
+        Form.SetPlugins(Shell.Plugins);
         Form.AvailableSubGroups = [.. Shell.Groups.SelectMany(g => g.SubGroups).Select(s => s.Name).Distinct(StringComparer.OrdinalIgnoreCase)];
         Form.Load(_loaded);
         OnPropertyChanged(nameof(IsLoaded));

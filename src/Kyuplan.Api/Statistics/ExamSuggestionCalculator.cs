@@ -1,4 +1,3 @@
-using Kyuplan.Api.Domain;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
 

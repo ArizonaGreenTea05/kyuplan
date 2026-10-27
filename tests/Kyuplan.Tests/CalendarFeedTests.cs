@@ -488,15 +488,15 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.True(Count(await IcsAsync(host.CreateClient(), PathOf(stale)), "BEGIN:VEVENT") > 0);
     }
 
-    private sealed class UnreachableSource : Kyuplan.Api.Spond.IDataSource
+    private sealed class UnreachableSource : IDataSource
     {
-        public bool IsDemo => false;
+        public string Kind => "spond";
 
-        public Task<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
-            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+        public Task<IReadOnlyList<Kyuplan.Plugins.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) =>
+            throw new DataSourceUnavailableException("down");
 
-        public Task<IReadOnlyList<Kyuplan.Api.Domain.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
-            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+        public Task<IReadOnlyList<Kyuplan.Plugins.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
+            throw new DataSourceUnavailableException("down");
 
         public void InvalidateCache()
         {
@@ -507,7 +507,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
     public async Task The_feed_list_still_works_when_the_data_source_is_unreachable()
     {
         using var host = CreateHost().WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(s => s.AddSingleton<Kyuplan.Api.Spond.IDataSource>(new UnreachableSource())));
+            builder.ConfigureTestServices(s => s.AddSingleton<IDataSource>(new UnreachableSource())));
         var stale = await StoreFeedAsync(host, "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
         var admin = host.CreateSignedInClient();
 
@@ -518,16 +518,16 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await host.CreateClient().GetAsync(PathOf(stale))).StatusCode);
     }
 
-    private sealed class HangingSource : Kyuplan.Api.Spond.IDataSource
+    private sealed class HangingSource : IDataSource
     {
-        public TaskCompletionSource<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> Groups { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<IReadOnlyList<Kyuplan.Plugins.GroupInfo>> Groups { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public bool IsDemo => false;
+        public string Kind => "spond";
 
-        public Task<IReadOnlyList<Kyuplan.Api.Domain.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) => Groups.Task;
+        public Task<IReadOnlyList<Kyuplan.Plugins.GroupInfo>> GetGroupsAsync(CancellationToken cancellationToken) => Groups.Task;
 
-        public Task<IReadOnlyList<Kyuplan.Api.Domain.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
-            throw new Kyuplan.Api.Spond.SpondUnavailableException("down");
+        public Task<IReadOnlyList<Kyuplan.Plugins.EventInfo>> GetEventsAsync(string groupId, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken) =>
+            throw new DataSourceUnavailableException("down");
 
         public void InvalidateCache()
         {
@@ -539,7 +539,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
     {
         var source = new HangingSource();
         using var host = CreateHost().WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(s => s.AddSingleton<Kyuplan.Api.Spond.IDataSource>(source)));
+            builder.ConfigureTestServices(s => s.AddSingleton<IDataSource>(source)));
         await StoreFeedAsync(host, "Feed", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
         var admin = host.CreateSignedInClient();
 
@@ -555,7 +555,7 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
         Assert.Empty(Assert.Single((await request)!).BrokenSources ?? []);
 
         // A load that finishes later (or fails) after the answer is gone must not blow up anything.
-        source.Groups.SetException(new Kyuplan.Api.Spond.SpondUnavailableException("down"));
+        source.Groups.SetException(new DataSourceUnavailableException("down"));
         GC.Collect();
         GC.WaitForPendingFinalizers();
     }

@@ -21,7 +21,7 @@ kyuplan is a planner for a karate club's belt exams built on the club's Spond gr
 | Layer | Technology |
 | --- | --- |
 | Runtime / language | **.NET 10** (SDK pinned in `global.json`), C# `latest`, nullable reference types on |
-| API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, the `Spond.API` package |
+| API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, plugins loaded from GitHub releases (Spond is one: the `Spond.API` package is the plugin's, not the API's) |
 | Web client | Blazor WebAssembly, hand-written CSS, served by the API itself |
 | Desktop client | WPF, four designs (the Fluent theme that ships with .NET, Windows 10, Aero, native; Windows only), no control library, `Svg.Skia` for SVG logos |
 | Linux client | GTK 4 + libadwaita through the Gir.Core bindings (`GirCore.Gtk-4.0`, `GirCore.Adw-1`), widgets built in code, no web view; built for Arch Linux (`deploy/arch/PKGBUILD`) |
@@ -103,7 +103,8 @@ src/
     Endpoints/             Route groups: Planner, Exam, Belt, Comment, Account, Branding, Settings, ClientDownload, Documentation
     Persistence/           EF context, Entities.cs, services (Exam, ExamPlanning, Member, Belt, Comment, Tag), SpondSync(+Worker)
     Accounts/              Users, roles, Basic auth handler, permission authorization, login throttle, default roles
-    Spond/                 IDataSource: SpondApiDataSource (real), DemoDataSource, multi-account fallback
+    Spond/                 DemoDataSource (the generated sample data; the Spond data source is a plugin)
+    Plugins/               Plugin store, installer, GitHub fetcher, host, catalog
     Sources/               The other IDataSource implementations: CustomScriptDataSource (Jint), ManualDataSource (database)
     Statistics/            AttendanceCalculator, ExamSuggestionCalculator, span finder, ...
     Infrastructure/        Middleware (security headers, API key), settings service, restart loop, database registration, branding, logging
@@ -151,9 +152,13 @@ Both are migrated automatically at start (`Database setup` in `Infrastructure/Da
 and roles once (`DefaultData:Enabled`). SQLite and PostgreSQL have **separate migration sets** (see below). `Infrastructure/DatabaseRegistration.cs`
 picks the contexts; `Infrastructure/PostgresModel.cs` holds the provider differences (for example `citext` for case-insensitive unique names).
 
+### Plugins
+
+`src/Kyuplan.Plugins.Abstractions` is the interface of plugins (`IKyuplanPlugin`, `IPluginBuilder`, the `IDataSource` every data source implements and the model it delivers); `Api/Plugins/` loads them (`PluginStore` keeps the installed ones, `PluginInstaller`/`GitHubPluginFetcher` get them from GitHub, `PluginHost` loads the assemblies in their own load contexts and collects what they register, `PluginCatalogService` tells the clients what they add) and `Endpoints/PluginEndpoints.cs` serves it. A plugin's pages and settings forms are JSON (`PluginUiLayout` in Contracts) that every client draws with the shared `Plugin*ViewModel`s: Blazor `Components/PluginItems.razor`, WPF `Controls/PluginItemsView.xaml`, Linux `Kit/PluginView.cs`. Spond is a plugin in its own repository (`ArizonaGreenTea05/kyuplan.plugins.spond`). Writing one: [Plugin development](plugin-development.md).
+
 ### Spond access and sync
 
-`IDataSource` hides where groups, members and events come from (`SpondApiDataSource` for Spond.API with caching, re-login and optional
+`IDataSource` (in `Kyuplan.Plugins.Abstractions`) hides where groups, members and events come from (the Spond plugin for Spond.API with caching, re-login and optional
 backup accounts; `DemoDataSource` for generated data; `CustomScriptDataSource`, the administrator's JavaScript run by Jint; `ManualDataSource`,
 rows entered by users in the `Manual*` tables). Which one runs is decided once, in `Program.cs`, from `DataSourceOptions.Resolve`
 (`DataSource:Kind`, `Spond:UseDemoData` wins); the settings page changes it and restarts the API. The API **only reads** from the source. `SpondSyncWorker` (a hosted service) runs `SpondSync`
@@ -293,10 +298,10 @@ Add `Strings.<culture>.resx` with all keys of `Strings.resx`, list the culture i
 
 ### Add a Spond feature
 
-Everything Spond-related passes through `IDataSource`. Extend the interface, implement it for every source (Spond, demo, custom script,
-manual), and use `FakeSpondDataSource` in tests. A new kind of source: add the id to `DataSourceKinds`, the class, one line in `Program.cs`,
-and an option in the settings page (`SettingsForm.DataSources`, the `Settings_DataSource_*` texts). Remember: Spond.API never refreshes its token and reports failures as empty
-lists; see the handling in `SpondApiDataSource`.
+Everything Spond-related passes through `IDataSource`. Extend the interface, implement it for every source (demo, custom script,
+manual, and the Spond plugin in its own repository), and use `FakeSpondDataSource` in tests. A new kind of source that ships with the program: add the id to `DataSourceKinds`, the class, one line in `Program.cs`,
+and an option in the settings page (`SettingsForm.DataSources`, the `Settings_DataSource_*` texts); any other source is a plugin ([Plugin development](plugin-development.md)). Remember: Spond.API never refreshes its token and reports failures as empty
+lists; see the handling in the Spond plugin's data source.
 
 ### Add a client for another operating system
 

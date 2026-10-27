@@ -9,12 +9,15 @@ namespace Kyuplan.Client.ViewModels;
 /// <summary>
 /// The settings as they are typed, on the setup screen and on the settings page: the same fields, checked with the same rules
 /// (<see cref="SettingsRules"/>) as the API checks them. The time zone is only checked by the API, which knows the zones of its system.
+/// The settings of a data source that comes from a plugin are a form the plugin describes in JSON (<see cref="PluginForm"/>); the form is drawn from that, not coded here.
 /// </summary>
 public sealed partial class SettingsForm : ObservableObject
 {
+    private IReadOnlyList<PluginDataSourceDto> _pluginSources = [];
+    private readonly Dictionary<string, PluginFormViewModel> _pluginForms = [];
+
     public SettingsForm()
     {
-        BackupAccounts.CollectionChanged += (_, _) => OnPropertyChanged(nameof(BackupAccounts));
         ScriptSecrets.CollectionChanged += (_, _) => SecretsChanged();
     }
 
@@ -28,15 +31,12 @@ public sealed partial class SettingsForm : ObservableObject
     /// <summary>The secrets the custom script reads with <c>secrets.get('NAME')</c>; a stored value is never shown, only typed to set or change it.</summary>
     public ObservableCollection<ScriptSecretForm> ScriptSecrets { get; } = [];
 
-    /// <summary>More Spond logins, tried in this order after the first one.</summary>
-    public ObservableCollection<BackupAccountForm> BackupAccounts { get; } = [];
-
     [ObservableProperty] private string _databasePath = "";
     [ObservableProperty] private string _accountsDatabasePath = "";
 
-    /// <summary>Where groups, members and events come from, one of <see cref="DataSourceKinds"/>.</summary>
+    /// <summary>Where groups, members and events come from: one of <see cref="DataSourceKinds"/> or the id of the data source of a plugin.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(UseDemoData), nameof(IsSpondSource), nameof(IsCustomSource), nameof(IsManualSource), nameof(SpondProblem), nameof(BackupProblem), nameof(CustomScriptProblem), nameof(CustomScriptWarning), nameof(ScriptSecretsProblem))]
+    [NotifyPropertyChangedFor(nameof(UseDemoData), nameof(IsPluginSource), nameof(IsMissingPlugin), nameof(PluginForm), nameof(PluginFormProblem), nameof(IsCustomSource), nameof(IsManualSource), nameof(CustomScriptProblem), nameof(CustomScriptWarning), nameof(ScriptSecretsProblem))]
     private string _dataSource = DataSourceKinds.Spond;
 
     /// <summary>The JavaScript of the custom data source.</summary>
@@ -57,22 +57,61 @@ public sealed partial class SettingsForm : ObservableObject
         set => DataSource = value ? DataSourceKinds.Demo : DataSource == DataSourceKinds.Demo ? DataSourceKinds.Spond : DataSource;
     }
 
-    public bool IsSpondSource => DataSource == DataSourceKinds.Spond;
+    /// <summary>The data source comes from a plugin (it is none of the program's own).</summary>
+    public bool IsPluginSource => !DataSourceKinds.All.Contains(DataSource);
 
     public bool IsCustomSource => DataSource == DataSourceKinds.Custom;
 
     public bool IsManualSource => DataSource == DataSourceKinds.Manual;
 
-    /// <summary>The data sources to choose from, in the order they are offered.</summary>
-    public static IReadOnlyList<string> DataSources { get; } = DataSourceKinds.All;
+    /// <summary>What the plugins add is known (the API answered). Until then the form cannot say that a plugin is missing: it only does not know.</summary>
+    private bool _pluginsKnown;
 
-    public static string DataSourceText(string kind) => kind switch
+    /// <summary>The chosen data source is a plugin's, but no installed plugin offers it (the plugin was removed, or never installed): saving it would leave the API without data.</summary>
+    public bool IsMissingPlugin => _pluginsKnown && IsPluginSource && _pluginSources.All(s => s.Id != DataSource);
+
+    /// <summary>
+    /// Takes the data sources the plugins offer (<see cref="PluginCatalogDto"/>) and builds the forms of their settings. Call it before <see cref="Load"/>, which fills the forms.
+    /// </summary>
+    public void SetPlugins(PluginCatalogDto? catalog)
     {
-        DataSourceKinds.Custom => Strings.Settings_DataSource_custom,
-        DataSourceKinds.Manual => Strings.Settings_DataSource_manual,
-        DataSourceKinds.Demo => Strings.Settings_DataSource_demo,
-        _ => Strings.Settings_DataSource_spond,
-    };
+        _pluginsKnown = catalog is not null;
+        _pluginSources = [.. (catalog?.Plugins ?? []).SelectMany(p => p.DataSources)];
+        foreach (var form in _pluginForms.Values) form.ValueChanged -= OnPluginFormChanged;
+        _pluginForms.Clear();
+        foreach (var source in _pluginSources.Where(s => s.Form is not null))
+        {
+            var form = new PluginFormViewModel(source.Form!);
+            form.ValueChanged += OnPluginFormChanged;
+            _pluginForms[source.Id] = form;
+        }
+
+        OnPropertyChanged(nameof(DataSources));
+        OnPropertyChanged(nameof(IsMissingPlugin));
+        OnPropertyChanged(nameof(PluginForm));
+        OnPropertyChanged(nameof(PluginFormProblem));
+    }
+
+    private void OnPluginFormChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(PluginFormProblem));
+        OnPropertyChanged(nameof(IsValid));
+    }
+
+    /// <summary>The data sources to choose from, in the order they are offered: those of the plugins first. The chosen one is always in the list, so that a data source whose plugin is gone is still shown.</summary>
+    public IReadOnlyList<string> DataSources =>
+        [.. _pluginSources.Select(s => s.Id).Concat(DataSourceKinds.All).Append(DataSource).Distinct()];
+
+    public string DataSourceText(string kind) => _pluginSources.FirstOrDefault(s => s.Id == kind) is { } source
+        ? PluginText.Pick(source.Name, source.NameDe)
+        : kind switch
+        {
+            DataSourceKinds.Custom => Strings.Settings_DataSource_custom,
+            DataSourceKinds.Manual => Strings.Settings_DataSource_manual,
+            DataSourceKinds.Demo => Strings.Settings_DataSource_demo,
+            _ when !_pluginsKnown => kind,
+            _ => string.Format(Strings.Settings_DataSource_missing, kind),
+        };
 
     /// <summary>What the chosen data source means, in a sentence.</summary>
     public string DataSourceHint => DataSource switch
@@ -80,14 +119,19 @@ public sealed partial class SettingsForm : ObservableObject
         DataSourceKinds.Custom => Strings.Settings_DataSourceHint_custom,
         DataSourceKinds.Manual => Strings.Settings_DataSourceHint_manual,
         DataSourceKinds.Demo => Strings.Settings_UseDemoDataHint,
-        _ => Strings.Settings_DataSourceHint_spond,
+        _ when _pluginSources.FirstOrDefault(s => s.Id == DataSource) is { } source => PluginText.Pick(source.Description, source.DescriptionDe),
+        _ when !_pluginsKnown => "",
+        _ => Strings.Settings_DataSourceHint_missing,
     };
 
     partial void OnDataSourceChanged(string value) => OnPropertyChanged(nameof(DataSourceHint));
-    [ObservableProperty] private string _spondEmail = "";
-    [ObservableProperty] private string _spondPhoneNumber = "";
-    [ObservableProperty] private string _spondPassword = "";
-    [ObservableProperty] private bool _hasSpondPassword;
+
+    /// <summary>The settings form of the chosen data source, when it is a plugin's and has one.</summary>
+    public PluginFormViewModel? PluginForm => _pluginForms.GetValueOrDefault(DataSource);
+
+    /// <summary>What is wrong with the settings of the chosen plugin data source, in words.</summary>
+    public string? PluginFormProblem => PluginForm?.Problem;
+
     [ObservableProperty] private string _timeZone = "";
     [ObservableProperty] private string _examKeyword = "";
     [ObservableProperty] private int _defaultMinAttendancePercent;
@@ -110,7 +154,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     [ObservableProperty] private bool _hasMetricsToken;
 
-    /// <summary>The names of the subgroups the Spond groups have (the combobox's choices), plus the one that is set when Spond does not list it (any more).</summary>
+    /// <summary>The names of the subgroups the groups have (the combobox's choices), plus the one that is set when the data source does not list it (any more).</summary>
     public IReadOnlyList<string> SubGroupChoices =>
         [.. AvailableSubGroups.Append(UnregisteredSubGroup.Trim()).Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase)];
 
@@ -123,10 +167,7 @@ public sealed partial class SettingsForm : ObservableObject
         DataSource = DataSourceKinds.Normalize(settings.UseDemoData ? DataSourceKinds.Demo : settings.DataSource);
         CustomScript = settings.CustomScript;
         CustomScriptHidden = settings.CustomScriptHidden;
-        SpondEmail = settings.SpondEmail ?? "";
-        SpondPhoneNumber = settings.SpondPhoneNumber ?? "";
-        SpondPassword = "";
-        HasSpondPassword = settings.HasSpondPassword;
+        foreach (var (id, form) in _pluginForms) form.Load(settings.PluginSettings?.GetValueOrDefault(id));
         TimeZone = settings.TimeZone;
         ExamKeyword = settings.ExamKeyword;
         DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent;
@@ -140,21 +181,18 @@ public sealed partial class SettingsForm : ObservableObject
         MetricsEnabled = settings.MetricsEnabled;
         MetricsToken = "";
         HasMetricsToken = settings.HasMetricsToken;
-        BackupAccounts.Clear();
-        foreach (var account in settings.BackupAccounts ?? []) AddBackup(new BackupAccountForm(account));
         ScriptSecrets.Clear();
         foreach (var name in settings.ScriptSecrets ?? []) AddSecret(new ScriptSecretForm(name));
         OnPropertyChanged(string.Empty);
     }
 
     public SettingsInputDto ToInput() => new(
-        DatabasePath.Trim(), AccountsDatabasePath.Trim(), DataSource == DataSourceKinds.Demo, SpondEmail.Trim(), SpondPhoneNumber.Trim(),
-        SpondPassword.Length == 0 ? null : SpondPassword, TimeZone.Trim(), ExamKeyword.Trim(),
-        DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes,
-        [.. BackupAccounts.Where(a => !a.IsEmpty).Select(a => a.ToInput())], AllowedHosts.Trim(),
+        DatabasePath.Trim(), AccountsDatabasePath.Trim(), DataSource == DataSourceKinds.Demo, TimeZone.Trim(), ExamKeyword.Trim(),
+        DefaultMinAttendancePercent, DefaultMinInvitedEvents, SyncEnabled, SyncIntervalMinutes, AllowedHosts.Trim(),
         DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScriptHidden ? null : CustomScript,
         MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken,
-        IsCustomSource ? [.. ScriptSecrets.Where(s => !s.IsEmpty).Select(s => s.ToInput())] : null); // another source leaves the stored secrets alone
+        IsCustomSource ? [.. ScriptSecrets.Where(s => !s.IsEmpty).Select(s => s.ToInput())] : null, // another source leaves the stored secrets alone
+        PluginForm is { } form ? new Dictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>> { [DataSource] = form.Values() } : null); // only the settings of the chosen data source
 
     // A script the API kept back is never sent, so a template put there would be dropped silently.
     [RelayCommand(CanExecute = nameof(CanInsertScriptTemplate))]
@@ -174,39 +212,21 @@ public sealed partial class SettingsForm : ObservableObject
         ScriptSecrets.Add(secret);
     }
 
-    [RelayCommand]
-    private void AddBackupAccount() => AddBackup(new BackupAccountForm());
-
-    [RelayCommand]
-    private void RemoveBackupAccount(BackupAccountForm account) => BackupAccounts.Remove(account);
-
-    private void AddBackup(BackupAccountForm account)
-    {
-        account.PropertyChanged += (_, _) => OnPropertyChanged(nameof(BackupAccounts));
-        BackupAccounts.Add(account);
-    }
-
-    /// <summary>Everything typed is what the API runs with (and no new Spond password was typed).</summary>
+    /// <summary>Everything typed is what the API runs with (and no new password was typed).</summary>
     public bool Matches(SettingsDto s) =>
         DatabasePath.Trim() == s.DatabasePath && AccountsDatabasePath.Trim() == s.AccountsDatabasePath && DataSource == DataSourceKinds.Normalize(s.UseDemoData ? DataSourceKinds.Demo : s.DataSource) && (CustomScriptHidden || CustomScript == s.CustomScript) && SecretsMatch(s.ScriptSecrets ?? []) &&
-        SpondEmail.Trim() == (s.SpondEmail ?? "") && SpondPhoneNumber.Trim() == (s.SpondPhoneNumber ?? "") && SpondPassword.Length == 0 &&
+        (PluginForm is not { IsChanged: true }) &&
         TimeZone.Trim() == s.TimeZone && ExamKeyword.Trim() == s.ExamKeyword &&
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
         DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
         UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&
         SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) &&
-        MetricsEnabled == s.MetricsEnabled && MetricsToken.Length == 0 && BackupMatches(s.BackupAccounts ?? []);
+        MetricsEnabled == s.MetricsEnabled && MetricsToken.Length == 0;
 
     private bool SecretsMatch(IReadOnlyList<string> saved)
     {
         var typed = ScriptSecrets.Where(s => !s.IsEmpty).ToList();
         return typed.Count == saved.Count && typed.All(s => s.Value.Length == 0 && saved.Contains(s.Name.Trim(), StringComparer.OrdinalIgnoreCase));
-    }
-
-    private bool BackupMatches(IReadOnlyList<SpondAccountDto> saved)
-    {
-        var typed = BackupAccounts.Where(a => !a.IsEmpty).ToList();
-        return typed.Count == saved.Count && typed.Zip(saved).All(p => p.First.Matches(p.Second));
     }
 
     public string? DatabasePathProblem => SettingsRules.IsPath(DatabasePath) ? null : Strings.Settings_PathInvalid;
@@ -215,14 +235,6 @@ public sealed partial class SettingsForm : ObservableObject
         !SettingsRules.IsPath(AccountsDatabasePath) ? Strings.Settings_PathInvalid
         : SettingsRules.AreSameFile(DatabasePath, AccountsDatabasePath) ? Strings.Settings_DatabasesSame
         : null;
-
-    public string? SpondProblem =>
-        IsSpondSource && SettingsRules.HasHalfCredentials(SpondEmail, SpondPhoneNumber, SpondPassword.Length > 0 || HasSpondPassword)
-            ? Strings.Settings_SpondIncomplete
-            : null;
-
-    public string? BackupProblem =>
-        IsSpondSource && BackupAccounts.Any(a => a.IsIncomplete) ? Strings.Settings_BackupIncomplete : null;
 
     public string? CustomScriptProblem =>
         !IsCustomSource || CustomScriptHidden ? null
@@ -264,8 +276,16 @@ public sealed partial class SettingsForm : ObservableObject
         : null;
 
     public bool IsValid =>
-        DatabasePathProblem is null && AccountsDatabasePathProblem is null && SpondProblem is null && BackupProblem is null && CustomScriptProblem is null && ScriptSecretsProblem is null && TimeZoneProblem is null &&
+        DatabasePathProblem is null && AccountsDatabasePathProblem is null && PluginFormProblem is null && CustomScriptProblem is null && ScriptSecretsProblem is null && TimeZoneProblem is null &&
         PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null && MetricsTokenProblem is null;
+
+    /// <summary>The language changed: the texts of the plugins' forms are read again.</summary>
+    public void LanguageChanged()
+    {
+        foreach (var form in _pluginForms.Values) form.LanguageChanged();
+        OnPropertyChanged(nameof(DataSources));
+        OnPropertyChanged(nameof(DataSourceHint));
+    }
 }
 
 /// <summary>One secret of the custom script as it is typed: the value is only filled in to set or change it.</summary>
@@ -302,34 +322,4 @@ public sealed partial class ScriptSecretForm : ObservableObject
         !IsEmpty && (!SettingsRules.IsSecretName(Name.Trim()) || (Value.Length > 0 ? !SettingsRules.IsSecretValue(Value) : !HasValue));
 
     public ScriptSecretInputDto ToInput() => new(Name.Trim(), Value.Length == 0 ? null : Value);
-}
-
-/// <summary>One backup Spond login as it is typed: the password is only filled in to set or change it.</summary>
-public sealed partial class BackupAccountForm : ObservableObject
-{
-    [ObservableProperty] private string _email = "";
-    [ObservableProperty] private string _phoneNumber = "";
-    [ObservableProperty] private string _password = "";
-    [ObservableProperty] private bool _hasPassword;
-
-    public BackupAccountForm()
-    {
-    }
-
-    public BackupAccountForm(SpondAccountDto saved)
-    {
-        _email = saved.Email ?? "";
-        _phoneNumber = saved.PhoneNumber ?? "";
-        _hasPassword = saved.HasPassword;
-    }
-
-    public bool IsEmpty => Email.Trim().Length == 0 && PhoneNumber.Trim().Length == 0 && Password.Length == 0;
-
-    /// <summary>Something typed, but not a whole login: it needs the email (or phone number) and the password.</summary>
-    public bool IsIncomplete => !IsEmpty && SettingsRules.HasHalfCredentials(Email, PhoneNumber, Password.Length > 0 || HasPassword);
-
-    public SpondAccountInputDto ToInput() => new(Email.Trim(), PhoneNumber.Trim(), Password.Length == 0 ? null : Password);
-
-    public bool Matches(SpondAccountDto saved) =>
-        Email.Trim() == (saved.Email ?? "") && PhoneNumber.Trim() == (saved.PhoneNumber ?? "") && Password.Length == 0;
 }

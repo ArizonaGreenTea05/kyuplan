@@ -39,9 +39,9 @@
     <label class="field">
         <span>@Strings.Settings_DataSource</span>
         <select value="@Form.DataSource" disabled="@Disabled" @onchange="e => Form.DataSource = e.Value?.ToString() ?? DataSourceKinds.Spond">
-            @foreach (var kind in SettingsForm.DataSources)
+            @foreach (var kind in Form.DataSources)
             {
-                <option value="@kind">@SettingsForm.DataSourceText(kind)</option>
+                <option value="@kind">@Form.DataSourceText(kind)</option>
             }
         </select>
         <small>@Form.DataSourceHint</small>
@@ -109,75 +109,19 @@
         </div>
     }
 
-    @if (Form.IsSpondSource)
+    @if (Form.IsMissingPlugin)
     {
-        <div class="grid two">
-            <label class="field">
-                <span>@Strings.Settings_SpondEmail</span>
-                <input type="email" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.SpondEmail" @bind:event="oninput" />
-            </label>
+        <p class="field-error" role="alert">@Strings.Settings_DataSourceHint_missing</p>
+    }
 
-            <label class="field">
-                <span>@Strings.Settings_SpondPhone</span>
-                <input type="tel" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.SpondPhoneNumber" @bind:event="oninput" />
-            </label>
-        </div>
+    @* The settings of the data source of a plugin: the plugin describes the form in JSON, the same way for every plugin. *@
+    @if (Form.PluginForm is { } pluginForm)
+    {
+        <PluginItems Items="pluginForm.Items" Disabled="Disabled" />
+    }
 
-        <label class="field">
-            <span>@Strings.Settings_SpondPassword</span>
-            <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="Form.SpondPassword" />
-            @if (Form.SpondProblem is { } spondProblem)
-            {
-                <p class="field-error" role="alert">@spondProblem</p>
-            }
-            else
-            {
-                <small>@(Form.HasSpondPassword ? Strings.Settings_SpondPasswordStored : Strings.Settings_SpondPasswordMissing)</small>
-            }
-        </label>
-
-        <h3>@Strings.Settings_BackupAccounts</h3>
-        <p class="hint">@Strings.Settings_BackupAccountsHint</p>
-
-        @foreach (var account in Form.BackupAccounts)
-        {
-            <div class="grid two">
-                <label class="field">
-                    <span>@Strings.Settings_SpondEmail</span>
-                    <input type="email" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="account.Email" @bind:event="oninput" />
-                </label>
-
-                <label class="field">
-                    <span>@Strings.Settings_SpondPhone</span>
-                    <input type="tel" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="account.PhoneNumber" @bind:event="oninput" />
-                </label>
-            </div>
-
-            <div class="grid two">
-                <label class="field">
-                    <span>@Strings.Settings_SpondPassword</span>
-                    <PasswordInput autocomplete="new-password" disabled="@Disabled" @bind-Value="account.Password" />
-                    @if (account.HasPassword)
-                    {
-                        <small>@Strings.Settings_SpondPasswordStored</small>
-                    }
-                </label>
-
-                <div class="form-actions">
-                    <button type="button" class="btn secondary" disabled="@Disabled" @onclick="() => Form.RemoveBackupAccountCommand.Execute(account)">@Strings.Settings_BackupRemove</button>
-                </div>
-            </div>
-        }
-
-        @if (Form.BackupProblem is { } backupProblem)
-        {
-            <p class="field-error" role="alert">@backupProblem</p>
-        }
-
-        <div class="form-actions">
-            <button type="button" class="btn secondary" disabled="@(Disabled || Form.BackupAccounts.Count >= SettingsRules.MaxBackupAccounts)" @onclick="() => Form.AddBackupAccountCommand.Execute(null)">@Strings.Settings_BackupAdd</button>
-        </div>
-
+    @if (Form.IsPluginSource)
+    {
         <label class="field">
             <span>@Strings.Settings_UnregisteredSubGroup</span>
             <select value="@Form.UnregisteredSubGroup" disabled="@Disabled" @onchange="e => Form.UnregisteredSubGroup = e.Value?.ToString() ?? string.Empty">

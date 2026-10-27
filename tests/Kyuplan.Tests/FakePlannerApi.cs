@@ -305,6 +305,80 @@ internal sealed class FakePlannerApi : IPlannerApi
             return PublishThemes();
         });
 
+    // --- Plugins ---------------------------------------------------------------------------------------------
+
+    /// <summary>What the plugins that run add, as the API tells the signed-in user.</summary>
+    public PluginCatalogDto PluginCatalog { get; set; } = new([]);
+
+    public List<PluginAdminDto> InstalledPlugins { get; } = [];
+
+    public List<string> PluginCalls { get; } = [];
+
+    /// <summary>What the endpoints of the plugins answer, by <c>pluginId/path</c>.</summary>
+    public Dictionary<string, System.Text.Json.JsonElement> PluginData { get; } = [];
+
+    /// <summary>What the next installation or update says (a plugin on its way, or a restart that is not needed).</summary>
+    public bool PluginChangeRestarts { get; set; } = true;
+
+    /// <summary>When set, only the question for the plugin catalog fails with this exception (every call fails with <see cref="FailWith"/>).</summary>
+    public Exception? PluginsFailWith { get; set; }
+
+    /// <summary>When set, only the question for the groups fails with this exception: a data source that cannot be read (no login yet, the service is down).</summary>
+    public Exception? GroupsFailWith { get; set; }
+
+    public Task<PluginCatalogDto> GetPluginsAsync(CancellationToken cancellationToken = default) =>
+        PluginsFailWith is { } ex ? Task.FromException<PluginCatalogDto>(ex) : Run(() => PluginCatalog);
+
+    public Task<IReadOnlyList<PluginAdminDto>> GetInstalledPluginsAsync(CancellationToken cancellationToken = default) =>
+        Run<IReadOnlyList<PluginAdminDto>>(() =>
+        {
+            if (!Account.Can(Permission.PluginsView)) throw Forbidden();
+            return [.. InstalledPlugins];
+        });
+
+    public Task<PluginChangedDto> InstallPluginAsync(string url, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.PluginsEdit)) throw Forbidden();
+            if (ThemeSourceRules.Parse(url) is not var (owner, repo)) throw BadRequest("not a repository");
+            PluginCalls.Add("install:" + url);
+            var plugin = new PluginAdminDto(repo, repo, "1.0.0", null, ThemeSourceRules.Url(owner, repo), Now, false, null, [], 0, "abc");
+            InstalledPlugins.RemoveAll(p => p.Id == plugin.Id);
+            InstalledPlugins.Add(plugin);
+            return new PluginChangedDto(plugin, PluginChangeRestarts);
+        });
+
+    public Task<PluginChangedDto> UpdatePluginAsync(string id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.PluginsEdit)) throw Forbidden();
+            PluginCalls.Add("update:" + id);
+            return new PluginChangedDto(InstalledPlugins.FirstOrDefault(p => p.Id == id) ?? throw NotFound(), PluginChangeRestarts);
+        });
+
+    public Task<PluginChangedDto> RemovePluginAsync(string id, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            if (!Account.Can(Permission.PluginsEdit)) throw Forbidden();
+            PluginCalls.Add("remove:" + id);
+            if (InstalledPlugins.RemoveAll(p => p.Id == id) == 0) throw NotFound();
+            return new PluginChangedDto(null, true);
+        });
+
+    public Task<System.Text.Json.JsonElement> GetPluginDataAsync(string pluginId, string path, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            PluginCalls.Add($"get:{pluginId}/{path}");
+            return PluginData.GetValueOrDefault($"{pluginId}/{path}");
+        });
+
+    public Task<System.Text.Json.JsonElement> SendPluginAsync(string pluginId, string method, string path, System.Text.Json.JsonElement? body, CancellationToken cancellationToken = default) =>
+        Run(() =>
+        {
+            PluginCalls.Add($"{method}:{pluginId}/{path}:{body?.GetRawText()}");
+            return default(System.Text.Json.JsonElement);
+        });
+
     public Task<IReadOnlyList<ThemeSourceDto>> GetThemeSourcesAsync(CancellationToken cancellationToken = default) =>
         Run<IReadOnlyList<ThemeSourceDto>>(() =>
         {
@@ -769,7 +843,7 @@ internal sealed class FakePlannerApi : IPlannerApi
         });
 
     public Task<IReadOnlyList<GroupDto>> GetGroupsAsync(CancellationToken cancellationToken = default) =>
-        FailWith is { } ex ? Task.FromException<IReadOnlyList<GroupDto>>(ex) : Task.FromResult<IReadOnlyList<GroupDto>>(Groups);
+        (GroupsFailWith ?? FailWith) is { } ex ? Task.FromException<IReadOnlyList<GroupDto>>(ex) : Task.FromResult<IReadOnlyList<GroupDto>>(Groups);
 
     public Task<DashboardDto> GetDashboardAsync(
         string groupId, string? subGroupId = null, int? days = null, CancellationToken cancellationToken = default)
@@ -1672,7 +1746,7 @@ internal sealed class FakePlannerApi : IPlannerApi
     // --- Setup and settings ----------------------------------------------------------------------------------
 
     public static readonly SettingsDto DefaultSettings = new(
-        "data/kyuplan.db", "data/accounts.db", false, null, null, false, "Europe/Berlin", "Prüfung", 60, 3, true, 30);
+        "data/kyuplan.db", "data/accounts.db", false, "Europe/Berlin", "Prüfung", 60, 3, true, 30);
 
     /// <summary>What the server says of whether it needs the setup; the fake never needs it unless a test says so.</summary>
     public bool NeedsSetup { get; set; }
@@ -1700,7 +1774,7 @@ internal sealed class FakePlannerApi : IPlannerApi
             return Task.FromException<SetupStatusDto>(new PlannerApiException("Not reachable.", null));
         }
 
-        return Run(() => new SetupStatusDto(NeedsSetup, NeedsSetup ? Settings : null));
+        return Run(() => new SetupStatusDto(NeedsSetup, NeedsSetup ? Settings : null, Plugins: NeedsSetup ? PluginCatalog : null));
     }
 
     public Task<SettingsSavedDto> SetupAsync(SetupInputDto setup, CancellationToken cancellationToken = default) =>
@@ -1725,8 +1799,6 @@ internal sealed class FakePlannerApi : IPlannerApi
             Settings = Settings with
             {
                 DatabasePath = settings.DatabasePath, AccountsDatabasePath = settings.AccountsDatabasePath, UseDemoData = settings.UseDemoData,
-                SpondEmail = settings.SpondEmail, SpondPhoneNumber = settings.SpondPhoneNumber,
-                HasSpondPassword = Settings.HasSpondPassword || !string.IsNullOrEmpty(settings.SpondPassword),
                 TimeZone = settings.TimeZone, ExamKeyword = settings.ExamKeyword,
                 DefaultMinAttendancePercent = settings.DefaultMinAttendancePercent, DefaultMinInvitedEvents = settings.DefaultMinInvitedEvents,
                 SyncEnabled = settings.SyncEnabled, SyncIntervalMinutes = settings.SyncIntervalMinutes,

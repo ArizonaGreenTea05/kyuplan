@@ -119,6 +119,9 @@
   <data name="Nav_SyncStatus" xml:space="preserve">
     <value>Sync status</value>
   </data>
+  <data name="Nav_Plugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
   <data name="Shell_Group" xml:space="preserve">
     <value>Group</value>
   </data>
@@ -1408,24 +1411,6 @@
   <data name="Settings_UseDemoDataHint" xml:space="preserve">
     <value>Generated sample data, to try the planner out. No real data source is asked.</value>
   </data>
-  <data name="Settings_SpondEmail" xml:space="preserve">
-    <value>Spond email</value>
-  </data>
-  <data name="Settings_SpondPhone" xml:space="preserve">
-    <value>Spond phone number (instead of the email)</value>
-  </data>
-  <data name="Settings_SpondPassword" xml:space="preserve">
-    <value>Spond password</value>
-  </data>
-  <data name="Settings_SpondPasswordStored" xml:space="preserve">
-    <value>A password is stored. Leave this empty to keep it.</value>
-  </data>
-  <data name="Settings_SpondPasswordMissing" xml:space="preserve">
-    <value>Without a Spond login the planner has no data; you can add it later.</value>
-  </data>
-  <data name="Settings_SpondIncomplete" xml:space="preserve">
-    <value>A Spond login needs the email (or phone number) and the password.</value>
-  </data>
   <data name="Settings_StatisticsTitle" xml:space="preserve">
     <value>Statistics and exams</value>
   </data>
@@ -1474,21 +1459,6 @@
   <data name="Settings_SyncIntervalInvalid" xml:space="preserve">
     <value>Enter a number from 0 to {0}.</value>
   </data>
-  <data name="Settings_BackupAccounts" xml:space="preserve">
-    <value>Backup Spond accounts</value>
-  </data>
-  <data name="Settings_BackupAccountsHint" xml:space="preserve">
-    <value>Asked in this order when the first account yields nothing (Spond sometimes answers an account that sent too many requests with nothing at all). All accounts must see the same groups.</value>
-  </data>
-  <data name="Settings_BackupAdd" xml:space="preserve">
-    <value>Add backup account</value>
-  </data>
-  <data name="Settings_BackupRemove" xml:space="preserve">
-    <value>Remove</value>
-  </data>
-  <data name="Settings_BackupIncomplete" xml:space="preserve">
-    <value>A backup Spond login needs the email (or phone number) and the password.</value>
-  </data>
   <data name="Settings_SecurityTitle" xml:space="preserve">
     <value>Security</value>
   </data>
@@ -1519,9 +1489,6 @@
   <data name="Settings_DataSource" xml:space="preserve">
     <value>Data source</value>
   </data>
-  <data name="Settings_DataSource_spond" xml:space="preserve">
-    <value>Spond</value>
-  </data>
   <data name="Settings_DataSource_custom" xml:space="preserve">
     <value>Custom (script)</value>
   </data>
@@ -1530,9 +1497,6 @@
   </data>
   <data name="Settings_DataSource_demo" xml:space="preserve">
     <value>Demo data</value>
-  </data>
-  <data name="Settings_DataSourceHint_spond" xml:space="preserve">
-    <value>Groups, members and events are read from Spond.</value>
   </data>
   <data name="Settings_DataSourceHint_custom" xml:space="preserve">
     <value>A JavaScript you write reads them from any service (see the administrator guide).</value>
@@ -1605,6 +1569,12 @@
   </data>
   <data name="Settings_MetricsTokenInvalid" xml:space="preserve">
     <value>The token needs at least {0} characters (at most 200) without spaces.</value>
+  </data>
+  <data name="Settings_DataSource_missing" xml:space="preserve">
+    <value>{0} (plugin not installed)</value>
+  </data>
+  <data name="Settings_DataSourceHint_missing" xml:space="preserve">
+    <value>The plugin that offers this data source is not installed. Install it on the plugins page, or choose another data source.</value>
   </data>
   <data name="Exams_Lede" xml:space="preserve">
     <value>Belt exams: who is fit for the next one, and who attended the past ones and received which belt.</value>
@@ -2442,6 +2412,9 @@
   <data name="PermissionGroup_sync" xml:space="preserve">
     <value>Sync status</value>
   </data>
+  <data name="PermissionGroup_plugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
   <data name="Permission_dashboard_view" xml:space="preserve">
     <value>See the dashboard</value>
   </data>
@@ -2579,6 +2552,12 @@
   </data>
   <data name="Permission_sync_view" xml:space="preserve">
     <value>See how the sync with the data source is doing</value>
+  </data>
+  <data name="Permission_plugins_view" xml:space="preserve">
+    <value>See the installed plugins</value>
+  </data>
+  <data name="Permission_plugins_edit" xml:space="preserve">
+    <value>Install, update and remove plugins</value>
   </data>
   <data name="Setup_Title" xml:space="preserve">
     <value>Set up</value>
@@ -3576,6 +3555,9 @@
   <data name="AuditArea_themes" xml:space="preserve">
     <value>Theme packs</value>
   </data>
+  <data name="AuditArea_plugins" xml:space="preserve">
+    <value>Plugins</value>
+  </data>
   <data name="AuditAction_create" xml:space="preserve">
     <value>Created</value>
   </data>
@@ -3665,6 +3647,108 @@
   </data>
   <data name="SyncStatus_ConfirmDone" xml:space="preserve">
     <value>The sync was applied.</value>
+  </data>
+  <data name="Plugins_Lede" xml:space="preserve">
+    <value>Plugins add pages, permissions and data sources. They come from public GitHub repositories.</value>
+  </data>
+  <data name="Plugins_Warning" xml:space="preserve">
+    <value>A plugin is code that runs inside the API with all its rights. Only install plugins from authors you trust.</value>
+  </data>
+  <data name="Plugins_InstallTitle" xml:space="preserve">
+    <value>Install a plugin</value>
+  </data>
+  <data name="Plugins_Url" xml:space="preserve">
+    <value>Address of the GitHub repository</value>
+  </data>
+  <data name="Plugins_UrlHint" xml:space="preserve">
+    <value>https://github.com/owner/repo: the latest release of the repository has to carry a .kyuplugin file.</value>
+  </data>
+  <data name="Plugins_UrlInvalid" xml:space="preserve">
+    <value>That is not the address of a GitHub repository (https://github.com/owner/repo).</value>
+  </data>
+  <data name="Plugins_Install" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="Plugins_InstalledTitle" xml:space="preserve">
+    <value>Installed plugins</value>
+  </data>
+  <data name="Plugins_None" xml:space="preserve">
+    <value>No plugin is installed.</value>
+  </data>
+  <data name="Plugins_Update" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="Plugins_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Plugins_RemoveYes" xml:space="preserve">
+    <value>Remove it</value>
+  </data>
+  <data name="Plugins_RemoveConfirm" xml:space="preserve">
+    <value>Remove the plugin {0}? The API restarts. What was allowed through its permissions works again when it is installed again.</value>
+  </data>
+  <data name="Plugins_Details" xml:space="preserve">
+    <value>Version {0} · from {1}</value>
+  </data>
+  <data name="Plugins_SourceBundled" xml:space="preserve">
+    <value>the program</value>
+  </data>
+  <data name="Plugins_DataSources" xml:space="preserve">
+    <value>Data sources: {0}</value>
+  </data>
+  <data name="Plugins_Pages" xml:space="preserve">
+    <value>{0} pages</value>
+  </data>
+  <data name="Plugins_Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Plugins_NotRunning" xml:space="preserve">
+    <value>Not running yet: it starts with the next start of the API.</value>
+  </data>
+  <data name="Plugins_Problem" xml:space="preserve">
+    <value>Does not run: {0}</value>
+  </data>
+  <data name="Plugins_NothingChanged" xml:space="preserve">
+    <value>Nothing changed: the plugin is up to date.</value>
+  </data>
+  <data name="Plugins_Restarting" xml:space="preserve">
+    <value>The API restarts to run the plugins ...</value>
+  </data>
+  <data name="Plugins_Restarted" xml:space="preserve">
+    <value>The API is back.</value>
+  </data>
+  <data name="Plugin_ActionDone" xml:space="preserve">
+    <value>Done.</value>
+  </data>
+  <data name="Plugin_SecretStored" xml:space="preserve">
+    <value>A password is stored. Leave this empty to keep it.</value>
+  </data>
+  <data name="Plugin_FieldRequired" xml:space="preserve">
+    <value>This field is required.</value>
+  </data>
+  <data name="Plugin_FieldInvalid" xml:space="preserve">
+    <value>This value is not valid.</value>
+  </data>
+  <data name="Plugin_TableEmpty" xml:space="preserve">
+    <value>Nothing to show.</value>
+  </data>
+  <data name="Plugin_Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Plugin_No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Plugin_ListAdd" xml:space="preserve">
+    <value>Add row</value>
+  </data>
+  <data name="Plugin_ListRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Plugin_Confirm" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Plugin_Cancel" xml:space="preserve">
+    <value>No</value>
   </data>
   <data name="Number_Increase" xml:space="preserve">
     <value>Increase</value>

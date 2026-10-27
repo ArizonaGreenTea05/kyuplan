@@ -85,7 +85,7 @@ public sealed class LinuxNavigationTests : IDisposable
     {
         _session.User = Boss;
 
-        Assert.Equal(["UserAdmin", "Roles", "Settings", "BrandingAdmin", "CalendarFeeds", "Backup", "SyncStatus"], Names(_navigation.AdminItems.Select(i => i.Page)));
+        Assert.Equal(["UserAdmin", "Roles", "Settings", "Plugins", "BrandingAdmin", "CalendarFeeds", "Backup", "SyncStatus"], Names(_navigation.AdminItems.Select(i => i.Page)));
         Assert.Equal(8, _navigation.Items.Count); // the manual data page waits for the server to say the source is manual
     }
 
@@ -121,21 +121,21 @@ public sealed class LinuxNavigationTests : IDisposable
     {
         _session.User = Boss;
         _session.User = Boss with { UserName = "chief" }; // renamed: still an administrator
-        Assert.Equal(7, _navigation.AdminItems.Count);
+        Assert.Equal(8, _navigation.AdminItems.Count);
 
         _session.User = Anna;
         Assert.Equal(6, _navigation.Items.Count);
         Assert.Empty(_navigation.AdminItems);
 
         _session.User = Boss;
-        Assert.Equal(7, _navigation.AdminItems.Count);
+        Assert.Equal(8, _navigation.AdminItems.Count);
     }
 
     [Fact]
     public void A_page_that_is_open_gives_way_to_the_first_one_that_is_left_when_the_permission_is_gone()
     {
         _session.User = Boss;
-        _navigation.SelectedItem = _navigation.AdminItems[3];
+        _navigation.SelectedItem = _navigation.AdminItems[4];
         Assert.IsType<BrandingAdminViewModel>(_navigation.SelectedItem.Page);
 
         _session.User = Anna;
@@ -192,5 +192,43 @@ public sealed class LinuxNavigationTests : IDisposable
 
         Assert.True(changed);
         Assert.Contains("Anna K.", _navigation.SignedInText);
+    }
+
+    [Fact]
+    public async Task The_pages_the_plugins_added_follow_the_main_pages_and_come_and_go_with_the_catalog()
+    {
+        _api.PluginCatalog = PluginTestKit.AcmeCatalog();
+        _api.Account = WithPermissions(5, "viewer", "acme.view");
+        _api.AccountGate!.SetResult();
+        var shell = _services.GetRequiredService<ShellViewModel>();
+
+        // The shell learns who is signed in itself. (The clients change the navigation on one thread; setting the user here while the
+        // start-up still runs in the background would make two threads do it at once.)
+        await shell.InitializeAsync();
+
+        var pluginPages = _navigation.Items.Select(i => i.Page).OfType<PluginPageViewModel>().ToList();
+        Assert.Equal(["acme/items", "acme/about"], pluginPages.Select(p => p.Key));
+        Assert.Same(pluginPages[1], _navigation.Items[^1].Page); // after the program's own pages
+        Assert.All(_navigation.Items.Where(i => i.Page is PluginPageViewModel), item => Assert.NotEmpty(item.Icon));
+
+        // The open page gives way when its permission goes: somebody else signs in.
+        _navigation.SelectedItem = _navigation.Items[^2];
+        Assert.Same(pluginPages[0], _navigation.SelectedItem.Page);
+        _session.User = Nobody(6, "nobody");
+        await shell.RefreshPluginsAsync();
+
+        Assert.DoesNotContain(_navigation.Items.Select(i => i.Page), page => ReferenceEquals(page, pluginPages[0]));
+        Assert.False(ReferenceEquals(_navigation.SelectedItem.Page, pluginPages[0]));
+    }
+
+    [Fact]
+    public async Task The_plugins_page_is_in_the_administration_group_for_those_who_may_see_it()
+    {
+        _session.User = WithPermissions(7, "ops", Permission.PluginsView);
+        await Task.CompletedTask;
+
+        Assert.Contains(_navigation.AdminItems.Select(i => i.Page), page => page is PluginsViewModel);
+        _session.User = Nobody(8, "nobody");
+        Assert.DoesNotContain(_navigation.AdminItems.Select(i => i.Page), page => page is PluginsViewModel);
     }
 }

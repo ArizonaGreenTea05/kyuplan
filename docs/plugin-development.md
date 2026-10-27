@@ -6,7 +6,9 @@ A kyuplan **plugin** adds three kinds of things to an installation:
 2. **Pages** with **permissions** of their own, which show up in the navigation of every client,
 3. **Data sources** (where groups, members and events come from), with a settings form in the data source settings of the clients.
 
-A plugin is C# code (it implements one interface) plus JSON files. The JSON describes the layout of the pages and of the settings form; **the clients draw it** (web, Windows, Linux), so a plugin has no UI code of its own and nothing platform specific. The Spond data source is a plugin that is installed by default: it is a complete, small example (repository `ArizonaGreenTea05/kyuplan.plugins.spond`).
+A plugin is C# code (it implements one interface) plus JSON files. The JSON describes the layout of the pages and of the settings form; **the clients draw it** (web, Windows, Linux), so a plugin has no UI code of its own and nothing platform specific.
+
+**Start from an example.** The [example plugin](https://github.com/ArizonaGreenTea05/kyuplan.plugins.example) (repository `ArizonaGreenTea05/kyuplan.plugins.example`) is a template that uses every option described on this page: a data source with a settings form (every kind of input, a list, a password, a `together` rule), pages behind a permission and for everybody, endpoints (GET, POST, PUT, DELETE), permissions, English and German texts, tests that check the plugin the way kyuplan will, and the CI and release workflows. Use it as a GitHub template and follow its [Make it yours](https://github.com/ArizonaGreenTea05/kyuplan.plugins.example/blob/main/docs/make-it-yours.md) checklist. The Spond data source is a plugin that does real work and is installed by default (repository `ArizonaGreenTea05/kyuplan.plugins.spond`).
 
 How administrators install and trust plugins: [Plugins in the administrator guide](admin-guide.md#plugins); the API: [reference](reference.md#plugins).
 
@@ -145,7 +147,7 @@ dotnet publish src/Acme.Kyuplan -c Release -o publish          # assembly + depe
 (cd publish && zip -r ../acme-2.1.0.kyuplugin .)                 # plugin.json and ui/ are in the publish output
 ```
 
-`plugin.json` and the JSON files go into the output with `<Content Include="plugin.json" CopyToPublishDirectory="PreserveNewest" />`. Attach the one `.kyuplugin` file to a GitHub **release** of a **public** repository; the API asks for the *latest* release. A package is at most 50 MB (150 MB unpacked, 500 files); file names are plain relative paths. A tag like `v2.1.0` and a workflow that builds the package on a tag keep the version in the manifest and in the release equal (the Spond plugin's repository has one).
+`plugin.json` and the JSON files go into the output with `<Content Include="plugin.json" CopyToPublishDirectory="PreserveNewest" />`. (Windows has no `zip`, and `Compress-Archive` of Windows PowerShell 5.1 writes backslashes into the names: the example plugin's `scripts/pack.ps1` shows a script that does it right.) Attach the one `.kyuplugin` file to a GitHub **release** of a **public** repository; the API asks for the *latest* release. A package is at most 50 MB (150 MB unpacked, 500 files); file names are plain relative paths. A tag like `v2.1.0` and a workflow that builds the package on a tag keep the version in the manifest and in the release equal (the Spond plugin's repository has one).
 
 Install it on the Plugins page with the address of the repository. **Update** fetches the latest release again.
 
@@ -153,7 +155,7 @@ Install it on the Plugins page with the address of the repository. **Update** fe
 
 - Unit-test the data source against fakes (the Spond plugin's tests do: its `Spond.API` client is replaced by a fake per account).
 - To try the plugin in a running API, build it, zip it and put the file into the folder `Plugins:BundledDirectory` before the first start, or serve it from a release.
-- The tests of this repository load a plugin through `tests/Kyuplan.TestPlugin` and `PluginTestKit` (build a package in memory, install it into the folder of a test's settings file, start the API). Use the same approach to test endpoints and permissions end to end.
+- The tests of this repository load a plugin through `tests/Kyuplan.TestPlugin` and `PluginTestKit` (build a package in memory, install it into the folder of a test's settings file, start the API). Use the same approach to test endpoints and permissions end to end. A plugin's own tests can also reference `Kyuplan.Contracts` and run the same `PluginRules` checks on the manifest and the JSON that kyuplan runs when it installs the package, and host the endpoints in memory behind a fake sign-in: the example plugin's tests (`ManifestTests`, `OptionsTests`, `EndpointTests`) do both and are meant to be copied.
 
 ## Safety
 

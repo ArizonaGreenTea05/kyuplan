@@ -11,7 +11,7 @@
 
 <p align="center"><a href="docs/deployment.md">Self-hosting guide</a> · <a href="docs/user-guide.md">User guide</a> · <a href="https://ko-fi.com/idkeverygoodnameistaken">☕ Sponsor on Ko-fi</a></p>
 
-kyuplan reads the groups, members and events of your club from a **data source** and turns them into an **exam planner**. Built in are entering the data by hand and a custom script for any other service; [Spond](https://spond.com) comes as a **plugin** that a new installation gets by default, and [plugins](docs/plugin-development.md) from public GitHub repositories can add more data sources, endpoints and pages.
+kyuplan reads the groups, members and events of your club from a **data source** and turns them into an **exam planner**. Built in are entering the data by hand and a custom script for any other service; [Spond](https://spond.com) comes as a **plugin** that a new installation gets by default, and [plugins](docs/plugin-development.md) from public GitHub repositories can add more data sources, endpoints and pages (start from the [example plugin](https://github.com/ArizonaGreenTea05/kyuplan.plugins.example)).
 
 - **Suggests who is fit for the next exam** from belt, the day the belt was received, age and training attendance, and lets you save the members you put forward.
 - **Shows what happened at past exams**: who attended and who received which belt.

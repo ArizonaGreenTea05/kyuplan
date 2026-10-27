@@ -351,6 +351,12 @@ internal static class Ui
                 line.Append(leading(value));
                 line.Append(Caption(text(value)));
             };
+            // The button keeps its widget when nothing is selected any more: without this it would go on showing the last belt.
+            factory.OnUnbind += (_, e) =>
+            {
+                var line = (Gtk.Box)((Gtk.ListItem)e.Object).GetChild()!;
+                while (line.GetFirstChild() is { } old) line.Remove(old);
+            };
             drop.SetFactory(factory);
         }
 

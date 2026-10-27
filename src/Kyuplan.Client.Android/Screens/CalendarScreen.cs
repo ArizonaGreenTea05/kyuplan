@@ -262,9 +262,4 @@ public sealed class CalendarScreen : ScrollScreen
         Run(command, parameter);
         Invalidate();
     }
-
-    private static void Run(System.Windows.Input.ICommand command, object? parameter = null)
-    {
-        if (command.CanExecute(parameter)) command.Execute(parameter);
-    }
 }

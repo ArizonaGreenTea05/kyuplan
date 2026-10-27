@@ -69,6 +69,13 @@ public sealed class MembersScreen : Screen
 
     public override bool HandleBack()
     {
+        // Back from the form is back to the member, not to the list.
+        if (_vm.IsFormOpen)
+        {
+            Run(_vm.CancelFormCommand);
+            return true;
+        }
+
         if (_open is null) return false;
 
         _open = null;
@@ -81,13 +88,16 @@ public sealed class MembersScreen : Screen
         _busy.Visibility = _vm.IsBusy ? ViewStates.Visible : ViewStates.Invisible;
         _adapter.Items = _vm.VisibleMembers;
         _count.Text = _vm.HasLoaded ? _vm.CountText : "";
-        _message.Text = _vm.HasError ? _vm.ErrorMessage
+        var status = (_vm.HasError ? _vm.ErrorMessage
             : string.IsNullOrEmpty(_vm.Shell.SelectedGroupId) ? Strings.Calendar_NoGroup
             : _vm.IsNobodyHere ? Strings.MemberPage_NoneHidden
             : _vm.NoneMatch ? Strings.MemberPage_NoneMatch
-            : "";
-        _message.Visibility = (_message.Text ?? "").Length > 0 ? ViewStates.Visible : ViewStates.Gone;
-        _message.SetTextColor(_vm.HasError ? Ui.P.Danger : Ui.P.Muted);
+            : "") ?? "";
+        var saved = status.Length == 0 && _vm.HasNotice; // "Anna saved.": where a save leaves the user
+        var text = saved ? _vm.NoticeText : status;
+        _message.Text = text;
+        _message.Visibility = text.Length > 0 ? ViewStates.Visible : ViewStates.Gone;
+        _message.SetTextColor(_vm.HasError ? Ui.P.Danger : saved ? Ui.P.Success : Ui.P.Muted);
 
         if (_open is not null && !_vm.Members.Contains(_open)) _open = _vm.Members.FirstOrDefault(m => m.Id == _open.Id);
         _list.Visibility = _open is null ? ViewStates.Visible : ViewStates.Gone;
@@ -98,6 +108,12 @@ public sealed class MembersScreen : Screen
     private void ShowDetail(MemberRow member)
     {
         _detail.RemoveAllViews();
+        if (_vm.IsFormOpen)
+        {
+            ShowForm();
+            return;
+        }
+
         Ui.Add(_detail, Ui.Row(Ui.IconButton(Resource.Drawable.ic_back, Strings.MemberPage_BackToMembers, () => HandleBack()), Ui.Text(Strings.MemberPage_BackToMembers, TextStyle.Caption)));
 
         var belt = Ui.Row();
@@ -110,7 +126,76 @@ public sealed class MembersScreen : Screen
             Field(Strings.MemberPage_ColStarted, member.StartedText),
             Field(Strings.MemberPage_ColBirth, member.BirthText),
             Field(Strings.MemberPage_ColRegistered, member.RegisteredText)));
+        if (_vm.BeginEditCommand.CanExecute(member)) Ui.Add(_detail, Ui.Button(Strings.MemberPage_Edit, () => Run(_vm.BeginEditCommand, member)), top: 12);
         if (_vm.MayViewComments(member)) Ui.Add(_detail, Ui.Text(member.CommentsText, TextStyle.Caption), top: 12);
+    }
+
+    /// <summary>The belt and the days of the member being edited (<see cref="MembersViewModel.Editing"/>), as the other clients have them.</summary>
+    private void ShowForm()
+    {
+        var form = Ui.Card(Ui.Text(_vm.FormTitle, TextStyle.Heading));
+        if (_vm.IsBusy) form.AddView(Ui.Busy()); // the bar of the list is out of sight while a member is open
+        if (_vm.HasError) form.AddView(Ui.Notice(_vm.ErrorMessage!, Tone.Danger), Ui.Params(top: 12));
+
+        var belt = _vm.FormBelt;
+        var options = _vm.BeltOptions;
+        form.AddView(
+            Ui.Picker(Strings.Belts_ColBelt, belt.Label,
+                () => Ui.PickOne(Strings.Belts_ColBelt, options, options.ToList().IndexOf(belt), BeltChoice, option => _vm.FormBelt = option),
+                belt.IsNone ? null : Ui.BeltSwatch(belt.Color, belt.SecondaryColor, right: 8)),
+            Ui.Params(top: 12));
+
+        form.AddView(DateField(Strings.MemberPage_ColStarted, _vm.FormStartedAt, day => _vm.FormStartedAt = day,
+            Strings.MemberPage_FormStartedHint, _vm.StartedAtProblem, _vm.ClearStartedAtCommand, Strings.MemberPage_ClearStarted), Ui.Params(top: 16));
+        form.AddView(DateField(Strings.MemberPage_ColBirth, _vm.FormBirthDate, day => _vm.FormBirthDate = day,
+            Strings.MemberPage_FormBirthHint, _vm.BirthDateProblem, _vm.ClearBirthDateCommand, Strings.MemberPage_ClearBirth), Ui.Params(top: 16));
+
+        // The day the belt was received is for a member who has one.
+        if (_vm.CanSetBeltSince)
+            form.AddView(DateField(Strings.MemberPage_ColBeltSince, _vm.FormBeltSince, day => _vm.FormBeltSince = day,
+                Strings.MemberPage_FormBeltSinceHint, _vm.BeltSinceProblem, _vm.ClearBeltSinceCommand, Strings.MemberPage_ClearStarted), Ui.Params(top: 16));
+        else
+            form.AddView(Ui.Column(Ui.Text(Strings.MemberPage_ColBeltSince, TextStyle.Caption), Ui.Text(Strings.MemberPage_BeltSinceNeedsBelt, muted: true)), Ui.Params(top: 16));
+
+        Ui.Add(_detail, form, bottom: 12);
+
+        var buttons = Ui.Row(
+            Ui.Button(Strings.MemberPage_Save, () => _ = SaveAsync(), enabled: _vm.SaveCommand.CanExecute(null)),
+            Ui.Button(Strings.MemberPage_Cancel, () => Run(_vm.CancelFormCommand), filled: false));
+        buttons.GetChildAt(0)!.LayoutParameters = Ui.Params(weight: 1, right: 4);
+        buttons.GetChildAt(1)!.LayoutParameters = Ui.Params(weight: 1, left: 4);
+        _detail.AddView(buttons);
+    }
+
+    /// <summary>A day with the button that clears it, what to know about it and, when the API would refuse it, why.</summary>
+    private LinearLayout DateField(string caption, DateTime? value, Action<DateTime> set, string hint, string? problem, System.Windows.Input.ICommand clear, string clearLabel)
+    {
+        var shown = value is { } day ? ViewModels.Display.Date(DateOnly.FromDateTime(day)) : Strings.MemberPage_NotKnown;
+        var field = Ui.Column(Ui.Picker(caption, shown, () => Ui.PickDate(value, set)));
+        if (clear.CanExecute(null)) field.AddView(Ui.Button(clearLabel, () => Run(clear), filled: false), Ui.Params(wrap: true, top: 4));
+        field.AddView(Ui.Text(hint, TextStyle.Caption), Ui.Params(top: 4));
+        if (problem is not null) field.AddView(Ui.Text(problem, TextStyle.Caption, Tone.Danger), Ui.Params(top: 4));
+        return field;
+    }
+
+    /// <summary>An entry of the belt dialog: the belt, and a tick on the one chosen in the form now.</summary>
+    private View BeltChoice(BeltOption option, bool current)
+    {
+        var row = Ui.Row();
+        if (!option.IsNone) row.AddView(Ui.BeltSwatch(option.Color, option.SecondaryColor, right: 8));
+        row.AddView(Ui.Text(option.Label, current ? TextStyle.Heading : TextStyle.Body), Ui.Params(weight: 1));
+        if (current) row.AddView(Ui.Text("✓", TextStyle.Heading), Ui.Params(wrap: true));
+        return row;
+    }
+
+    /// <summary>Saves and, when that worked, goes back to the list, which says so. A refusal leaves the form open, with the reason.</summary>
+    private async Task SaveAsync()
+    {
+        await _vm.SaveCommand.ExecuteAsync(null);
+        if (_vm.IsFormOpen) return;
+
+        _open = null;
+        Invalidate();
     }
 
     private LinearLayout Field(string label, string value)

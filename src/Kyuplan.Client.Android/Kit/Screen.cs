@@ -28,6 +28,12 @@ public abstract class Screen(Ui ui) : IDisposable
     /// <summary>The user pressed back: <c>true</c> when the screen used it (it closed a detail view), <c>false</c> when it is at its top.</summary>
     public virtual bool HandleBack() => false;
 
+    /// <summary>Runs a command when it may run: a button is drawn from a state that can be a moment old.</summary>
+    protected static void Run(System.Windows.Input.ICommand command, object? parameter = null)
+    {
+        if (command.CanExecute(parameter)) command.Execute(parameter);
+    }
+
     /// <summary>
     /// Watches <paramref name="source"/>. Without <paramref name="names"/> every change counts, otherwise only these properties (a view model
     /// that says "everything changed", with an empty name, always counts).

@@ -88,7 +88,8 @@ language, and has every page the web client has.
    signed in; the login is kept encrypted, in a place only this app can use.
 3. The pages are the **tabs at the bottom**: **Dashboard**, **Calendar**, **Exams**, **Members** and **Account** (you only see the tabs you
    may use). The group everything is about is chosen at the top. The calendar opens first; tap an event to see who was invited and what they
-   answered, and to write a comment about a member. In **Exams** you tick the candidates of an exam; in **Members** you search the list and open a member.
+   answered, and to write a comment about a member. In **Exams** you tick the candidates of an exam; in **Members** you search the list and
+   open a member; if you may edit members, **Edit** sets their belt, the day they got it, the day they started and their birth date.
 4. **Account** has the language, the guides, **Change …** (another server) and **Sign out**.
 5. **Updates**: when the server has a newer version, an **Update to x.y.z** bar appears at the top. Tap it; Android asks you to confirm the
    installation. The first time it asks you to allow this app to install apps.

@@ -1,3 +1,4 @@
+using Android.App;
 using Android.Content;
 using Android.Content.Res;
 using Android.Graphics;
@@ -322,6 +323,67 @@ public sealed class Ui(Context context, Palette palette)
             LayoutParameters = new LinearLayout.LayoutParams(Dp(28), Dp(10)) { RightMargin = Dp(right) },
         };
         return swatch;
+    }
+
+    // --- Choices ---------------------------------------------------------------------------------------------
+
+    /// <summary>A field that opens a choice when tapped (a belt, a day): the caption above, the value in a box with a caret.</summary>
+    public View Picker(string caption, string value, Action onClick, View? leading = null)
+    {
+        var box = Row();
+        if (leading is not null) box.AddView(leading);
+        box.AddView(Text(value, TextStyle.Body), Params(weight: 1));
+        box.AddView(Text("▾", TextStyle.Heading), Params(wrap: true));
+        box.SetMinimumHeight(Dp(48));
+        box.SetPadding(Dp(14), Dp(6), Dp(14), Dp(6));
+        box.Background = Ripple(Rounded(P.Surface, 12, P.Line));
+        box.Clickable = true;
+        box.Focusable = true;
+        box.ContentDescription = $"{caption}: {value}";
+        box.Click += (_, _) => onClick();
+
+        var field = Column(Text(caption, TextStyle.Caption));
+        field.AddView(box, Params(top: 4));
+        return field;
+    }
+
+    /// <summary>A dialog with a list to choose from: <paramref name="row"/> draws an entry (and is told whether it is the current one), <paramref name="chosen"/> gets the pick.</summary>
+    public void PickOne<T>(string title, IReadOnlyList<T> items, int selected, Func<T, bool, View> row, Action<T> chosen)
+    {
+        AlertDialog? dialog = null;
+        var list = new ListView(Context) { Adapter = new ChoiceAdapter<T>(this, items, selected, row) };
+        list.ItemClick += (_, e) =>
+        {
+            chosen(items[e.Position]);
+            dialog!.Dismiss();
+        };
+        dialog = new AlertDialog.Builder(Context)!.SetTitle(title)!.SetView(list)!.Show();
+    }
+
+    /// <summary>The system's date dialog, opened at <paramref name="current"/> (today when there is none); <paramref name="chosen"/> gets the day picked.</summary>
+    public void PickDate(DateTime? current, Action<DateTime> chosen)
+    {
+        var start = current ?? DateTime.Today;
+        new DatePickerDialog(Context, (_, e) => chosen(e.Date.Date), start.Year, start.Month - 1, start.Day).Show();
+    }
+
+    private sealed class ChoiceAdapter<T>(Ui ui, IReadOnlyList<T> items, int selected, Func<T, bool, View> row) : BaseAdapter<T>
+    {
+        public override int Count => items.Count;
+
+        public override T this[int position] => items[position];
+
+        public override long GetItemId(int position) => position;
+
+        public override View GetView(int position, View? convertView, ViewGroup? parent)
+        {
+            var view = row(items[position], position == selected);
+            var holder = new FrameLayout(ui.Context);
+            holder.SetPadding(ui.Dp(20), ui.Dp(12), ui.Dp(20), ui.Dp(12));
+            holder.SetMinimumHeight(ui.Dp(48));
+            holder.AddView(view);
+            return holder;
+        }
     }
 
     // --- Layout parameters -----------------------------------------------------------------------------------

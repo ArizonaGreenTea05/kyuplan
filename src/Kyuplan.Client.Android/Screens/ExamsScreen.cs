@@ -170,9 +170,4 @@ public sealed class ExamsScreen : ScrollScreen
             Ui.Add(content, Ui.Card(row), bottom: 8);
         }
     }
-
-    private static void Run(System.Windows.Input.ICommand command)
-    {
-        if (command.CanExecute(null)) command.Execute(null);
-    }
 }

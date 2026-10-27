@@ -23,6 +23,15 @@ public sealed class PluginHostTests : IDisposable
         _services = services.BuildServiceProvider();
     }
 
+    [Fact]
+    public void LoadContext_gives_the_APIs_abstractions_to_a_plugin_built_against_a_newer_version()
+    {
+        var context = new PluginLoadContext(typeof(PluginHostTests).Assembly.Location);
+        var requested = new System.Reflection.AssemblyName("Kyuplan.Plugins.Abstractions") { Version = new Version(9, 0, 0, 0) };
+
+        Assert.Same(typeof(IKyuplanPlugin).Assembly, context.LoadFromAssemblyName(requested));
+    }
+
     public void Dispose()
     {
         _services.Dispose();

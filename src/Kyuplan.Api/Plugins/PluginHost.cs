@@ -17,7 +17,8 @@ internal sealed class PluginLoadContext(string assemblyPath) : AssemblyLoadConte
     protected override Assembly? Load(AssemblyName assemblyName)
     {
         // The API's own copy wins when it has one; a library only the plugin brings is loaded from the plugin's folder.
-        if (assemblyName.Name is { } name && Default.Assemblies.Any(a => a.GetName().Name == name)) return null;
+        // Returned by name, whatever version the plugin was built against: the default context would refuse a copy older than the requested version.
+        if (assemblyName.Name is { } name && Default.Assemblies.FirstOrDefault(a => a.GetName().Name == name) is { } shared) return shared;
 
         return _resolver.ResolveAssemblyToPath(assemblyName) is { } path ? LoadFromFile(path) : null;
     }

@@ -333,6 +333,16 @@ public sealed class ThemePaletteTests
         Assert.Contains("progressbar.rate-bar", css);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void A_colour_swatch_has_an_outline_so_that_a_white_belt_does_not_vanish_on_a_white_page(bool pack)
+    {
+        var css = ThemePalette.Css(pack ? ThemePalette.BuiltIn(ThemeIds.Dracula) : null, "#2563eb", dark: pack);
+
+        Assert.Contains(".swatch { border: 1px solid alpha(currentColor, 0.3);", css);
+    }
+
     [Fact]
     public void A_pack_replaces_the_colours_of_the_window_the_cards_and_the_sidebar()
     {

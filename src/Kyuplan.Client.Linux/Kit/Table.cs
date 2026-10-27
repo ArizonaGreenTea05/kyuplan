@@ -15,7 +15,7 @@ internal static class Table
     {
         var grid = Gtk.Grid.New();
         grid.ColumnSpacing = 14;
-        grid.RowSpacing = 0;
+        grid.RowSpacing = 4; // cells with a border of their own (drop-downs, entries, buttons) would touch otherwise
         grid.AddCssClass("table");
 
         void Rebuild()

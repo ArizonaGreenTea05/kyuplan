@@ -191,4 +191,13 @@ internal static class Widgets
         if (tone is not null) label.AddCssClass(tone);
         return label;
     }
+
+    /// <summary>
+    /// A drop-down over belts that shows the colours of each belt in front of its name. The empty entry has no colours: it gets a plain box
+    /// of the same size (not a swatch, which has an outline), so nothing is drawn and the names still line up.
+    /// </summary>
+    public static Gtk.DropDown BeltChoice(INotifyPropertyChanged source, Func<IReadOnlyList<BeltOption>> items, Func<BeltOption?> selected, Action<BeltOption> select,
+        string[] properties, string? name = null) =>
+        Ui.Choice(source, items, o => o.Label, selected, select, properties, name,
+            o => o.IsNone ? Gtk.Box.New(Gtk.Orientation.Horizontal, 0).Tap(spacer => spacer.SetSizeRequest(36, 12)) : ColorClass.Belt(o.Color, o.SecondaryColor, 36, 12));
 }

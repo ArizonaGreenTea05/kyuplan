@@ -59,7 +59,11 @@ internal static class Ui
 
     public static T Css<T>(this T widget, params string[] classes) where T : Gtk.Widget
     {
-        foreach (var name in classes) widget.AddCssClass(name);
+        foreach (var name in classes)
+        {
+            if (name.Length > 0) widget.AddCssClass(name); // "" (a condition that adds no class) is a GTK critical otherwise
+        }
+
         return widget;
     }
 
@@ -320,9 +324,10 @@ internal static class Ui
     /// <summary>
     /// A drop-down over <paramref name="items"/>. The choice is read with <paramref name="selected"/> (re-read whenever one of the
     /// <paramref name="properties"/> changes) and written with <paramref name="select"/>; the list is re-read then, too.
+    /// <paramref name="leading"/> draws a picture in front of the text of an item (a belt's colours), in the button and in the list.
     /// </summary>
     public static Gtk.DropDown Choice<T>(INotifyPropertyChanged source, Func<IReadOnlyList<T>> items, Func<T, string> text, Func<T?> selected, Action<T> select,
-        string[] properties, string? name = null)
+        string[] properties, string? name = null, Func<T, Gtk.Widget>? leading = null)
     {
         var drop = Gtk.DropDown.NewFromStrings([]);
         drop.Hexpand = true;
@@ -330,6 +335,24 @@ internal static class Ui
         if (name is not null) drop.Named(name);
         IReadOnlyList<T> current = [];
         var updating = false;
+
+        if (leading is not null)
+        {
+            var factory = Gtk.SignalListItemFactory.New();
+            factory.OnSetup += (_, e) => ((Gtk.ListItem)e.Object).SetChild(HBox(10));
+            factory.OnBind += (_, e) =>
+            {
+                var item = (Gtk.ListItem)e.Object;
+                var line = (Gtk.Box)item.GetChild()!;
+                while (line.GetFirstChild() is { } old) line.Remove(old);
+                if (item.Position >= current.Count) return;
+
+                var value = current[(int)item.Position];
+                line.Append(leading(value));
+                line.Append(Caption(text(value)));
+            };
+            drop.SetFactory(factory);
+        }
 
         void Refresh()
         {

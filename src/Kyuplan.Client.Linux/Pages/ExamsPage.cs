@@ -131,7 +131,7 @@ internal static class ExamsPage
         var table = Table.Create(detail, () => detail.Attendees, [nameof(ExamDetailViewModel.Attendees)],
             new Column<AttendeeRow>(Strings.Col_Member, a => Table.Text(a.Name, "heading"), true),
             new Column<AttendeeRow>(Strings.Res_ColAnswer, a => Ui.Caption(a.AnswerText)),
-            new Column<AttendeeRow>(Strings.Res_ColBelt, a => Ui.Choice(a, () => detail.BeltOptions, b => b.Label, () => a.SelectedBelt, b => a.SelectedBelt = b,
+            new Column<AttendeeRow>(Strings.Res_ColBelt, a => Widgets.BeltChoice(a, () => detail.BeltOptions, () => a.SelectedBelt, b => a.SelectedBelt = b,
                 [nameof(AttendeeRow.SelectedBelt)]).Tap(w =>
                 {
                     w.Hexpand = false;

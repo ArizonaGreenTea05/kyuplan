@@ -126,6 +126,7 @@ public static class ThemePalette
         css.AppendLine($".warn-text {{ color: {amber}; }}");
         css.AppendLine($".bad-text {{ color: {red}; }}");
         css.AppendLine($".bar-track {{ background: alpha({muted}, 0.22); border-radius: 4px; min-height: 8px; }}");
+        css.AppendLine(".swatch { border: 1px solid alpha(currentColor, 0.3); border-radius: 2px; }"); // a white belt must not vanish on a white page
         css.AppendLine(".legend-swatch { border-radius: 2px; }");
         css.AppendLine($".legend-swatch.bar-yes-swatch {{ background: @accent_bg_color; }}");
         css.AppendLine($".legend-swatch.bar-no-swatch {{ background: {red}; }}");

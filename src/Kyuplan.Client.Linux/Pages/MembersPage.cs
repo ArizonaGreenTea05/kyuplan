@@ -56,7 +56,7 @@ internal static class MembersPage
 
     private static Gtk.Widget Form(MembersViewModel page)
     {
-        var belt = Ui.Choice(page, () => page.BeltOptions, o => o.Label, () => page.FormBelt, o => page.FormBelt = o,
+        var belt = Widgets.BeltChoice(page, () => page.BeltOptions, () => page.FormBelt, o => page.FormBelt = o,
             [nameof(MembersViewModel.BeltOptions), nameof(MembersViewModel.FormBelt)], Strings.Belts_ColBelt);
 
         Gtk.Widget Dated(string caption, string property, string hint, string? problemProperty, Func<string?> problem, System.Windows.Input.ICommand clear, string clearLabel)

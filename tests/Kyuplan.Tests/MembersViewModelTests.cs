@@ -70,6 +70,16 @@ public sealed class MembersViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task The_belt_choices_carry_the_colours_the_pickers_draw_and_the_empty_choice_none()
+    {
+        var vm = await ShownAsync();
+
+        // A belt without a stripe has an empty second colour, so the pickers draw no stripe; "No belt" has no colours at all, so they draw nothing for it.
+        Assert.Equal(["", "#FFFFFF", "#FFD800"], vm.BeltOptions.Select(o => o.Color));
+        Assert.Equal(["", "", "#000000"], vm.BeltOptions.Select(o => o.SecondaryColor));
+    }
+
+    [Fact]
     public async Task Another_group_is_another_list_and_closes_a_form_for_a_member_of_the_old_one()
     {
         var vm = await ShownAsync();

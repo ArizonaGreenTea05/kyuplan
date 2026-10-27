@@ -137,8 +137,8 @@ public sealed class MembersScreen : Screen
         if (_vm.IsBusy) form.AddView(Ui.Busy()); // the bar of the list is out of sight while a member is open
         if (_vm.HasError) form.AddView(Ui.Notice(_vm.ErrorMessage!, Tone.Danger), Ui.Params(top: 12));
 
-        var belt = _vm.FormBelt;
         var options = _vm.BeltOptions;
+        var belt = _vm.FormBelt ?? options[0]; // the "no belt" entry comes first
         form.AddView(
             Ui.Picker(Strings.Belts_ColBelt, belt.Label,
                 () => Ui.PickOne(Strings.Belts_ColBelt, options, options.ToList().IndexOf(belt), BeltChoice, option => _vm.FormBelt = option),

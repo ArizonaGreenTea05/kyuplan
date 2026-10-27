@@ -21,7 +21,7 @@ kyuplan is a planner for a karate club's belt exams built on the club's Spond gr
 | Layer | Technology |
 | --- | --- |
 | Runtime / language | **.NET 10** (SDK pinned in `global.json`), C# `latest`, nullable reference types on |
-| API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, the `Spond.API` package |
+| API | ASP.NET Core minimal API, EF Core (**SQLite** by default, **PostgreSQL** optional), Basic authentication, plugins loaded from GitHub releases (Spond is one: the `Spond.API` package is the plugin's, not the API's) |
 | Web client | Blazor WebAssembly, hand-written CSS, served by the API itself |
 | Desktop client | WPF, four designs (the Fluent theme that ships with .NET, Windows 10, Aero, native; Windows only), no control library, `Svg.Skia` for SVG logos |
 | Linux client | GTK 4 + libadwaita through the Gir.Core bindings (`GirCore.Gtk-4.0`, `GirCore.Adw-1`), widgets built in code, no web view; built for Arch Linux (`deploy/arch/PKGBUILD`) |

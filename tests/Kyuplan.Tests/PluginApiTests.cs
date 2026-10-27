@@ -582,6 +582,28 @@ public sealed class PluginApiTests(WebApplicationFactory<Program> factory) : ICl
         Assert.Empty(plugin.Pages);
     }
 
+    [Fact]
+    public async Task A_data_source_id_that_two_installed_plugins_claim_does_not_keep_the_settings_from_loading()
+    {
+        var other = PluginTestKit.Package(
+            PluginTestKit.AcmeManifest with { Id = "other", Pages = null, Permissions = null, DataSources = [PluginTestKit.AcmeManifest.DataSources![0] with { Id = "other" }] },
+            new Dictionary<string, string> { ["ui/settings.json"] = PluginTestKit.AcmeForm });
+        using var host = CreateHost([PluginTestKit.AcmePackage(), other]);
+        // Installing refuses it, so the clash is made by hand: the index of an older version, a folder copied from elsewhere.
+        var store = PluginTestKit.StoreOf(SettingsFile);
+        var manifestFile = Path.Combine(store.Directory, "other", store.List().Single(p => p.Id == "other").Folder, PluginRules.ManifestFile);
+        var manifest = PluginPackage.ReadFile<PluginManifest>(manifestFile)!;
+        File.WriteAllText(manifestFile, JsonSerializer.Serialize(manifest with { DataSources = [manifest.DataSources![0] with { Id = "acme" }] }, PluginPackage.Json));
+
+        var response = await host.CreateSignedInClient().GetAsync("/api/settings");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("acme", (await response.Content.ReadFromJsonAsync<SettingsDto>())!.PluginSettings!.Keys);
+        var plugins = await host.CreateSignedInClient().GetFromJsonAsync<List<PluginAdminDto>>("/api/plugin-admin");
+        Assert.False(plugins!.Single(p => p.Id == "other").IsRunning); // the one that came second does not run
+        Assert.True(plugins!.Single(p => p.Id == "acme").IsRunning);
+    }
+
     // --- What the host does with the settings file ---------------------------------------------------------------
 
     [Fact]

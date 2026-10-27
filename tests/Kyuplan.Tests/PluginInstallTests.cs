@@ -273,6 +273,23 @@ public sealed class PluginStoreTests : IDisposable
     }
 
     [Fact]
+    public void A_plugin_that_came_with_the_program_is_replaced_by_the_one_of_its_repository_but_not_the_other_way_round()
+    {
+        var store = Store();
+        Install(store, PluginTestKit.AcmePackage(), PluginStore.BundledSource);
+
+        var replaced = Install(store, PluginTestKit.AcmePackage("2.5.0"), "https://github.com/acme/plugin");
+
+        Assert.Equal("https://github.com/acme/plugin", replaced.Source);
+        Assert.Equal(("2.5.0", "https://github.com/acme/plugin"), (Assert.Single(store.List()).Version, Assert.Single(store.List()).Source));
+
+        // The package file of the program does not push out what an administrator installed from GitHub.
+        var ex = Assert.Throws<InvalidInputException>(() => Install(store, PluginTestKit.AcmePackage("2.6.0"), PluginStore.BundledSource));
+        Assert.Contains("installed already", ex.Message);
+        Assert.Equal("2.5.0", Assert.Single(store.List()).Version);
+    }
+
+    [Fact]
     public void The_source_may_differ_in_case_because_github_does_not_care()
     {
         var store = Store();
@@ -504,6 +521,20 @@ public sealed class PluginInstallerTests : IDisposable
         _installer.InstallFile(WriteBundled(PluginTestKit.SpondPackage()));
         var ex = await Assert.ThrowsAsync<InvalidInputException>(() => _installer.UpdateAsync("spond", default));
         Assert.Contains("not installed from GitHub", ex.Message);
+    }
+
+    [Fact]
+    public async Task A_plugin_that_came_with_the_program_is_installed_from_its_repository_over_the_bundled_copy_and_can_be_updated_from_then_on()
+    {
+        _installer.InstallFile(WriteBundled(PluginTestKit.SpondPackage())); // the container image carries the Spond plugin like this
+        _fetcher.Package = (_, _) => PluginTestKit.Package(PluginTestKit.SpondManifest with { Version = "1.1.0" }, new Dictionary<string, string> { ["ui/settings.json"] = PluginTestKit.SpondForm });
+
+        var (plugin, changed) = await _installer.InstallFromGitHubAsync("https://github.com/acme/spond", default);
+
+        Assert.True(changed);
+        Assert.Equal(("1.1.0", "https://github.com/acme/spond"), (plugin.Version, plugin.Source));
+        Assert.Equal(plugin, Assert.Single(_store.List()));
+        Assert.NotNull(await _installer.UpdateAsync("spond", default)); // it has a repository now
     }
 
     [Fact]

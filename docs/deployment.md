@@ -367,7 +367,7 @@ Plugins (the Spond data source is one) are installed by an administrator on the 
 - **Where they live.** `Plugins__Directory` (default `plugins` next to the settings file, i.e. `/data/plugins` in the image, on the volume). The folder is part of what you back up with the volume; the [backup file](admin-guide.md#backup-file-download-and-restore) holds the databases only, so install the plugins again after a restore (their settings are in `settings.json`).
 - **Changes restart the application** (inside the container: it keeps running); several instances behind a balancer must be changed one by one.
 - **Running third-party code.** A plugin runs with the rights of the server's user. Run the container as non-root (the image does) and do not give it more than it needs.
-- A new release of the Spond plugin is picked up by *Update* on the Plugins page; the server never updates a plugin by itself.
+- A new release of the Spond plugin is picked up by *Update* on the Plugins page; the server never updates a plugin by itself. The copy that comes with the image is *bundled*, not from GitHub, so it has no *Update* until it is installed once from its repository (`https://github.com/ArizonaGreenTea05/kyuplan.plugins.spond` on the Plugins page), which replaces the bundled copy.
 
 ## Choosing the database
 

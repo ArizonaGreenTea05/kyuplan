@@ -83,6 +83,7 @@ public sealed class PluginStore(SettingsFile settings, IConfiguration configurat
     /// <summary>
     /// Installs the package (or replaces the installed plugin with the same id). Throws <see cref="InvalidInputException"/> when another plugin
     /// with the id is installed from somewhere else, when a data source id is taken by another plugin, or when too many plugins are installed.
+    /// A plugin that came with the program (<see cref="BundledSource"/>) is replaced by the one of its repository: that is how it gets updated, since it has no repository to update from.
     /// </summary>
     public StoredPlugin Install(PluginPackage package, string source, TimeProvider time)
     {
@@ -91,7 +92,7 @@ public sealed class PluginStore(SettingsFile settings, IConfiguration configurat
         {
             var all = Load();
             var existing = all.FirstOrDefault(p => p.Id == manifest.Id);
-            if (existing is not null && !string.Equals(existing.Source, source, StringComparison.OrdinalIgnoreCase))
+            if (existing is not null && existing.Source != BundledSource && !string.Equals(existing.Source, source, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidInputException($"A plugin with the id '{manifest.Id}' is installed already, from {existing.Source}. Remove it first to install this one.");
             if (existing is null && all.Count >= PluginRules.MaxPlugins) throw new InvalidInputException($"At most {PluginRules.MaxPlugins} plugins can be installed; remove one first.");
 

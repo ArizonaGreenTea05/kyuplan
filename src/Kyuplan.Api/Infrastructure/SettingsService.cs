@@ -67,12 +67,16 @@ public sealed class SettingsService(
             PluginSettings: Forms().ToDictionary(f => f.Source.Id, f => PluginSettingsMapper.Read(f.Form, configuration.GetSection(f.Section))));
     }
 
-    /// <summary>The settings forms of the data sources of the installed plugins: the form, and the section of the configuration its values are kept in.</summary>
+    /// <summary>
+    /// The settings forms of the data sources of the installed plugins: the form, and the section of the configuration its values are kept in. A data source id that two
+    /// installed plugins claim (a hand-edited index; installing refuses it) has one form: the one of the plugin that runs.
+    /// </summary>
     private IEnumerable<(PluginDataSourceDef Source, PluginUiLayout Form, string Section)> Forms() =>
-        plugins.Plugins.SelectMany(p => (p.Manifest.DataSources ?? [])
-            .Select(source => (Source: source, Form: p.Installed.FormOf(source), Section: p.Installed.SectionOf(source)))
-            .Where(f => f.Form is not null)
-            .Select(f => (f.Source, f.Form!, f.Section)));
+        plugins.Plugins.OrderByDescending(p => p.IsRunning).SelectMany(p => (p.Manifest.DataSources ?? [])
+                .Select(source => (Source: source, Form: p.Installed.FormOf(source), Section: p.Installed.SectionOf(source)))
+                .Where(f => f.Form is not null)
+                .Select(f => (f.Source, f.Form!, f.Section)))
+            .DistinctBy(f => f.Source.Id);
 
     /// <summary>What is wrong with the settings of the plugin data sources that were sent, or <c>null</c>. A data source that was not sent is left alone.</summary>
     private string? PluginSettingsProblem(SettingsInputDto input)

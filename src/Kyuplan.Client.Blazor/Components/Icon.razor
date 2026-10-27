@@ -9,7 +9,12 @@
     [Parameter] public int Size { get; set; } = 18;
 
     // Stroke icons in the style of the Lucide set (ISC licence), kept inline so the app has no icon dependency.
-    private string Paths => Name switch
+    private string Paths => PathsOf(Name);
+
+    /// <summary>Whether there is a symbol of this name (a plugin names the symbol of its page; one that is not here gets a default instead of an empty space).</summary>
+    public static bool Exists(string? name) => !string.IsNullOrEmpty(name) && PathsOf(name).Length > 0;
+
+    private static string PathsOf(string name) => name switch
     {
         "dashboard" => """<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>""",
         "chart" => """<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>""",

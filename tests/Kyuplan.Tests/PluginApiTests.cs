@@ -278,6 +278,33 @@ public sealed class PluginApiTests(WebApplicationFactory<Program> factory) : ICl
     }
 
     [Fact]
+    public async Task A_user_who_holds_the_permissions_of_a_removed_plugin_can_still_be_changed_but_nobody_gets_them_anew()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var role = (await (await admin.PostAsJsonAsync("/api/roles", new RoleInputDto("Acme viewers", ["acme.view"]))).Content.ReadFromJsonAsync<RoleDto>())!;
+        var anna = (await (await admin.PostAsJsonAsync("/api/users", new UserInputDto("anna", Password, null, null, [role.Id], ["acme.edit"]))).Content.ReadFromJsonAsync<UserDto>())!;
+
+        Assert.True(PluginTestKit.StoreOf(SettingsFile).Remove("acme"));
+        using var without = CreateHost([]);
+        var after = without.CreateSignedInClient();
+
+        // The form sends the roles and permissions the user has; the plugin that granted them is gone, which is no reason to refuse a new display name (even to the administrator).
+        var renamed = await after.PutAsJsonAsync($"/api/users/{anna.Id}", new UserInputDto("anna", null, "Anna B.", null, [role.Id], ["acme.edit"]));
+        Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
+        var changed = (await renamed.Content.ReadFromJsonAsync<UserDto>())!;
+        Assert.Equal("Anna B.", changed.DisplayName);
+        Assert.Equal([role.Id], changed.Roles.Select(r => r.Id));
+        Assert.Equal(["acme.edit"], changed.Permissions);
+
+        // What the user does not have yet is still not given: nobody has the permissions of a plugin that is not there.
+        var bob = (await (await after.PostAsJsonAsync("/api/users", new UserInputDto("bob", Password))).Content.ReadFromJsonAsync<UserDto>())!;
+        Assert.Equal(HttpStatusCode.Forbidden, (await after.PutAsJsonAsync($"/api/users/{bob.Id}", new UserInputDto("bob", null, null, null, [role.Id]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await after.PutAsJsonAsync($"/api/users/{bob.Id}", new UserInputDto("bob", null, null, null, null, ["acme.edit"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await after.PostAsJsonAsync("/api/users", new UserInputDto("carl", Password, null, null, [role.Id]))).StatusCode);
+    }
+
+    [Fact]
     public async Task Somebody_cannot_give_a_role_a_permission_of_a_plugin_that_they_do_not_have()
     {
         using var host = CreateHost([]);

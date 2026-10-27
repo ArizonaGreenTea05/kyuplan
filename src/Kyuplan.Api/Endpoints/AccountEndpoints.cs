@@ -87,7 +87,7 @@ public static class AccountEndpoints
                 EnsureMayGrant(input, principal);
                 if (Validate(input, creating: false) is { } errors) return Results.ValidationProblem(errors);
                 await service.EnsureMayManageAsync(userId, principal, ct);
-                await service.EnsureMayGrantAsync(input, principal, ct);
+                await service.EnsureMayGrantAsync(input, principal, ct, userId);
 
                 return Results.Ok(await WithMembers(await service.UpdateAsync(userId, input, ct), members, ct));
             })

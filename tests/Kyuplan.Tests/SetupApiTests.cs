@@ -744,6 +744,7 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Contains("customScript", await broken.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.BadRequest, empty.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Contains("id of a data source of a plugin", await unknown.Content.ReadAsStringAsync()); // the plugins' data sources are not in the list of the built-in ones
         Assert.Equal(0, _restarter.Requests);
 
         const string script = "function getGroups() { return []; } function getEvents() { return []; }";

@@ -97,15 +97,24 @@ public sealed class AccountService(
             throw new ForbiddenException("That user can do more than you can, so only somebody who can do at least as much may change or delete them.");
     }
 
-    /// <summary>Roles and permissions that are given must not be more than the giver has.</summary>
+    /// <summary>
+    /// Roles and permissions that are given must not be more than the giver has. For a user who exists (<paramref name="userId"/>), what they have already is not given
+    /// again: a role can hold the permission of a plugin that does not run (removed, or it failed to load), which nobody has, and changing the user's name must still work.
+    /// </summary>
     /// <exception cref="ForbiddenException"/>
-    public async Task EnsureMayGrantAsync(UserInputDto input, ClaimsPrincipal actor, CancellationToken cancellationToken)
+    public async Task EnsureMayGrantAsync(UserInputDto input, ClaimsPrincipal actor, CancellationToken cancellationToken, int? userId = null)
     {
         var wanted = new List<string>(input.Permissions ?? []);
         if (input.RoleIds is { Count: > 0 } roleIds)
         {
             foreach (var role in await db.Roles.AsNoTracking().Where(r => roleIds.Contains(r.Id)).ToListAsync(cancellationToken))
                 wanted.AddRange(role.IsSystem ? [.. Permission.All, .. PluginPermissions] : role.Permissions);
+        }
+
+        if (userId is { } id)
+        {
+            var current = await FindAsync(id, cancellationToken);
+            wanted = [.. wanted.Except(current.Permissions).Except(current.Roles.SelectMany(r => r.Permissions))];
         }
 
         if (wanted.Any(p => !actor.Has(p))) throw new ForbiddenException("You cannot give permissions that you do not have yourself.");

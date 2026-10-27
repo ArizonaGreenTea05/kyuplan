@@ -183,7 +183,7 @@ public sealed class SettingsService(
                 Fail("accountsDatabasePath", "The accounts database must be another file than the planner database.");
         }
 
-        if (!SettingsRules.IsDataSource(input.DataSource)) Fail("dataSource", $"dataSource must be one of: {string.Join(", ", DataSourceKinds.All)}.");
+        if (!SettingsRules.IsDataSource(input.DataSource)) Fail("dataSource", $"dataSource must be one of: {string.Join(", ", DataSourceKinds.All)}, or the id of a data source of a plugin (lower case letters, digits and hyphens).");
         var script = input.CustomScript ?? dataSource.Value.Script;
         if (script.Length > SettingsRules.MaxScriptLength) Fail("customScript", $"customScript is too long (at most {SettingsRules.MaxScriptLength} characters).");
         else if (RequestedKind(input) == DataSourceKinds.Custom && CustomScriptDataSource.CheckSyntax(script) is { } problem) Fail("customScript", $"customScript: {problem}");

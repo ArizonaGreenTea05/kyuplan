@@ -87,7 +87,7 @@
             @foreach (var plugin in Shell.PluginPages)
             {
                 <NavLink class="nav-item" href="@($"plugin/{Uri.EscapeDataString(plugin.PluginId)}/{Uri.EscapeDataString(plugin.PageId)}")">
-                    <Icon Name="@(plugin.Icon ?? "puzzle")" /><span>@plugin.Title</span>
+                    <Icon Name="@(Icon.Exists(plugin.Icon) ? plugin.Icon! : "puzzle")" /><span>@plugin.Title</span>
                 </NavLink>
             }
         </nav>

@@ -618,4 +618,5 @@ docker build -f src/Kyuplan.Api/Dockerfile --build-arg VERSION=1.2.3 --build-arg
 docker buildx build --platform linux/amd64,linux/arm64 -f src/Kyuplan.Api/Dockerfile --build-context installer=artifacts/installer -t kyuplan .
 ```
 
-Without `--build-context installer=...` the image has no installer (and the server offers no download).
+Without `--build-context installer=...` the image has no installer (and the server offers no download). Without `--build-context plugins=<folder with *.kyuplugin files>`
+(the release workflow passes the latest release of the Spond plugin) the image carries no [plugin](#plugins): a new installation then fetches the Spond plugin from GitHub at its first start.

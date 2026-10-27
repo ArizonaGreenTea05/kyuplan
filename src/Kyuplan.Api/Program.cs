@@ -55,7 +55,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     var pluginStore = new PluginStore(settingsFile, builder.Configuration, NullLogger<PluginStore>.Instance);
     var bootstrap = await PluginBootstrap.InstallDefaultsAsync(
         pluginStore,
-        new PluginInstaller(pluginStore, new GitHubPluginFetcher(new HttpClient { Timeout = TimeSpan.FromSeconds(60) }), TimeProvider.System, NullLogger<PluginInstaller>.Instance),
+        new PluginInstaller(pluginStore, new GitHubPluginFetcher(GitHubPluginFetcher.CreateClient()), TimeProvider.System, NullLogger<PluginInstaller>.Instance),
         PluginDefaults(builder.Configuration),
         builder.Environment.ContentRootPath,
         CancellationToken.None);
@@ -75,7 +75,7 @@ static async Task<WebApplication> BuildAsync(string[] args)
     // Plugins add endpoints, pages with permissions and data sources (see docs/plugin-development.md). They are loaded once, when the application starts.
     builder.Services.Configure<PluginOptions>(builder.Configuration.GetSection(PluginOptions.Section));
     builder.Services.AddSingleton<PluginStore>();
-    builder.Services.AddSingleton<IPluginFetcher>(_ => new GitHubPluginFetcher(new HttpClient { Timeout = TimeSpan.FromSeconds(60) }));
+    builder.Services.AddSingleton<IPluginFetcher>(_ => new GitHubPluginFetcher(GitHubPluginFetcher.CreateClient()));
     builder.Services.AddSingleton<PluginInstaller>();
     builder.Services.AddSingleton<PluginHost>();
     builder.Services.AddSingleton<PluginCatalogService>();

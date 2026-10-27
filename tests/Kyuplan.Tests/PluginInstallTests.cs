@@ -355,13 +355,35 @@ public sealed class PluginStoreTests : IDisposable
         var store = Store();
         var old = Install(store, PluginTestKit.AcmePackage("2.0.0"));
         var current = Install(store, PluginTestKit.AcmePackage("2.1.0"));
-        Directory.CreateDirectory(Path.Combine(store.Directory, "stray", "1.0.0"));
+        Directory.CreateDirectory(Path.Combine(store.Directory, "stray", "1.0.0-abcdef12"));
+        Directory.CreateDirectory(Path.Combine(store.Directory, "archive", "2024"));
 
         store.Sweep();
+
+        Assert.True(Directory.Exists(Path.Combine(store.Directory, "archive", "2024"))); // not made by the store: left alone
 
         Assert.False(Directory.Exists(Path.Combine(store.Directory, "acme", old.Folder)));
         Assert.True(Directory.Exists(Path.Combine(store.Directory, "acme", current.Folder)));
         Assert.False(Directory.Exists(Path.Combine(store.Directory, "stray")));
+    }
+
+    [Fact]
+    public void The_sweep_leaves_a_folder_with_files_of_its_own_alone_even_when_it_is_named_like_a_plugin()
+    {
+        var store = Store();
+        Install(store, PluginTestKit.AcmePackage());
+        var other = Path.Combine(store.Directory, "uploads");
+        Directory.CreateDirectory(other);
+        File.WriteAllText(Path.Combine(other, "mine.json"), "{}");
+        var mixed = Path.Combine(store.Directory, "mixed");
+        Directory.CreateDirectory(Path.Combine(mixed, "1.0.0-abcdef12"));
+        File.WriteAllText(Path.Combine(mixed, "notes.txt"), "keep");
+
+        store.Sweep();
+
+        Assert.True(File.Exists(Path.Combine(other, "mine.json")));
+        Assert.True(File.Exists(Path.Combine(mixed, "notes.txt")));
+        Assert.True(Directory.Exists(Path.Combine(mixed, "1.0.0-abcdef12")));
     }
 
     [Fact]
@@ -734,14 +756,68 @@ public sealed class GitHubPluginFetcherTests
             : Bytes([7]));
         Assert.Equal<byte>([7], fine.Bytes);
 
+        var requested = new List<string>();
         var redirected = await FailureAsync(r =>
         {
+            requested.Add(r.RequestUri!.Host);
             if (r.RequestUri!.Host == "api.github.com") return Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1)));
-            var response = Bytes([7]);
-            response.RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://evil.example/final"); // where the redirects ended
+            var response = new HttpResponseMessage(HttpStatusCode.Found);
+            response.Headers.Location = new Uri("https://evil.example/final");
             return response;
         });
         Assert.Contains("another host", redirected);
+        Assert.DoesNotContain("evil.example", requested); // the other host is never asked
+
+        var followed = await FetchAsync(r => r.RequestUri!.Host switch
+        {
+            "api.github.com" => Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1))),
+            "github.com" => new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri("https://objects.githubusercontent.com/b") } },
+            _ => Bytes([9]),
+        });
+        Assert.Equal<byte>([9], followed.Bytes);
+    }
+
+    [Fact]
+    public async Task A_relative_redirect_stays_on_the_host_and_one_to_plain_http_or_another_port_is_refused()
+    {
+        var requested = new List<string>();
+        var relative = await FetchAsync(r =>
+        {
+            requested.Add(r.RequestUri!.ToString());
+            return r.RequestUri!.Host switch
+            {
+                "api.github.com" => Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1))),
+                _ when r.RequestUri.AbsolutePath == "/a" => new HttpResponseMessage(HttpStatusCode.MovedPermanently) { Headers = { Location = new Uri("/moved/a", UriKind.Relative) } },
+                _ => Bytes([5]),
+            };
+        });
+        Assert.Equal<byte>([5], relative.Bytes);
+        Assert.Equal("https://github.com/moved/a", requested[^1]);
+
+        foreach (var target in new[] { "http://github.com/a", "https://github.com:8443/a" })
+        {
+            var message = await FailureAsync(r => r.RequestUri!.Host == "api.github.com"
+                ? Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1)))
+                : new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri(target) } });
+            Assert.Contains("another host", message);
+        }
+    }
+
+    [Fact]
+    public async Task A_redirect_status_without_a_place_to_go_is_an_error_like_any_other()
+    {
+        Assert.Contains("304", await FailureAsync(r => r.RequestUri!.Host == "api.github.com"
+            ? Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1)))
+            : new HttpResponseMessage(HttpStatusCode.NotModified)));
+    }
+
+    [Fact]
+    public async Task A_download_that_keeps_redirecting_is_given_up()
+    {
+        var message = await FailureAsync(r => r.RequestUri!.Host == "api.github.com"
+            ? Json(Release("v1", ("a.kyuplugin", "https://github.com/a", 1)))
+            : new HttpResponseMessage(HttpStatusCode.Found) { Headers = { Location = new Uri("https://github.com/loop") } });
+        Assert.Contains("too often", message);
     }
 
     [Fact]

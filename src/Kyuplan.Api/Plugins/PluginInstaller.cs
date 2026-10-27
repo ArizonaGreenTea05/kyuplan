@@ -134,7 +134,7 @@ public static class PluginBootstrap
                 var (plugin, _) = await installer.InstallFromGitHubAsync(url, timeout.Token);
                 lines.Add((LogLevel.Information, $"The default plugin {plugin.Id} {plugin.Version} was installed from {url}."));
             }
-            catch (Exception ex) when (ex is InvalidInputException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
+            catch (Exception ex) when (ex is InvalidInputException or IOException or UnauthorizedAccessException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
             {
                 lines.Add((LogLevel.Warning, $"The default plugin {url} could not be installed: {ex.Message} It is tried again at the next start; administrators can also install it on the plugins page."));
             }

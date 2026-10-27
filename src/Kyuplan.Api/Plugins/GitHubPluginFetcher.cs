@@ -27,6 +27,11 @@ public sealed class GitHubPluginFetcher(HttpClient http) : IPluginFetcher
 {
     private const int MaxReleaseBytes = 1024 * 1024;
 
+    private const int MaxRedirects = 5;
+
+    /// <summary>A client for this fetcher. It does not follow redirects itself: every hop is checked against the GitHub hosts before it is requested.</summary>
+    public static HttpClient CreateClient() => new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(60) };
+
     /// <summary>The hosts GitHub serves release assets from (github.com redirects to one of the others).</summary>
     private static bool IsGitHubHost(Uri uri) =>
         uri.Scheme == Uri.UriSchemeHttps && uri.IsDefaultPort && (uri.Host is "github.com" or "api.github.com" || uri.Host.EndsWith(".githubusercontent.com", StringComparison.Ordinal));
@@ -74,19 +79,13 @@ public sealed class GitHubPluginFetcher(HttpClient http) : IPluginFetcher
     /// <summary>The body of the address; <c>null</c> for 404. Throws <see cref="PluginFetchException"/> for everything else that is not a plain answer.</summary>
     private async Task<byte[]?> GetBytesAsync(Uri address, int limit, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, address);
-        request.Headers.UserAgent.ParseAdd("kyuplan-plugins");
-        request.Headers.Accept.ParseAdd(address.Host == "api.github.com" ? "application/vnd.github+json" : "application/octet-stream");
-
         try
         {
-            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await SendFollowingAsync(address, cancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound) return null;
             if (response.StatusCode == HttpStatusCode.TooManyRequests || (response.StatusCode == HttpStatusCode.Forbidden && IsRateLimited(response)))
                 throw new PluginFetchException("GitHub does not answer more requests for now (rate limit). Try again later.");
             if (!response.IsSuccessStatusCode) throw new PluginFetchException($"GitHub answered {(int)response.StatusCode} ({response.ReasonPhrase}).");
-            // A redirect is followed by the HttpClient: where it ended must still be a GitHub host.
-            if (response.RequestMessage?.RequestUri is { } final && !IsGitHubHost(final)) throw new PluginFetchException("GitHub sent the download to another host.");
             if (response.Content.Headers.ContentLength > limit) throw new PluginFetchException($"An answer of GitHub is larger than {limit / 1024} KB.");
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
@@ -108,6 +107,26 @@ public sealed class GitHubPluginFetcher(HttpClient http) : IPluginFetcher
         catch (HttpRequestException ex)
         {
             throw new PluginFetchException($"GitHub could not be reached: {ex.Message}");
+        }
+    }
+
+    /// <summary>Sends the request and follows redirects by hand: a hop to a host that is not GitHub's is never requested.</summary>
+    private async Task<HttpResponseMessage> SendFollowingAsync(Uri address, CancellationToken cancellationToken)
+    {
+        for (var hop = 0; ; hop++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, address);
+            request.Headers.UserAgent.ParseAdd("kyuplan-plugins");
+            request.Headers.Accept.ParseAdd(address.Host == "api.github.com" ? "application/vnd.github+json" : "application/octet-stream");
+
+            var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (response.Headers.Location is not { } location || (int)response.StatusCode is < 300 or >= 400) return response;
+
+            response.Dispose();
+            if (hop >= MaxRedirects) throw new PluginFetchException("GitHub redirected the download too often.");
+
+            address = location.IsAbsoluteUri ? location : new Uri(address, location);
+            if (!IsGitHubHost(address)) throw new PluginFetchException("GitHub sent the download to another host.");
         }
     }
 

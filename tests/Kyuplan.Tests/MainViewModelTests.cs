@@ -197,6 +197,11 @@ public sealed class MainViewModelTests : IDisposable
         // start-up still runs in the background would make two threads do it at once.)
         await shell.InitializeAsync();
 
+        // The account page is open from the start and reads the account once more when the start-up is done (and sets the user): let it finish, or
+        // it could set the user again after this test changed it below.
+        var account = _services.GetRequiredService<AccountViewModel>();
+        for (var waited = 0; (_api.AccountRequests < 2 || account.IsBusy) && waited < 5000; waited += 10) await Task.Delay(10);
+
         var pluginPages = _main.Items.Select(i => i.Page).OfType<PluginPageViewModel>().ToList();
         Assert.Equal(["acme/items", "acme/about"], pluginPages.Select(p => p.Key));
         Assert.Same(pluginPages[1], _main.Items[^1].Page); // after the program's own pages

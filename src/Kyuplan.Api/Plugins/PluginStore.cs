@@ -141,14 +141,21 @@ public sealed class PluginStore(SettingsFile settings, IConfiguration configurat
             var wanted = Load().ToDictionary(p => p.Id, p => p.Folder);
             foreach (var plugin in System.IO.Directory.GetDirectories(Directory))
             {
+                // Plugins:Directory may be a folder that holds other things: only what this store makes (<id>/<version>-<hash>) is touched.
                 var id = Path.GetFileName(plugin);
-                foreach (var version in System.IO.Directory.GetDirectories(plugin).Where(v => !wanted.TryGetValue(id, out var folder) || Path.GetFileName(v) != folder))
+                var versions = System.IO.Directory.GetFileSystemEntries(plugin);
+                if (!PluginRules.IsPluginId(id) || !versions.All(v => System.IO.Directory.Exists(v) && IsStoreFolder(Path.GetFileName(v)))) continue;
+
+                foreach (var version in versions.Where(v => !wanted.TryGetValue(id, out var folder) || Path.GetFileName(v) != folder))
                     TryDelete(version);
 
                 if (!wanted.ContainsKey(id)) TryDelete(plugin);
             }
         }
     }
+
+    /// <summary>A folder of an installed version (<c>1.2.0-1a2b3c4d</c>), or what is left of one that was being unpacked (<c>.partial</c>).</summary>
+    private static bool IsStoreFolder(string name) => System.Text.RegularExpressions.Regex.IsMatch(name, @"-[0-9a-f]{8}(\.partial)?$");
 
     private void TryDelete(string directory)
     {

@@ -343,6 +343,21 @@ public sealed class MembersViewModelTests : IDisposable
         Assert.False(vm.CanSave); // nothing differs from Clara as she is
     }
 
+    [Fact]
+    public async Task A_null_belt_in_the_form_counts_as_no_belt()
+    {
+        _api.AddMember("Emil", beltId: _white.Id, beltSince: new DateOnly(2025, 11, 2));
+        var vm = await ShownAsync();
+        vm.BeginEditCommand.Execute(Row(vm, "Emil"));
+
+        vm.FormBelt = null!; // a binding can still hand over null
+
+        Assert.False(vm.CanSetBeltSince);
+        Assert.True(vm.CanSave);
+        await vm.SaveCommand.ExecuteAsync(null);
+        Assert.Null(Assert.Single(_api.MemberInputs).BeltId);
+    }
+
     [Theory]
     [InlineData(1899, 12, 31, true)]   // nobody is that old
     [InlineData(1900, 1, 1, false)]

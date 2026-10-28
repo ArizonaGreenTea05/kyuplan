@@ -128,6 +128,24 @@ public sealed class PluginPackageTests : IDisposable
     }
 
     [Fact]
+    public void A_name_that_differs_from_the_file_only_in_case_is_refused_for_every_lookup_because_linux_would_not_find_it()
+    {
+        var page = Simple with { Pages = [new PluginPageDef("p", "P", null, null, null, "ui/p.json")] };
+        var source = Simple with { DataSources = [new PluginDataSourceDef("src", "S", null, null, null, null, "ui/s.json")] };
+        const string Text = """{ "elements": [ { "type": "text", "text": "hi" } ] }""";
+        const string Form = """{ "elements": [ { "type": "field", "id": "A", "label": "A", "input": "text" } ] }""";
+
+        AssertRefused(Zip(("Plugin.json", ManifestJson(Simple)), ("Simple.dll", "x")), "plugin.json (the manifest) is spelled Plugin.json");
+        AssertRefused(Zip(("plugin.json", ManifestJson(Simple with { Assembly = "simple.dll" })), ("Simple.dll", "x")), "simple.dll (assembly in plugin.json) is spelled Simple.dll");
+        AssertRefused(Zip(("plugin.json", ManifestJson(page)), ("Simple.dll", "x"), ("ui/P.json", Text)), "ui/p.json (page p) is spelled ui/P.json");
+        AssertRefused(Zip(("plugin.json", ManifestJson(source)), ("Simple.dll", "x"), ("UI/s.json", Form)), "ui/s.json (data source src) is spelled UI/s.json");
+
+        // spelled right, they are still accepted
+        Assert.NotNull(PluginPackage.Open(Zip(("plugin.json", ManifestJson(page)), ("Simple.dll", "x"), ("ui/p.json", Text))));
+        Assert.NotNull(PluginPackage.Open(Zip(("plugin.json", ManifestJson(source)), ("Simple.dll", "x"), ("ui/s.json", Form))));
+    }
+
+    [Fact]
     public void A_package_with_too_many_files_or_a_large_manifest_is_refused()
     {
         var many = Enumerable.Range(0, PluginRules.MaxFiles + 1).Select(i => ($"f{i}.txt", "x")).Append(("plugin.json", ManifestJson(Simple))).ToArray();

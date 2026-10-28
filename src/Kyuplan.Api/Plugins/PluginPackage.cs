@@ -127,9 +127,23 @@ public sealed class PluginPackage
 
     private static string Printable(string name) => new(name.Take(60).Select(c => char.IsControl(c) ? '?' : c).ToArray());
 
+    /// <summary>
+    /// The entry the manifest (or the package) names. The map is case-insensitive (only to find duplicates), but the plugin is loaded from a file system
+    /// that may not be (Linux): a name that differs from the file's spelling only in case is refused now, not after the restart.
+    /// </summary>
+    private static ZipArchiveEntry? Find(Dictionary<string, ZipArchiveEntry> files, string path, string owner)
+    {
+        if (!files.TryGetValue(path, out var entry)) return null;
+
+        var actual = files.Keys.First(key => string.Equals(key, path, StringComparison.OrdinalIgnoreCase));
+        if (!string.Equals(actual, path, StringComparison.Ordinal)) throw new InvalidInputException($"{path} ({owner}) is spelled {actual} in the package: the case of file names has to match.");
+
+        return entry;
+    }
+
     private static PluginManifest ReadManifest(ZipArchive archive, Dictionary<string, ZipArchiveEntry> files)
     {
-        if (!files.TryGetValue(PluginRules.ManifestFile, out var entry)) throw new InvalidInputException($"The package has no {PluginRules.ManifestFile} in its root.");
+        var entry = Find(files, PluginRules.ManifestFile, "the manifest") ?? throw new InvalidInputException($"The package has no {PluginRules.ManifestFile} in its root.");
 
         var manifest = Parse<PluginManifest>(entry, PluginRules.ManifestFile);
         if (PluginRules.CheckManifest(manifest) is { } problem) throw new InvalidInputException($"{PluginRules.ManifestFile}: {problem}");
@@ -139,7 +153,7 @@ public sealed class PluginPackage
 
     private static void CheckFiles(PluginManifest manifest, ZipArchive archive, Dictionary<string, ZipArchiveEntry> files)
     {
-        if (!files.ContainsKey(manifest.Assembly)) throw new InvalidInputException($"The assembly {manifest.Assembly} (assembly in {PluginRules.ManifestFile}) is not in the package.");
+        if (Find(files, manifest.Assembly, $"assembly in {PluginRules.ManifestFile}") is null) throw new InvalidInputException($"The assembly {manifest.Assembly} (assembly in {PluginRules.ManifestFile}) is not in the package.");
 
         foreach (var page in manifest.Pages ?? [])
         {
@@ -158,7 +172,7 @@ public sealed class PluginPackage
 
     private static PluginUiLayout LayoutOf(Dictionary<string, ZipArchiveEntry> files, string path, string owner)
     {
-        if (!files.TryGetValue(path, out var entry)) throw new InvalidInputException($"{path} ({owner}) is not in the package.");
+        var entry = Find(files, path, owner) ?? throw new InvalidInputException($"{path} ({owner}) is not in the package.");
 
         return Parse<PluginUiLayout>(entry, path) ?? throw new InvalidInputException($"{path} is empty.");
     }

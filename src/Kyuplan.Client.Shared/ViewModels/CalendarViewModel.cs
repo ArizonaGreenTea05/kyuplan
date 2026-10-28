@@ -141,14 +141,11 @@ public sealed partial class CalendarViewModel : PageViewModel
         var groupId = Shell.SelectedGroupId;
         var view = View;
         var date = _date;
-        var opening = _opening;
         await LoadAsync(async ct =>
         {
             var calendar = await _api.GetCalendarAsync(groupId, view, date, ct);
             Show(calendar);
-            // An event being opened stays wanted when this read supersedes the one that opens it (the page being shown reads the calendar too).
             if (Detail is { } open) await ReadDetailAsync(open.GroupId, open.Id, ct);
-            else if (opening is var (openGroup, openEvent)) await ReadDetailAsync(openGroup, openEvent, ct);
         });
     }
 
@@ -283,23 +280,13 @@ public sealed partial class CalendarViewModel : PageViewModel
     [RelayCommand]
     private Task OpenEventAsync(CalendarEventRow row) => OpenEventAsync(row.GroupId, row.Id);
 
-    private (string GroupId, string EventId)? _opening;
-
     /// <summary>Shows an event in detail: reads it and everybody invited to it.</summary>
     public async Task OpenEventAsync(string groupId, string eventId)
     {
         await Shell.InitializeAsync();
         if (!CanView) return;
 
-        _opening = (groupId, eventId);
-        try
-        {
-            await LoadAsync(ct => ReadDetailAsync(groupId, eventId, ct));
-        }
-        finally
-        {
-            if (_opening == (groupId, eventId)) _opening = null;
-        }
+        await LoadAsync(ct => ReadDetailAsync(groupId, eventId, ct));
 
         // Opened before the calendar itself was read (from the banner): that read was superseded by this one, so it is made up for now.
         if (!HasLoaded && !HasError && !string.IsNullOrEmpty(Shell.SelectedGroupId)) await ReloadAsync();
@@ -348,7 +335,6 @@ public sealed partial class CalendarViewModel : PageViewModel
     private void CloseEvent()
     {
         Detail = null;
-        _opening = null;
         RatingsOpen = false;
         Attendees = [];
         _answerFilter = null;

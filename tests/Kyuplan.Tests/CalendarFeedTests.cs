@@ -60,6 +60,26 @@ public sealed class CalendarFeedTests(WebApplicationFactory<Program> factory) : 
 
     private static int Count(string ics, string text) => ics.Split(text).Length - 1;
 
+    [Theory]
+    [InlineData("https://planner.example.org", "https://planner.example.org/calendar-feeds/")]
+    [InlineData("https://planner.example.org/", "https://planner.example.org/calendar-feeds/")]
+    [InlineData("  https://planner.example.org/kyuplan//  ", "https://planner.example.org/kyuplan/calendar-feeds/")]
+    [InlineData("http://192.168.1.5:8080", "http://192.168.1.5:8080/calendar-feeds/")]
+    [InlineData("", "http://localhost/calendar-feeds/")]
+    [InlineData("not a url", "http://localhost/calendar-feeds/")]
+    [InlineData("https://planner.example.org/?x=1", "http://localhost/calendar-feeds/")]
+    public async Task The_address_starts_with_the_public_url_when_one_is_set_and_with_the_request_otherwise(string publicUrl, string prefix)
+    {
+        using var host = CreateHost().WithWebHostBuilder(builder => builder.UseSetting("Api:PublicUrl", publicUrl));
+        var admin = host.CreateSignedInClient();
+
+        var created = await CreateAsync(admin, "Kids", new CalendarSourceDto(CalendarSourceKinds.Events, Group));
+        Assert.StartsWith(prefix, created.Url);
+
+        var renewed = await (await admin.PostAsync($"/api/calendar-feeds/{created.Id}/regenerate", null)).Content.ReadFromJsonAsync<CalendarFeedDto>();
+        Assert.StartsWith(prefix, renewed!.Url);
+    }
+
     [Fact]
     public async Task A_feed_is_read_as_ics_without_a_login_and_an_unknown_token_is_not_found()
     {

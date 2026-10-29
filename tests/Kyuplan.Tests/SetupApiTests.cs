@@ -402,6 +402,26 @@ public sealed class SetupApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
+    public async Task The_public_url_is_saved_with_the_settings_kept_when_unsent_and_must_be_an_http_address()
+    {
+        using var host = CreateHost(withAdmin: true);
+        var admin = host.CreateSignedInClient();
+        var settings = Unchanged(await SettingsOfAsync(admin));
+        Assert.Equal("", (await SettingsOfAsync(admin)).PublicUrl);
+
+        foreach (var bad in new[] { "planner.example.org", "https://x.example/?a=1", "ftp://x.example" })
+            Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/settings", settings with { PublicUrl = bad })).StatusCode);
+
+        var good = await admin.PutAsJsonAsync("/api/settings", settings with { PublicUrl = " https://planner.example.org/kyuplan/ " });
+        Assert.Equal(HttpStatusCode.OK, good.StatusCode);
+        Assert.Equal("https://planner.example.org/kyuplan", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Api"]!["PublicUrl"]);
+
+        // An older client sends none: the stored one stays.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", settings with { PublicUrl = null, TimeZone = "UTC" })).StatusCode);
+        Assert.Equal("https://planner.example.org/kyuplan", (string?)JsonNode.Parse(File.ReadAllText(SettingsFile))!["Api"]!["PublicUrl"]);
+    }
+
+    [Fact]
     public async Task The_metrics_are_off_by_default_and_need_a_token_before_they_can_be_switched_on()
     {
         using var host = CreateHost(withAdmin: true);

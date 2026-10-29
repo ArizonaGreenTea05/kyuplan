@@ -64,7 +64,8 @@ public sealed class SettingsService(
             metrics.Value.Enabled,
             !string.IsNullOrEmpty(metrics.Value.Token),
             [.. dataSource.Value.Secrets.Where(s => !string.IsNullOrEmpty(s.Value)).Select(s => s.Key).Order(StringComparer.OrdinalIgnoreCase)],
-            PluginSettings: Forms().ToDictionary(f => f.Source.Id, f => PluginSettingsMapper.Read(f.Form, configuration.GetSection(f.Section))));
+            PluginSettings: Forms().ToDictionary(f => f.Source.Id, f => PluginSettingsMapper.Read(f.Form, configuration.GetSection(f.Section))),
+            PublicUrl: configuration[PublicUrlKey] ?? "");
     }
 
     /// <summary>
@@ -149,6 +150,7 @@ public sealed class SettingsService(
 
     /// <summary>The configuration key ASP.NET's host filtering reads.</summary>
     public const string AllowedHostsKey = "AllowedHosts";
+    public const string PublicUrlKey = "Api:PublicUrl";
 
     public SetupStatusDto GetStatus() => new(
         state.NeedsSetup, state.NeedsSetup ? ForSetup(Get()) : null, state.NeedsSetup ? file.Path : null, SettingsFile.IsConfigured(configuration),
@@ -198,6 +200,7 @@ public sealed class SettingsService(
             Fail("metricsToken", "The metrics need a token.");
 
         if (!SettingsRules.IsAllowedHosts(input.AllowedHosts)) Fail("allowedHosts", "allowedHosts must be host names separated by ';' (or *).");
+        if (!SettingsRules.IsPublicUrl(input.PublicUrl)) Fail("publicUrl", "publicUrl must be an absolute http or https address without query, e.g. https://planner.example.org.");
         if (!IsTimeZone(input.TimeZone)) Fail("timeZone", "timeZone is not a time zone of this system.");
         if (!SettingsRules.IsKeywordValid(input.ExamKeyword)) Fail("examKeyword", "examKeyword is too long.");
         if (!SettingsRules.IsKeywordValid(input.UnregisteredSubGroup)) Fail("unregisteredSubGroup", "unregisteredSubGroup is too long.");
@@ -341,6 +344,9 @@ public sealed class SettingsService(
         Set("Sync:Interval", Interval(now.SyncIntervalMinutes), Interval(input.SyncIntervalMinutes));
         // An older client that does not know the field sends none: that keeps what is set.
         if (input.AllowedHosts is not null) Set(AllowedHostsKey, now.AllowedHosts ?? SettingsRules.AnyHost, input.AllowedHosts.Trim().Length == 0 ? SettingsRules.AnyHost : input.AllowedHosts.Trim());
+
+        // An older client that does not know the field sends none: that keeps what is set.
+        if (input.PublicUrl is not null) Set(PublicUrlKey, now.PublicUrl ?? "", SettingsRules.NormalizePublicUrl(input.PublicUrl) ?? "");
 
         if (input.MetricsEnabled is { } metricsOn) Set("Metrics:Enabled", Flag(now.MetricsEnabled), Flag(metricsOn));
         if (!string.IsNullOrEmpty(input.MetricsToken) && input.MetricsToken != metrics.Value.Token) changes["Metrics:Token"] = input.MetricsToken;

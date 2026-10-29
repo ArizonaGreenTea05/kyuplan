@@ -247,6 +247,19 @@
         }
     </label>
 
+    <label class="field">
+        <span>@Strings.Settings_PublicUrl</span>
+        <input type="url" autocomplete="off" spellcheck="false" disabled="@Disabled" @bind="Form.PublicUrl" @bind:event="oninput" />
+        @if (Form.PublicUrlProblem is { } publicUrlProblem)
+        {
+            <p class="field-error" role="alert">@publicUrlProblem</p>
+        }
+        else
+        {
+            <small>@Strings.Settings_PublicUrlHint</small>
+        }
+    </label>
+
     <label class="check">
         <input type="checkbox" disabled="@Disabled" @bind="Form.MetricsEnabled" />
         <span>@Strings.Settings_MetricsEnabled<small>@Strings.Settings_MetricsEnabledHint</small></span>

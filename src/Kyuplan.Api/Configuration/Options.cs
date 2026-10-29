@@ -408,6 +408,12 @@ public sealed class ApiSecurityOptions
     /// </summary>
     public bool AllowInsecureHttp { get; set; }
 
+    /// <summary>
+    /// The address this API is reached on from outside (<c>https://planner.example.org</c>, with the path when it sits under one); calendar feed addresses are built
+    /// from it. Empty = the scheme, host and path base of the request, which is wrong behind a proxy that sends its own Host header.
+    /// </summary>
+    public string? PublicUrl { get; set; }
+
     /// <summary>Failed logins from one network address within <see cref="LoginFailureWindow"/> before that address is locked out for the rest of the window; 0 = never.</summary>
     public int MaxLoginFailuresPerAddress { get; set; } = 10;
 

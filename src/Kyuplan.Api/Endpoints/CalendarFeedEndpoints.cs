@@ -1,7 +1,9 @@
 using Kyuplan.Api.Accounts;
+using Kyuplan.Api.Configuration;
 using Kyuplan.Api.Infrastructure;
 using Kyuplan.Api.Persistence;
 using Kyuplan.Contracts;
+using Microsoft.Extensions.Options;
 
 namespace Kyuplan.Api.Endpoints;
 
@@ -44,12 +46,12 @@ public static class CalendarFeedEndpoints
         feeds.MapGet("/{id:int}", (int id, CalendarFeedService service, CancellationToken ct) => service.GetAsync(id, ct))
             .WithSummary("One calendar feed.");
 
-        feeds.MapPost("/", async (CalendarFeedInputDto input, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
+        feeds.MapPost("/", async (CalendarFeedInputDto input, HttpRequest request, IOptions<ApiSecurityOptions> api, CalendarFeedService service, CancellationToken ct) =>
             {
                 var errors = CalendarFeedRules.Check(input);
                 if (errors.Count > 0) return Results.ValidationProblem(errors);
 
-                return Results.Ok(await service.CreateAsync(input, BaseUrl(request), ct));
+                return Results.Ok(await service.CreateAsync(input, BaseUrl(request, api.Value), ct));
             })
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Create)
             .WithSummary("Make a calendar feed from sources: events of a group (narrowed by subgroups, members, invitation, name, exams, cancelled), birthdays, club anniversaries or belt anniversaries of members. The answer has the address (url) to give to calendar apps; it is told only this once, the server keeps just a hash of its secret.");
@@ -64,8 +66,8 @@ public static class CalendarFeedEndpoints
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Update)
             .WithSummary("Replace the name and sources of a feed. The address stays the same (and is not in the answer).");
 
-        feeds.MapPost("/{id:int}/regenerate", (int id, HttpRequest request, CalendarFeedService service, CancellationToken ct) =>
-                service.RegenerateTokenAsync(id, BaseUrl(request), ct))
+        feeds.MapPost("/{id:int}/regenerate", (int id, HttpRequest request, IOptions<ApiSecurityOptions> api, CalendarFeedService service, CancellationToken ct) =>
+                service.RegenerateTokenAsync(id, BaseUrl(request, api.Value), ct))
             .Audited(AuditAreas.CalendarFeeds, AuditActions.Regenerate)
             .WithSummary("Give a feed a new secret address; the old one stops working (apps that subscribed must be given the new one). The new address (url) is told only in this answer.");
 
@@ -80,5 +82,9 @@ public static class CalendarFeedEndpoints
         return app;
     }
 
-    private static string BaseUrl(HttpRequest request) => $"{request.Scheme}://{request.Host}{request.PathBase}";
+    /// <summary>What feed addresses start with: <c>Api:PublicUrl</c> when it is set (and valid), else the request as it came in.</summary>
+    internal static string BaseUrl(HttpRequest request, ApiSecurityOptions options) =>
+        SettingsRules.IsPublicUrl(options.PublicUrl) && SettingsRules.NormalizePublicUrl(options.PublicUrl) is { } configured
+            ? configured
+            : $"{request.Scheme}://{request.Host}{request.PathBase}";
 }

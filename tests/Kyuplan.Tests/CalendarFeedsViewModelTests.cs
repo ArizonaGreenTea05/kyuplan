@@ -115,9 +115,10 @@ public sealed class CalendarFeedsViewModelTests : IDisposable
 
         Assert.True(_vm.HasAddress);
         Assert.StartsWith("https://x/calendar-feeds/token", _vm.Address);
-        Assert.Equal("Address of “Kids”. Copy it now: it is not shown again.", _vm.AddressText);
+        Assert.Equal("https://x", _vm.AddressBase);
+        Assert.Equal("Address of “Kids”, built from https://x. Copy it now: it is not shown again. If https://x is not where calendar apps can reach this server, set the public address under Settings.", _vm.AddressText);
         _language.Select("de");
-        Assert.Equal("Adresse von „Kids“. Kopiere sie jetzt: Sie wird nicht noch einmal angezeigt.", _vm.AddressText);
+        Assert.StartsWith("Adresse von „Kids“, gebildet aus https://x. Kopiere sie jetzt", _vm.AddressText);
 
         _vm.DismissAddressCommand.Execute(null);
         Assert.False(_vm.HasAddress);

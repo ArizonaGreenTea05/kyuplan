@@ -314,6 +314,29 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { MetricsEnabled = true, HasMetricsToken = true }));
     }
 
+    [Fact]
+    public void The_public_url_is_checked_trimmed_and_ignores_a_trailing_slash_when_comparing()
+    {
+        var form = new SettingsForm();
+        form.Load(FakePlannerApi.DefaultSettings with { PublicUrl = null });
+        Assert.Equal("", form.PublicUrl);
+        Assert.Null(form.PublicUrlProblem);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = null }));
+
+        form.PublicUrl = "planner.example.org";
+        Assert.Equal(Strings.Settings_PublicUrlInvalid, form.PublicUrlProblem);
+        Assert.False(form.IsValid);
+
+        form.PublicUrl = "  https://planner.example.org/  ";
+        Assert.Null(form.PublicUrlProblem);
+        Assert.Equal("https://planner.example.org/", form.ToInput().PublicUrl);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = "https://planner.example.org" }));
+        Assert.False(form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = "https://other.example.org" }));
+
+        form.Load(FakePlannerApi.DefaultSettings with { PublicUrl = "https://planner.example.org" });
+        Assert.Equal("https://planner.example.org", form.PublicUrl);
+    }
+
     private static SettingsForm CustomForm(params string[] stored)
     {
         var form = new SettingsForm();

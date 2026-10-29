@@ -298,6 +298,20 @@ public sealed class CalendarViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task An_event_that_cannot_be_read_is_not_opened_again_by_the_next_reload()
+    {
+        _api.CalendarEvents.Add(Event("e1", 13, 18));
+
+        await _vm.OpenEventAsync("g1", "missing");
+        Assert.True(_vm.HasError);
+        _api.CalendarCalls.Clear();
+        await ShownAsync();
+
+        Assert.DoesNotContain("event:missing", _api.CalendarCalls);
+        Assert.False(_vm.HasError);
+    }
+
+    [Fact]
     public async Task A_user_without_the_permission_gets_nothing()
     {
         _api.Account = TestAccounts.WithPermissions(1, "anna", Permission.CommentsWrite);

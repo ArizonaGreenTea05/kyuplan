@@ -292,6 +292,7 @@ public sealed partial class CalendarViewModel : PageViewModel
         // Kept until the event is shown: the page's own read (it starts when the page is shown) may supersede this one, and then takes over.
         _opening = (groupId, eventId);
         await LoadAsync(ct => ReadDetailAsync(groupId, eventId, ct));
+        if (HasError) _opening = null; // a failed read is not tried again by every later reload
 
         // Opened before the calendar itself was read (from the banner): that read was superseded by this one, so it is made up for now.
         if (!HasLoaded && !HasError && !string.IsNullOrEmpty(Shell.SelectedGroupId)) await ReloadAsync();

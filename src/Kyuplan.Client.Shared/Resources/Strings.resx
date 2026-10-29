@@ -1468,6 +1468,15 @@
   <data name="Settings_AllowedHostsHint" xml:space="preserve">
     <value>The address(es) this server answers to, separated by ";" (for example kyuplan.example.com). Requests for any other name are refused. "*" allows every name. Applies after the restart; if you lock yourself out, change AllowedHosts in the settings file.</value>
   </data>
+  <data name="Settings_PublicUrl" xml:space="preserve">
+    <value>Public address</value>
+  </data>
+  <data name="Settings_PublicUrlHint" xml:space="preserve">
+    <value>The address people reach this server on from outside, for example https://planner.example.org. Calendar feed addresses start with it; empty = taken from each request, which is wrong behind a proxy that does not pass on the Host header. Applies after the restart.</value>
+  </data>
+  <data name="Settings_PublicUrlInvalid" xml:space="preserve">
+    <value>Enter a full http:// or https:// address without a query, for example https://planner.example.org, or leave it empty.</value>
+  </data>
   <data name="Settings_AllowedHostsInvalid" xml:space="preserve">
     <value>Enter host names separated by ";", e.g. kyuplan.example.com or *.example.com, or just *.</value>
   </data>
@@ -3190,7 +3199,7 @@
     <value>Subscribe to a calendar’s address in a calendar app (“add internet calendar”). Whoever has it can read the calendar without a login, so treat it like a password. It is shown once, when the calendar is made or gets a new address; the server keeps only a hash of it. If you lost it, give the calendar a new address.</value>
   </data>
   <data name="CalendarFeeds_AddressOnce" xml:space="preserve">
-    <value>Address of “{0}”. Copy it now: it is not shown again.</value>
+    <value>Address of “{0}”, built from {1}. Copy it now: it is not shown again. If {1} is not where calendar apps can reach this server, set the public address under Settings.</value>
   </data>
   <data name="CalendarFeeds_CopyAddress" xml:space="preserve">
     <value>Copy address</value>

@@ -144,7 +144,10 @@ public sealed partial class CalendarFeedsViewModel : PageViewModel
     public bool HasAddress => Address.Length > 0;
 
     /// <summary>Says whose address it is and that it is not shown again.</summary>
-    public string AddressText => HasAddress ? string.Format(Strings.CalendarFeeds_AddressOnce, _addressFeedName) : "";
+    public string AddressText => HasAddress ? string.Format(Strings.CalendarFeeds_AddressOnce, _addressFeedName, AddressBase) : "";
+
+    /// <summary>What the address starts with (scheme, host and path), so that a wrong one is noticed before the address is handed out.</summary>
+    public string AddressBase => Address.IndexOf("/calendar-feeds/", StringComparison.Ordinal) is var at and > 0 ? Address[..at] : Address;
 
     private void RevealAddress(CalendarFeedDto feed)
     {

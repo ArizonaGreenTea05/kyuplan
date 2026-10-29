@@ -17,6 +17,7 @@ namespace Kyuplan.Contracts;
 /// <param name="UnregisteredSubGroup">Name (or id) of the subgroup of the people not registered in the club yet; empty = none.</param>
 /// <param name="DataSource">Where groups, members and events come from: one of <see cref="DataSourceKinds"/> or the id of the data source of a plugin; <see cref="UseDemoData"/> is the same as <see cref="DataSourceKinds.Demo"/>.</param>
 /// <param name="CustomScript">The JavaScript that reads the data when <paramref name="DataSource"/> is <see cref="DataSourceKinds.Custom"/> (see docs/admin-guide.md).</param>
+/// <param name="PublicUrl">The address the API is reached on from outside (<see cref="SettingsRules.IsPublicUrl"/>); calendar feed addresses are built from it. Empty/<c>null</c> = taken from each request. In the input <c>null</c> = an older client: keep what is set.</param>
 /// <param name="MetricsEnabled">Whether <c>GET /metrics</c> exists. Off unless an administrator switches it on.</param>
 /// <param name="HasMetricsToken">A metrics token is stored (the endpoint needs it as bearer token). The token itself is never sent back.</param>
 /// <param name="ScriptSecrets">The names of the secrets the script can read with <c>secrets.get('NAME')</c> and that have a value (the values are never sent back).</param>
@@ -42,7 +43,8 @@ public sealed record SettingsDto(
     bool HasMetricsToken = false,
     IReadOnlyList<string>? ScriptSecrets = null,
     bool CustomScriptHidden = false,
-    IReadOnlyDictionary<string, PluginSettingsDto>? PluginSettings = null);
+    IReadOnlyDictionary<string, PluginSettingsDto>? PluginSettings = null,
+    string? PublicUrl = null);
 
 /// <summary>A secret of the custom script to save.</summary>
 /// <param name="Name">What the script asks for (<see cref="SettingsRules.IsSecretName"/>); names are not case sensitive.</param>
@@ -79,7 +81,8 @@ public sealed record SettingsInputDto(
     bool? MetricsEnabled = null,
     string? MetricsToken = null,
     IReadOnlyList<ScriptSecretInputDto>? ScriptSecrets = null,
-    IReadOnlyDictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>>? PluginSettings = null);
+    IReadOnlyDictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>>? PluginSettings = null,
+    string? PublicUrl = null);
 
 /// <summary>Whether the API still has to be set up (it has no user yet), and what it would start with. Open to everybody.</summary>
 /// <param name="Settings">What the API runs with now, as the form to fill in starts; <c>null</c> once it is set up (the settings are then for administrators only).</param>
@@ -162,6 +165,21 @@ public static class SettingsRules
             host == AnyHost || (host.Length > 0 && !host.StartsWith("*.*") && host.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '-' or ':' or '*' or '[' or ']')
                                 && (!host.Contains('*') || host.StartsWith("*.")) && !host.Skip(1).Contains('*'));
     }
+
+    public const int MaxPublicUrlLength = 300;
+
+    /// <summary>Empty (= from the request) or an absolute http(s) address of the server with an optional path: no user info, query or fragment.</summary>
+    public static bool IsPublicUrl(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return true;
+        url = url.Trim();
+        return url.Length <= MaxPublicUrlLength && url.All(c => c > ' ' && c < 127)
+               && Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https"
+               && uri.UserInfo.Length == 0 && uri.Query.Length == 0 && uri.Fragment.Length == 0 && !url.Contains('?') && !url.Contains('#');
+    }
+
+    /// <summary>The address without a trailing slash (<c>null</c> if there is none).</summary>
+    public static string? NormalizePublicUrl(string? url) => string.IsNullOrWhiteSpace(url) ? null : url.Trim().TrimEnd('/');
 
     public const int MinMetricsTokenLength = 16;
     public const int MaxMetricsTokenLength = 200;

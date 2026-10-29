@@ -511,6 +511,41 @@ public sealed class SecurityTests(WebApplicationFactory<Program> factory) : ICla
         Assert.Equal(valid, SettingsRules.IsAllowedHosts(hosts));
 
     [Theory]
+    [InlineData(null, true)]
+    [InlineData("", true)]
+    [InlineData("   ", true)]
+    [InlineData("https://planner.example.org", true)]
+    [InlineData("  https://planner.example.org/  ", true)]
+    [InlineData("http://192.168.1.5:8080/kyuplan", true)]
+    [InlineData("HTTPS://Planner.Example.org", true)]
+    [InlineData("planner.example.org", false)]
+    [InlineData("//planner.example.org", false)]
+    [InlineData("ftp://planner.example.org", false)]
+    [InlineData("https://planner.example.org/?a=1", false)]
+    [InlineData("https://planner.example.org?", false)]
+    [InlineData("https://planner.example.org/#x", false)]
+    [InlineData("https://user:pw@planner.example.org", false)]
+    [InlineData("https://planner example.org", false)]
+    [InlineData("https://planner.exämple.org", false)]
+    public void A_public_url_is_empty_or_an_absolute_http_address_without_query(string? url, bool valid) =>
+        Assert.Equal(valid, SettingsRules.IsPublicUrl(url));
+
+    [Fact]
+    public void A_public_url_is_not_longer_than_the_limit()
+    {
+        Assert.True(SettingsRules.IsPublicUrl("https://a.example/" + new string('a', SettingsRules.MaxPublicUrlLength - 19)));
+        Assert.False(SettingsRules.IsPublicUrl("https://a.example/" + new string('a', SettingsRules.MaxPublicUrlLength)));
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("  ", null)]
+    [InlineData(" https://p.example.org/ ", "https://p.example.org")]
+    [InlineData("https://p.example.org/kyuplan//", "https://p.example.org/kyuplan")]
+    public void A_public_url_loses_its_trailing_slashes(string? url, string? expected) =>
+        Assert.Equal(expected, SettingsRules.NormalizePublicUrl(url));
+
+    [Theory]
     [InlineData("0123456789abcdef", true)]
     [InlineData("0123456789abcde", false)]
     [InlineData("0123456789abcdef ", false)]

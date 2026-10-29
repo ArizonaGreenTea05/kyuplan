@@ -1387,6 +1387,15 @@
   <data name="Settings_AllowedHostsHint" xml:space="preserve">
     <value>Die Adresse(n), auf die dieser Server antwortet, getrennt durch ";" (z. B. kyuplan.example.com). Anfragen mit einem anderen Namen werden abgewiesen. "*" erlaubt jeden Namen. Gilt nach dem Neustart; wer sich aussperrt, ändert AllowedHosts in der Einstellungsdatei.</value>
   </data>
+  <data name="Settings_PublicUrl" xml:space="preserve">
+    <value>Öffentliche Adresse</value>
+  </data>
+  <data name="Settings_PublicUrlHint" xml:space="preserve">
+    <value>Die Adresse, unter der dieser Server von außen erreichbar ist, z. B. https://planner.example.org. Adressen von Kalender-Feeds beginnen damit; leer = aus der jeweiligen Anfrage genommen, was hinter einem Proxy falsch ist, der den Host-Header nicht weitergibt. Gilt nach dem Neustart.</value>
+  </data>
+  <data name="Settings_PublicUrlInvalid" xml:space="preserve">
+    <value>Gib eine vollständige http://- oder https://-Adresse ohne Abfrage ein, z. B. https://planner.example.org, oder lass das Feld leer.</value>
+  </data>
   <data name="Settings_AllowedHostsInvalid" xml:space="preserve">
     <value>Gib Hostnamen getrennt durch ";" ein, z. B. kyuplan.example.com oder *.example.com, oder nur *.</value>
   </data>
@@ -3086,7 +3095,7 @@
     <value>Abonniere die Adresse eines Kalenders in einer Kalender-App („Internetkalender hinzufügen“). Wer sie kennt, kann den Kalender ohne Anmeldung lesen – behandle sie wie ein Passwort. Sie wird einmal angezeigt, wenn der Kalender angelegt wird oder eine neue Adresse bekommt; der Server speichert nur einen Hash davon. Hast du sie verloren, gib dem Kalender eine neue Adresse.</value>
   </data>
   <data name="CalendarFeeds_AddressOnce" xml:space="preserve">
-    <value>Adresse von „{0}“. Kopiere sie jetzt: Sie wird nicht noch einmal angezeigt.</value>
+    <value>Adresse von „{0}“, gebildet aus {1}. Kopiere sie jetzt: Sie wird nicht noch einmal angezeigt. Wenn Kalender-Apps diesen Server unter {1} nicht erreichen, stelle die öffentliche Adresse unter Einstellungen ein.</value>
   </data>
   <data name="CalendarFeeds_CopyAddress" xml:space="preserve">
     <value>Adresse kopieren</value>

@@ -86,6 +86,7 @@ internal static class SettingsFormView
 
         var security = Widgets.Section(Strings.Settings_SecurityTitle,
             Text(Strings.Settings_AllowedHosts, nameof(SettingsForm.AllowedHosts), () => form.AllowedHostsProblem, nameof(SettingsForm.AllowedHostsProblem)),
+            Text(Strings.Settings_PublicUrl, nameof(SettingsForm.PublicUrl), () => form.PublicUrlProblem, nameof(SettingsForm.PublicUrlProblem)),
             Ui.HBox(10, Ui.Switch(form, nameof(SettingsForm.MetricsEnabled)),
                 Ui.VBox(0, Ui.Label(Strings.Settings_MetricsEnabled), Ui.Muted(Strings.Settings_MetricsEnabledHint).Css("caption")).Expand()),
             Field(Strings.Settings_MetricsToken, Ui.Password(form, nameof(SettingsForm.MetricsToken), Strings.Settings_MetricsToken), () => form.MetricsTokenProblem, nameof(SettingsForm.MetricsTokenProblem))

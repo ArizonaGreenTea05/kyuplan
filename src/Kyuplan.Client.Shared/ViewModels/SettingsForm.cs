@@ -146,6 +146,7 @@ public sealed partial class SettingsForm : ObservableObject
     [ObservableProperty] private bool _syncEnabled;
     [ObservableProperty] private int _syncIntervalMinutes;
     [ObservableProperty] private string _allowedHosts = SettingsRules.AnyHost;
+    [ObservableProperty] private string _publicUrl = "";
 
     [ObservableProperty] private bool _metricsEnabled;
 
@@ -178,6 +179,7 @@ public sealed partial class SettingsForm : ObservableObject
         SyncEnabled = settings.SyncEnabled;
         SyncIntervalMinutes = settings.SyncIntervalMinutes;
         AllowedHosts = string.IsNullOrWhiteSpace(settings.AllowedHosts) ? SettingsRules.AnyHost : settings.AllowedHosts;
+        PublicUrl = settings.PublicUrl ?? "";
         MetricsEnabled = settings.MetricsEnabled;
         MetricsToken = "";
         HasMetricsToken = settings.HasMetricsToken;
@@ -192,7 +194,9 @@ public sealed partial class SettingsForm : ObservableObject
         DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScriptHidden ? null : CustomScript,
         MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken,
         IsCustomSource ? [.. ScriptSecrets.Where(s => !s.IsEmpty).Select(s => s.ToInput())] : null, // another source leaves the stored secrets alone
-        PluginForm is { } form ? new Dictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>> { [DataSource] = form.Values() } : null); // only the settings of the chosen data source
+        // only the settings of the chosen data source
+        PluginForm is { } form ? new Dictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>> { [DataSource] = form.Values() } : null,
+        PublicUrl.Trim());
 
     // A script the API kept back is never sent, so a template put there would be dropped silently.
     [RelayCommand(CanExecute = nameof(CanInsertScriptTemplate))]
@@ -220,7 +224,7 @@ public sealed partial class SettingsForm : ObservableObject
         DefaultMinAttendancePercent == s.DefaultMinAttendancePercent && DefaultMinInvitedEvents == s.DefaultMinInvitedEvents &&
         DefaultEventStars == s.DefaultEventStars && ExamMinAverageStars == s.ExamMinAverageStars &&
         UnregisteredSubGroup.Trim() == (s.UnregisteredSubGroup ?? "") &&
-        SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) &&
+        SyncEnabled == s.SyncEnabled && SyncIntervalMinutes == s.SyncIntervalMinutes && AllowedHosts.Trim() == (s.AllowedHosts ?? SettingsRules.AnyHost) && (SettingsRules.NormalizePublicUrl(PublicUrl) ?? "") == (s.PublicUrl ?? "") &&
         MetricsEnabled == s.MetricsEnabled && MetricsToken.Length == 0;
 
     private bool SecretsMatch(IReadOnlyList<string> saved)
@@ -267,6 +271,8 @@ public sealed partial class SettingsForm : ObservableObject
     public string? SyncIntervalProblem =>
         SettingsRules.IsSyncInterval(SyncIntervalMinutes) ? null : string.Format(Strings.Settings_SyncIntervalInvalid, SettingsRules.MaxSyncIntervalMinutes);
 
+    public string? PublicUrlProblem => SettingsRules.IsPublicUrl(PublicUrl) ? null : Strings.Settings_PublicUrlInvalid;
+
     public string? AllowedHostsProblem => SettingsRules.IsAllowedHosts(AllowedHosts) ? null : Strings.Settings_AllowedHostsInvalid;
 
     /// <summary>The metrics need a token when they are on: a typed one, or the stored one.</summary>
@@ -277,7 +283,7 @@ public sealed partial class SettingsForm : ObservableObject
 
     public bool IsValid =>
         DatabasePathProblem is null && AccountsDatabasePathProblem is null && PluginFormProblem is null && CustomScriptProblem is null && ScriptSecretsProblem is null && TimeZoneProblem is null &&
-        PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null && MetricsTokenProblem is null;
+        PercentProblem is null && InvitedEventsProblem is null && DefaultEventStarsProblem is null && ExamMinAverageStarsProblem is null && SyncIntervalProblem is null && AllowedHostsProblem is null && PublicUrlProblem is null && MetricsTokenProblem is null;
 
     /// <summary>The language changed: the texts of the plugins' forms are read again.</summary>
     public void LanguageChanged()

@@ -13,7 +13,7 @@ internal static class SettingsAudit
 {
     /// <summary>Keys whose new value is written down as it is.</summary>
     private static readonly string[] Plain =
-        ["Statistics:", "Sync:", "Spond:UseDemoData", "DataSource:Kind", "Metrics:Enabled", SettingsService.AllowedHostsKey];
+        ["Statistics:", "Sync:", "Spond:UseDemoData", "DataSource:Kind", "Metrics:Enabled", SettingsService.AllowedHostsKey, SettingsService.PublicUrlKey];
 
     private const string ScriptKey = "DataSource:Script";
 

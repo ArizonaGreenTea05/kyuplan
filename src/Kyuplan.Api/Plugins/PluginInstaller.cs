@@ -97,11 +97,12 @@ public sealed class PluginInstaller(PluginStore store, IPluginFetcher fetcher, T
 /// </summary>
 public static class PluginBootstrap
 {
-    public static readonly TimeSpan GitHubTimeout = TimeSpan.FromSeconds(60);
+    /// <summary>The limit for asking GitHub for all default plugins together: the start of the program waits for it, so a blocked connection must not hold it up for long.</summary>
+    public static readonly TimeSpan GitHubTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>Installs the default plugins when there is no plugin yet. Returns the lines for the log (the logging is not set up yet at this point of the start).</summary>
     public static async Task<IReadOnlyList<(LogLevel Level, string Message)>> InstallDefaultsAsync(
-        PluginStore store, PluginInstaller installer, PluginOptions options, string programDirectory, CancellationToken cancellationToken)
+        PluginStore store, PluginInstaller installer, PluginOptions options, string programDirectory, CancellationToken cancellationToken, TimeSpan? gitHubTimeout = null)
     {
         var lines = new List<(LogLevel, string)>();
         if (!options.InstallDefaults || !store.IsFresh) return lines;
@@ -125,10 +126,10 @@ public static class PluginBootstrap
 
         if (!store.IsFresh) return lines;
 
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(gitHubTimeout ?? GitHubTimeout);
         foreach (var url in options.Defaults.Where(u => !string.IsNullOrWhiteSpace(u)))
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(GitHubTimeout);
             try
             {
                 var (plugin, _) = await installer.InstallFromGitHubAsync(url, timeout.Token);
@@ -136,7 +137,9 @@ public static class PluginBootstrap
             }
             catch (Exception ex) when (ex is InvalidInputException or IOException or UnauthorizedAccessException or OperationCanceledException && !cancellationToken.IsCancellationRequested)
             {
-                lines.Add((LogLevel.Warning, $"The default plugin {url} could not be installed: {ex.Message} It is tried again at the next start; administrators can also install it on the plugins page."));
+                var reason = timeout.IsCancellationRequested ? "GitHub did not answer in time." : ex.Message;
+                lines.Add((LogLevel.Warning, $"The default plugin {url} could not be installed: {reason} It is tried again at the next start; administrators can also install it on the plugins page."));
+                if (timeout.IsCancellationRequested) break; // out of time: the rest would only wait as well
             }
         }
 

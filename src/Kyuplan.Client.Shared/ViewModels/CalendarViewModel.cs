@@ -146,7 +146,6 @@ public sealed partial class CalendarViewModel : PageViewModel
             var calendar = await _api.GetCalendarAsync(groupId, view, date, ct);
             Show(calendar);
             if (Detail is { } open) await ReadDetailAsync(open.GroupId, open.Id, ct);
-            else if (_opening is var (openGroup, openEvent)) await ReadDetailAsync(openGroup, openEvent, ct);
         });
     }
 
@@ -239,8 +238,6 @@ public sealed partial class CalendarViewModel : PageViewModel
     [NotifyPropertyChangedFor(nameof(HasDetail))]
     private CalendarEventRow? _detail;
 
-    private (string GroupId, string EventId)? _opening;
-
     public bool HasDetail => Detail is not null;
 
     [ObservableProperty]
@@ -289,10 +286,7 @@ public sealed partial class CalendarViewModel : PageViewModel
         await Shell.InitializeAsync();
         if (!CanView) return;
 
-        // Kept until the event is shown: the page's own read (it starts when the page is shown) may supersede this one, and then takes over.
-        _opening = (groupId, eventId);
         await LoadAsync(ct => ReadDetailAsync(groupId, eventId, ct));
-        if (HasError) _opening = null; // a failed read is not tried again by every later reload
 
         // Opened before the calendar itself was read (from the banner): that read was superseded by this one, so it is made up for now.
         if (!HasLoaded && !HasError && !string.IsNullOrEmpty(Shell.SelectedGroupId)) await ReloadAsync();
@@ -309,7 +303,6 @@ public sealed partial class CalendarViewModel : PageViewModel
         var user = Shell.CurrentUser;
         bool MayDelete(CommentDto c) => user is not null && (Shell.Can(Permission.CommentsDeleteAny) || (user.Id == c.AuthorId && Shell.Can(Permission.CommentsDelete)));
         Detail = new CalendarEventRow(detail.Event);
-        _opening = null;
         RatingsOpen = detail.Event.Start <= _time.GetUtcNow();
         Attendees = [.. detail.Attendees.Select(a =>
         {
@@ -342,7 +335,6 @@ public sealed partial class CalendarViewModel : PageViewModel
     private void CloseEvent()
     {
         Detail = null;
-        _opening = null;
         RatingsOpen = false;
         Attendees = [];
         _answerFilter = null;

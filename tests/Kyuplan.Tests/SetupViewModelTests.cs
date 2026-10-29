@@ -472,4 +472,28 @@ public sealed class SetupViewModelTests : IDisposable
         Assert.Equal(CustomScriptTemplate.Text, form.CustomScript);
         Assert.Null(form.CustomScriptWarning); // the shipped example holds no credentials itself
     }
+
+    [Theory]
+    [InlineData("", true)]
+    [InlineData("https://planner.example.org/kyuplan", true)]
+    [InlineData("ftp://planner.example.org", false)]
+    [InlineData("not a url", false)]
+    public void The_public_url_is_checked_trimmed_loaded_and_compared(string url, bool valid)
+    {
+        var form = new SettingsForm();
+        form.Load(FakePlannerApi.DefaultSettings with { PublicUrl = null });
+        Assert.Equal("", form.PublicUrl);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = null }));
+
+        form.PublicUrl = "  " + url + "  ";
+        Assert.Equal(valid, form.PublicUrlProblem is null);
+        Assert.Equal(valid, form.IsValid);
+        if (!valid) Assert.Equal(Strings.Settings_PublicUrlInvalid, form.PublicUrlProblem);
+        Assert.Equal(url, form.ToInput().PublicUrl);
+        Assert.Equal(url.Length == 0, form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = "" }));
+
+        form.Load(FakePlannerApi.DefaultSettings with { PublicUrl = "https://a.example" });
+        Assert.Equal("https://a.example", form.PublicUrl);
+        Assert.True(form.Matches(FakePlannerApi.DefaultSettings with { PublicUrl = "https://a.example" }));
+    }
 }

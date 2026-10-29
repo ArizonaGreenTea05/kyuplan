@@ -194,8 +194,8 @@ public sealed partial class SettingsForm : ObservableObject
         DefaultEventStars, ExamMinAverageStars, UnregisteredSubGroup.Trim(), DataSource, CustomScriptHidden ? null : CustomScript,
         MetricsEnabled, MetricsToken.Length == 0 ? null : MetricsToken,
         IsCustomSource ? [.. ScriptSecrets.Where(s => !s.IsEmpty).Select(s => s.ToInput())] : null, // another source leaves the stored secrets alone
-        PluginForm is { } form ? new Dictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>> { [DataSource] = form.Values() } : null,
-        PublicUrl.Trim()); // only the settings of the chosen data source
+        PluginForm is { } form ? new Dictionary<string, IReadOnlyDictionary<string, System.Text.Json.JsonElement>> { [DataSource] = form.Values() } : null, // only the settings of the chosen data source
+        PublicUrl.Trim());
 
     // A script the API kept back is never sent, so a template put there would be dropped silently.
     [RelayCommand(CanExecute = nameof(CanInsertScriptTemplate))]

@@ -284,6 +284,19 @@ public sealed class AuditApiTests(WebApplicationFactory<Program> factory) : ICla
     }
 
     [Fact]
+    public async Task Changing_the_public_url_is_written_to_the_settings_audit()
+    {
+        using var host = CreateHost();
+        var admin = host.CreateSignedInClient();
+        var settings = await UnchangedSettingsAsync(admin);
+
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync("/api/settings", settings with { PublicUrl = "https://planner.example.org" })).StatusCode);
+
+        var entry = Assert.Single((await ReadLogAsync(admin, "?area=" + AuditAreas.Settings)).Entries);
+        Assert.NotNull(JsonNode.Parse(entry.Details!)!["changed"]![SettingsService.PublicUrlKey]);
+    }
+
+    [Fact]
     public async Task A_settings_save_that_changes_nothing_leaves_nothing_behind()
     {
         using var host = CreateHost();

@@ -694,6 +694,24 @@ public sealed class PluginInstallerTests : IDisposable
             PluginBootstrap.InstallDefaultsAsync(_store, installer, new PluginOptions { Defaults = ["https://github.com/a/b"] }, _folder, cancelled.Token));
     }
 
+    [Fact]
+    public async Task Defaults_that_never_answer_are_given_up_after_the_limit_for_all_together_and_the_folder_stays_new()
+    {
+        var installer = new PluginInstaller(_store, new SlowFetcher(), _time, NullLogger<PluginInstaller>.Instance);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+
+        var lines = await PluginBootstrap.InstallDefaultsAsync(_store, installer,
+            new PluginOptions { Defaults = ["https://github.com/a/b", "https://github.com/c/d"] }, _folder, default, TimeSpan.FromMilliseconds(200));
+
+        Assert.True(watch.Elapsed < TimeSpan.FromSeconds(5));
+        Assert.True(_store.IsFresh);
+        Assert.Single(lines, l => l.Level == LogLevel.Warning); // the second repository is not even tried
+        Assert.Contains("did not answer in time", lines.Single().Message);
+    }
+
+    [Fact]
+    public void The_limit_for_asking_GitHub_is_short() => Assert.True(PluginBootstrap.GitHubTimeout <= TimeSpan.FromSeconds(10));
+
     private sealed class SlowFetcher : IPluginFetcher
     {
         public async Task<PluginDownload> FetchLatestAsync(string owner, string repo, CancellationToken cancellationToken)

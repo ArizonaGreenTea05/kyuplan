@@ -34,7 +34,7 @@ services:
 
   db:
     # 17 keeps its files in /var/lib/postgresql/data. Updating to another major version needs a dump and restore (docs/deployment.md).
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: kyuplan

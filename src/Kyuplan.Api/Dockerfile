@@ -17,7 +17,7 @@
 # The documentation: one Docusaurus site per audience (website/, from docs/), served under /docs by the API to the users who may read each.
 # Node: the LTS line the workflows use (setup-node, node-version) and website/ is tested with; SupplyChainConfigTests keeps the two the same.
 # The base images are pinned to a digest (Dependabot keeps tag and digest current), so what the release scans and what is rebuilt is the same.
-FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS docs
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS docs
 WORKDIR /repo/website
 COPY website/package.json website/package-lock.json ./
 RUN npm ci --no-audit --no-fund

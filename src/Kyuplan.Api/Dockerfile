@@ -28,7 +28,7 @@ ARG DOCS_REPO_REF=main
 RUN DOCS_REPO_REF=${DOCS_REPO_REF} node scripts/build-all.mjs user admin deployment
 
 # Always runs on the machine that builds; for the other CPU it cross-compiles (no emulation), TARGETARCH being the one of the image.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e AS build
 ARG TARGETARCH
 WORKDIR /src
 
